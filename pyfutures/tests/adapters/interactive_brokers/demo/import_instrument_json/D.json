@@ -1,0 +1,54 @@
+{
+    "Local Name": "RCF5",
+    "Local Class": "RC",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "09:00-17:30"
+        ],
+        "Tue": [
+            "09:00-17:30"
+        ],
+        "Wed": [
+            "09:00-17:30"
+        ],
+        "Thu": [
+            "09:00-17:30"
+        ],
+        "Fri": [
+            "09:00-17:30"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "ICEEUSOFT",
+    "Description/Name": "Robusta Coffee",
+    "Symbol": "D",
+    "Contract Type": "Futures",
+    "Country/Region": "United Kingdom",
+    "Closing Price": 2343.0,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "633534688",
+    "Futures Type": "Agriculture",
+    "First Notice Date": "24/12/2024",
+    "First Position Date": "24/12/2024",
+    "Last Trading Date": "27/01/2025",
+    "Expiration Date": "27/01/2025",
+    "Multiplier": 10.0,
+    "Intraday Initial Margin": 2412,
+    "Intraday Maintenance Margin": 1930,
+    "Overnight Initial Margin": 2412,
+    "Overnight Maintenance Margin": 1930
+}

@@ -1,0 +1,58 @@
+{
+    "Local Name": "MFSM8",
+    "Local Class": "MFS",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.liffe.com",
+    "Trading Hours": {
+        "Sun": [
+            "18:00-23:59"
+        ],
+        "Mon": [
+            "00:00-18:00",
+            "20:00-23:59"
+        ],
+        "Tue": [
+            "00:00-18:00",
+            "20:00-23:59"
+        ],
+        "Wed": [
+            "00:00-18:00",
+            "20:00-23:59"
+        ],
+        "Thu": [
+            "00:00-18:00",
+            "20:00-23:59"
+        ],
+        "Fri": [
+            "00:00-18:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "NYSELIFFE",
+    "Description/Name": "MSCI EAFE Index",
+    "Symbol": "MXEA",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 2234.9,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "638175039",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "16/06/2028",
+    "Expiration Date": "16/06/2028",
+    "Multiplier": 50.0,
+    "Intraday Initial Margin": 5748,
+    "Intraday Maintenance Margin": 4598,
+    "Overnight Initial Margin": 8212,
+    "Overnight Maintenance Margin": 6569
+}

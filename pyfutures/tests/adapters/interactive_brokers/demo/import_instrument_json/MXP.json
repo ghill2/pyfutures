@@ -1,0 +1,81 @@
+{
+    "Local Name": "6MV4",
+    "Local Class": "6M",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "http://www.cme.com",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-16:00"
+        ],
+        "Tue": [
+            "08:30-16:00"
+        ],
+        "Wed": [
+            "08:30-16:00"
+        ],
+        "Thu": [
+            "08:30-16:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.00001"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CME",
+    "Description/Name": "Mexican Peso",
+    "Symbol": "MXP",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 0.05545,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "654722280",
+    "Futures Type": "Foreign Exchange",
+    "First Notice Date": "11/10/2024",
+    "First Position Date": "11/10/2024",
+    "Last Trading Date": "11/10/2024",
+    "Expiration Date": "11/10/2024",
+    "Multiplier": 500000.0,
+    "Intraday Initial Margin": 2181,
+    "Intraday Maintenance Margin": 1745,
+    "Overnight Initial Margin": 2181,
+    "Overnight Maintenance Margin": 1745
+}

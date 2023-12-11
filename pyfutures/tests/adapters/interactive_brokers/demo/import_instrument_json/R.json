@@ -1,0 +1,54 @@
+{
+    "Local Name": "RH4",
+    "Local Class": "R",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "08:00-18:00"
+        ],
+        "Tue": [
+            "08:00-18:00"
+        ],
+        "Wed": [
+            "08:00-18:00"
+        ],
+        "Thu": [
+            "08:00-18:00"
+        ],
+        "Fri": [
+            "08:00-18:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.01"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "ICEEU",
+    "Description/Name": "Long Gilt",
+    "Symbol": "R",
+    "Contract Type": "Futures",
+    "Country/Region": "United Kingdom",
+    "Closing Price": 97.57,
+    "Currency": "British Pound (GBP)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "639901498",
+    "Futures Type": "Fixed Income",
+    "First Notice Date": "28/02/2024",
+    "First Position Date": "28/02/2024",
+    "Last Trading Date": "26/03/2024",
+    "Expiration Date": "26/03/2024",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 4775,
+    "Intraday Maintenance Margin": 3820,
+    "Overnight Initial Margin": 4775,
+    "Overnight Maintenance Margin": 3820
+}

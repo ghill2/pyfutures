@@ -1,0 +1,63 @@
+{
+    "Local Name": "169120019",
+    "Local Class": "225M",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.ose.or.jp",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "08:45-15:15",
+            "16:30-23:59"
+        ],
+        "Tue": [
+            "00:00-06:00",
+            "08:45-15:15",
+            "16:30-23:59"
+        ],
+        "Wed": [
+            "00:00-06:00",
+            "08:45-15:15",
+            "16:30-23:59"
+        ],
+        "Thu": [
+            "00:00-06:00",
+            "08:45-15:15",
+            "16:30-23:59"
+        ],
+        "Fri": [
+            "00:00-06:00",
+            "08:45-15:15",
+            "16:30-23:59"
+        ],
+        "Sat": [
+            "00:00-06:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "5"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "OSE.JPN",
+    "Description/Name": "Nikkei 225 Mini",
+    "Symbol": "N225M",
+    "Contract Type": "Futures",
+    "Country/Region": "Japan",
+    "Closing Price": 32750.0,
+    "Currency": "Japanese Yen (JPY)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "395556077",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "12/12/2024",
+    "Expiration Date": "13/12/2024",
+    "Multiplier": 100.0,
+    "Intraday Initial Margin": 211669,
+    "Intraday Maintenance Margin": 169336,
+    "Overnight Initial Margin": 302385,
+    "Overnight Maintenance Margin": 241908
+}

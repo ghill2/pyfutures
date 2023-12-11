@@ -1,0 +1,286 @@
+<html>
+<head>
+<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+<title>IB Contract Information Center</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.css"/>
+    <link rel="stylesheet" type="text/css" href="https://www.clientam.com/stylesheet/web/font-awesome.v4.6.1.css"/>
+    <link rel="stylesheet" type="text/css" href="https://www.clientam.com/stylesheet/am/am-print.css"/>
+<script language="Javascript" src="js/Hashtable.js"></script>
+<script language="Javascript" src="js/IBCSUtils.js"></script>
+<script language="Javascript" src="js/ActionObj.js"></script>
+<script language="Javascript" src="js/ActionMenu.js"></script>
+<script language="Javascript" src="js/CICFunc_en.js"></script>
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/bootstrap.js"></script>
+</head>
+
+<body onload="showContractSpecsTab()">
+<div class="container">
+<script language="Javascript" src="js/tooltip/wz_tooltip.js"></script>
+
+<br>
+
+<form id="refreshForm" name="refreshForm" action="index.php" method="POST">
+<input type="hidden" name="wlId" id="wlId" value="GEN"/>
+<input type="hidden" name="ib_entity" id="ib_entity" value="" />
+<input type="hidden" name="lang" id="lang" value="en">
+<input type="hidden" name="action" id="action" value="Details">
+<input type="hidden" name="action" id="action" value="Details">
+  
+    <div class="row">
+        <div class="col-md-6 text-left"><img src="images/GEN/cic_gen_left.gif" width=244 height=58 border=0></div>
+        <div class="col-md-6 text-right"><img src="images/GEN/consearch_03.gif" width="371" height="58" border=0></div>
+    </div>
+
+<div id="tabcontainer" style="display: none"><div id="tabs">
+<ul class="nav nav-tabs">
+<li class="active" onclick="showContractSpecsTab()"><a><span>Specifications</span></a></li>
+</ul>
+</div>
+</div>
+<br style="clear: left;" />
+
+<div id="contractCalendar" style="display: none">
+calendar
+</div>
+
+<div id="contractNews" style="display: none">
+news
+</div>
+
+<div id="contractSpecs" style="display: none">
+
+<table class="table table-bordered">
+  
+<tr class="underlying">
+<th colspan=2>Underlying Information</th>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Description/Name</th>
+<td><a href="javascript:CICFunc.openPageForEntity('a132599369','/v3.10/index.php?action=Advanced Search&entityId=a132599369')" class="company">FTSE Taiwan RIC Capped Price Return TWD Index (TWN@TWSE)</a></td> 
+</tr>  
+
+
+
+</table>
+
+<table class="table table-bordered">
+
+<tr class="underlying">
+<th colspan=2>Contract Information</th>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Description/Name</th>
+<td>FTSE Taiwan RIC Capped Price Return TWD Index</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Symbol</th>
+<td>TWN</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Exchange</th>
+<td><b><a href="#SGX">SGX</a></b></td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Contract Type</th>
+<td>Futures</th>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Country/Region</th>
+<td><img src="images/flags/SG.gif" border=0 alt="SG">Singapore</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Closing Price</th>
+<td>1394.25</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Currency</th>
+<td>U.S. Dollar (USD)</th>
+</tr>
+
+<tr class="white"><td class="rowhead">PRIIPS KID</td><td><a href="https://www.interactivebrokers.com/cstoolsws/ibgroup.custops.priips/index?symbol=TWN&exchange=SGX&isin=&lang=en&ib_entity=" target="_blank">PRIIPS KID link</td></tr>
+
+</table>
+
+<table class="table table-bordered">
+
+<tr class="underlying">
+<th colspan=2>Contract Identifiers</th>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">CONID</td>
+<td>637677823</td>
+</tr>
+</table>
+    
+<table class="table table-bordered">
+    
+<tr class="underlying">
+<th colspan=2>Futures Features</th>
+</tr>
+    
+<tr class="white">
+<th width="200" class="rowhead text-left">Futures Type</th>
+<td>Equity Index</th>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">First Notice Date<img src="images/misc/qm.gif" class="qm" onmouseover="Tip('The first day on which a notice of intent to deliver a commodity can be made by a clearinghouse to a buyer in order to fulfill a given futures contract.', WIDTH, 400)" onmouseout="UnTip()"></td>
+<td>-</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">First Position Date<img src="images/misc/qm.gif" class="qm" onmouseover="Tip('The first day when an investor who is short a commodity futures contract may notify the clearinghouse of the intention to deliver the commodity.', WIDTH, 400)" onmouseout="UnTip()"></td>
+<td>-</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Last Trading Date</th>
+<td>29/06/2026</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Expiration Date</th>
+<td>29/06/2026</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Multiplier</th>
+<td>40</td>
+</tr>
+
+</table>
+
+<table class="table table-bordered">
+
+<tr class="underlying">
+<th colspan=2>Margin Requirements<img src="images/misc/qm.gif" class="qm" onmouseover="Tip('Margin settings can vary based on account type, portfolio positions, and other factors. To calculate the most accurate margin settings, use the Check Margin feature. See also the website information on margin requirements.', WIDTH, 400)" onmouseout="UnTip()"></th>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Intraday Initial Margin</th>
+<td>2,100</td>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Intraday Maintenance Margin</th>
+<td>1,680</td>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Overnight Initial Margin</th>
+<td>3,000</td>
+</tr>
+
+<tr class="white">
+<th width="200" class="rowhead text-left">Overnight Maintenance Margin</th>
+<td>2,400</td>
+</tr>
+
+</table>
+
+
+<a name="SGX"></a>
+<table class="table table-bordered">
+
+<tr class="underlying">
+<td colspan=2><center><b>Singapore Exchange (SGX)</b> <a href="#top">Top</a></center></td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left" width="200">Local Name</th>
+<td>TWNM26</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Local Class</th>
+<td>TWN</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Settlement Method</th>
+<td>Cash</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Exchange Website</th>
+<td><a href="http://www.sgx.com" target="_blank">http://www.sgx.com</a></td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Trading Hours</th>
+<td>
+<center>
+<table class="table table-bordered">
+<tr><td>Sun</td><td>00:00-00:00<br/></td></tr>
+<tr><td>Mon</td><td>08:45-13:50<br/>14:15-23:59<br/></td></tr>
+<tr><td>Tue</td><td>00:00-05:15<br/>08:45-13:50<br/>14:15-23:59<br/></td></tr>
+<tr><td>Wed</td><td>00:00-05:15<br/>08:45-13:50<br/>14:15-23:59<br/></td></tr>
+<tr><td>Thu</td><td>00:00-05:15<br/>08:45-13:50<br/>14:15-23:59<br/></td></tr>
+<tr><td>Fri</td><td>00:00-05:15<br/>08:45-13:50<br/>14:15-23:59<br/></td></tr>
+<tr><td>Sat</td><td>00:00-05:15<br/></td></tr>
+</table>
+</center>
+</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Price Parameters</th>
+<td>
+<center>
+<table class="table table-bordered">
+<tr>
+<th width=50%>Range</th>
+<th width=50%>Increment</th>
+</tr>
+
+<tr align="center">
+<td>price > 0</td>
+<td>0.25</td>
+</tr>
+
+</table>
+</center>
+</td>
+</tr>
+
+<tr class="white">
+<th class="rowhead text-left">Size Parameters</th>
+<td>
+<center>
+<table class="table table-bordered">
+<tr>
+<th width=50%>Range</th>
+<th width=50%>Increment</th>
+</tr>
+
+<tr align="center">
+<td>size > 1</td>
+<td>1</td>
+</tr>
+
+</table>
+</center>
+</td>
+</tr>
+
+</table>
+
+
+</table>
+
+</div>
+</form>
+</div>
+</body>
+</html>

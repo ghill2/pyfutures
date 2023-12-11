@@ -1,0 +1,81 @@
+{
+    "Local Name": "VXJ4",
+    "Local Class": "VX",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://cfe.cboe.com/",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-15:15"
+        ],
+        "Tue": [
+            "08:30-15:15"
+        ],
+        "Wed": [
+            "08:30-15:15"
+        ],
+        "Thu": [
+            "08:30-15:15"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.05"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CFE",
+    "Description/Name": "CBOE Volatility Index",
+    "Symbol": "VIX",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 17.499,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "644107697",
+    "Futures Type": "Equity Index Volatility",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "17/04/2024",
+    "Expiration Date": "17/04/2024",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 8721,
+    "Intraday Maintenance Margin": 6977,
+    "Overnight Initial Margin": 8721,
+    "Overnight Maintenance Margin": 6977
+}

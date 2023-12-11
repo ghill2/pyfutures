@@ -1,0 +1,86 @@
+{
+    "Local Name": "KE   SEP 25",
+    "Local Class": "KE",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "http://www.cbot.com",
+    "Trading Hours": {
+        "Sun": [
+            "19:00-23:59"
+        ],
+        "Mon": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Tue": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Wed": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Thu": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Fri": [
+            "00:00-07:45",
+            "08:30-13:20"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "19:00-23:59"
+        ],
+        "Mon": [
+            "08:30-13:20"
+        ],
+        "Tue": [
+            "08:30-13:20"
+        ],
+        "Wed": [
+            "08:30-13:20"
+        ],
+        "Thu": [
+            "08:30-13:20"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "19:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.0025"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CBOT",
+    "Description/Name": "Hard Red Winter Wheat -KCBOT-",
+    "Symbol": "KE",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 6.6275,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "642254787",
+    "Futures Type": "Agriculture",
+    "First Notice Date": "28/08/2025",
+    "First Position Date": "28/08/2025",
+    "Last Trading Date": "12/09/2025",
+    "Expiration Date": "12/09/2025",
+    "Multiplier": 5000.0,
+    "Intraday Initial Margin": 3734,
+    "Intraday Maintenance Margin": 2987,
+    "Overnight Initial Margin": 3734,
+    "Overnight Maintenance Margin": 2987
+}

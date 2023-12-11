@@ -1,0 +1,54 @@
+{
+    "Local Name": "FXXP 20260918 M",
+    "Local Class": "FXXP",
+    "Settlement Method": "Cash",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "01:15-22:05"
+        ],
+        "Tue": [
+            "01:15-22:05"
+        ],
+        "Wed": [
+            "01:15-22:05"
+        ],
+        "Thu": [
+            "01:15-22:05"
+        ],
+        "Fri": [
+            "01:15-22:05"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "EUREX",
+    "Description/Name": "STOXX 600 Index",
+    "Symbol": "DJ600",
+    "Contract Type": "Futures",
+    "Country/Region": "[$countryEU]",
+    "Closing Price": 458.7,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "655096192",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "18/09/2026",
+    "Expiration Date": "18/09/2026",
+    "Multiplier": 50.0,
+    "Intraday Initial Margin": 1371,
+    "Intraday Maintenance Margin": 1097,
+    "Overnight Initial Margin": 1958,
+    "Overnight Maintenance Margin": 1567
+}

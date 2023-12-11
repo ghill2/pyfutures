@@ -1,0 +1,54 @@
+{
+    "Local Name": "Y2M4",
+    "Local Class": "Y2",
+    "Settlement Method": "Cash",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "07:00-21:00"
+        ],
+        "Tue": [
+            "07:00-21:00"
+        ],
+        "Wed": [
+            "07:00-21:00"
+        ],
+        "Thu": [
+            "07:00-21:00"
+        ],
+        "Fri": [
+            "07:00-21:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "ICEEU",
+    "Description/Name": "FTSE 250 Index",
+    "Symbol": "Y",
+    "Contract Type": "Futures",
+    "Country/Region": "United Kingdom",
+    "Closing Price": 18604.0,
+    "Currency": "British Pound (GBP)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "638175570",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "21/06/2024",
+    "Expiration Date": "21/06/2024",
+    "Multiplier": 2.0,
+    "Intraday Initial Margin": 4828,
+    "Intraday Maintenance Margin": 3862,
+    "Overnight Initial Margin": 4828,
+    "Overnight Maintenance Margin": 3862
+}

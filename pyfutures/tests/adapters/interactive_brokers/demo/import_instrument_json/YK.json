@@ -1,0 +1,86 @@
+{
+    "Local Name": "XK   SEP 24",
+    "Local Class": "XK",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "http://www.cbot.com",
+    "Trading Hours": {
+        "Sun": [
+            "19:00-23:59"
+        ],
+        "Mon": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Tue": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Wed": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Thu": [
+            "00:00-07:45",
+            "08:30-13:20",
+            "19:00-23:59"
+        ],
+        "Fri": [
+            "00:00-07:45",
+            "08:30-13:20"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "19:00-23:59"
+        ],
+        "Mon": [
+            "08:30-13:20"
+        ],
+        "Tue": [
+            "08:30-13:20"
+        ],
+        "Wed": [
+            "08:30-13:20"
+        ],
+        "Thu": [
+            "08:30-13:20"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "19:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.00125"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CBOT",
+    "Description/Name": "Mini Sized Soybean Futures",
+    "Symbol": "YK",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 13.12,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "526264510",
+    "Futures Type": "Agriculture",
+    "First Notice Date": "30/08/2024",
+    "First Position Date": "29/08/2024",
+    "Last Trading Date": "13/09/2024",
+    "Expiration Date": "13/09/2024",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 1228,
+    "Intraday Maintenance Margin": 982,
+    "Overnight Initial Margin": 1228,
+    "Overnight Maintenance Margin": 982
+}

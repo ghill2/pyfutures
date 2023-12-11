@@ -1,0 +1,77 @@
+{
+    "Local Name": "MCHH4",
+    "Local Class": "MCH",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.hkex.com.hk",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "09:15-12:00",
+            "13:00-16:30",
+            "17:15-23:59"
+        ],
+        "Tue": [
+            "00:00-03:00",
+            "09:15-12:00",
+            "13:00-16:30",
+            "17:15-23:59"
+        ],
+        "Wed": [
+            "00:00-03:00",
+            "09:15-12:00",
+            "13:00-16:30",
+            "17:15-23:59"
+        ],
+        "Thu": [
+            "00:00-03:00",
+            "09:15-12:00",
+            "13:00-16:30",
+            "17:15-23:59"
+        ],
+        "Fri": [
+            "00:00-03:00",
+            "09:15-12:00",
+            "13:00-16:30",
+            "17:15-23:59"
+        ],
+        "Sat": [
+            "00:00-03:00"
+        ]
+    },
+    "Regular Trading Hours": {
+        "Sun": "00:00-00:00",
+        "Mon": "09:15-12:0013:00-16:30",
+        "Tue": "09:15-12:0013:00-16:30",
+        "Wed": "09:15-12:0013:00-16:30",
+        "Thu": "09:15-12:0013:00-16:30",
+        "Fri": "00:00-03:00",
+        "Sat": "00:00-00:00"
+    },
+    "Price Parameters": {
+        "price > 0": "1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "HKFE",
+    "Description/Name": "Mini-Hang Seng China Enterprises Index",
+    "Symbol": "MCH.HK",
+    "Contract Type": "Futures",
+    "Country/Region": "Hong Kong",
+    "Closing Price": 5925.0,
+    "Currency": "Hong Kong Dollar (HKD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "645676997",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "27/03/2024",
+    "Expiration Date": "27/03/2024",
+    "Multiplier": 10.0,
+    "Intraday Initial Margin": 6132,
+    "Intraday Maintenance Margin": 4906,
+    "Overnight Initial Margin": 8760,
+    "Overnight Maintenance Margin": 7008
+}

@@ -1,0 +1,54 @@
+{
+    "Local Name": "FOAT 20240606 M",
+    "Local Class": "FOAT",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "01:15-22:05"
+        ],
+        "Tue": [
+            "01:15-22:05"
+        ],
+        "Wed": [
+            "01:15-22:05"
+        ],
+        "Thu": [
+            "01:15-22:05"
+        ],
+        "Fri": [
+            "01:15-22:05"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.01"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "EUREX",
+    "Description/Name": "Euro-OAT French Government Bond",
+    "Symbol": "OAT",
+    "Contract Type": "Futures",
+    "Country/Region": "[$countryEU]",
+    "Closing Price": 125.97,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "653027260",
+    "Futures Type": "Fixed Income",
+    "First Notice Date": "06/06/2024",
+    "First Position Date": "06/06/2024",
+    "Last Trading Date": "06/06/2024",
+    "Expiration Date": "06/06/2024",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 3642,
+    "Intraday Maintenance Margin": 2914,
+    "Overnight Initial Margin": 3642,
+    "Overnight Maintenance Margin": 2914
+}

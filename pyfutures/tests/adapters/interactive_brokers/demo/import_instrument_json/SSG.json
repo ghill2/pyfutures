@@ -1,0 +1,63 @@
+{
+    "Local Name": "SGPG24",
+    "Local Class": "SGP",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.sgx.com",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "08:30-17:25",
+            "17:50-23:59"
+        ],
+        "Tue": [
+            "00:00-05:15",
+            "08:30-17:25",
+            "17:50-23:59"
+        ],
+        "Wed": [
+            "00:00-05:15",
+            "08:30-17:25",
+            "17:50-23:59"
+        ],
+        "Thu": [
+            "00:00-05:15",
+            "08:30-17:25",
+            "17:50-23:59"
+        ],
+        "Fri": [
+            "00:00-05:15",
+            "08:30-17:25",
+            "17:50-23:59"
+        ],
+        "Sat": [
+            "00:00-05:15"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.05"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "SGX",
+    "Description/Name": "MSCI Singapore Free Index",
+    "Symbol": "SSG",
+    "Contract Type": "Futures",
+    "Country/Region": "Singapore",
+    "Closing Price": 0.0,
+    "Currency": "Singapore Dollar (SGD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "666711101",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "28/02/2024",
+    "Expiration Date": "29/02/2024",
+    "Multiplier": 100.0,
+    "Intraday Initial Margin": 1179,
+    "Intraday Maintenance Margin": 943,
+    "Overnight Initial Margin": 1685,
+    "Overnight Maintenance Margin": 1348
+}

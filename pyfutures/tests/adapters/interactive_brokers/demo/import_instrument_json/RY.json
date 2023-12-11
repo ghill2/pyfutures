@@ -1,0 +1,81 @@
+{
+    "Local Name": "RYH5",
+    "Local Class": "RY",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "http://www.cme.com",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-16:00"
+        ],
+        "Tue": [
+            "08:30-16:00"
+        ],
+        "Wed": [
+            "08:30-16:00"
+        ],
+        "Thu": [
+            "08:30-16:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.01"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CME",
+    "Description/Name": "European Monetary Union Euro",
+    "Symbol": "RY",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 154.62,
+    "Currency": "Japanese Yen (JPY)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "654722421",
+    "Futures Type": "Foreign Exchange",
+    "First Notice Date": "17/03/2025",
+    "First Position Date": "17/03/2025",
+    "Last Trading Date": "17/03/2025",
+    "Expiration Date": "17/03/2025",
+    "Multiplier": 125000.0,
+    "Intraday Initial Margin": 952696,
+    "Intraday Maintenance Margin": 762157,
+    "Overnight Initial Margin": 952696,
+    "Overnight Maintenance Margin": 762157
+}

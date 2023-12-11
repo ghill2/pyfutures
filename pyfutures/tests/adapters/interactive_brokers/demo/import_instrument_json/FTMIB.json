@@ -1,0 +1,54 @@
+{
+    "Local Name": "FTMIBM4",
+    "Local Class": "FTMIB",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.borsaitalia.it",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "07:45-22:00"
+        ],
+        "Tue": [
+            "07:45-22:00"
+        ],
+        "Wed": [
+            "07:45-22:00"
+        ],
+        "Thu": [
+            "07:45-22:00"
+        ],
+        "Fri": [
+            "07:45-22:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "5"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "IDEM",
+    "Description/Name": "FTSE MIB Index",
+    "Symbol": "FTMIB",
+    "Contract Type": "Futures",
+    "Country/Region": "Italy",
+    "Closing Price": 29089.0,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "638232785",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "21/06/2024",
+    "Expiration Date": "21/06/2024",
+    "Multiplier": 5.0,
+    "Intraday Initial Margin": 15763,
+    "Intraday Maintenance Margin": 12610,
+    "Overnight Initial Margin": 22519,
+    "Overnight Maintenance Margin": 18015
+}

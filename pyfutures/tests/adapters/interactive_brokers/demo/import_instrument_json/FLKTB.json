@@ -1,0 +1,63 @@
+{
+    "Local Name": "1674H",
+    "Local Class": "167",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.kse.or.kr",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "09:00-15:45"
+        ],
+        "Tue": [
+            "09:00-15:45"
+        ],
+        "Wed": [
+            "09:00-15:45"
+        ],
+        "Thu": [
+            "09:00-15:45"
+        ],
+        "Fri": [
+            "09:00-15:45"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Regular Trading Hours": {
+        "Sun": "00:00-00:00",
+        "Mon": "09:00-15:45",
+        "Tue": "09:00-15:45",
+        "Wed": "09:00-15:45",
+        "Thu": "09:00-15:45",
+        "Fri": "00:00-00:00",
+        "Sat": "00:00-00:00"
+    },
+    "Price Parameters": {
+        "price > 0": "0.01"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "KSE",
+    "Description/Name": "10-Year Korea Treasury Bond",
+    "Symbol": "FLKTB",
+    "Contract Type": "Futures",
+    "Country/Region": "South Korea",
+    "Closing Price": 111.35,
+    "Currency": "Korean Won (KRW)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "655454318",
+    "Futures Type": "Fixed Income",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "19/03/2024",
+    "Expiration Date": "20/03/2024",
+    "Multiplier": 1000000.0,
+    "Intraday Initial Margin": 3803576,
+    "Intraday Maintenance Margin": 3042861,
+    "Overnight Initial Margin": 3803576,
+    "Overnight Maintenance Margin": 3042861
+}

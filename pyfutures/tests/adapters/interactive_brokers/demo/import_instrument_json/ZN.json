@@ -1,0 +1,81 @@
+{
+    "Local Name": "ZNM4",
+    "Local Class": "ZN",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "http://www.cbot.com",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-16:00"
+        ],
+        "Tue": [
+            "08:30-16:00"
+        ],
+        "Wed": [
+            "08:30-16:00"
+        ],
+        "Thu": [
+            "08:30-16:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.015625"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CBOT",
+    "Description/Name": "10 Year US Treasury Note",
+    "Symbol": "ZN",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 110.46875,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "655454673",
+    "Futures Type": "Fixed Income",
+    "First Notice Date": "31/05/2024",
+    "First Position Date": "30/05/2024",
+    "Last Trading Date": "18/06/2024",
+    "Expiration Date": "18/06/2024",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 2500,
+    "Intraday Maintenance Margin": 2000,
+    "Overnight Initial Margin": 2500,
+    "Overnight Maintenance Margin": 2000
+}

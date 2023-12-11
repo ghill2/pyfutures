@@ -1,0 +1,54 @@
+{
+    "Local Name": "ECFQ6",
+    "Local Class": "ECF",
+    "Settlement Method": "Delivery",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "08:00-18:00"
+        ],
+        "Tue": [
+            "08:00-18:00"
+        ],
+        "Wed": [
+            "08:00-18:00"
+        ],
+        "Thu": [
+            "08:00-18:00"
+        ],
+        "Fri": [
+            "08:00-18:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.01"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "ENDEX",
+    "Description/Name": "ICE ECX EUA Futures",
+    "Symbol": "ECF",
+    "Contract Type": "Futures",
+    "Country/Region": "Netherlands",
+    "Closing Price": 79.32,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "649974300",
+    "Futures Type": "Energy",
+    "First Notice Date": "24/08/2026",
+    "First Position Date": "24/08/2026",
+    "Last Trading Date": "24/08/2026",
+    "Expiration Date": "24/08/2026",
+    "Multiplier": 1000.0,
+    "Intraday Initial Margin": 72960,
+    "Intraday Maintenance Margin": 58368,
+    "Overnight Initial Margin": 72960,
+    "Overnight Maintenance Margin": 58368
+}

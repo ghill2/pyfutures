@@ -1,0 +1,54 @@
+{
+    "Local Name": "FMEU 20260622 M",
+    "Local Class": "FMEU",
+    "Settlement Method": "Cash",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "01:15-22:05"
+        ],
+        "Tue": [
+            "01:15-22:05"
+        ],
+        "Wed": [
+            "01:15-22:05"
+        ],
+        "Thu": [
+            "01:15-22:05"
+        ],
+        "Fri": [
+            "01:15-22:05"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.05"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "EUREX",
+    "Description/Name": "MSCI Europe Net Return EUR Index",
+    "Symbol": "M7EU",
+    "Contract Type": "Futures",
+    "Country/Region": "[$countryEU]",
+    "Closing Price": 318.3,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "638347496",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "19/06/2026",
+    "Expiration Date": "22/06/2026",
+    "Multiplier": 100.0,
+    "Intraday Initial Margin": 2519,
+    "Intraday Maintenance Margin": 2015,
+    "Overnight Initial Margin": 2519,
+    "Overnight Maintenance Margin": 2015
+}

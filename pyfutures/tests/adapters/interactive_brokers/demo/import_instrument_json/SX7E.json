@@ -1,0 +1,54 @@
+{
+    "Local Name": "FESB 20240621 M",
+    "Local Class": "FESB",
+    "Settlement Method": "Cash",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "00:00-00:00"
+        ],
+        "Mon": [
+            "01:15-22:05"
+        ],
+        "Tue": [
+            "01:15-22:05"
+        ],
+        "Wed": [
+            "01:15-22:05"
+        ],
+        "Thu": [
+            "01:15-22:05"
+        ],
+        "Fri": [
+            "01:15-22:05"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.05"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "EUREX",
+    "Description/Name": "Euro STOXX Banks Index",
+    "Symbol": "SX7E",
+    "Contract Type": "Futures",
+    "Country/Region": "[$countryEU]",
+    "Closing Price": 111.75,
+    "Currency": "Euro (EUR)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "655095919",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "21/06/2024",
+    "Expiration Date": "21/06/2024",
+    "Multiplier": 50.0,
+    "Intraday Initial Margin": 590,
+    "Intraday Maintenance Margin": 472,
+    "Overnight Initial Margin": 842,
+    "Overnight Maintenance Margin": 674
+}

@@ -1,0 +1,81 @@
+{
+    "Local Name": "RXU4",
+    "Local Class": "RX",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.cbot.com",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-16:00"
+        ],
+        "Tue": [
+            "08:30-16:00"
+        ],
+        "Wed": [
+            "08:30-16:00"
+        ],
+        "Thu": [
+            "08:30-16:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CBOT",
+    "Description/Name": "Dow Jones US Real Estate Index",
+    "Symbol": "DJUSRE",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 329.9,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "654503271",
+    "Futures Type": "Housing",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "20/09/2024",
+    "Expiration Date": "20/09/2024",
+    "Multiplier": 100.0,
+    "Intraday Initial Margin": 4046,
+    "Intraday Maintenance Margin": 3237,
+    "Overnight Initial Margin": 4046,
+    "Overnight Maintenance Margin": 3237
+}

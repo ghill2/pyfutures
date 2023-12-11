@@ -1,0 +1,81 @@
+{
+    "Local Name": "MHGZ8",
+    "Local Class": "MHG",
+    "Settlement Method": "Cash",
+    "Exchange Website": "",
+    "Trading Hours": {
+        "Sun": [
+            "18:00-23:59"
+        ],
+        "Mon": [
+            "00:00-17:00",
+            "18:00-23:59"
+        ],
+        "Tue": [
+            "00:00-17:00",
+            "18:00-23:59"
+        ],
+        "Wed": [
+            "00:00-17:00",
+            "18:00-23:59"
+        ],
+        "Thu": [
+            "00:00-17:00",
+            "18:00-23:59"
+        ],
+        "Fri": [
+            "00:00-17:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "18:00-23:59"
+        ],
+        "Mon": [
+            "09:30-17:00"
+        ],
+        "Tue": [
+            "09:30-17:00"
+        ],
+        "Wed": [
+            "09:30-17:00"
+        ],
+        "Thu": [
+            "09:30-17:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "18:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.0005"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "COMEX",
+    "Description/Name": "Micro Copper",
+    "Symbol": "MHG",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 4.018,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "656780487",
+    "Futures Type": "Metal",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "28/11/2028",
+    "Expiration Date": "28/11/2028",
+    "Multiplier": 2500.0,
+    "Intraday Initial Margin": 991,
+    "Intraday Maintenance Margin": 793,
+    "Overnight Initial Margin": 991,
+    "Overnight Maintenance Margin": 793
+}

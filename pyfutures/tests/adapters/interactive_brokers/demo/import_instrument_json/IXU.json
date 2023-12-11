@@ -1,0 +1,81 @@
+{
+    "Local Name": "XAUZ4",
+    "Local Class": "XAU",
+    "Settlement Method": "Cash",
+    "Exchange Website": "http://www.cme.com",
+    "Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Tue": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Wed": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Thu": [
+            "00:00-16:00",
+            "17:00-23:59"
+        ],
+        "Fri": [
+            "00:00-16:00"
+        ],
+        "Sat": [
+            "00:00-00:00"
+        ]
+    },
+    "Liquid Trading Hours": {
+        "Sun": [
+            "17:00-23:59"
+        ],
+        "Mon": [
+            "08:30-16:00"
+        ],
+        "Tue": [
+            "08:30-16:00"
+        ],
+        "Wed": [
+            "08:30-16:00"
+        ],
+        "Thu": [
+            "08:30-16:00"
+        ],
+        "Fri": [
+            "00:00-00:00"
+        ],
+        "Sat": [
+            "17:00-23:59"
+        ]
+    },
+    "Price Parameters": {
+        "price > 0": "0.1"
+    },
+    "Size Parameters": {
+        "size > 1": "1"
+    },
+    "Exchange": "CME",
+    "Description/Name": "Utilities Select Sector Index",
+    "Symbol": "IXU",
+    "Contract Type": "Futures",
+    "Country/Region": "United States",
+    "Closing Price": 654.1,
+    "Currency": "U.S. Dollar (USD)",
+    "PRIIPS KID": "PRIIPS KID link",
+    "CONID": "654503432",
+    "Futures Type": "Equity Index",
+    "First Notice Date": "-",
+    "First Position Date": "-",
+    "Last Trading Date": "20/12/2024",
+    "Expiration Date": "20/12/2024",
+    "Multiplier": 100.0,
+    "Intraday Initial Margin": 7512,
+    "Intraday Maintenance Margin": 6010,
+    "Overnight Initial Margin": 7512,
+    "Overnight Maintenance Margin": 6010
+}
