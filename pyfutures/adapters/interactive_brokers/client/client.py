@@ -57,6 +57,7 @@ from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
 class InteractiveBrokersClient(Component, EWrapper):
+    
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
@@ -97,14 +98,9 @@ class InteractiveBrokersClient(Component, EWrapper):
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
 
-        self.is_connected = False
-
         # Config
         self._loop = loop
         self._cache = cache
-        self._host = host
-        self._port = port
-        self._client_id = client_id
 
         self._requests = {}
         self._subscriptions = {}
@@ -124,9 +120,11 @@ class InteractiveBrokersClient(Component, EWrapper):
             loop=loop,
             logger=logger,
             handler=self._handle_msg,
+            wrapper=self,
+            host=host,
+            port=port,
+            client_id=client_id,
         )
-
-        # self._client = Encoder(connection=self._conn, logger=logger)
 
         self._client = EClient(wrapper=None)
         self._client.isConnected = lambda: True
@@ -153,16 +151,16 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     async def reset(self) -> None:
         self._conn.reset()
-
+    
+    def connectionClosed(self):
+        self._log.debug("Connection closed notification.")
+        
+        # while True:
+        #     self._loop.run_until_complete(self.connect())
+        
     async def connect(self) -> None:
-        self._log.debug("Connecting...")
-        await asyncio.wait_for(self._conn.connect(self._host, self._port), 4)
-        self._log.debug("Connected")
-        self._log.debug("Handshaking...")
-        await self._conn.handshake(self._host, self._port, self._client_id)
-        self.is_connected = True
-        self._log.debug("Handshaked")
-
+        await self._conn.connect()
+    
     async def _handle_msg(self, msg: bytes) -> None:
         # self._log.debug(repr(msg))
         fields = comm.read_fields(msg)
@@ -282,16 +280,29 @@ class InteractiveBrokersClient(Component, EWrapper):
         return await self._wait_for_request(request)
 
     async def request_last_contract_month(self, contract: IBContract) -> str:
+        
         self._log.debug(
             f"Requesting last contract month for: {contract.symbol}, {contract.tradingClass}",
         )
 
         details_list = await self.request_contract_details(contract)
 
-        details_list = sorted(details_list, key=lambda x: x.contractMonth)
-
         return details_list[-1].contractMonth
+    
+    async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails:
+        
+        self._log.debug(
+            f"Requesting front contract for: {contract.symbol}, {contract.tradingClass}",
+        )
+        
+        details_list = await self.request_contract_details(contract)
 
+        return details_list[0]
+    
+    async def request_front_contract(self, contract: IBContract) -> IBContract:
+        details: IBContractDetails = await self.request_front_contract_details(contract)
+        return details.contract
+        
     def contractDetails(
         self,
         reqId: int,
@@ -314,8 +325,10 @@ class InteractiveBrokersClient(Component, EWrapper):
         if request is None:
             self._log.error(f"No request found for {reqId}")
             return
-
-        request.set_result(request.data)
+        
+        request.set_result(
+            sorted(request.data, key=lambda x: x.contractMonth)
+        )
 
     ################################################################################################
     # Request bars
@@ -917,6 +930,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         request_id = self._next_request_id()
 
         if bar_size == BarSize._5_SECOND:
+            
             self._log.debug(
                 f"Requesting realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
             )

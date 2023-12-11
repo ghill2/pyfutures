@@ -88,11 +88,8 @@ def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient
 @pytest.fixture()
 def instrument_provider(event_loop, client, logger, cache) -> InteractiveBrokersInstrumentProvider:
 
+    config = InteractiveBrokersInstrumentProviderConfig()
     
-
-    config = InteractiveBrokersInstrumentProviderConfig(
-        # load_ids=load_ids,
-    )
     instrument_provider = InteractiveBrokersInstrumentProvider(
         client=client,
         logger=logger,

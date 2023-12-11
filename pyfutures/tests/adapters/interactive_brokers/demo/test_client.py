@@ -9,6 +9,8 @@ from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
 
 from nautilus_trader.core.uuid import UUID4
+from nautilus_trader.model.identifiers import InstrumentId
+
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import IBBar
@@ -19,16 +21,13 @@ from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-
+from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 
 class TestInteractiveBrokersClient:
-    @pytest.mark.asyncio()
-    async def test_connect(self, client):
-        while True:
-            await asyncio.sleep(0)
-            if client.is_connected:
-                return True
-
+    
+    
+            
+            
     @pytest.mark.asyncio()
     async def test_reset(self, client):
         await client.reset()
