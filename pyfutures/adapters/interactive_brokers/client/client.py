@@ -120,10 +120,10 @@ class InteractiveBrokersClient(Component, EWrapper):
             loop=loop,
             logger=logger,
             handler=self._handle_msg,
-            wrapper=self,
             host=host,
             port=port,
             client_id=client_id,
+            subscriptions=self._subscriptions.values(),
         )
 
         self._client = EClient(wrapper=None)
@@ -152,13 +152,12 @@ class InteractiveBrokersClient(Component, EWrapper):
     async def reset(self) -> None:
         self._conn.reset()
     
-    def connectionClosed(self):
-        self._log.debug("Connection closed notification.")
-        
-        # while True:
-        #     self._loop.run_until_complete(self.connect())
-        
+    @property
+    def is_connected(self) -> bool:
+        return self._conn.is_connected
+    
     async def connect(self) -> None:
+        print("GOT TO HERE")
         await self._conn.connect()
     
     async def _handle_msg(self, msg: bytes) -> None:

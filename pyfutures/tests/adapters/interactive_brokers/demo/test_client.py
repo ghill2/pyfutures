@@ -24,9 +24,6 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 
 class TestInteractiveBrokersClient:
-    
-    
-            
             
     @pytest.mark.asyncio()
     async def test_reset(self, client):

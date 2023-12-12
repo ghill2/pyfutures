@@ -1,22 +1,7 @@
-# -------------------------------------------------------------------------------------------------
-#  Copyright (C) 2015-2023 Nautech Systems Pty Ltd. All rights reserved.
-#  https://nautechsystems.io
-#
-#  Licensed under the GNU Lesser General Public License Version 3.0 (the "License");
-#  You may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at https://www.gnu.org/licenses/lgpl-3.0.en.html
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-# -------------------------------------------------------------------------------------------------
-
 import asyncio
 
 import pytest
-
+import os
 from nautilus_trader.common.clock import LiveClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.logging import Logger
@@ -33,23 +18,16 @@ from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
 # fmt: off
 from pyfutures.adapters.interactive_brokers import IB_VENUE
-
-# from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-
-# from pyfutures.adapters.interactive_brokers.data import InteractiveBrokersDataClient
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
-
-# from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-# from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
-# from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveDataClientFactory
-# from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.tests.adapters.order_setup import OrderSetup
+from pyfutures.adapters.interactive_brokers.client.socket import Socket
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -70,10 +48,7 @@ def pytest_addoption(parser):
         default="",
         help='Log path for the test',
     )
-
-
-
-
+    
 @pytest.fixture(scope="session")
 def instrument_id(request) -> InstrumentId:
     value = request.config.getoption('--instrument-id')
@@ -119,6 +94,17 @@ def cache(logger):
     return TestComponentStubs.cache(logger)
 
 @pytest.fixture(scope="session")
+def socket(event_loop, logger) -> InteractiveBrokersClient:
+    return Socket(
+            loop=event_loop,
+            logger=logger,
+            host="127.0.0.1",
+            port=4002,
+            client_id=1,
+            callback=None,
+    )
+    
+@pytest.fixture(scope="session")
 def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
     client = InteractiveBrokersClient(
             loop=event_loop,
@@ -130,7 +116,6 @@ def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient
             port=4002,
             client_id=1,
     )
-    event_loop.run_until_complete(client.connect())
     return client
 
 @pytest.fixture(scope="session")
