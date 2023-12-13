@@ -26,19 +26,20 @@ from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_cont
 class TestInteractiveBrokersClient:
     
         
-    @pytest.mark.asyncio()
-    async def test_handle_disconnect(self, client):
-        
-        import os
-        os.system("killall -m java")
-        await asyncio.sleep(1)
-        
-        os.system("sh /opt/ibc/twsstartmacos.sh")
-        
-        await asyncio.sleep(5)
+    # @pytest.mark.asyncio()
+    # async def test_handle_disconnect(self, client):
         
         
-        assert False
+    #     import os
+    #     os.system("killall -m java")
+    #     await asyncio.sleep(1)
+        
+    #     os.system("sh /opt/ibc/twsstartmacos.sh")
+        
+    #     await asyncio.sleep(5)
+        
+        
+    #     assert False
     
     @pytest.mark.skip(reason="research")
     @pytest.mark.asyncio()

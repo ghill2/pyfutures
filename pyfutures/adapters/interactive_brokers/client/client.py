@@ -145,6 +145,10 @@ class InteractiveBrokersClient(Component, EWrapper):
     @property
     def requests(self) -> list[ClientRequest]:
         return self._requests.values()
+    
+    @property
+    def connection(self) -> Connection:
+        return self._conn
 
     ################################################################################################
     # Connection
@@ -157,7 +161,6 @@ class InteractiveBrokersClient(Component, EWrapper):
         return self._conn.is_connected
     
     async def connect(self) -> None:
-        print("GOT TO HERE")
         await self._conn.connect()
     
     async def _handle_msg(self, msg: bytes) -> None:
