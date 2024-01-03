@@ -25,19 +25,42 @@ from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_cont
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
 class TestInteractiveBrokersClient:
-    
     @pytest.mark.asyncio()
-    async def test_connect(self, client):
-        """
-        Can handshake be performed twice?
-        """
+    async def test_reconnect(self, client):
+        
+        await Connection.start_tws()
+        await asyncio.sleep(15)
+        
+        # await client.connection.connect()
+        await client.connection.start()
+        
+        await asyncio.sleep(5)
+        await Connection.kill_tws()
+        
+        await asyncio.sleep(5)
+
+        await Connection.start_tws()
+        await asyncio.sleep(15)
+        
+        while True:
+            await asyncio.sleep(0)
+        
+    # @pytest.mark.asyncio()
+    # async def test_connect(self, client):
+    #     """
+    #     Can handshake be performed twice?
+    #     """
         # await Connection.kill_tws()
         # client.socket.connect = Mock(side_effect=ConnectionRefusedError())
         # await Connection.start_tws()
         # await asyncio.sleep(15)
         
+        # await Connection.start_tws()
+        # return
+    
         # await client.connect()
-        await client._conn.start()
+            
+        # await client.connection.start()
         # await asyncio.sleep(4)
         # await client.connect()
         
@@ -45,28 +68,7 @@ class TestInteractiveBrokersClient:
         
         # await asyncio.sleep(10)
     
-    @pytest.mark.asyncio()
-    async def test_reconnect(self, client):
-        
-        # await Connection.start_tws()
-        # await asyncio.sleep(20)
-        
-        await client.connection.connect()
-        await client.connection.start()
-        
-        await asyncio.wait_for(client.connection.is_ready.wait(), 3)
-        
-        # # assert client.connection.is_ready.is_set()
-        
-        # await Connection.kill_tws()
-        # await asyncio.sleep(2)
-        # await Connection.start_tws()
-        # await asyncio.sleep(20)
-        
-        # assert client.connection.handshake.is_set()
-        
-        # while True:
-        #     await asyncio.sleep(1)
+    
             
         
     # @pytest.mark.asyncio()

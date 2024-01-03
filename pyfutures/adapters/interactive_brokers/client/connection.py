@@ -51,19 +51,22 @@ class Connection:
         self._port = port
         self._client_id = client_id
         self._subscriptions = subscriptions
-        self._listen_task = None
-        self._connection_task = None
-        self.is_ready = asyncio.Event()
-        self.connection_state = Connection.DISCONNECTED
+        
+        
+        self._connection_task: asyncio.Task | None = None
+        self._listen_task: asyncio.Task | None = None
+        self._reader, self._writer = (None, None)
+        
+        self._loop.run_until_complete(self._reset())
+        
+        self._is_connecting_lock = asyncio.Lock()
         
     async def _listen(self) -> None:
         
         assert self._reader is not None
         
         buf = b""
-
-        self._log.info("Listen loop started")
-        
+        previous_message = None
         try:
             try:
                 while True:
@@ -71,7 +74,17 @@ class Connection:
                     # data = await self._loop.run_in_executor(None, self.socket.recvMsg)
                     data = await self._reader.read(4096)
                     
+                    if data == b"" and data != previous_message:
+                        print(data)
+                    previous_message = data
+                    
+                    if data == b"":
+                        self._log.debug(f"0 bytes received from server, connect has been dropped")
+                        await self._reset()
+                        return
+                    
                     buf += data
+                    
                     
                     while len(buf) > 0:
                         
@@ -85,12 +98,15 @@ class Connection:
                             break
                         
                     await asyncio.sleep(0)
-            except Exception as e:
-                self._log.error(repr(e))
+                    
+            except ConnectionResetError as e:
+                self._log.error(f"listen: TWS closed the connection {e!r}...")
+                await self._reset()
+                return
                 
         except asyncio.CancelledError:
             
-            self._log.debug("`watch_dog` task was canceled.")
+            self._log.debug("`listen` task was canceled.")
                 
     async def _run_watch_dog(self):
         
@@ -101,66 +117,100 @@ class Connection:
             
             while True:
                 
-                if self.socket.isConnected():
+                self._log.debug("Watchdog: Running...")
+                
+                if self.is_ready.set():
                     continue
                 
-                if self.connection_state == Connection.DISCONNECTED:
-                    continue
-                
-                self._log.debug(f"Watchdog found the socket disconnected. Reconnecting...")
+                self._log.debug(f"Watchdog: connection has been disconnected. Reconnecting...")
                 
                 await self.connect()
                 
                 await asyncio.sleep(5)
                 
-        except asyncio.CancelledError:
-            self._log.debug("`watch_dog` task was canceled.")
+        except Exception as e:
+            # self._log.error("`watch_dog` task was canceled.")
+            self._log.error(repr(e))
     
-    def connectionClosed(self):
-        self._log.error(f"Connection closed")
-        self.connection_state = Connection.DISCONNECTED
-                
-    async def start(self) -> bool:
+    async def _reset(self) -> bool:
         
-        if self._watch_dog_task is not None:
-            self._watch_dog_task.cancel()
-        self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
+        self._log.debug("Resetting...")
         
-    async def connect(self) -> bool:
-       
-        self._log.debug("Connecting...")
+        self.is_ready = asyncio.Event()
+        self._accounts = None
+        self._hasReqId = False
+        self._apiReady = False
+        self._serverVersion = None
         
-        if self._connection_task is not None:
-            self._connection_task.cancel()
-            
-        self._connection_task = self._loop.create_task(self._connect())
-            
-    async def _connect(self) -> bool:
-        
-        self.connection_state = Connection.CONNECTING
+        # if self._connection_task is not None:
+        #     self._connection_task.cancel()
+        # self._connection_task = None
         
         if self._listen_task is not None:
             self._listen_task.cancel()
-            
-        self._log.debug(f"Connecting socket")
+        self._listen_task = None
         
+        # close the writer
+        try:
+            if self._writer is not None and not self._writer.is_closing():
+                self._writer.write_eof()
+                self._writer.close()
+                await self._writer.wait_closed()
+        except RuntimeError as e:
+            if "unable to perform operation on" in str(e) and "closed=True" in str(e):
+                pass
+            else:
+                raise
+            
+        self._reader, self._writer = (None, None)
+        
+        self._log.debug("Reset")
+        
+    async def start(self) -> bool:
+        
+        self._log.debug("Starting...")
+        if self._watch_dog_task is not None:
+            self._watch_dog_task.cancel()
+        self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
+    
+    async def connect(self) -> None:
+        
+        async with self._is_connecting_lock:
+            await self._connect()
+            
+    async def _connect(self) -> None:
+        
+        self._log.debug("Connecting...")
+        
+        await self._reset()
+        
+        # close current listen task
+        if self._listen_task is not None:
+            self._listen_task.cancel()
+        
+        # connect socket
+        self._log.debug("Connecting socket...")
         try:
             self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         except ConnectionRefusedError as e:
-            self._log.error(repr(e))
-            self.connection_state = Connection.DISCONNECTED
-            return False
+            self._log.error(f"Socket connection failed, check TWS is open {e!r}")
+            await self._reset()
+            return
+        self._log.debug("Socket connected")
         
-        self._log.debug(f"Starting listen task")
+        # start listen task
+        self._log.debug("Starting listen task...")
         self._listen_task = self._loop.create_task(self._listen())
-        self._log.debug(f"Performing handshake")
+        self._log.info("Listen task started")
         
+        # handshake
+        self._log.debug("Performing handshake...")
         try:
-            await self.perform_handshake()
-        except asyncio.TimeoutError:
-            self._log.error("Handshake failed")
-            self.connection_state = Connection.DISCONNECTED
-            return False
+            await self._perform_handshake()
+        except asyncio.TimeoutError as e:
+            self._log.error(f"Handshake failed {e!r}")
+            await self._reset()
+            return
         
     def sendMsg(self, msg: bytes) -> None:
         
@@ -185,23 +235,17 @@ class Connection:
         Called when the socket has been disconnected for some reason, for example,
         due to a schedule restart or during IB nightly reset.
         """
-        self._log.debug("Server has been disconnected, attempting to reconnect...")
+        self._log.debug("Handling disconnect.")
         
-        await self.connect()
+        # await self.connect()
         
         # reconnect subscriptions
         # for sub in self._subscriptions:
         #     sub.cancel()
     
-    async def perform_handshake(self) -> None:
+    async def _perform_handshake(self) -> None:
         
-        self.is_ready.clear()
-        self._accounts = None
-        self._hasReqId = False
-        self._apiReady = False
-        self._serverVersion = None
         
-        self._log.info(f"Handshaking...")
 
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
         

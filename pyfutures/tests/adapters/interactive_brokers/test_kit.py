@@ -49,6 +49,7 @@ class Session:
 
 
 class IBTestProviderStubs:
+    
     @staticmethod
     def universe_dataframe() -> pd.DataFrame:
         file = UNIVERSE_CSV_PATH
