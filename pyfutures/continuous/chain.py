@@ -2,9 +2,9 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from nautilus_trader.model.continuous.config import FuturesChainConfig
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.cycle import RollCycle
+from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.identifiers import InstrumentId
 
 

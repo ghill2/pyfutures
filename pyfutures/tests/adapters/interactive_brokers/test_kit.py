@@ -10,10 +10,10 @@ from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 
 from nautilus_trader.model.identifiers import InstrumentId
-from pytower import PACKAGE_ROOT
+from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
-from nautilus_trader.model.continuous.chain import FuturesChain
-from nautilus_trader.model.continuous.config import FuturesChainConfig
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.config import FuturesChainConfig
 
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")

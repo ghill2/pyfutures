@@ -6,9 +6,9 @@ import pandas as pd
 
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.model.continuous.chain import FuturesChain
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.price import ContinuousPrice
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price

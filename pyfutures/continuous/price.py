@@ -4,7 +4,7 @@ import pyarrow as pa
 
 from nautilus_trader.core.correctness import PyCondition
 from nautilus_trader.core.data import Data
-from nautilus_trader.model.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.cycle import RollCycle
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
 
 
 class TestRollCycle:

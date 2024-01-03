@@ -12,9 +12,9 @@ from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_i
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 from pyfutures.adapters.interactive_brokers.parsing import contract_id_to_contract
 
-from nautilus_trader.model.continuous.chain import FuturesChain
-from nautilus_trader.model.continuous.chain import ContractId
-from nautilus_trader.model.continuous.contract_month import ContractMonth
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.chain import ContractId
+from pyfutures.continuous.contract_month import ContractMonth
 
 class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     """

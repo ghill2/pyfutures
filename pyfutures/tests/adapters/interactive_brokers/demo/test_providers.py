@@ -10,10 +10,10 @@ from ibapi.contract import Contract as IBContract
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
-from nautilus_trader.model.continuous.chain import FuturesChain
-from nautilus_trader.model.continuous.chain import ContractId
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.config import FuturesChainConfig
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.chain import ContractId
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 @pytest.mark.asyncio()

@@ -1,3 +1,8 @@
+from pathlib import Path
+import os
+
+PACKAGE_ROOT = Path(os.path.dirname(os.path.abspath(__file__)))
+
 from dotenv import dotenv_values
 
 PROXY_EMAIL = dotenv_values().get("PROXY_EMAIL")

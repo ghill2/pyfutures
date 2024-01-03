@@ -1,7 +1,7 @@
 import pickle
 
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.price import ContinuousPrice
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.model.objects import Price
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer

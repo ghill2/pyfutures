@@ -12,10 +12,10 @@ from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.data.engine import DataEngine
-from nautilus_trader.model.continuous.chain import FuturesChain
-from nautilus_trader.model.continuous.config import FuturesChainConfig
-from nautilus_trader.model.continuous.contract_month import ContractMonth
-from nautilus_trader.model.continuous.data import ContinuousData
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.data import ContinuousData
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import capsule_to_list

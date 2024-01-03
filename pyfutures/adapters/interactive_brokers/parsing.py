@@ -38,7 +38,7 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.orders.base import Order
 from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
-from nautilus_trader.model.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 def ib_quote_tick_to_nautilus_quote_tick(
