@@ -25,19 +25,13 @@ class ContractMonth:
         value: str,
     ):
         """
-        Z21 -> ContractId(year=2021, month=12)
+        2021Z -> ContractId(year=2021, month=12)
         """
         assert isinstance(value, str)
-        assert len(value) == 3
-
-        if int(value[1:]) > 50:
-            year = int(f"19{value[1:]}")
-        else:
-            year = int(f"20{value[1:]}")
-
-        self.year = year
-        self.month = letter_month_to_int(value[0])
-        self.letter_month = value[0]
+        assert len(value) == 5
+        self.year = int(f"{value[:4]}")
+        self.letter_month = value[4]
+        self.month = letter_month_to_int(value[4])
         self.value = value
 
     @property
@@ -45,17 +39,16 @@ class ContractMonth:
         return pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
     
     @classmethod
-    def from_year_letter_month(cls, year: int, letter_month: int) -> ContractMonth:
-        return cls(f"{letter_month}{str(year)[2:]}")
+    def from_year_letter_month(cls, year: int, letter_month: str) -> ContractMonth:
+        assert isinstance(year, int)
+        assert isinstance(letter_month, str)
+        return cls(f"{year}{letter_month}")
     
     @classmethod
     def from_month_year(cls, year: int, month: int) -> ContractMonth:
-        assert isinstance(year, int)
-        assert year > 1950
         assert isinstance(month, int)
         assert month >= 1 and month <= 12
-        letter_month = int_to_letter_month(month)
-        return cls(f"{letter_month}{str(year)[2:]}")
+        return cls(f"{year}{int_to_letter_month(month)}")
 
     @classmethod
     def from_int(cls, value: int) -> ContractMonth:
@@ -83,7 +76,6 @@ class ContractMonth:
 def letter_month_to_int(letter_month: str) -> int:
     assert letter_month in MONTH_LIST
     return MONTH_LIST.index(letter_month) + 1
-
 
 def int_to_letter_month(value: int) -> str:
     assert value > 0 and value < 13

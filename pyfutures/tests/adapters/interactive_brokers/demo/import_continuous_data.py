@@ -69,9 +69,13 @@ if __name__ == "__main__":
         keyword = f"{row.trading_class}-{row.symbol}=*.{row.exchange}*.parquet"
         paths = list(sorted(data_folder.glob(keyword)))
         
+        start = Path("/Users/g1/Desktop/output/PL-PL=2024G.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2024.parquet")
+        paths = paths[paths.index(start):]
+        
         session = DataBackendSession()
         for i, path in enumerate(paths):
             session.add_file(NautilusDataType.Bar, f"data{i}", str(path))
+            print(path)
         
         bars = []
         for chunk in session.to_query_result():
@@ -96,8 +100,8 @@ if __name__ == "__main__":
             ),
         )
         
-        start_month = ContractMonth.from_year_letter_month(year=row.start_year, letter_month=row.start_month)
-        end_month = ContractMonth.from_year_letter_month(year=row.end_year, letter_month=row.end_month)
+        start_month = ContractMonth.from_year_letter_month(year=2024, letter_month="G")
+        end_month = ContractMonth.from_year_letter_month(year=int(row.end_year), letter_month=row.end_month)
         
         continuous_prices = []
         data = ContinuousData(
@@ -162,6 +166,7 @@ if __name__ == "__main__":
             data.on_bar(bar)
         
         print(len(continuous_prices))
+        print(data.current_id.month)
         assert data.current_id.month == end_month
         
         exit()

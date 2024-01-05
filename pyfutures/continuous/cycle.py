@@ -35,8 +35,7 @@ class RollCycle:
         else:
             month = self.value[self.value.index(letter_month) + 1]
 
-        year_str = str(year).zfill(2)
-        return ContractMonth(f"{month}{year_str[-2]}{year_str[-1]}")
+        return ContractMonth(f"{year}{month}")
 
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         year = current.year
@@ -54,8 +53,7 @@ class RollCycle:
         else:
             month = self.value[self.value.index(letter_month) - 1]
 
-        year_str = str(year).zfill(2)
-        return ContractMonth(f"{month}{year_str[-2]}{year_str[-1]}")
+        return ContractMonth(f"{year}{month}")
 
     def _closest_previous(self, current: ContractMonth) -> ContractMonth:
         year = current.year
@@ -64,12 +62,10 @@ class RollCycle:
         assert letter_month not in self.value
         for char in self.value[::-1]:
             if char < letter_month:
-                year_str = str(year)
-                return ContractMonth(f"{char}{year_str[-2]}{year_str[-1]}")
+                return ContractMonth(f"{year}{char}")
 
         year -= 1
-        year_str = str(year)
-        return ContractMonth(f"{self.value[-1]}{year_str[-2]}{year_str[-1]}")
+        return ContractMonth(f"{year}{self.value[-1]}")
 
     def _closest_next(self, current: ContractMonth) -> ContractMonth:
         year = current.year
@@ -79,12 +75,10 @@ class RollCycle:
 
         for char in self.value:
             if char > letter_month:
-                year_str = str(year)
-                return ContractMonth(f"{char}{year_str[-2]}{year_str[-1]}")
+                return ContractMonth(f"{year}{char}")
 
         year += 1
-        year_str = str(year)
-        return ContractMonth(f"{self.value[0]}{year_str[-2]}{year_str[-1]}")
+        return ContractMonth(f"{year}{self.value[0]}")
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.value})"

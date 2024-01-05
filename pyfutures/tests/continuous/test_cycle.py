@@ -9,35 +9,34 @@ class TestRollCycle:
         # Arrange
         cycle = RollCycle("HMUX")
 
-        assert cycle.previous_month(ContractMonth("Z21")) == ContractMonth("X21")
-        assert cycle.previous_month(ContractMonth("F21")) == ContractMonth("X20")
-        assert cycle.previous_month(ContractMonth("V21")) == ContractMonth("U21")
+        assert cycle.previous_month(ContractMonth("2021Z")) == ContractMonth("2021X")
+        assert cycle.previous_month(ContractMonth("2021F")) == ContractMonth("2020X")
+        assert cycle.previous_month(ContractMonth("2021V")) == ContractMonth("2021U")
 
     def test_cycle_closest_next_returns_expected(self):
         # Arrange
         cycle = RollCycle("HMUX")
 
         # Act, Assert
-        assert cycle.next_month(ContractMonth("V22")) == ContractMonth("X22")
-        assert cycle.next_month(ContractMonth("Z21")) == ContractMonth("H22")
-        assert cycle.next_month(ContractMonth("F21")) == ContractMonth("H21")
+        assert cycle.next_month(ContractMonth("2022V")) == ContractMonth("2022X")
+        assert cycle.next_month(ContractMonth("2021Z")) == ContractMonth("2022H")
+        assert cycle.next_month(ContractMonth("2021F")) == ContractMonth("2021H")
 
     def test_cycle_current_month(self):
         # Arrange
         cycle = RollCycle("HMUX")
 
         # Act, Assert
-        assert cycle.current_month(pd.Timestamp("2021-10-01")) == ContractMonth("X21")
-        assert cycle.current_month(pd.Timestamp("2021-11-01")) == ContractMonth("X21")
-        assert cycle.current_month(pd.Timestamp("2021-12-01")) == ContractMonth("H22")
+        assert cycle.current_month(pd.Timestamp("2021-10-01")) == ContractMonth("2021X")
+        assert cycle.current_month(pd.Timestamp("2021-11-01")) == ContractMonth("2021X")
+        assert cycle.current_month(pd.Timestamp("2021-12-01")) == ContractMonth("2022H")
 
     def test_cycle_contains(self):
         # Arrange
         cycle = RollCycle("HMUX")
 
         # Act, Assert
-        assert "X" in cycle
-        assert 11 in cycle
+        assert ContractMonth("2020X") in cycle
 
     def test_cycle_equality(self):
         # Arrange

@@ -66,7 +66,6 @@ class ContinuousData(Actor):
     def roll_date_utc(self) -> pd.Timestamp:
         return self._current_id.roll_date_utc
     
-    
     @property
     def approximate_expiry_date_utc(self) -> pd.Timestamp:
         return self._current_id.approximate_expiry_date_utc
@@ -141,6 +140,7 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.carry_bar_type)
 
     def _try_roll(self) -> None:
+        
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
 

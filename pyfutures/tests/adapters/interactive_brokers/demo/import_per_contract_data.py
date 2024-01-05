@@ -18,17 +18,15 @@ MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 
 if __name__ == "__main__":
     
-    folder = Path("/Users/g1/Downloads/portara data/all UTC")
-
     universe = IBTestProviderStubs.universe_dataframe()
     
     # make sure each file has a related data symbol marked in the universe csv
-    data_folder = Path("/Users/g1/Downloads/portara data/all UTC")
+    data_folder = Path("/Users/g1/Desktop/portara data/all UTC")
     for data_symbol in universe.data_symbol.dropna():
         assert (data_folder / data_symbol).exists()
 
     # check files
-    files = list(folder.rglob("*.txt")) + list(folder.rglob("*.b01"))
+    files = list(data_folder.rglob("*.txt")) + list(data_folder.rglob("*.b01"))
     for file in files:
 
         # check file has a letter month check
