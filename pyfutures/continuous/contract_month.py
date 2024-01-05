@@ -33,10 +33,7 @@ class ContractMonth:
         self.letter_month = value[4]
         self.month = letter_month_to_int(value[4])
         self.value = value
-
-    @property
-    def timestamp_utc(self) -> pd.Timestamp:
-        return pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
+        self.timestamp_utc = pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
     
     @classmethod
     def from_year_letter_month(cls, year: int, letter_month: str) -> ContractMonth:
@@ -49,7 +46,12 @@ class ContractMonth:
         assert isinstance(month, int)
         assert month >= 1 and month <= 12
         return cls(f"{year}{int_to_letter_month(month)}")
-
+    
+    @classmethod
+    def now(self, cls):
+        now = pd.Timestamp.utcnow()
+        return cls.from_month_year(year=now.year, month=now.month)
+    
     @classmethod
     def from_int(cls, value: int) -> ContractMonth:
         return cls.from_month_year(
@@ -68,6 +70,18 @@ class ContractMonth:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.value})"
+    
+    def __gt__(self, other) -> bool:
+        return self.timestamp_utc > other.timestamp_utc
+    
+    def __lt__(self, other) -> bool:
+        return self.timestamp_utc < other.timestamp_utc
+    
+    def __ge__(self, other) -> bool:
+        return self.timestamp_utc >= other.timestamp_utc
+    
+    def __le__(self, other) -> bool:
+        return self.timestamp_utc <= other.timestamp_utc
 
     def __str__(self) -> str:
         return self.value

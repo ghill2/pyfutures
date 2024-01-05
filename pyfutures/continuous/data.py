@@ -19,7 +19,8 @@ class ContinuousData(Actor):
         self,
         bar_type: BarType,
         chain: FuturesChain,
-        start_time_utc: pd.Timestamp | ContractMonth,
+        start_month: ContractMonth,
+        end_month: ContractMonth | None,
         handler: Callable | None = None,
     ):
         super().__init__()
@@ -28,8 +29,8 @@ class ContinuousData(Actor):
         self._handler = handler
         self._instrument_id = bar_type.instrument_id
         self._chain = chain
-        self._start_time_utc = start_time_utc
-
+        self._start_month = start_month
+        self._end_month = end_month
         self._current_bar_type = None  # initialized on start
         self._forward_bar_type = None  # initialized on start
         self._carry_bar_type = None  # initialized on start
@@ -71,7 +72,7 @@ class ContinuousData(Actor):
         return self._current_id.approximate_expiry_date_utc
     
     def on_start(self) -> None:
-        start = self._start_time_utc
+        start = self._start_month
         if isinstance(start, ContractMonth):
             start = start.timestamp_utc
 
@@ -79,6 +80,10 @@ class ContinuousData(Actor):
         self.roll()
 
     def on_bar(self, bar: Bar) -> None:
+        
+        if self._current_id > self._end_month:
+            return  # do nothing
+        
         if bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type:
             self._try_roll()
 
@@ -116,6 +121,8 @@ class ContinuousData(Actor):
 
         self._forward_id = self._chain.forward_id(self._current_id)
         self._carry_id = self._chain.carry_id(self._current_id)
+        
+        print(self._carry_id)
 
         self._current_bar_type = BarType(
             instrument_id=self._current_id.instrument_id,

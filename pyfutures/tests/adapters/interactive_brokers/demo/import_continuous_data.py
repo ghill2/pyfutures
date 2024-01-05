@@ -100,14 +100,19 @@ if __name__ == "__main__":
             ),
         )
         
-        start_month = ContractMonth.from_year_letter_month(year=2024, letter_month="G")
-        end_month = ContractMonth.from_year_letter_month(year=int(row.end_year), letter_month=row.end_month)
+        # start_month = ContractMonth.from_year_letter_month(year=2024, letter_month="G")
+        start_month = ContractMonth.from_year_letter_month(
+                            year=int(row.start_year),
+                            letter_month=row.start_month,
+                        )
+        end_month = ContractMonth.now()
         
         continuous_prices = []
         data = ContinuousData(
             bar_type=bars[0].bar_type,
             chain=chain,
-            start_time_utc=start_month,
+            start_month=start_month,
+            end_month=end_month,
             handler=continuous_prices.append,
         )
         
