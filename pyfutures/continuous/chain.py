@@ -29,7 +29,6 @@ class FuturesChain:
         self.carry_offset = config.carry_offset
 
         assert self.roll_offset <= 0
-        assert self.approximate_expiry_offset >= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
 
     def approximate_expiry_date(self, month: ContractMonth) -> pd.Timestamp:

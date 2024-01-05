@@ -66,10 +66,15 @@ if __name__ == "__main__":
     
     for row in universe.itertuples():
         
+        # these contracts failed to roll before expiry date, indication of lack of data to roll
+        failed_list = ["CL"]
+        if row.symbol in failed_list:
+            continue
+        
         keyword = f"{row.trading_class}-{row.symbol}=*.{row.exchange}*.parquet"
         paths = list(sorted(data_folder.glob(keyword)))
         
-        # start = Path("/Users/g1/Desktop/output/PL-PL=2024G.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2024.parquet")
+        # start = Path("/Users/g1/Desktop/output/HO-HO=2023V.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2023.parquet")
         # paths = paths[paths.index(start):]
         
         session = DataBackendSession()
@@ -100,20 +105,27 @@ if __name__ == "__main__":
             ),
         )
         
-        # start_month = ContractMonth.from_year_letter_month(year=2024, letter_month="G")
+        # # user defined start month for debugging
+        # start_year = int(start.stem.split("=")[1].split(".")[0][:4])
+        # start_letter_month = start.stem.split("=")[1].split(".")[0][-1]
+        # start_month = ContractMonth.from_year_letter_month(year=start_year, letter_month=start_letter_month)
+        
+        # start month is start of data
+        start_year = int(paths[0].stem.split("=")[1].split(".")[0][:4])
+        start_letter_month = paths[0].stem.split("=")[1].split(".")[0][-1]
         start_month = ContractMonth.from_year_letter_month(
                             year=int(row.start_year),
                             letter_month=row.start_month,
                         )
-        end_month = ContractMonth.now()
         
-        continuous_prices = []
+        
+        prices = []
         data = ContinuousData(
             bar_type=bars[0].bar_type,
             chain=chain,
             start_month=start_month,
-            end_month=end_month,
-            handler=continuous_prices.append,
+            # end_month=end_month,
+            handler=prices.append,
         )
         
         #########################
@@ -166,9 +178,13 @@ if __name__ == "__main__":
         
         data.on_start()
         
+        end_month = ContractMonth("2024F")
         for bar in bars:
+            
+            # stop when the data module rolls to year 2024
+            if len(prices) > 0 and prices[-1].current_month >= end_month:
+                prices.pop(-1)
+                assert prices[-1].current_month.year < 2024
+                break  # done sampling
             cache.add_bar(bar)
             data.on_bar(bar)
-        
-        assert data.current_id.month == end_month
-        

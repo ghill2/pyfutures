@@ -125,8 +125,8 @@ async def test_get_trading_class(client):
                 exchange = df.iloc[i].exchange
                 contract = IBContract()
                 contract.secType = "FUT"
-                contract.symbol = symbol.replace("|", ".")
-                contract.exchange = exchange.replace("|", ".")
+                contract.symbol = symbol.replace("_", ".")
+                contract.exchange = exchange.replace("_", ".")
                 contract.includeExpired = False
                 await asyncio.sleep(0.4)
                 details_list = await client.request_contract_details(contract)
@@ -162,8 +162,8 @@ async def test_weekly_contracts(client):
     for instrument_id in IBTestProviderStubs.universe_instrument_ids():
         contract = IBContract()
         contract.secType = "FUT"
-        contract.symbol = instrument_id.symbol.value.replace("|", ".")
-        contract.exchange = instrument_id.venue.value.replace("|", ".")
+        contract.symbol = instrument_id.symbol.value.replace("_", ".")
+        contract.exchange = instrument_id.venue.value.replace("_", ".")
         contract.includeExpired = False
 
         details_list = await client.request_contract_details(contract)

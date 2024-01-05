@@ -137,9 +137,9 @@ def _format_instrument_id(
     exchange: str,
     contractMonth: str,
 ) -> InstrumentId:
-    symbol = symbol.replace(".", "|")
-    trading_class = tradingClass.replace(".", "|")
-    exchange = exchange.replace(".", "|")
+    symbol = symbol.replace(".", "_")
+    trading_class = tradingClass.replace(".", "_")
+    exchange = exchange.replace(".", "_")
     month = str(ContractMonth.from_int(int(contractMonth)))
     return InstrumentId.from_str(f"{symbol}-{trading_class}={month}.{exchange}")
 
@@ -151,9 +151,9 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
 
     contract = IBContract()
 
-    contract.symbol = symbol.replace("|", ".")
-    contract.exchange = exchange.replace("|", ".")
-    contract.tradingClass = trading_class.replace("|", ".")
+    contract.symbol = symbol.replace("_", ".")
+    contract.exchange = exchange.replace("_", ".")
+    contract.tradingClass = trading_class.replace("_", ".")
     
     if "=" in instrument_id.symbol.value:
         contract_month = ContractMonth(instrument_id.symbol.value.split("=")[1])
@@ -172,9 +172,9 @@ def contract_id_to_contract(instrument_id: InstrumentId) -> IBContract:
 
     contract = IBContract()
 
-    contract.symbol = symbol.replace("|", ".")
-    contract.exchange = exchange.replace("|", ".")
-    contract.tradingClass = trading_class.replace("|", ".")
+    contract.symbol = symbol.replace("_", ".")
+    contract.exchange = exchange.replace("_", ".")
+    contract.tradingClass = trading_class.replace("_", ".")
     contract.lastTradeDateOrContractMonth = str(ContractMonth.from_str(contract_month).to_int())
     contract.includeExpired = False
     contract.secType = "FUT"

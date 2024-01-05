@@ -20,7 +20,7 @@ class ContinuousData(Actor):
         bar_type: BarType,
         chain: FuturesChain,
         start_month: ContractMonth,
-        end_month: ContractMonth | None,
+        # end_month: ContractMonth | None,
         handler: Callable | None = None,
     ):
         super().__init__()
@@ -37,7 +37,7 @@ class ContinuousData(Actor):
         self._instrument_id = bar_type.instrument_id
         self._handler = handler
         self._start_month = start_month
-        self._end_month = end_month
+        # self._end_month = end_month
 
     @property
     def roll_date_utc(self) -> pd.Timestamp:
@@ -56,9 +56,6 @@ class ContinuousData(Actor):
         self.roll()
 
     def on_bar(self, bar: Bar) -> None:
-        
-        # if self.current_id.month > self._end_month:
-        #     return  # do nothing
         
         if bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type:
             self._try_roll()

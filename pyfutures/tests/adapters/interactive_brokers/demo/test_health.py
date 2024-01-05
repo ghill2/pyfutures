@@ -51,10 +51,9 @@ async def test_can_just_use_trading_class(client):
     for row in universe.itertuples():
         print(row)
         contract = IBContract()
-        contract.symbol = row.symbol.replace("|", ".")
-        contract.exchange = row.exchange.replace("|", ".")
-        contract.tradingClass = row.trading_class.replace("|", ".")
-        # contract.localSymbol = row.trading_class.replace("|", ".")
+        contract.symbol = row.symbol.replace("_", ".")
+        contract.exchange = row.exchange.replace("_", ".")
+        contract.tradingClass = row.trading_class.replace("_", ".")
         contract.includeExpired = False
         contract.secType = "FUT"
         
@@ -73,10 +72,9 @@ async def test_fmeu(client):
     await client.connect()
     
     contract = IBContract()
-    contract.symbol = row.symbol.replace("|", ".")
-    contract.exchange = row.exchange.replace("|", ".")
-    contract.tradingClass = row.trading_class.replace("|", ".")
-    # contract.localSymbol = row.trading_class.replace("|", ".")
+    contract.symbol = row.symbol.replace("_", ".")
+    contract.exchange = row.exchange.replace("_", ".")
+    contract.tradingClass = row.trading_class.replace("_", ".")
     contract.includeExpired = False
     contract.secType = "FUT"
     
@@ -107,8 +105,8 @@ async def test_trading_class(client):
             exchange = df.iloc[i].exchange
             contract = IBContract()
             contract.secType = "FUT"
-            contract.symbol = symbol.replace("|", ".")
-            contract.exchange = exchange.replace("|", ".")
+            contract.symbol = symbol.replace("_", ".")
+            contract.exchange = exchange.replace("_", ".")
             contract.includeExpired = False
             await asyncio.sleep(0.4)
             details_list = await client.request_contract_details(contract)
@@ -144,8 +142,8 @@ async def test_weekly_contracts(client):
         
         contract = IBContract()
         contract.secType = "FUT"
-        contract.symbol = instrument_id.symbol.value.replace("|", ".")
-        contract.exchange = instrument_id.venue.value.replace("|", ".")
+        contract.symbol = instrument_id.symbol.value.replace("_", ".")
+        contract.exchange = instrument_id.venue.value.replace("_", ".")
         contract.includeExpired = False
 
         details_list = await client.request_contract_details(contract)
