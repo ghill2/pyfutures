@@ -48,7 +48,7 @@ class ContractMonth:
         return cls(f"{year}{int_to_letter_month(month)}")
     
     @classmethod
-    def now(self, cls):
+    def now(cls):
         now = pd.Timestamp.utcnow()
         return cls.from_month_year(year=now.year, month=now.month)
     
