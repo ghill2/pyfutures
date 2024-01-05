@@ -105,7 +105,6 @@ if __name__ == "__main__":
             
             writer.write_dataframe(df)
             
-        exit()
             
             
 # @pytest.mark.asyncio()

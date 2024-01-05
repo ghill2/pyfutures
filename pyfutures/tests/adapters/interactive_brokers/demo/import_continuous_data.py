@@ -69,8 +69,8 @@ if __name__ == "__main__":
         keyword = f"{row.trading_class}-{row.symbol}=*.{row.exchange}*.parquet"
         paths = list(sorted(data_folder.glob(keyword)))
         
-        start = Path("/Users/g1/Desktop/output/PL-PL=2024G.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2024.parquet")
-        paths = paths[paths.index(start):]
+        # start = Path("/Users/g1/Desktop/output/PL-PL=2024G.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2024.parquet")
+        # paths = paths[paths.index(start):]
         
         session = DataBackendSession()
         for i, path in enumerate(paths):
@@ -170,13 +170,5 @@ if __name__ == "__main__":
             cache.add_bar(bar)
             data.on_bar(bar)
         
-        print(len(continuous_prices))
-        print(data.current_id.month)
         assert data.current_id.month == end_month
         
-        exit()
-        
-        
-    
-    
-            

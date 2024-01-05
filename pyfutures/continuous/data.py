@@ -25,21 +25,19 @@ class ContinuousData(Actor):
     ):
         super().__init__()
         
-        
         self.current_bar_type = None  # initialized on start
         self.forward_bar_type = None  # initialized on start
         self.carry_bar_type = None  # initialized on start
-        self.current_id = None
-        self.forward_id = None
-        self.carry_id = None
+        self.current_id = None  # initialized on start
+        self.forward_id = None  # initialized on start
+        self.carry_id = None  # initialized on start
         
         self._bar_type = bar_type
-        self._handler = handler
-        self._instrument_id = bar_type.instrument_id
         self._chain = chain
+        self._instrument_id = bar_type.instrument_id
+        self._handler = handler
         self._start_month = start_month
         self._end_month = end_month
-        
 
     @property
     def roll_date_utc(self) -> pd.Timestamp:
@@ -59,8 +57,8 @@ class ContinuousData(Actor):
 
     def on_bar(self, bar: Bar) -> None:
         
-        if self.current_id.month > self._end_month:
-            return  # do nothing
+        # if self.current_id.month > self._end_month:
+        #     return  # do nothing
         
         if bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type:
             self._try_roll()
@@ -102,8 +100,6 @@ class ContinuousData(Actor):
         self.forward_id = self._chain.forward_id(self.current_id)
         self.carry_id = self._chain.carry_id(self.current_id)
         
-        print(self.carry_id)
-
         self.current_bar_type = BarType(
             instrument_id=self.current_id.instrument_id,
             bar_spec=self._bar_type.spec,
@@ -125,6 +121,8 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
         self.subscribe_bars(self.carry_bar_type)
+        
+        print(self.current_id)
 
     def _try_roll(self) -> None:
         
