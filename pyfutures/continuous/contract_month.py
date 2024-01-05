@@ -43,7 +43,11 @@ class ContractMonth:
     @property
     def timestamp_utc(self) -> pd.Timestamp:
         return pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
-
+    
+    @classmethod
+    def from_year_letter_month(cls, year: int, letter_month: int) -> ContractMonth:
+        return cls(f"{letter_month}{str(year)[2:]}")
+    
     @classmethod
     def from_month_year(cls, year: int, month: int) -> ContractMonth:
         assert isinstance(year, int)

@@ -22,7 +22,7 @@ STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
-UNIVERSE_CSV_PATH = PACKAGE_ROOT / "instruments/universe.csv"
+UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
 
 
@@ -59,7 +59,16 @@ class IBTestProviderStubs:
             "tradingClass": str,
             "symbol": str,
             "exchange": str,
-            "hold_cycle": str,
+            "ex_symbol": str,
+            "data_symbol": str,
+            "price_precision": pd.Float64Dtype(),
+            "size_precision": pd.Float64Dtype(),
+            "start_month": str,
+            "end_month": str,
+            "start_year": pd.Int64Dtype(),
+            "end_year": pd.Int64Dtype(),
+            "price_magnifier":	pd.Int64Dtype(),
+            "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,
             "expiry_offset": pd.Int64Dtype(),
             "roll_offset": pd.Int64Dtype(),
@@ -68,19 +77,28 @@ class IBTestProviderStubs:
             "close": str,
             "session": pd.Int64Dtype(),
             "description": str,
+            "comments": str,
         }
         df = pd.read_csv(file, dtype=dtype)
-        df.open = df.open.apply(lambda x: datetime.strptime(x, "%H:%M").time())
-        df.close = df.close.apply(lambda x: datetime.strptime(x, "%H:%M").time())
+        
+        df = df[df.data_symbol.notna()]
+        
+        # temporary skip until rest filled in
+        df = df[df.price_precision.notna() & df.size_precision.notna()]
+        
         assert not df.exchange.isna().any()
         assert not df.symbol.isna().any()
-        assert not df.tradingClass.isna().any()
+        assert not df.trading_class.isna().any()
         return df
 
     @classmethod
     def universe_future_chains(cls) -> list[FuturesChain]:
         chains = []
         universe = cls.universe_dataframe()
+        
+        # universe.open = universe.open.apply(lambda x: datetime.strptime(x, "%H:%M").time())
+        # universe.close = universe.close.apply(lambda x: datetime.strptime(x, "%H:%M").time())
+        
         for row in universe.itertuples():
             instrument_id = f"{row.tradingClass}-{row.symbol}.{row.exchange}"
             chains.append(
@@ -96,7 +114,12 @@ class IBTestProviderStubs:
                 ),
             )
         return chains
-
+    
+    @classmethod
+    def universe_continuous_data(cls) -> list:
+        pass
+        
+        
     @classmethod
     def sessions(cls, names: int | None = None) -> list[Session]:
         universe = cls.universe_dataframe()

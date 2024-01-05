@@ -3,8 +3,8 @@ from decimal import Decimal
 
 import pandas as pd
 import pytz
-from ibapi.common import UNSET_DECIMAL
-from ibapi.common import UNSET_DOUBLE
+# from ibapi.common import UNSET_DECIMAL
+# from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order as IBOrder
@@ -165,6 +165,7 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     return contract
 
 def contract_id_to_contract(instrument_id: InstrumentId) -> IBContract:
+    
     contract_month = instrument_id.symbol.value.split("=")[1]
     symbol, trading_class = tuple(instrument_id.symbol.value.split("=")[0].split("-"))
     exchange = instrument_id.venue.value
@@ -302,22 +303,25 @@ def order_event_to_order_status_report(
     now_ns: pd.Timestamp,
     account_id: AccountId,
 ) -> OrderStatusReport:
-    total_qty = (
-        Quantity.from_int(0)
-        if event.totalQuantity == UNSET_DECIMAL
-        else Quantity.from_str(str(event.totalQuantity))
-    )
-    filled_qty = (
-        Quantity.from_int(0)
-        if event.filledQuantity == UNSET_DECIMAL
-        else Quantity.from_str(str(event.filledQuantity))
-    )
+    # total_qty = (
+    #     Quantity.from_int(0)
+    #     if event.totalQuantity == UNSET_DECIMAL
+    #     else Quantity.from_str(str(event.totalQuantity))
+    # )
+    # filled_qty = (
+    #     Quantity.from_int(0)
+    #     if event.filledQuantity == UNSET_DECIMAL
+    #     else Quantity.from_str(str(event.filledQuantity))
+    # )
+    total_qty = Quantity.from_str(str(event.totalQuantity))
+    filled_qty = Quantity.from_str(str(event.filledQuantity))
     if total_qty.as_double() > filled_qty.as_double() > 0:
         order_status = OrderStatus.PARTIALLY_FILLED
     else:
         order_status = map_order_status[event.status]
 
-    price = None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
+    # price = None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
+    price = instrument.make_price(event.lmtPrice)
 
     order_status = OrderStatusReport(
         account_id=account_id,

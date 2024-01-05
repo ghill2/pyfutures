@@ -1,15 +1,14 @@
 import asyncio
 
 import pandas as pd
-from ibapi.common import UNSET_DECIMAL
-from ibapi.common import UNSET_DOUBLE
+# from ibapi.common import UNSET_DECIMAL
+# from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 
 # fmt: off
-from nautilus_trader.adapters.interactive_brokers.client import InteractiveBrokersClient
-from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
-from nautilus_trader.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
+
+
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.clock import LiveClock
 from nautilus_trader.common.logging import Logger
@@ -53,7 +52,9 @@ from pyfutures.adapters.interactive_brokers.parsing import ib_quote_tick_to_naut
 from pyfutures.adapters.interactive_brokers.parsing import nautilus_order_to_ib_order
 from pyfutures.adapters.interactive_brokers.parsing import order_event_to_order_status_report
 from pyfutures.adapters.interactive_brokers.parsing import order_side_to_order_action
-
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+from pyfutures.adapters.interactive_brokers import IB_VENUE
+from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
@@ -178,15 +179,18 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         self._log.debug(f"Received {event}")
 
         # generate modify
-        total_qty = (
-            Quantity.from_int(0)
-            if event.totalQuantity == UNSET_DECIMAL
-            else Quantity.from_str(str(event.totalQuantity))
-        )
-
-        price = (
-            None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
-        )
+        # total_qty = (
+        #     Quantity.from_int(0)
+        #     if event.totalQuantity == UNSET_DECIMAL
+        #     else Quantity.from_str(str(event.totalQuantity))
+        # )
+        total_qty = Quantity.from_str(str(event.totalQuantity))
+        
+        
+        # price = (
+        #     None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
+        # )
+        price = instrument.make_price(event.lmtPrice)
 
         if total_qty == order.quantity and price == order.price:
             return # no change

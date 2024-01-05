@@ -12,7 +12,7 @@ from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
-
+from pyfutures.continuous.chain import ContractId
 
 class ContinuousData(Actor):
     def __init__(
@@ -49,11 +49,28 @@ class ContinuousData(Actor):
     @property
     def roll_date_utc(self) -> pd.Timestamp:
         return self._current_id.roll_date_utc
+    
+    @property
+    def forward_id(self) -> ContractId:
+        return self._forward_id
 
+    @property
+    def current_id(self) -> ContractId:
+        return self._carry_id
+    
+    @property
+    def carry_id(self) -> ContractId:
+        return self._carry_id
+
+    @property
+    def roll_date_utc(self) -> pd.Timestamp:
+        return self._current_id.roll_date_utc
+    
+    
     @property
     def approximate_expiry_date_utc(self) -> pd.Timestamp:
         return self._current_id.approximate_expiry_date_utc
-
+    
     def on_start(self) -> None:
         start = self._start_time_utc
         if isinstance(start, ContractMonth):
@@ -91,7 +108,7 @@ class ContinuousData(Actor):
         )
 
         if self._handler is not None:
-            self.handler(continuous_price)
+            self._handler(continuous_price)
 
         self._msgbus.publish(topic=f"{self._bar_type}0", msg=continuous_price)
 

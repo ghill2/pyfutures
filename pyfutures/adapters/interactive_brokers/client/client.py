@@ -30,13 +30,14 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
+
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.clock import LiveClock
 from nautilus_trader.common.component import Component
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.common.component import MessageBus
+from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import ClientRequest
@@ -114,8 +115,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         self._request_timeout_seconds = request_timeout_seconds
 
-        self._decoder = Decoder(wrapper=self, serverVersion=176)
-
         self._conn = Connection(
             loop=loop,
             logger=logger,
@@ -132,6 +131,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         self._client.conn = self._conn
 
         self._request_id_seq = -10
+        
+        self._decoder = Decoder(wrapper=self, serverVersion=176)
         # self._log._is_bypassed = True
 
     @property
@@ -166,9 +167,9 @@ class InteractiveBrokersClient(Component, EWrapper):
     async def _handle_msg(self, msg: bytes) -> None:
         # self._log.debug(repr(msg))
         fields = comm.read_fields(msg)
-        self._log.debug(
-            "Received fields: " + ",".join([x.decode(errors="backslashreplace") for x in fields]),
-        )
+        # self._log.debug(
+        #     "Received fields: " + ",".join([x.decode(errors="backslashreplace") for x in fields]),
+        # )
         self._decoder.interpret(fields)
         await asyncio.sleep(0)
 
@@ -219,7 +220,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         del self._requests[request.id]
 
         if isinstance(result, ClientException):
-            print(request)
+            # print(request)
+            # self._log.error(result.message)
             raise result
 
         return result
@@ -314,7 +316,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         request = self._requests.get(reqId)
 
-        self._log.debug(repr(request))
+        # self._log.debug(repr(request))
 
         if request is None:
             self._log.error(f"No request found for {reqId}")
@@ -323,6 +325,9 @@ class InteractiveBrokersClient(Component, EWrapper):
         request.data.append(contractDetails)
 
     def contractDetailsEnd(self, reqId: int):
+        
+        self._log.debug("contractDetailsEnd")
+        
         request = self._requests.get(reqId)
         if request is None:
             self._log.error(f"No request found for {reqId}")

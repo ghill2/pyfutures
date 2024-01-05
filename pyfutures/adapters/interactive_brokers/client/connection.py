@@ -13,11 +13,8 @@ from ibapi import comm
 from ibapi.wrapper import EWrapper
 from ibapi.connection import Connection as IBConnection
 from typing import ValuesView
-from pyfutures.adapters.interactive_brokers.client.socket import Socket
                     
 class Connection:
-    
-    (DISCONNECTED, CONNECTING, CONNECTED) = range(3)
     
     def __init__(
         self,
@@ -36,22 +33,13 @@ class Connection:
         
         self._watch_dog_task: asyncio.Task | None = None
         
-        self.socket = IBConnection(
-            # loop=self._loop,
-            # logger=logger,
-            host=host,
-            port=port,
-            # client_id=client_id,
-            # handler=self._handle_msg,
-            # disconnect_handler=self._handle_disconnect,
-        )
+        self.socket = IBConnection(host=host, port=port)
         self.socket.wrapper = self
 
         self._host = host
         self._port = port
         self._client_id = client_id
         self._subscriptions = subscriptions
-        
         
         self._connection_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
@@ -74,8 +62,8 @@ class Connection:
                     # data = await self._loop.run_in_executor(None, self.socket.recvMsg)
                     data = await self._reader.read(4096)
                     
-                    if data == b"" and data != previous_message:
-                        print(data)
+                    # if data == b"" and data != previous_message:
+                    #     print(data)
                     previous_message = data
                     
                     if data == b"":
@@ -85,15 +73,23 @@ class Connection:
                     
                     buf += data
                     
-                    
                     while len(buf) > 0:
                         
                         (size, msg, buf) = comm.read_msg(buf)
                 
                         if msg:
-                            await self._handle_msg(msg)
+                            
+                            # self._log.debug(f"<-- {msg!r}")
+        
+                            if self._is_ready.is_set():
+                                await self._handler(msg)
+                            else:
+                                self._process_handshake(msg)
+                                
                             await asyncio.sleep(0)
+                            
                         else:
+                            
                             self._log.debug("more incoming packet(s) are needed ")
                             break
                         
@@ -119,7 +115,7 @@ class Connection:
                 
                 self._log.debug("Watchdog: Running...")
                 
-                if self.is_ready.set():
+                if self._is_ready.set():
                     continue
                 
                 self._log.debug(f"Watchdog: connection has been disconnected. Reconnecting...")
@@ -136,7 +132,7 @@ class Connection:
         
         self._log.debug("Resetting...")
         
-        self.is_ready = asyncio.Event()
+        self._is_ready = asyncio.Event()
         self._accounts = None
         self._hasReqId = False
         self._apiReady = False
@@ -221,14 +217,6 @@ class Connection:
         self._log.debug(f"--> {msg}")
         self._writer.write(msg)
         self._loop.create_task(self._writer.drain())
-
-    async def _handle_msg(self, msg: bytes) -> None:
-        
-        self._log.debug(f"<-- {msg!r}")
-        
-        if not self.is_ready.is_set():
-            self._process_handshake(msg)
-            return
     
     async def _handle_disconnect(self):
         """
@@ -244,8 +232,6 @@ class Connection:
         #     sub.cancel()
     
     async def _perform_handshake(self) -> None:
-        
-        
 
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
         
@@ -253,7 +239,7 @@ class Connection:
         
         self._log.debug("Waiting for handshake response")
 
-        await asyncio.wait_for(self.is_ready.wait(), 10)
+        await asyncio.wait_for(self._is_ready.wait(), 10)
 
         self._log.info("API connection ready, server version 176")
 
@@ -287,7 +273,7 @@ class Connection:
                     self._accounts = [a for a in accts.split(",") if a]
                 if self._hasReqId and self._accounts is not None:
                     self._apiReady = True
-                    self.is_ready.set()
+                    self._is_ready.set()
         
     def _prefix(self, msg):
         # prefix a message with its length
