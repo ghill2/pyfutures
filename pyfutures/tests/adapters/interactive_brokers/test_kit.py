@@ -77,6 +77,10 @@ class IBTestProviderStubs:
             "close": str,
             "session": pd.Int64Dtype(),
             "description": str,
+            "sector": str,
+            "sub_sector": str,
+            "region": str,
+            "url": str,
             "comments": str,
         }
         df = pd.read_csv(file, dtype=dtype)
