@@ -54,7 +54,7 @@ QG,QG,NYMEX,QG,NGA,0.005,1,M,Z,1990,2026,1,0.005,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-35,-
 BZ,BZ,NYMEX,BZ,QOA,0.01,1,U,Z,1988,2027,1,0.01,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-40,-32,-1,,,,Brent Crude NYMEX,Energy,Oil,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=594762315,
 COIL,COIL,IPE,COIL,QOA,0.01,1,U,Z,1988,2027,1,0.01,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-40,14,-1,,,,Brent Crude ICE,Energy,Oil,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=602389078,
 GOIL,GOIL,IPE,GOIL,QPA,0.25,1,Z,V,1987,2026,1,0.25,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-60,12,-1,,,,Gasoil,Energy,Oil,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=395617117,
-CL,CL,NYMEX,CL,CLA,0.01,1,V,F,1987,2027,1,0.01,Z,FGHJKMNQUVXZ,-40,-11,1,07:00,23:00,,WTI Crude Oil,Energy,Oil,US,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=421710646,
+CL,CL,NYMEX,CL,CLA,0.01,1,V,F,1987,2027,1,0.01,Z,FGHJKMNQUVXZ,-40,-11,-1,07:00,23:00,,WTI Crude Oil,Energy,Oil,US,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=421710646,
 HO,HO,NYMEX,HO,HOA,0.0001,1,V,Z,1987,2024,1,0.0001,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-60,14,-1,07:00,23:00,23,Heating Oil,Energy,Oil,US,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=600696475,
 MCL,MCL,NYMEX,MCL,CLA,0.01,1,V,F,1987,2027,1,0.01,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-40,-11,-1,07:00,23:00,23,Micro WTI Crude Oil,Energy,Oil,US,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=666754611,
 QM,QM,NYMEX,QM,CLA,0.025,1,V,F,1987,2027,1,0.025,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-40,-11,-1,07:00,23:00,23,NYMEX MINY Light Sweet Crude Oil,Energy,Oil,US,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=391696381,

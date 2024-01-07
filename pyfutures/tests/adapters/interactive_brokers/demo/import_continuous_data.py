@@ -58,16 +58,7 @@ def process_row(
     carry_offset: int,
 ):
         
-    # these contracts failed to roll before expiry date, indication of lack of data to roll
-    failed_list = [
-        "CL",  # roll failure, contract expired
-        "ZAR",  # roll failure, contract expired
-        "ZB",  # roll failure, contract expired
-        "SXEP",  # assert prices[-1].current_month.year < 2024
-    ]
     
-    if symbol in failed_list:
-        return
     
     keyword = f"{trading_class}_{symbol}=*.{exchange}*.parquet"
     paths = list(sorted(data_folder.glob(keyword)))
@@ -177,7 +168,8 @@ def process_row(
         # stop when the data module rolls to year 2024
         if len(prices) > 0 and prices[-1].current_month >= end_month:
             prices.pop(-1)
-            assert prices[-1].current_month.year < 2024
+            assert len(prices) > 0, f"{symbol}"
+            assert prices[-1].current_month.year < 2024, f"prices[-1].current_month.year < 2024 {symbol}"
             break  # done sampling
         cache.add_bar(bar)
         data.on_bar(bar)
@@ -188,6 +180,27 @@ if __name__ == "__main__":
     data_folder = Path("/Users/g1/Desktop/output")
     
     universe = IBTestProviderStubs.universe_dataframe()
+    
+    # these contracts failed to roll before expiry date, indication of lack of data to roll
+    failed_list = [
+        "CL",  # roll failure, contract expired
+        "ZAR",  # roll failure, contract expired
+        "ZB",  # roll failure, contract expired
+        "ZW",  # roll failure, contract expired
+        "FLKTB",  # 2017U roll failure, contract expired
+        "D",  # 1991N, roll failure, contract expired
+        "TWN",  # 2020N, roll failure, contract expired
+        "XINA50",  # 2006U, roll failure, contract expired
+        "CAC40",  # 1990M, roll failure, contract expired
+        "DAX",  # 1992Z, roll failure, contract expired
+        "ESU",  # 2008H, roll failure, contract expired
+        "SMI"  # 1994J, roll failure, contract expired
+        "Z",   # 1987Z
+        "M7EU",  # assert len(prices) > 0, f"{symbol}"
+        "EOE",  # assert prices[-1].current_month.year < 2024
+        "SXEP",  # assert prices[-1].current_month.year < 2024
+        "HH",  # assert prices[-1].current_month.year < 2024, IndexError: list index out of range
+    ]
     
     func_gen = (
         joblib.delayed(process_row)(
@@ -200,6 +213,8 @@ if __name__ == "__main__":
             int(row.expiry_offset),
             int(row.carry_offset),
         )
-        for row in universe.itertuples())
+        for row in universe.itertuples()
+        if row.symbol not in failed_list
+        )
     
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)

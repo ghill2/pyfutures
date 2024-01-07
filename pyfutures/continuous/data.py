@@ -135,7 +135,7 @@ class ContinuousData(Actor):
         expiry_date = self.current_id.approximate_expiry_date_utc
         if current_timestamp >= expiry_date:
             # TODO: special handling
-            raise ValueError("Contract has expired")
+            raise ValueError(f"Contract has expired: {self._bar_type}")
 
         roll_date = self.current_id.roll_date_utc
         in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
