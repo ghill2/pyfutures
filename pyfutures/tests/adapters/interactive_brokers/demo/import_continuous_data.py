@@ -12,6 +12,7 @@ import pandas as pd
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
+from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.common.clock import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
@@ -19,7 +20,11 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
-        
+from pytower.data.writer import ContinuousPriceParquetWriter
+from pytower.data.files import ParquetFile
+from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.data import BarType
 from pathlib import Path
 import pandas as pd
 import pytest
@@ -227,15 +232,25 @@ def process_row(
     keyword = f"{trading_class}_{symbol}=*.{exchange}*.parquet"
     paths = list(sorted(data_folder.glob(keyword)))
     
+    
+                        
+    
     # start = Path("/Users/g1/Desktop/output/HO-HO=2023V.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2023.parquet")
     # paths = paths[paths.index(start):]
     
     bars = []
-    from pytower.data.files import ParquetFile
+    
     for path in paths:
         file = ParquetFile.from_path(path)
         bars.extend(file.read_objects())
     bars = list(sorted(bars, key=lambda x: x.ts_event))
+    
+    
+    instrument_id = InstrumentId(
+                        symbol=Symbol(bars[0].bar_type.instrument_id.symbol.value.split("=")[0]),
+                        venue=bars[0].bar_type.instrument_id.venue,
+    )
+    bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
     timestamps = [x.ts_event for x in bars]
     
@@ -269,7 +284,7 @@ def process_row(
     
     prices = []
     data = ContinuousData(
-        bar_type=bars[0].bar_type,
+        bar_type=bar_type,
         chain=chain,
         start_month=start_month,
         # end_month=end_month,
@@ -342,9 +357,17 @@ def process_row(
         data.on_bar(bar)
         # except ValueError as e:
         #     return repr(e)
-        
     
-        
+    
+    file = ParquetFile(
+        parent=Path("/Users/g1/Desktop/continuous"),
+        bar_type=bar_type,
+        cls=ContinuousPrice,
+    )
+    writer = ContinuousPriceParquetWriter(path=file.path)
+    writer.write_objects(data=prices)
+
+    
 if __name__ == "__main__":
     
     # load all the data for the data symbol
@@ -368,6 +391,3 @@ if __name__ == "__main__":
     )
         
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
-    
-    # for trading_class, reason in FAILED:
-    #     print(trading_class, reason)
