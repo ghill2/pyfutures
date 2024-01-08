@@ -213,22 +213,6 @@ def get_start_month_and_year():
         end_year = files[-1].stem[-5:-1]
         print(end_year)
 
-# FAILED = []
-
-# def process_row(
-#     *args, **kwargs,
-# ):
-    
-#     trading_class = kwargs.get("trading_class")
-    
-#     error_msg = _process_row(*args, **kwargs)
-#     if error_msg == "":
-#         return
-    
-#     FAILED.append(
-#         (trading_class, error_msg)
-#     )
-        
 def process_row(
     trading_class: str,
     symbol: str,
