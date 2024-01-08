@@ -58,7 +58,7 @@ class ContinuousData(Actor):
     def on_bar(self, bar: Bar) -> None:
         
         if bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type:
-            self._try_roll()
+            self._try_roll(bar)
 
         if bar.bar_type == self.current_bar_type:
             self._send_continous_price()
@@ -121,8 +121,24 @@ class ContinuousData(Actor):
         
         print(self.current_id)
 
-    def _try_roll(self) -> None:
+    def _try_roll(self, bar: Bar) -> None:
         
+        # print("_try_roll")
+        
+        # if unix_nanos_to_dt(bar.ts_event) > pd.Timestamp("1987-10-20 14:32:00+00:00", tz="UTC"):
+        #     exit()
+            
+        if bar.bar_type.instrument_id.symbol.value.endswith("1987Z") \
+            or bar.bar_type.instrument_id.symbol.value.endswith("1988H"):
+            expiry_date = self.current_id.approximate_expiry_date_utc
+            roll_date = self.current_id.roll_date_utc
+            current_timestamp = unix_nanos_to_dt(bar.ts_event)
+            in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
+            # if in_window:
+            #     print(self.forward_bar_type, unix_nanos_to_dt(bar.ts_event), bar)
+                # roll_date = 1987-10-15 00:00:00+00:00
+                # expiry_date = 1987-12-14 00:00:00+00:00
+                
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
 
@@ -131,15 +147,26 @@ class ContinuousData(Actor):
 
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-
+        
+        # print(
+        #     current_timestamp,
+        #     self.current_id.month,
+        #     self.current_id.roll_date_utc,
+        #     self.current_id.approximate_expiry_date_utc,
+        # )
+        
         expiry_date = self.current_id.approximate_expiry_date_utc
         if current_timestamp >= expiry_date:
             # TODO: special handling
-            raise ValueError(f"Contract has expired: {self._bar_type}")
+            # raise ValueError(f"Contract has expired: {self.current_bar_type}")
+            if bar.bar_type == self.forward_bar_type:
+                self.unsubscribe_bars(self.current_bar_type)
+                self.current_id = self._chain.forward_id(self.current_id)
+                self.roll()
 
         roll_date = self.current_id.roll_date_utc
         in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
-
+        # print(in_window, current_timestamp == forward_timestamp)
         if not in_window:
             return
 

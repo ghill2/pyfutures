@@ -1,7 +1,7 @@
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
-
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
@@ -26,7 +26,173 @@ import pytest
 import numpy as np
 import pytest
 import joblib
+
+
+
+
+attempting_list = [
     
+]
+
+success_list = [
+    "DC",
+    "EBM",
+    "ECO",
+    "EMA",
+    "KE",
+    "RS",
+    "XK",
+    "XW",
+    "ZC",
+    "ZL",
+    "ZM",
+    "ZO",
+    "ZR",
+    "ZS",
+    "GF",
+    "HE",
+    "LE",
+    "C",
+    "W",
+    "CC",
+    "CT",
+    "KC",
+    "OJ",
+    "SB",
+    "JBL",
+    "JBLM",
+    "JB",
+    "XT",
+    "FGBX",
+    "FBTP",
+    "FGBL",
+    "FOAT",
+    "R",
+    "FGBM",
+    "FGBS",
+    "ZB",
+    "CGB",
+    "TN",
+    "UB",
+    "ZN",
+    "ZF",
+    "ZT",
+    "ATW",
+    "ECF",
+    "NGF",
+    "TFM",
+    "HH",
+    "NG",
+    "QG",
+    "BZ",
+    "COIL",
+    "GOIL",
+    "HO",
+    "MCL",
+    "QM",
+    "RB",
+    "06",
+    "05",
+    "MHI",
+    "TPXM",
+    "MCH",
+    "MFS",
+    "MME",
+    "SGP",
+    "225MC",
+    "225M",
+    "FTI",
+    "MFA",
+    "FEDV",
+    "FXXP",
+    "FSXE",
+    "FESX",
+    "Y2",
+    "MICRO",
+    "FTMIB",
+    "MINI",
+    "MIX",
+    "FSMX",
+    "FESB",
+    "FSTA",
+    "FSTS",
+    "FSTI",
+    "FSTY",
+    "EMD",
+    "MYM",
+    "MNQ",
+    "M2K",
+    "MES",
+    "SXF",
+    "SXM",
+    "RX",
+    "XAP",
+    "XAE",
+    "XAF",
+    "XAV",
+    "XAI",
+    "XAU",
+    "RP",
+    "RY",
+    "6L",
+    "6M",
+    "6A",
+    "6C",
+    "6S",
+    "DX",
+    "E7",
+    "6E",
+    "6B",
+    "6J",
+    "M6A",
+    "M6E",
+    "6N",
+    "FEF",
+    "TF",
+    "ALI",
+    "HG",
+    "HRC",
+    "MHG",
+    "PA",
+    "GC",
+    "MBT",
+    "MGC",
+    "PL",
+    "SI",
+    "SIL",
+    "YIW",
+    "FEU3",
+    "I",
+    "SO3",
+    "SR3",
+    "FVS",
+    "VX",
+    "VXM",
+]
+
+failed_list = [
+    "ZW",  # 1987Z, contract expired
+    "167", # 2017M, contract expired
+    "RC",  # 2008X, contract expired
+    "TWN",  # 2020N, contract expired
+    "CN", # XINA50, contract expired
+    "CL",  # 1987Z, contract expired
+    "FESU",  # 2008H, contract expired, roll date is 2008-03-16 for 2008H but no data in next contract 2008M until 2008-03-20
+    "FSTO",  # 2008H, contract expired
+    "FSTH",  # 2008H, contract expired
+    "FSTE",  # 2008H, contract expired
+    "FSTU",  # 2008H, contract expired
+    "FSTL",  # 2008U, contract expired
+    "FSMS",  # 1994M, contract expired
+    "FSMI",  # 1994M, contract expired
+    "Z",  # 1988H, contract expired
+    "FDXM",  # 1992Z, contract expired
+    "FDXS",  # 1992Z, contract expired
+    "FDAX",  # 1992Z, contract expired
+    "FCE",  # 1990M, contract expired
+    "MFC",  # 1990M, contract expired
+    "6Z",  # 2008M, contract expired
+]
 def get_start_month_and_year():
     
     data_folder = Path("/Users/g1/Downloads/portara data/all UTC")
@@ -47,6 +213,22 @@ def get_start_month_and_year():
         end_year = files[-1].stem[-5:-1]
         print(end_year)
 
+# FAILED = []
+
+# def process_row(
+#     *args, **kwargs,
+# ):
+    
+#     trading_class = kwargs.get("trading_class")
+    
+#     error_msg = _process_row(*args, **kwargs)
+#     if error_msg == "":
+#         return
+    
+#     FAILED.append(
+#         (trading_class, error_msg)
+#     )
+        
 def process_row(
     trading_class: str,
     symbol: str,
@@ -57,8 +239,6 @@ def process_row(
     approximate_expiry_offset: int,
     carry_offset: int,
 ):
-        
-    
     
     keyword = f"{trading_class}_{symbol}=*.{exchange}*.parquet"
     paths = list(sorted(data_folder.glob(keyword)))
@@ -165,14 +345,21 @@ def process_row(
     end_month = ContractMonth("2024F")
     for bar in bars:
         
+        
         # stop when the data module rolls to year 2024
         if len(prices) > 0 and prices[-1].current_month >= end_month:
             prices.pop(-1)
-            assert len(prices) > 0, f"{symbol}"
-            assert prices[-1].current_month.year < 2024, f"prices[-1].current_month.year < 2024 {symbol}"
+            assert (len(prices)) > 0, f"prices length is 0 {trading_class}"
+            assert prices[-1].current_month.year < 2024, f"prices[-1].current_month.year < 2024 {trading_class}"
             break  # done sampling
+        
         cache.add_bar(bar)
+        # try:
         data.on_bar(bar)
+        # except ValueError as e:
+        #     return repr(e)
+        
+    
         
 if __name__ == "__main__":
     
@@ -180,27 +367,6 @@ if __name__ == "__main__":
     data_folder = Path("/Users/g1/Desktop/output")
     
     universe = IBTestProviderStubs.universe_dataframe()
-    
-    # these contracts failed to roll before expiry date, indication of lack of data to roll
-    failed_list = [
-        "CL",  # roll failure, contract expired
-        "ZAR",  # roll failure, contract expired
-        "ZB",  # roll failure, contract expired
-        "ZW",  # roll failure, contract expired
-        "FLKTB",  # 2017U roll failure, contract expired
-        "D",  # 1991N, roll failure, contract expired
-        "TWN",  # 2020N, roll failure, contract expired
-        "XINA50",  # 2006U, roll failure, contract expired
-        "CAC40",  # 1990M, roll failure, contract expired
-        "DAX",  # 1992Z, roll failure, contract expired
-        "ESU",  # 2008H, roll failure, contract expired
-        "SMI"  # 1994J, roll failure, contract expired
-        "Z",   # 1987Z
-        "M7EU",  # assert len(prices) > 0, f"{symbol}"
-        "EOE",  # assert prices[-1].current_month.year < 2024
-        "SXEP",  # assert prices[-1].current_month.year < 2024
-        "HH",  # assert prices[-1].current_month.year < 2024, IndexError: list index out of range
-    ]
     
     func_gen = (
         joblib.delayed(process_row)(
@@ -214,7 +380,10 @@ if __name__ == "__main__":
             int(row.carry_offset),
         )
         for row in universe.itertuples()
-        if row.symbol not in failed_list
-        )
-    
+        # if row.trading_class in failed_list
+    )
+        
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
+    
+    # for trading_class, reason in FAILED:
+    #     print(trading_class, reason)

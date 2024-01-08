@@ -89,7 +89,7 @@ FTMIB,FTMIB,IDEM,MINI,ISP,5,1,H,M,1995,2024,1,5,HMUZ,HMUZ,-5,20,1,07:45,21:00,21
 MINI,FTMIB,IDEM,MINI,ISP,5,1,H,M,1995,2024,1,5,HMUZ,HMUZ,-5,20,1,07:45,21:00,21,FTSE MIB Index,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=673369700,
 MIX,IBEX,MEFFRV,MIX,IB,5,1,F,M,2003,2024,1,1,FGHJKMNQUVXZ,FGHJKMNQUVXZ,-10,15,1,08:00,19:00,19,IBEX 35 Index Mini,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=372590306,special price handling
 FSMX,MDAX,EUREX,FSMX,FSMX,1,1,U,U,2021,2024,1,1,HMUZ,HMUZ,-5,15,1,08:00,21:05,21,Midcap DAX,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=655096092,
-FMEU,M7EU,EUREX,FMEU,FMEU,0.05,1,U,Z,2024,2026,1,0.05,HMUZ,HMUZ,-5,19,1,01:15,21:05,21,MSCI Europe Net Return EUR Index,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=675524497,
+FMEU,M7EU,EUREX,FMEU,,0.05,1,U,Z,2024,2026,1,0.05,HMUZ,HMUZ,-5,19,1,01:15,21:05,21,MSCI Europe Net Return EUR Index,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=675524497,
 FSMS,SMI,EUREX,FSMI,SW,1,1,J,U,1994,2024,1,1,HMUZ,HMUZ,-5,14,1,08:00,21:00,21,Swiss Market Index,Equity,index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=655096089,
 FSMI,SMI,EUREX,FSMI,SW,1,1,J,U,1994,2024,1,1,HMUZ,HMUZ,-5,14,1,08:00,21:00,21,Swiss Market Index,Equity,Index,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=655096083,
 FESB,SX7E,EUREX,FESB,ESB,0.05,1,M,U,2001,2024,1,0.05,HMUZ,HMUZ,-10,18,1,01:15,21:05,21,Dow Jones Euro STOXX Banks Index,Equity,Sector,EU,https://contract.ibkr.info/v3.10/index.php?action=Details&site=GEN&conid=655095919,

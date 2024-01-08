@@ -144,7 +144,7 @@ class TestContinuousPrice:
             deserializer=make_dict_deserializer(data_cls=ContinuousPrice),
         )
 
-        price = price = ContinuousPrice(
+        price = ContinuousPrice(
             instrument_id=TestIdStubs.gbpusd_id(),
             current_price=Price.from_str("1.1"),
             current_month=ContractMonth("X21"),
