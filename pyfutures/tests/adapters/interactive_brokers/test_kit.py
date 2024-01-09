@@ -14,7 +14,7 @@ from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
-
+from nautilus_trader.model.objects import Price
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
@@ -118,6 +118,24 @@ class IBTestProviderStubs:
                 ),
             )
         return chains
+    
+    @staticmethod
+    def price_precision(
+        min_tick: float,
+        price_magnifier: int,
+    ) -> int:
+        min_tick = min_tick * price_magnifier
+        price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+        return price_precision
+    
+    @staticmethod
+    def price_increment(
+        min_tick: float,
+        price_magnifier: int,
+    ) -> Price:
+        min_tick = min_tick * price_magnifier
+        price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+        return Price(min_tick, price_precision)
     
     @classmethod
     def universe_continuous_data(cls) -> list:

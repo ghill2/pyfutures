@@ -62,8 +62,10 @@ if __name__ == "__main__":
                 f"{instrument_id}-1-MINUTE-MID-EXTERNAL"
             )
             
-            min_tick = row.min_tick * row.price_magnifier
-            price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+            price_increment=IBTestProviderStubs.price_increment(
+                                min_tick=row.min_tick,
+                                price_magnifier=row.price_magnifier,
+                            )
 
             df = pd.read_csv(
                 file,
