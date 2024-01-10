@@ -55,17 +55,12 @@ if __name__ == "__main__":
             contract_month = ContractMonth.from_year_letter_month(year=year, letter_month=letter_month)
             
             instrument_id = InstrumentId.from_str(
-                f"{row.trading_class}-{row.symbol}={contract_month}.{row.exchange}"
+                f"{row.trading_class}_{row.symbol}={contract_month}.IB"
             )
             
             bar_type = BarType.from_str(
                 f"{instrument_id}-1-MINUTE-MID-EXTERNAL"
             )
-            
-            price_increment=IBTestProviderStubs.price_increment(
-                                min_tick=row.min_tick,
-                                price_magnifier=row.price_magnifier,
-                            )
 
             df = pd.read_csv(
                 file,
@@ -101,7 +96,10 @@ if __name__ == "__main__":
             writer = BarParquetWriter(
                 path=outfile.path,
                 bar_type=bar_type,
-                price_precision=price_precision,
+                price_precision=IBTestProviderStubs.price_precision(
+                    min_tick=row.min_tick,
+                    price_magnifier=row.price_magnifier,
+                ),
                 size_precision=1,
             )
             

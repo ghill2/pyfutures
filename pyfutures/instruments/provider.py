@@ -16,6 +16,9 @@ from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.enums import AssetType
 
 class UniverseInstrumentProvider(InstrumentProvider):
+    """
+    Provides instruments to the backtest engine
+    """
     def __init__(self):
         super().__init__(
             logger=Logger(
@@ -31,7 +34,7 @@ class UniverseInstrumentProvider(InstrumentProvider):
             
             self.add(
                 Instrument(
-                    instrument_id=InstrumentId.from_str(f"{row.trading_class}-{row.symbol}.{row.exchange}"),
+                    instrument_id=InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
                     raw_symbol=Symbol(row.symbol),
                     asset_class=AssetClass.COMMODITY,
                     asset_type=AssetType.FUTURE,
@@ -41,7 +44,7 @@ class UniverseInstrumentProvider(InstrumentProvider):
                         min_tick=row.min_tick,
                         price_magnifier=row.price_magnifier,
                     ),
-                    size_precision=1,
+                    size_precision=0,
                     size_increment=Quantity.from_int(1),
                     multiplier=Quantity.from_str(str(row.multiplier * row.price_magnifier)),
                     margin_init=Decimal(),

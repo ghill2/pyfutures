@@ -24,6 +24,7 @@ from pytower.data.writer import ContinuousPriceParquetWriter
 from pytower.data.files import ParquetFile
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.data import BarType
 from pathlib import Path
 import pandas as pd
@@ -31,9 +32,6 @@ import pytest
 import numpy as np
 import pytest
 import joblib
-
-
-
 
 attempting_list = [
     
@@ -229,11 +227,13 @@ def process_row(
     carry_offset: int,
 ):
     
-    keyword = f"{trading_class}_{symbol}=*.{exchange}*.parquet"
+    
+    # load all the data for the data symbol
+    data_folder = Path("/Users/g1/Desktop/output")
+    
+    keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
     paths = list(sorted(data_folder.glob(keyword)))
-    
-    
-                        
+    assert len(paths) > 0
     
     # start = Path("/Users/g1/Desktop/output/HO-HO=2023V.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2023.parquet")
     # paths = paths[paths.index(start):]
@@ -245,18 +245,11 @@ def process_row(
         bars.extend(file.read_objects())
     bars = list(sorted(bars, key=lambda x: x.ts_event))
     
-    
-    instrument_id = InstrumentId(
-                        symbol=Symbol(bars[0].bar_type.instrument_id.symbol.value.split("=")[0]),
-                        venue=bars[0].bar_type.instrument_id.venue,
-    )
-    bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
-    
     timestamps = [x.ts_event for x in bars]
-    
     assert list(sorted(timestamps)) == timestamps
     
-    instrument_id = f"{trading_class}-{symbol}.{exchange}"
+    instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
+    bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
     chain = FuturesChain(
         config=FuturesChainConfig(
@@ -344,7 +337,6 @@ def process_row(
     end_month = ContractMonth("2024F")
     for bar in bars:
         
-        
         # stop when the data module rolls to year 2024
         if len(prices) > 0 and prices[-1].current_month >= end_month:
             prices.pop(-1)
@@ -360,18 +352,16 @@ def process_row(
     
     
     file = ParquetFile(
-        parent=Path("/Users/g1/Desktop/continuous"),
+        parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
         bar_type=bar_type,
         cls=ContinuousPrice,
     )
     writer = ContinuousPriceParquetWriter(path=file.path)
     writer.write_objects(data=prices)
-
     
 if __name__ == "__main__":
     
-    # load all the data for the data symbol
-    data_folder = Path("/Users/g1/Desktop/output")
+    
     
     universe = IBTestProviderStubs.universe_dataframe()
     
