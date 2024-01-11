@@ -31,14 +31,16 @@ class ContinuousData(Actor):
         self.current_id = None  # initialized on start
         self.forward_id = None  # initialized on start
         self.carry_id = None  # initialized on start
+        self.recv_count = 0
         
         self._bar_type = bar_type
         self._chain = chain
         self._instrument_id = bar_type.instrument_id
         self._handler = handler
         self._start_month = start_month
+        self._last_received = False
         # self._end_month = end_month
-
+        
     @property
     def roll_date_utc(self) -> pd.Timestamp:
         return self.current_id.roll_date_utc
@@ -48,21 +50,72 @@ class ContinuousData(Actor):
         return self.current_id.approximate_expiry_date_utc
     
     def on_start(self) -> None:
-        start = self._start_month
-        if isinstance(start, ContractMonth):
-            start = start.timestamp_utc
-
-        self.current_id = self._chain.current_id(start)
+        # start = self._start_month.timestamp_utc
+        """
+        if the start month is in the hold cycle, do nothing
+        if the start month is not in the hold cycle, go to next month in the hold cycle
+        """
+        
+        start_month = self._start_month
+        if self._start_month not in self._chain.hold_cycle:
+            start_month = self._chain.hold_cycle.next_month(start_month)
+            
+        self.current_id = self._chain.make_id(start_month)
         self.roll()
 
-    def on_bar(self, bar: Bar) -> None:
+    def on_bar(self, bar: Bar, is_last: bool = False) -> None:
         
-        if bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type:
-            self._try_roll(bar)
-
-        if bar.bar_type == self.current_bar_type:
-            self._send_continous_price()
-
+        current_bar = self.cache.bar(self.current_bar_type)
+        forward_bar = self.cache.bar(self.forward_bar_type)
+        
+        # next bar arrived before current or vice versa
+        if current_bar is None or forward_bar is None:
+            self.recv_count += 1
+            return
+            
+        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
+        is_expired = current_timestamp >= self.expiry_date
+        if is_expired:
+            raise ValueError("ContractExpired")
+        elif bar.bar_type == self.current_bar_type and is_last:
+            raise ValueError("roll failure, last bar of current contract")
+        
+        self._send_continous_price()
+            
+        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
+        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
+        
+        
+        # and current_timestamp >= self.roll_date
+        # if self.current_id.month.value == "2006M":
+            
+        current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+        forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+        print(
+            f"{self.current_id.month.value} {current_timestamp_str}",
+            f"{self.forward_id.month.value} {forward_timestamp_str}",
+            str(self.expiry_date)[:-15],
+        )
+                
+        in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp < self.expiry_date)
+            
+        # a valid roll time is where both timestamps are equal
+        
+        current_day = current_timestamp.day
+        forward_day = forward_timestamp.day
+        should_roll = in_roll_window and current_day == forward_day
+        if should_roll:
+            self._roll_forward()
+            
+        self.recv_count += 1
+        
+        """
+        current contract last bar before expiry date and no forward bar received
+        current contract last bar before expiry date and forward bar received but no valid roll date
+        current contract last bar and forward bar received on same bar with valid roll date
+        current contract expires
+        """
+            
     def _send_continous_price(self) -> None:
         
         current_bar = self.cache.bar(self.current_bar_type)
@@ -90,7 +143,7 @@ class ContinuousData(Actor):
 
         self._msgbus.publish(topic=f"{self._bar_type}0", msg=continuous_price)
 
-    def roll(self) -> None:
+    def roll(self, message: str = "") -> None:
         
         assert self.current_id is not None
 
@@ -119,60 +172,34 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.forward_bar_type)
         self.subscribe_bars(self.carry_bar_type)
         
-        print(self.current_id)
+        self.expiry_date = self.current_id.approximate_expiry_date_utc
+        self.roll_date = self.current_id.roll_date_utc
+        self._last_received = False
+        print(f"{message}: {self.current_id}")
+                
+    def _roll_forward(self, message: str = "") -> None:
+        self.unsubscribe_bars(self.current_bar_type)
+        self.current_id = self._chain.forward_id(self.current_id)
+        self.roll(message=message)
 
-    def _try_roll(self, bar: Bar) -> None:
-        
+
+# print(f"expiry_date: {expiry_date}")
+
+    # def _try_roll(self, bar: Bar, is_last: bool = False) -> None:
         # print("_try_roll")
         
         # if unix_nanos_to_dt(bar.ts_event) > pd.Timestamp("1987-10-20 14:32:00+00:00", tz="UTC"):
         #     exit()
             
-        if bar.bar_type.instrument_id.symbol.value.endswith("1987Z") \
-            or bar.bar_type.instrument_id.symbol.value.endswith("1988H"):
-            expiry_date = self.current_id.approximate_expiry_date_utc
-            roll_date = self.current_id.roll_date_utc
-            current_timestamp = unix_nanos_to_dt(bar.ts_event)
-            in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
+        # if bar.bar_type.instrument_id.symbol.value.endswith("1987Z") \
+        #     or bar.bar_type.instrument_id.symbol.value.endswith("1988H"):
+        #     expiry_date = self.current_id.approximate_expiry_date_utc
+        #     roll_date = self.current_id.roll_date_utc
+        #     current_timestamp = unix_nanos_to_dt(bar.ts_event)
+        #     in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
             # if in_window:
-            #     print(self.forward_bar_type, unix_nanos_to_dt(bar.ts_event), bar)
+        
                 # roll_date = 1987-10-15 00:00:00+00:00
                 # expiry_date = 1987-12-14 00:00:00+00:00
                 
-        current_bar = self.cache.bar(self.current_bar_type)
-        forward_bar = self.cache.bar(self.forward_bar_type)
-
-        if current_bar is None or forward_bar is None:
-            return  # next bar arrived before current or vice versa
-
-        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
-        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
         
-        # print(
-        #     current_timestamp,
-        #     self.current_id.month,
-        #     self.current_id.roll_date_utc,
-        #     self.current_id.approximate_expiry_date_utc,
-        # )
-        
-        expiry_date = self.current_id.approximate_expiry_date_utc
-        if current_timestamp >= expiry_date:
-            # TODO: special handling
-            # raise ValueError(f"Contract has expired: {self.current_bar_type}")
-            if bar.bar_type == self.forward_bar_type:
-                self.unsubscribe_bars(self.current_bar_type)
-                self.current_id = self._chain.forward_id(self.current_id)
-                self.roll()
-
-        roll_date = self.current_id.roll_date_utc
-        in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
-        # print(in_window, current_timestamp == forward_timestamp)
-        if not in_window:
-            return
-
-        if current_timestamp != forward_timestamp:
-            return  # a valid roll time is where both timestamps are equal
-
-        self.unsubscribe_bars(self.current_bar_type)
-        self.current_id = self._chain.forward_id(self.current_id)
-        self.roll()

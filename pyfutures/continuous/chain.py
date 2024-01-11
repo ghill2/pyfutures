@@ -44,13 +44,13 @@ class FuturesChain:
         return self.approximate_expiry_date(month) + pd.Timedelta(days=self.roll_offset)
 
     def carry_id(self, current: ContractId) -> ContractId:
-        return self._make_id(self.carry_month(current.month))
+        return self.make_id(self.carry_month(current.month))
 
     def forward_id(self, current: ContractId) -> ContractId:
-        return self._make_id(self.forward_month(current.month))
+        return self.make_id(self.forward_month(current.month))
 
     def current_id(self, timestamp: pd.Timestamp) -> ContractId:
-        return self._make_id(self.current_month(timestamp))
+        return self.make_id(self.current_month(timestamp))
 
     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
         current = self.hold_cycle.current_month(timestamp)
@@ -76,7 +76,7 @@ class FuturesChain:
         else:
             raise ValueError("carry offset must be 1 or -1")
 
-    def _make_id(self, month: ContractMonth) -> ContractId:
+    def make_id(self, month: ContractMonth) -> ContractId:
         return ContractId(
             instrument_id=self._fmt_instrument_id(self.instrument_id, month),
             month=month,

@@ -63,10 +63,11 @@ class IBTestProviderStubs:
             "data_symbol": str,
             "price_precision": pd.Float64Dtype(),
             "size_precision": pd.Float64Dtype(),
-            "start_month": str,
-            "end_month": str,
-            "start_year": pd.Int64Dtype(),
-            "end_year": pd.Int64Dtype(),
+            "data_start": str,
+            "data_end": str,
+            "start": str,
+            "end": str,
+            "data_completes": pd.BooleanDtype(),
             "price_magnifier":	pd.Int64Dtype(),
             "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,
@@ -140,7 +141,6 @@ class IBTestProviderStubs:
     @classmethod
     def universe_continuous_data(cls) -> list:
         pass
-        
         
     @classmethod
     def sessions(cls, names: int | None = None) -> list[Session]:

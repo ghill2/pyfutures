@@ -1,6 +1,6 @@
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-
+from pyfutures.continuous.wrangler import ContinuousPriceWrangler
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
@@ -33,6 +33,10 @@ import numpy as np
 import pytest
 import joblib
 
+"""
+TODO: test if contract expires it take next forward price
+TODO: test if forward contract expires before current contract expiry date
+"""
 attempting_list = [
     
 ]
@@ -196,62 +200,30 @@ failed_list = [
     "MFC",  # 1990M, contract expired
     "6Z",  # 2008M, contract expired
 ]
-def get_start_month_and_year():
-    
-    data_folder = Path("/Users/g1/Downloads/portara data/all UTC")
-    
-    universe = IBTestProviderStubs.universe_dataframe()
-    
-    for row in universe.itertuples():
-        
-        data_dir = (data_folder / row.data_symbol)
-        
-        assert data_dir.exists()
-        
-        files = list(sorted(list(data_dir.rglob("*.txt")) + list(data_dir.rglob("*.b01"))))
-        start_month = files[0].stem[-1]
-        start_year = files[0].stem[-5:-1]
-        
-        end_month = files[-1].stem[-1]
-        end_year = files[-1].stem[-5:-1]
-        print(end_year)
 
+FAILED = []
 def process_row(
     trading_class: str,
     symbol: str,
-    exchange: str,
     hold_cycle: str,
     priced_cycle: str,
     roll_offset: str,
     approximate_expiry_offset: int,
     carry_offset: int,
+    start: str,
+    end: str,
 ):
-    
     
     # load all the data for the data symbol
     data_folder = Path("/Users/g1/Desktop/output")
     
-    keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
-    paths = list(sorted(data_folder.glob(keyword)))
-    assert len(paths) > 0
-    
-    # start = Path("/Users/g1/Desktop/output/HO-HO=2023V.NYMEX-1-MINUTE-MID-EXTERNAL-BAR-2023.parquet")
-    # paths = paths[paths.index(start):]
-    
-    bars = []
-    
-    for path in paths:
-        file = ParquetFile.from_path(path)
-        bars.extend(file.read_objects())
-    bars = list(sorted(bars, key=lambda x: x.ts_event))
-    
-    timestamps = [x.ts_event for x in bars]
-    assert list(sorted(timestamps)) == timestamps
-    
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
+    start_month = ContractMonth(start)
     
-    chain = FuturesChain(
+    wrangler = ContinuousPriceWrangler(
+        bar_type=bar_type,
+        start_month=start_month,
         config=FuturesChainConfig(
             instrument_id=instrument_id,
             hold_cycle=hold_cycle,
@@ -259,112 +231,43 @@ def process_row(
             roll_offset=roll_offset,
             approximate_expiry_offset=approximate_expiry_offset,
             carry_offset=carry_offset,
-        ),
+        )
     )
     
-    # # user defined start month for debugging
-    # start_year = int(start.stem.split("=")[1].split(".")[0][:4])
-    # start_letter_month = start.stem.split("=")[1].split(".")[0][-1]
-    # start_month = ContractMonth.from_year_letter_month(year=start_year, letter_month=start_letter_month)
+    keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
+    paths = list(sorted(data_folder.glob(keyword)))
+    assert len(paths) > 0
+    
+    wrangler.process_files(paths)
     
     # start month is start of data
-    start_year = int(paths[0].stem.split("=")[1].split(".")[0][:4])
-    start_letter_month = paths[0].stem.split("=")[1].split(".")[0][-1]
-    start_month = ContractMonth.from_year_letter_month(
-                        year=start_year,
-                        letter_month=start_letter_month,
-                    )
-    
-    prices = []
-    data = ContinuousData(
-        bar_type=bar_type,
-        chain=chain,
-        start_month=start_month,
-        # end_month=end_month,
-        handler=prices.append,
-    )
+    # start month for debugging
+    # idx = paths.index([x for x in paths if "2021Z" in x.stem][0])
+    # paths = paths[idx:]
+    # start_month = ContractMonth(paths[0].stem.split("=")[1].split(".")[0])
     
     #########################
-    # component setup
-    
-    clock = TestClock()
-    logger = Logger(
-        clock=TestClock(),
-        level_stdout=LogLevel.INFO,
-        bypass=True,
-    )
-
-    msgbus = MessageBus(
-        trader_id=TestIdStubs.trader_id(),
-        clock=clock,
-        logger=logger,
-    )
-
-    cache = Cache(
-        logger=logger,
-    )
-
-    data_engine = DataEngine(
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
-        logger=logger,
-        config=DataEngineConfig(debug=True),
-    )
-
-    portfolio = Portfolio(
-        msgbus,
-        cache,
-        clock,
-        logger,
-    )
-    
-    data.register_base(
-        portfolio=portfolio,
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
-        logger=logger,
-    )
-
-    data.start()
-    data_engine.start()
-    
-    #########################
-    
-    data.on_start()
-    
-    end_month = ContractMonth("2024F")
-    for bar in bars:
-        
-        # stop when the data module rolls to year 2024
-        if len(prices) > 0 and prices[-1].current_month >= end_month:
-            prices.pop(-1)
-            assert (len(prices)) > 0, f"prices length is 0 {trading_class}"
-            assert prices[-1].current_month.year < 2024, f"prices[-1].current_month.year < 2024 {trading_class}"
-            break  # done sampling
-        
-        cache.add_bar(bar)
-        # try:
-        data.on_bar(bar)
-        # except ValueError as e:
-        #     return repr(e)
-    
-    
-    file = ParquetFile(
-        parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
-        bar_type=bar_type,
-        cls=ContinuousPrice,
-    )
-    writer = ContinuousPriceParquetWriter(path=file.path)
-    writer.write_objects(data=prices)
     
 if __name__ == "__main__":
     
-    
-    
     universe = IBTestProviderStubs.universe_dataframe()
     
+    for row in universe.itertuples():
+        # if row.trading_class in success_list:
+        if row.trading_class == "EBM":
+            process_row(
+                str(row.trading_class),
+                str(row.symbol),
+                str(row.hold_cycle),
+                str(row.priced_cycle),
+                int(row.roll_offset),
+                int(row.expiry_offset),
+                int(row.carry_offset),
+                str(row.start),
+                str(row.end),
+            )
+    
+    exit()
     func_gen = (
         joblib.delayed(process_row)(
             str(row.trading_class),
@@ -375,9 +278,52 @@ if __name__ == "__main__":
             int(row.roll_offset),
             int(row.expiry_offset),
             int(row.carry_offset),
+            str(row.start),
+            str(row.end),
         )
         for row in universe.itertuples()
-        # if row.trading_class in failed_list
-    )
+        if row.trading_class in success_list
+        # if row.trading_class == "XW"
+        # if row.trading_class in [
+        #     "EBM",
+        #     # "COIL", # fixed
+        #     # "FSTS",
+        #     # "RX",
+        #     # "FVS",
+        #     # "M6A",
+        #     # "6A",
+        # ]
         
+    )
+    
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
+    
+    
+    # def get_start_month_and_year():
+    
+#     data_folder = Path("/Users/g1/Downloads/portara data/all UTC")
+    
+#     universe = IBTestProviderStubs.universe_dataframe()
+    
+#     for row in universe.itertuples():
+        
+#         data_dir = (data_folder / row.data_symbol)
+        
+#         assert data_dir.exists()
+        
+#         files = list(sorted(list(data_dir.rglob("*.txt")) + list(data_dir.rglob("*.b01"))))
+#         start_month = files[0].stem[-1]
+#         start_year = files[0].stem[-5:-1]
+        
+#         end_month = files[-1].stem[-1]
+#         end_year = files[-1].stem[-5:-1]
+#         print(end_year)
+# # merge the bars and add find is_last boolean
+# data = []
+# for path in paths:
+#     file = ParquetFile.from_path(path)
+#     bars = file.read_objects()
+#     for i, bar in enumerate(bars):
+#         is_last = i == len(bars) - 1
+#         data.append((bar, is_last))
+# data = list(sorted(data, key= lambda x: x[0].ts_init))
