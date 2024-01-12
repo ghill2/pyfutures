@@ -68,6 +68,7 @@ class IBTestProviderStubs:
             "start": str,
             "end": str,
             "data_completes": pd.BooleanDtype(),
+            "minute_transition": pd.BooleanDtype(),
             "price_magnifier":	pd.Int64Dtype(),
             "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,

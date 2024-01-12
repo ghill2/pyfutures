@@ -21,8 +21,9 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
     
     # make sure each file has a related data symbol marked in the universe csv
-    data_folder = Path("/Users/g1/Desktop/portara data/all UTC")
+    data_folder = Path("/Users/g1/Desktop/all UTC")
     for data_symbol in universe.data_symbol.dropna():
+        print(data_folder / data_symbol)
         assert (data_folder / data_symbol).exists()
 
     # check files
@@ -61,7 +62,17 @@ if __name__ == "__main__":
             bar_type = BarType.from_str(
                 f"{instrument_id}-1-MINUTE-MID-EXTERNAL"
             )
-
+            
+            outfile = ParquetFile(
+                parent=Path("/Users/g1/Desktop/output"),
+                bar_type=bar_type,
+                cls=Bar,
+                year=year,
+            )
+            
+            if outfile.path.exists():
+                continue
+            
             df = pd.read_csv(
                 file,
                 names=["day", "time", "open", "high", "low", "close", "tick_count", "volume"],
@@ -86,12 +97,7 @@ if __name__ == "__main__":
             
             df.drop(["day", "time", "tick_count"], axis=1, inplace=True)
             
-            outfile = ParquetFile(
-                parent=Path("/Users/g1/Desktop/output"),
-                bar_type=bar_type,
-                cls=Bar,
-                year=year,
-            )
+            
             
             writer = BarParquetWriter(
                 path=outfile.path,

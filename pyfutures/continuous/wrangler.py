@@ -141,14 +141,16 @@ class ContinuousPriceWrangler:
         
         print(f"wrangling completed: last_year: {last_year}, last_month: {last_month}")
         
-        assert last_month < end_month
-        assert last_year == 2022
+        if last_month >= end_month:
+            raise ValueError(f"last_month >= end_month for {self.bar_type}")
         
-
-        file = ParquetFile(
-            parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
-            bar_type=self.bar_type,
-            cls=ContinuousPrice,
-        )
-        writer = ContinuousPriceParquetWriter(path=file.path)
-        writer.write_objects(data=self.prices)
+        if last_year != 2022:
+            raise ValueError(f"last_year != 2022 for {self.bar_type}")
+        
+        # file = ParquetFile(
+        #     parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
+        #     bar_type=self.bar_type,
+        #     cls=ContinuousPrice,
+        # )
+        # writer = ContinuousPriceParquetWriter(path=file.path)
+        # writer.write_objects(data=self.prices)

@@ -5,18 +5,18 @@ import pandas as pd
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 """
-F = Jan
-G = Feb
-H = March
-J = April
-K = May
-M = June
-N = July
-Q = AUgust
-U = September
-V = October
-X = November
-Z = December
+F = Jan, 1
+G = Feb, 2
+H = March, 3
+J = April, 4
+K = May, 5
+M = June, 6
+N = July, 7
+Q = AUgust, 8
+U = September, 9
+V = October, 10
+X = November, 11
+Z = December, 12
 """
 
 class ContractMonth:

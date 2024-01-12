@@ -64,57 +64,58 @@ class ContinuousData(Actor):
         self.roll()
 
     def on_bar(self, bar: Bar, is_last: bool = False) -> None:
-        
+            
+        if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
+            return
+                
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         
+        
+            
         # next bar arrived before current or vice versa
         if current_bar is None or forward_bar is None:
             self.recv_count += 1
             return
             
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
-        is_expired = current_timestamp >= self.expiry_date
+        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
+        current_day = current_timestamp.floor("D")
+        forward_day = forward_timestamp.floor("D")
+        
+            
+        is_expired = current_timestamp > self.expiry_date
         if is_expired:
-            raise ValueError("ContractExpired")
-        elif bar.bar_type == self.current_bar_type and is_last:
-            raise ValueError("roll failure, last bar of current contract")
+            raise ValueError(f"ContractExpired {self._bar_type} {self.current_id}")
+        elif is_last and bar.bar_type == self.current_bar_type:
+            raise ValueError(f"{self._bar_type} roll failure, last bar of current contract")
         
         self._send_continous_price()
-            
-        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
-        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
         
+        # in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp.day <= self.expiry_date.day)
+        in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
         
-        # and current_timestamp >= self.roll_date
-        # if self.current_id.month.value == "2006M":
-            
-        current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-        forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-        print(
-            f"{self.current_id.month.value} {current_timestamp_str}",
-            f"{self.forward_id.month.value} {forward_timestamp_str}",
-            str(self.expiry_date)[:-15],
-        )
-                
-        in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp < self.expiry_date)
-            
+        if self.current_id.month.value == "2018M":
+            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+            print(
+                f"{self.current_id.month.value} {current_timestamp_str}",
+                f"{self.forward_id.month.value} {forward_timestamp_str}",
+                str(self.roll_date)[:-15],
+                str(self.expiry_date)[:-15],
+                in_roll_window,
+            )
+                    
         # a valid roll time is where both timestamps are equal
+        should_roll = in_roll_window and current_timestamp == forward_timestamp
+        # should_roll = in_roll_window and current_day == forward_day
         
-        current_day = current_timestamp.day
-        forward_day = forward_timestamp.day
-        should_roll = in_roll_window and current_day == forward_day
         if should_roll:
-            self._roll_forward()
+            self.unsubscribe_bars(self.current_bar_type)
+            self.current_id = self._chain.forward_id(self.current_id)
+            self.roll()
             
         self.recv_count += 1
-        
-        """
-        current contract last bar before expiry date and no forward bar received
-        current contract last bar before expiry date and forward bar received but no valid roll date
-        current contract last bar and forward bar received on same bar with valid roll date
-        current contract expires
-        """
             
     def _send_continous_price(self) -> None:
         
@@ -173,14 +174,13 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.carry_bar_type)
         
         self.expiry_date = self.current_id.approximate_expiry_date_utc
+        self.expiry_day = self.expiry_date.floor("D")
         self.roll_date = self.current_id.roll_date_utc
         self._last_received = False
         print(f"{message}: {self.current_id}")
                 
-    def _roll_forward(self, message: str = "") -> None:
-        self.unsubscribe_bars(self.current_bar_type)
-        self.current_id = self._chain.forward_id(self.current_id)
-        self.roll(message=message)
+    
+        
 
 
 # print(f"expiry_date: {expiry_date}")

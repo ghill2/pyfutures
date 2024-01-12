@@ -4,6 +4,7 @@ from pyfutures.continuous.wrangler import ContinuousPriceWrangler
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
@@ -37,171 +38,7 @@ import joblib
 TODO: test if contract expires it take next forward price
 TODO: test if forward contract expires before current contract expiry date
 """
-attempting_list = [
-    
-]
 
-success_list = [
-    "DC",
-    "EBM",
-    "ECO",
-    "EMA",
-    "KE",
-    "RS",
-    "XK",
-    "XW",
-    "ZC",
-    "ZL",
-    "ZM",
-    "ZO",
-    "ZR",
-    "ZS",
-    "GF",
-    "HE",
-    "LE",
-    "C",
-    "W",
-    "CC",
-    "CT",
-    "KC",
-    "OJ",
-    "SB",
-    "JBL",
-    "JBLM",
-    "JB",
-    "XT",
-    "FGBX",
-    "FBTP",
-    "FGBL",
-    "FOAT",
-    "R",
-    "FGBM",
-    "FGBS",
-    "ZB",
-    "CGB",
-    "TN",
-    "UB",
-    "ZN",
-    "ZF",
-    "ZT",
-    "ATW",
-    "ECF",
-    "NGF",
-    "TFM",
-    "HH",
-    "NG",
-    "QG",
-    "BZ",
-    "COIL",
-    "GOIL",
-    "HO",
-    "MCL",
-    "QM",
-    "RB",
-    "06",
-    "05",
-    "MHI",
-    "TPXM",
-    "MCH",
-    "MFS",
-    "MME",
-    "SGP",
-    "225MC",
-    "225M",
-    "FTI",
-    "MFA",
-    "FEDV",
-    "FXXP",
-    "FSXE",
-    "FESX",
-    "Y2",
-    "MICRO",
-    "FTMIB",
-    "MINI",
-    "MIX",
-    "FSMX",
-    "FESB",
-    "FSTA",
-    "FSTS",
-    "FSTI",
-    "FSTY",
-    "EMD",
-    "MYM",
-    "MNQ",
-    "M2K",
-    "MES",
-    "SXF",
-    "SXM",
-    "RX",
-    "XAP",
-    "XAE",
-    "XAF",
-    "XAV",
-    "XAI",
-    "XAU",
-    "RP",
-    "RY",
-    "6L",
-    "6M",
-    "6A",
-    "6C",
-    "6S",
-    "DX",
-    "E7",
-    "6E",
-    "6B",
-    "6J",
-    "M6A",
-    "M6E",
-    "6N",
-    "FEF",
-    "TF",
-    "ALI",
-    "HG",
-    "HRC",
-    "MHG",
-    "PA",
-    "GC",
-    "MBT",
-    "MGC",
-    "PL",
-    "SI",
-    "SIL",
-    "YIW",
-    "FEU3",
-    "I",
-    "SO3",
-    "SR3",
-    "FVS",
-    "VX",
-    "VXM",
-]
-
-failed_list = [
-    "ZW",  # 1987Z, contract expired
-    "167", # 2017M, contract expired
-    "RC",  # 2008X, contract expired
-    "TWN",  # 2020N, contract expired
-    "CN", # XINA50, contract expired
-    "CL",  # 1987Z, contract expired
-    "FESU",  # 2008H, contract expired, roll date is 2008-03-16 for 2008H but no data in next contract 2008M until 2008-03-20
-    "FSTO",  # 2008H, contract expired
-    "FSTH",  # 2008H, contract expired
-    "FSTE",  # 2008H, contract expired
-    "FSTU",  # 2008H, contract expired
-    "FSTL",  # 2008U, contract expired
-    "FSMS",  # 1994M, contract expired
-    "FSMI",  # 1994M, contract expired
-    "Z",  # 1988H, contract expired
-    "FDXM",  # 1992Z, contract expired
-    "FDXS",  # 1992Z, contract expired
-    "FDAX",  # 1992Z, contract expired
-    "FCE",  # 1990M, contract expired
-    "MFC",  # 1990M, contract expired
-    "6Z",  # 2008M, contract expired
-]
-
-FAILED = []
 def process_row(
     trading_class: str,
     symbol: str,
@@ -247,32 +84,60 @@ def process_row(
     # start_month = ContractMonth(paths[0].stem.split("=")[1].split(".")[0])
     
     #########################
-    
+
+def find_problem_files():
+    """
+    find trading_classes where the files do have the hold cycle in every year
+    """
+    universe = IBTestProviderStubs.universe_dataframe()
+    data_folder = Path("/Users/g1/Desktop/all UTC")
+    for row in universe.itertuples():
+        
+        data_dir = (data_folder / row.data_symbol)
+        paths = list(sorted(list(data_dir.glob("*.txt")) + list(data_dir.glob("*.b01"))))
+        assert len(paths) > 0
+        
+        start_month = ContractMonth(row.data_start)
+        end_month = ContractMonth(row.data_end)
+        required_months = []
+        
+        cycle = RollCycle(row.hold_cycle)
+        while True:
+            required_months.append(start_month)
+            start_month = cycle.next_month(start_month)
+            if start_month >= end_month:
+                break
+        
+        stems = [
+            x.stem[-5:] for x in paths
+        ]
+        for month in required_months:
+            if month.value in stems:
+                continue
+            print(row.trading_class, month.value)
+        
 if __name__ == "__main__":
     
     universe = IBTestProviderStubs.universe_dataframe()
     
-    for row in universe.itertuples():
-        # if row.trading_class in success_list:
-        if row.trading_class == "EBM":
-            process_row(
-                str(row.trading_class),
-                str(row.symbol),
-                str(row.hold_cycle),
-                str(row.priced_cycle),
-                int(row.roll_offset),
-                int(row.expiry_offset),
-                int(row.carry_offset),
-                str(row.start),
-                str(row.end),
-            )
+    # for row in universe.itertuples():
+    #     if row.trading_class == "MFS":
+    #         process_row(
+    #             str(row.trading_class),
+    #             str(row.symbol),
+    #             str(row.hold_cycle),
+    #             str(row.priced_cycle),
+    #             int(row.roll_offset),
+    #             int(row.expiry_offset),
+    #             int(row.carry_offset),
+    #             str(row.start),
+    #             str(row.end),
+    #         )
     
-    exit()
     func_gen = (
         joblib.delayed(process_row)(
             str(row.trading_class),
             str(row.symbol),
-            str(row.exchange),
             str(row.hold_cycle),
             str(row.priced_cycle),
             int(row.roll_offset),
@@ -282,48 +147,71 @@ if __name__ == "__main__":
             str(row.end),
         )
         for row in universe.itertuples()
-        if row.trading_class in success_list
-        # if row.trading_class == "XW"
-        # if row.trading_class in [
-        #     "EBM",
-        #     # "COIL", # fixed
-        #     # "FSTS",
-        #     # "RX",
-        #     # "FVS",
-        #     # "M6A",
-        #     # "6A",
-        # ]
-        
+    if row.trading_class in [
+        "DC",
+        "ECO",
+        "EMA",
+        "KE",
+        "RS",
+        "XK",
+        "XW",
+        "ZC",
+        "ZL",
+        "ZM",
+        "ZO",
+        "ZR",
+        "ZS",
+        "ZW",
+        "GF",
+        "HE",
+        "LE",
+        "C",
+        "RC",
+        "W",
+        "CC",
+        "CT",
+        "KC",
+        "OJ",
+        "SB",
+        "JBL",
+        "JBLM",
+        "JB",
+        "XT",
+        "FGBX",
+        "FBTP",
+        "FGBL",
+        "FOAT",
+        "R",
+        "FGBM",
+        "FGBS",
+        "ZB",
+        "CGB",
+        "TN",
+        "UB",
+        "ZN",
+        "ZF",
+        "ZT",
+        "ATW",
+        "ECF",
+        "NGF",
+        "TFM",
+        "HH",
+        "NG",
+        "QG",
+        "BZ",
+        "GOIL",
+        "CL",
+        "HO",
+        "MCL",
+        "QM",
+        "RB",
+        "TWN",
+        "CN",
+        "MHI",
+        "TPXM",
+        "MCH",
+    ]
     )
-    
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
-    
-    
-    # def get_start_month_and_year():
-    
-#     data_folder = Path("/Users/g1/Downloads/portara data/all UTC")
-    
-#     universe = IBTestProviderStubs.universe_dataframe()
-    
-#     for row in universe.itertuples():
-        
-#         data_dir = (data_folder / row.data_symbol)
-        
-#         assert data_dir.exists()
-        
-#         files = list(sorted(list(data_dir.rglob("*.txt")) + list(data_dir.rglob("*.b01"))))
-#         start_month = files[0].stem[-1]
-#         start_year = files[0].stem[-5:-1]
-        
-#         end_month = files[-1].stem[-1]
-#         end_year = files[-1].stem[-5:-1]
-#         print(end_year)
-# # merge the bars and add find is_last boolean
-# data = []
-# for path in paths:
-#     file = ParquetFile.from_path(path)
-#     bars = file.read_objects()
-#     for i, bar in enumerate(bars):
-#         is_last = i == len(bars) - 1
-#         data.append((bar, is_last))
-# data = list(sorted(data, key= lambda x: x[0].ts_init))
+
+
