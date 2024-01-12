@@ -75,8 +75,10 @@ class IBTestProviderStubs:
             "expiry_offset": pd.Int64Dtype(),
             "roll_offset": pd.Int64Dtype(),
             "carry_offset": pd.Int64Dtype(),
-            "open": str,
-            "close": str,
+            "market_hours_local": str,
+            "liquid_hours_local": str,
+            "weekly_hours": str,
+            "hours_last_edited": str,
             "session": pd.Int64Dtype(),
             "description": str,
             "sector": str,
@@ -84,6 +86,8 @@ class IBTestProviderStubs:
             "region": str,
             "url": str,
             "comments": str,
+            "open": str,
+            "close": str,
         }
         df = pd.read_csv(file, dtype=dtype)
         
