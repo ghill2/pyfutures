@@ -108,6 +108,7 @@ class ContinuousPriceWrangler:
             if month in self.chain.hold_cycle and month.year >= self.start_month.year:
                 filtered.append(path)
         paths = filtered
+        assert len(paths) > 0
         
         bars = []
         # merge and sort the bars and add find is_last boolean
@@ -119,7 +120,8 @@ class ContinuousPriceWrangler:
                 is_last = i == len(bars) - 1
                 data.append((bar, is_last))
         data = list(sorted(data, key= lambda x: x[0].ts_init))
-        assert len(data) > 0
+        if len(data) == 0:
+            raise ValueError(f"{self.bar_type} has no data")
         
         # process
         end_month = ContractMonth("2023F")

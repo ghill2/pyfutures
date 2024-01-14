@@ -48,7 +48,7 @@ if __name__ == "__main__":
         
         for file in files:
             
-            print(f"Importing {file}...")
+            
             letter_month = file.stem[-1]
             
             year = int(file.stem[-5:-1])
@@ -71,7 +71,10 @@ if __name__ == "__main__":
             )
             
             if outfile.path.exists():
+                print(f"Skipping {file}...")
                 continue
+            else:
+                print(f"Importing {file}...")
             
             df = pd.read_csv(
                 file,

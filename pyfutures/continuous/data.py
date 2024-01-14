@@ -71,7 +71,16 @@ class ContinuousData(Actor):
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         
-        
+        # for debugging
+        if self.current_id.month.value == "2008H":
+            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+            print(
+                f"{self.current_id.month.value} {current_timestamp_str}",
+                f"{self.forward_id.month.value} {forward_timestamp_str}",
+                str(self.roll_date)[:-15],
+                str(self.expiry_date)[:-15],
+            )
             
         # next bar arrived before current or vice versa
         if current_bar is None or forward_bar is None:
@@ -82,30 +91,20 @@ class ContinuousData(Actor):
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
         current_day = current_timestamp.floor("D")
         forward_day = forward_timestamp.floor("D")
-        
             
-        is_expired = current_timestamp > self.expiry_date
+        is_expired = current_timestamp >= (self.expiry_day + pd.Timedelta(days=1))
         if is_expired:
-            raise ValueError(f"ContractExpired {self._bar_type} {self.current_id}")
+            raise ValueError(f"ContractExpired {self.current_id}")
         elif is_last and bar.bar_type == self.current_bar_type:
-            raise ValueError(f"{self._bar_type} roll failure, last bar of current contract")
+            raise ValueError(f" contract failed to roll before last bar of current contract received {self.current_id}")
         
         self._send_continous_price()
         
         # in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp.day <= self.expiry_date.day)
         in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
         
-        if self.current_id.month.value == "2018M":
-            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-            print(
-                f"{self.current_id.month.value} {current_timestamp_str}",
-                f"{self.forward_id.month.value} {forward_timestamp_str}",
-                str(self.roll_date)[:-15],
-                str(self.expiry_date)[:-15],
-                in_roll_window,
-            )
-                    
+        
+            
         # a valid roll time is where both timestamps are equal
         should_roll = in_roll_window and current_timestamp == forward_timestamp
         # should_roll = in_roll_window and current_day == forward_day

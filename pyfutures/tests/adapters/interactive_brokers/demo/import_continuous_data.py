@@ -85,6 +85,33 @@ def process_row(
     
     #########################
 
+def find_minimum_day_of_month_within_range(
+    start: pd.Timestamp | str,
+    end: pd.Timestamp | str,
+    dayname: str, # Friday, Tuesday etc
+    dayofmonth: int, # 1, 2, 3, 4 etc
+):
+    
+    # find minimum x day of each month within a date range
+    import pandas as pd
+    df = pd.DataFrame({'date': pd.date_range(start=start, end=end)})
+    days = df[df['date'].dt.day_name() == dayname]
+
+    data = {}
+    for date in days.date:
+        
+        key = f"{date.year}{date.month}"
+        if data.get(key) is None:
+            data[key] = []
+            
+        data[key].append(date)
+        
+    filtered = []
+    for key, values in data.items():
+        filtered.append(values[dayofmonth - 1])
+
+    return pd.Series(filtered).dt.day.min()
+
 def find_problem_files():
     """
     find trading_classes where the files do have the hold cycle in every year
@@ -117,101 +144,52 @@ def find_problem_files():
             print(row.trading_class, month.value)
         
 if __name__ == "__main__":
+    	
+    # min_ = find_minimum_day_of_month_within_range(
+    #     start=ContractMonth("1999H").timestamp_utc,
+    #     end=ContractMonth("2025H").timestamp_utc,
+    #     dayname="Thursday",
+    #     dayofmonth=2,
+    # )
     
     universe = IBTestProviderStubs.universe_dataframe()
     
-    # for row in universe.itertuples():
-    #     if row.trading_class == "MFS":
-    #         process_row(
-    #             str(row.trading_class),
-    #             str(row.symbol),
-    #             str(row.hold_cycle),
-    #             str(row.priced_cycle),
-    #             int(row.roll_offset),
-    #             int(row.expiry_offset),
-    #             int(row.carry_offset),
-    #             str(row.start),
-    #             str(row.end),
-    #         )
+    for row in universe.itertuples():
+        if row.trading_class == "MES":
+            process_row(
+                str(row.trading_class),
+                str(row.symbol),
+                str(row.hold_cycle),
+                str(row.priced_cycle),
+                int(row.roll_offset),
+                int(row.expiry_offset),
+                int(row.carry_offset),
+                str(row.start),
+                str(row.end),
+            )
     
-    func_gen = (
-        joblib.delayed(process_row)(
-            str(row.trading_class),
-            str(row.symbol),
-            str(row.hold_cycle),
-            str(row.priced_cycle),
-            int(row.roll_offset),
-            int(row.expiry_offset),
-            int(row.carry_offset),
-            str(row.start),
-            str(row.end),
-        )
-        for row in universe.itertuples()
-    if row.trading_class in [
-        "DC",
-        "ECO",
-        "EMA",
-        "KE",
-        "RS",
-        "XK",
-        "XW",
-        "ZC",
-        "ZL",
-        "ZM",
-        "ZO",
-        "ZR",
-        "ZS",
-        "ZW",
-        "GF",
-        "HE",
-        "LE",
-        "C",
-        "RC",
-        "W",
-        "CC",
-        "CT",
-        "KC",
-        "OJ",
-        "SB",
-        "JBL",
-        "JBLM",
-        "JB",
-        "XT",
-        "FGBX",
-        "FBTP",
-        "FGBL",
-        "FOAT",
-        "R",
-        "FGBM",
-        "FGBS",
-        "ZB",
-        "CGB",
-        "TN",
-        "UB",
-        "ZN",
-        "ZF",
-        "ZT",
-        "ATW",
-        "ECF",
-        "NGF",
-        "TFM",
-        "HH",
-        "NG",
-        "QG",
-        "BZ",
-        "GOIL",
-        "CL",
-        "HO",
-        "MCL",
-        "QM",
-        "RB",
-        "TWN",
-        "CN",
-        "MHI",
-        "TPXM",
-        "MCH",
-    ]
-    )
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
+    # func_gen = (
+    #     joblib.delayed(process_row)(
+    #         str(row.trading_class),
+    #         str(row.symbol),
+    #         str(row.hold_cycle),
+    #         str(row.priced_cycle),
+    #         int(row.roll_offset),
+    #         int(row.expiry_offset),
+    #         int(row.carry_offset),
+    #         str(row.start),
+    #         str(row.end),
+    #     )
+    #     for row in universe.itertuples()
+    #     if row.trading_class in [
+    #         "FESB",
+    #         "FESU",
+    #         "FSTA",
+    #         "FSTS",
+    #         "FSTO",
+    #         "FSTH",
+    #     ]
+    # )
+    # results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
 
 

@@ -18,7 +18,8 @@ support expiry date calculation by last day of the month 2 months previous to co
 support lookback by market calendar if expiry date is within closed market hours
 support cycle masking by year/month
 support seasonal contracts with duplicate trading classes
-support year range cycle rules
+support year range hold cycle cycle rules (EBM)
+
 
 # Re-connect
 
