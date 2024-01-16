@@ -195,7 +195,7 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
-        if row.trading_class == "EBM":
+        if row.trading_class == "EBM_Z":
             process_row(
                 str(row.trading_class),
                 str(row.symbol),
