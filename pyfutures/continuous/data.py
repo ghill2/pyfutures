@@ -22,7 +22,6 @@ class ContinuousData(Actor):
         start_month: ContractMonth,
         # end_month: ContractMonth | None,
         handler: Callable | None = None,
-        ignore_failed: list[ContractMonth] | None = None
     ):
         super().__init__()
         
@@ -40,8 +39,6 @@ class ContinuousData(Actor):
         self._handler = handler
         self._start_month = start_month
         self._last_received = False
-        # self._end_month = end_month
-        self._ignore_failed = ignore_failed or []
         
     @property
     def roll_date_utc(self) -> pd.Timestamp:
@@ -52,12 +49,9 @@ class ContinuousData(Actor):
         return self.current_id.approximate_expiry_date_utc
     
     def on_start(self) -> None:
-        # start = self._start_month.timestamp_utc
-        """
-        if the start month is in the hold cycle, do nothing
-        if the start month is not in the hold cycle, go to next month in the hold cycle
-        """
         
+        # if the start month is in the hold cycle, do nothing
+        # if the start month is not in the hold cycle, go to next month in the hold cycle
         start_month = self._start_month
         if self._start_month not in self._chain.hold_cycle:
             start_month = self._chain.hold_cycle.next_month(start_month)
@@ -65,7 +59,7 @@ class ContinuousData(Actor):
         self.current_id = self._chain.make_id(start_month)
         self.roll()
 
-    def on_bar(self, bar: Bar, is_last: bool = False) -> None:
+    def on_bar(self, bar: Bar) -> None:
             
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return
@@ -74,7 +68,7 @@ class ContinuousData(Actor):
         forward_bar = self.cache.bar(self.forward_bar_type)
         
         # for debugging
-        if self.current_id.month.value == "2007M":
+        if self.current_id.month.value == "1999H":
             current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
             forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
             print(
@@ -107,7 +101,10 @@ class ContinuousData(Actor):
         is_expired = current_timestamp >= (self.expiry_day + pd.Timedelta(days=1))
         # should_roll = in_roll_window and current_day == forward_day
         
+        
+        
         if is_expired:
+            # TODO: wait for next forward bar != last timestamp
             raise ValueError(f"ContractExpired {self.current_id}")
         elif should_roll:
             self.roll()
@@ -145,7 +142,6 @@ class ContinuousData(Actor):
         
         assert self.current_id is not None
         
-        self.unsubscribe_bars(self.current_bar_type)
         self.current_id = self._chain.forward_id(self.current_id)
         self.forward_id = self._chain.forward_id(self.current_id)
         self.carry_id = self._chain.carry_id(self.current_id)
@@ -155,7 +151,9 @@ class ContinuousData(Actor):
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
-
+        
+        # TODO: unsubscribe to old bars self.unsubscribe_bars(self.current_bar_type)
+        
         self.forward_bar_type = BarType(
             instrument_id=self.forward_id.instrument_id,
             bar_spec=self._bar_type.spec,
@@ -168,6 +166,7 @@ class ContinuousData(Actor):
             aggregation_source=self._bar_type.aggregation_source,
         )
 
+        
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
         self.subscribe_bars(self.carry_bar_type)
@@ -176,8 +175,10 @@ class ContinuousData(Actor):
         self.expiry_day = self.expiry_date.floor("D")
         self.roll_date = self.current_id.roll_date_utc
         self._last_received = False
+        
+        print(self.current_id)
 
-# print(f"expiry_date: {expiry_date}")
+        # print(f"expiry_date: {expiry_date}")
 
     # def _try_roll(self, bar: Bar, is_last: bool = False) -> None:
         # print("_try_roll")

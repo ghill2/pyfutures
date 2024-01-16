@@ -1,7 +1,7 @@
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
-    
+
 class RollCycle:
     def __init__(self, value: str, skip_months: list[ContractMonth] | None = None):
         assert isinstance(value, str)
@@ -109,16 +109,20 @@ class RollCycle:
 
     def __contains__(self, month: ContractMonth) -> bool:
         return month.letter_month in self.value
+    
+    def __hash__(self) -> int:
+        return hash(self.value)
 
-class CycleIterator:
-    def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
-        raise NotImplementedError()
-    
-    def next_month(self, current: ContractMonth) -> ContractMonth:
-        raise NotImplementedError()
-    
-    def previous_month(self, current: ContractMonth) -> ContractMonth:
-        raise NotImplementedError()
+    def iterate(self, start: ContractMonth, end: ContractMonth, direction: int):
+        
+        if direction == 1:
+            if start.letter_month not in self.value:
+                start = self._closest_next(start)
+            while start < end:
+                yield start
+                start = self.next_month(start)
+        if direction == -1:
+            raise NotImplementedError()  # TODO
     
 class RollCycleRange:
     def __init__(
@@ -130,7 +134,46 @@ class RollCycleRange:
         self.start_month = start_month
         self.end_month = end_month
         self.cycle = cycle
-        
+    
+    def __contains__(self, month: ContractMonth) -> bool:
+        return (month >= self.start_month) and (month <= self.start_month)
+    
 class RangedRollCycle:
     def __init__(self, ranges: list[RollCycleRange]):
-        pass
+        
+        # TODO: check ranges are not overlapping
+        # TODO: check no gap between ranges
+        self._ranges = ranges
+    
+    def next_month(self, current: ContractMonth) -> ContractMonth:
+        
+        for range in self._ranges:
+            if current in range:
+                return range.cycle.next_month()
+            
+        raise RuntimeError()
+                
+                
+        
+        
+    
+        
+        
+            
+        
+# from abc import ABC, abstractmethod
+
+# class CycleIterator(ABC):
+    
+#     @abstractmethod
+#     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
+#         pass
+    
+#     @abstractmethod
+#     def next_month(self, current: ContractMonth) -> ContractMonth:
+#         pass
+    
+#     @abstractmethod
+#     def previous_month(self, current: ContractMonth) -> ContractMonth:
+#         pass
+        

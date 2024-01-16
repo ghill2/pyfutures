@@ -22,7 +22,10 @@ class FuturesChain:
     ):
         
         self.instrument_id = InstrumentId.from_str(str(config.instrument_id))
-        self.hold_cycle = RollCycle(config.hold_cycle, skip_months=config.skip_months)
+        
+        skip_months = list(map(ContractMonth, config.skip_months))
+        self.hold_cycle = RollCycle(config.hold_cycle, skip_months=skip_months)
+        
         self.priced_cycle = RollCycle(config.priced_cycle)
         self.roll_offset = config.roll_offset
         self.approximate_expiry_offset = config.approximate_expiry_offset

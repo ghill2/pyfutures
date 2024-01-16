@@ -34,11 +34,18 @@ if __name__ == "__main__":
         letter_month = file.stem[-1]
         assert letter_month in MONTH_LIST
         
-        # check file has data symbol
-        rows = universe[universe['data_symbol'] == file.parent.stem]
-        assert not rows.empty
+        # # check file has data symbol
+        # rows = universe[universe['data_symbol'] == file.parent.stem]
+        # if rows.empty:
+        #     raise ValueError(f"{file}")
         
     # import data
+    rows = list(universe.itertuples())
+    rows = [
+        x for x in rows
+        if x.trading_class.startswith("EBM")
+    ]
+    
     for row in universe.itertuples():
         
         # get files in the data folder
@@ -47,7 +54,6 @@ if __name__ == "__main__":
         files = list(sorted(list(data_dir.glob("*.txt")) + list(data_dir.glob("*.b01"))))
         
         for file in files:
-            
             
             letter_month = file.stem[-1]
             

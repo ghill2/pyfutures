@@ -9,6 +9,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
 from nautilus_trader.portfolio.portfolio import Portfolio
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 import pandas as pd
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
@@ -33,12 +34,19 @@ import pytest
 import numpy as np
 import pytest
 import joblib
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
 
 """
 TODO: test if contract expires it take next forward price
 TODO: test if forward contract expires before current contract expiry date
 """
 
+ADDED_BARS = {
+    
+}
+        
 def process_row(
     trading_class: str,
     symbol: str,
@@ -48,8 +56,7 @@ def process_row(
     approximate_expiry_offset: int,
     carry_offset: int,
     start: str,
-    missing_months: list[str],
-    ignore_failed: list[str],
+    missing_months: list[str] | None,
 ):
     
     
@@ -59,8 +66,8 @@ def process_row(
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     start_month = ContractMonth(start)
-    missing_months = list(map(ContractMonth, missing_months))
-    ignore_failed = list(map(ContractMonth, ignore_failed))
+    
+    # ignore_failed = list(map(ContractMonth, ignore_failed))
     wrangler = ContinuousPriceWrangler(
         bar_type=bar_type,
         start_month=start_month,
@@ -73,14 +80,42 @@ def process_row(
             carry_offset=carry_offset,
             skip_months=missing_months,
         ),
-        ignore_failed=ignore_failed,
     )
     
     keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
     paths = list(sorted(data_folder.glob(keyword)))
     assert len(paths) > 0
     
-    wrangler.process_files(paths)
+    # filter the paths by the hold cycle and start year
+    data = {}
+    for path in paths:
+        month = ContractMonth(path.stem.split("=")[1].split(".")[0])
+        if month in wrangler.chain.hold_cycle and month.year >= start_month.year:
+            file = ParquetFile.from_path(path)
+            data[month] = file.read_objects()
+    assert len(data) > 0
+    
+    # add extra bars
+    if trading_class == "FESB":
+        
+        bar = Bar(
+                BarType.from_str("FESB_SX7E=2007U.IB-1-MINUTE-MID-EXTERNAL"),
+                open=Price.from_str("480.00"),
+                high=Price.from_str("482.00"),
+                low=Price.from_str("479.30"),
+                close=Price.from_str("482.00"),
+                volume=Quantity.from_str("20.0"),
+                ts_init=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
+                ts_event=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
+            )
+        
+        "FESB 2007U - 20070615, 1621, 480.00, 482,00, 479.30, 482.00, 1, 20"
+        
+        data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
+        for bar in data[ContractMonth("2007U")][:2]:
+            print(bar)
+                    
+    wrangler.process_bars(list(data.values()))
     
     # start month is start of data
     # start month for debugging
@@ -160,7 +195,7 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
-        if row.trading_class == "FESB":
+        if row.trading_class == "EBM":
             process_row(
                 str(row.trading_class),
                 str(row.symbol),
@@ -170,8 +205,8 @@ if __name__ == "__main__":
                 int(row.expiry_offset),
                 int(row.carry_offset),
                 str(row.start),
-                list(map(lambda x: x.strip(), row.missing_months.split(","))),
-                list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
+                list(map(lambda x: x.strip(), row.missing_months.split(","))) if type(row.missing_months) is not float else [],
+                # list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
             )
     
     # func_gen = (

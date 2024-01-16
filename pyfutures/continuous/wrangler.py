@@ -32,6 +32,7 @@ import pytest
 import numpy as np
 import pytest
 import joblib
+from nautilus_trader.model.data import Bar
 
 class ContinuousPriceWrangler:
     
@@ -40,7 +41,7 @@ class ContinuousPriceWrangler:
         bar_type: BarType,
         start_month: ContractMonth,
         config: FuturesChainConfig,
-        ignore_failed: list[ContractMonth] | None = None,
+        skip_months: list[ContractMonth] | None = None
     ):
         
         self.start_month = start_month
@@ -87,7 +88,7 @@ class ContinuousPriceWrangler:
             start_month=start_month,
             # end_month=end_month,
             handler=self.prices.append,
-            ignore_failed=ignore_failed,
+            
         )
         
         self.continuous.register_base(
@@ -100,28 +101,21 @@ class ContinuousPriceWrangler:
 
         self.continuous.start()
         data_engine.start()
+        
+        self._skip_months = skip_months or []
     
-    def process_files(self, paths: list[Path]):
+    def process_bars(self, bars_list: list[list[Bar]]):
         
-        # filter the paths by the hold cycle and start year
-        filtered = []
-        for path in paths:
-            month = ContractMonth(path.stem.split("=")[1].split(".")[0])
-            if month in self.chain.hold_cycle and month.year >= self.start_month.year:
-                filtered.append(path)
-        paths = filtered
-        assert len(paths) > 0
+        # TODO: check contract months
         
-        bars = []
         # merge and sort the bars and add find is_last boolean
         data = []
-        for path in paths:
-            file = ParquetFile.from_path(path)
-            bars = file.read_objects()
+        for bars in bars_list:
             for i, bar in enumerate(bars):
                 is_last = i == len(bars) - 1
                 data.append((bar, is_last))
         data = list(sorted(data, key= lambda x: x[0].ts_init))
+        
         if len(data) == 0:
             raise ValueError(f"{self.bar_type} has no data")
         
@@ -134,17 +128,21 @@ class ContinuousPriceWrangler:
             if len(self.prices) > 0 and self.prices[-1].current_month >= end_month:
                 self.prices.pop(-1)
                 break  # done sampling
+            # elif self.continuous.current_id.month in self._skip_months:
+            #     print(f"Skipping month {self.continuous.current_id.month}")
+            #     self.continuous.roll()
             
             self.cache.add_bar(bar)
-            self.continuous.on_bar(bar, is_last=is_last)
+            self.continuous.on_bar(bar)
             
-            if is_last and bar.bar_type == self.current_bar_type:
-                if self.current_id.month in self._ignore_failed:
-                    print("ignoring failed and rolling to next contract")
-                    self.current_id = self._chain.forward_id(self.current_id)
-                    self.roll(self._chain.forward_id(self.current_id))
-                else:
-                    raise ValueError(f" contract failed to roll before last bar of current contract received {self.current_id}")
+            if is_last and bar.bar_type == self.continuous.current_bar_type:
+                raise ValueError(f" contract failed to roll before last bar of current contract received {self.continuous.current_id}")
+                # if self.current_id.month in self._ignore_failed:
+                #     print("ignoring failed and rolling to next contract")
+                #     self.current_id = self._chain.forward_id(self.current_id)
+                #     self.roll(self._chain.forward_id(self.current_id))
+                # else:
+                    
         
         assert len(self.prices) > 0
         
