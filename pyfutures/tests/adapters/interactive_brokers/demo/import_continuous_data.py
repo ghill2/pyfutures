@@ -48,8 +48,10 @@ def process_row(
     approximate_expiry_offset: int,
     carry_offset: int,
     start: str,
-    end: str,
+    missing_months: list[str],
+    ignore_failed: list[str],
 ):
+    
     
     # load all the data for the data symbol
     data_folder = Path("/Users/g1/Desktop/output")
@@ -57,7 +59,8 @@ def process_row(
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     start_month = ContractMonth(start)
-    
+    missing_months = list(map(ContractMonth, missing_months))
+    ignore_failed = list(map(ContractMonth, ignore_failed))
     wrangler = ContinuousPriceWrangler(
         bar_type=bar_type,
         start_month=start_month,
@@ -68,7 +71,9 @@ def process_row(
             roll_offset=roll_offset,
             approximate_expiry_offset=approximate_expiry_offset,
             carry_offset=carry_offset,
-        )
+            skip_months=missing_months,
+        ),
+        ignore_failed=ignore_failed,
     )
     
     keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
@@ -155,7 +160,7 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
-        if row.trading_class == "VX":
+        if row.trading_class == "FESB":
             process_row(
                 str(row.trading_class),
                 str(row.symbol),
@@ -165,7 +170,8 @@ if __name__ == "__main__":
                 int(row.expiry_offset),
                 int(row.carry_offset),
                 str(row.start),
-                str(row.end),
+                list(map(lambda x: x.strip(), row.missing_months.split(","))),
+                list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
             )
     
     # func_gen = (

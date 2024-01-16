@@ -20,3 +20,4 @@ class FuturesChainConfig:
     roll_offset: int
     approximate_expiry_offset: int
     carry_offset: int
+    skip_months: list[str] | None = None

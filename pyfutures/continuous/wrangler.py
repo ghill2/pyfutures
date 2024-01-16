@@ -40,7 +40,8 @@ class ContinuousPriceWrangler:
         bar_type: BarType,
         start_month: ContractMonth,
         config: FuturesChainConfig,
-        ):
+        ignore_failed: list[ContractMonth] | None = None,
+    ):
         
         self.start_month = start_month
         self.bar_type = bar_type
@@ -86,6 +87,7 @@ class ContinuousPriceWrangler:
             start_month=start_month,
             # end_month=end_month,
             handler=self.prices.append,
+            ignore_failed=ignore_failed,
         )
         
         self.continuous.register_base(
@@ -135,6 +137,14 @@ class ContinuousPriceWrangler:
             
             self.cache.add_bar(bar)
             self.continuous.on_bar(bar, is_last=is_last)
+            
+            if is_last and bar.bar_type == self.current_bar_type:
+                if self.current_id.month in self._ignore_failed:
+                    print("ignoring failed and rolling to next contract")
+                    self.current_id = self._chain.forward_id(self.current_id)
+                    self.roll(self._chain.forward_id(self.current_id))
+                else:
+                    raise ValueError(f" contract failed to roll before last bar of current contract received {self.current_id}")
         
         assert len(self.prices) > 0
         

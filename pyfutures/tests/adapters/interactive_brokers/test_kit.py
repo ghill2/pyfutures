@@ -67,6 +67,8 @@ class IBTestProviderStubs:
             "data_end": str,
             "start": str,
             "end": str,
+            "skip_months": str,
+            "ignore_failed": str,
             "data_completes": pd.BooleanDtype(),
             "minute_transition": pd.BooleanDtype(),
             "price_magnifier":	pd.Int64Dtype(),

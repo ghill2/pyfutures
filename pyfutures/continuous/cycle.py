@@ -1,26 +1,29 @@
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
-
-
+    
 class RollCycle:
-    def __init__(self, value: str, skip_months: list[str] | None = None):
+    def __init__(self, value: str, skip_months: list[ContractMonth] | None = None):
         assert isinstance(value, str)
 
         self.value = "".join(sorted(value))
         
-        self._skip_months = skip_months
+        self._skip_months = skip_months or []
 
     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
-        current_id = ContractMonth.from_month_year(timestamp.year, timestamp.month)
+        
+        month = ContractMonth.from_month_year(timestamp.year, timestamp.month)
 
-        letter_month = current_id.letter_month
+        letter_month = month.letter_month
 
         if letter_month not in self.value:
-            current_id = self.next_month(current_id)
+            month = self.next_month(month)
         
-        return current_id
-
+        while month.value in self._skip_months:
+            month = self.next_month(current=month)
+            
+        return month
+    
     def next_month(self, current: ContractMonth) -> ContractMonth:
         year = current.year
         letter_month = current.letter_month
@@ -37,7 +40,12 @@ class RollCycle:
         else:
             month = self.value[self.value.index(letter_month) + 1]
 
-        return ContractMonth(f"{year}{month}")
+        month = ContractMonth(f"{year}{month}")
+        
+        while month in self._skip_months:
+            month = self.next_month(current=month)
+            
+        return month
 
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         year = current.year
@@ -54,9 +62,14 @@ class RollCycle:
             month = self.value[-1]
         else:
             month = self.value[self.value.index(letter_month) - 1]
-
-        return ContractMonth(f"{year}{month}")
-
+        
+        month = ContractMonth(f"{year}{month}")
+        
+        while month in self._skip_months:
+            month = self.previous_month(current=month)
+            
+        return month
+    
     def _closest_previous(self, current: ContractMonth) -> ContractMonth:
         year = current.year
         letter_month = current.letter_month
@@ -96,3 +109,28 @@ class RollCycle:
 
     def __contains__(self, month: ContractMonth) -> bool:
         return month.letter_month in self.value
+
+class CycleIterator:
+    def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
+        raise NotImplementedError()
+    
+    def next_month(self, current: ContractMonth) -> ContractMonth:
+        raise NotImplementedError()
+    
+    def previous_month(self, current: ContractMonth) -> ContractMonth:
+        raise NotImplementedError()
+    
+class RollCycleRange:
+    def __init__(
+        self,
+        start_month: ContractMonth,
+        end_month: ContractMonth,
+        cycle: RollCycle,
+    ):
+        self.start_month = start_month
+        self.end_month = end_month
+        self.cycle = cycle
+        
+class RangedRollCycle:
+    def __init__(self, ranges: list[RollCycleRange]):
+        pass
