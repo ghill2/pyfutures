@@ -4,10 +4,12 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 
 class RollCycle:
-    def __init__(self, value: str):
+    def __init__(self, value: str, skip_months: list[str] | None = None):
         assert isinstance(value, str)
 
         self.value = "".join(sorted(value))
+        
+        self._skip_months = skip_months
 
     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
         current_id = ContractMonth.from_month_year(timestamp.year, timestamp.month)
@@ -16,7 +18,7 @@ class RollCycle:
 
         if letter_month not in self.value:
             current_id = self.next_month(current_id)
-
+        
         return current_id
 
     def next_month(self, current: ContractMonth) -> ContractMonth:

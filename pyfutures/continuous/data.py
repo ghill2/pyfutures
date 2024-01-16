@@ -91,17 +91,19 @@ class ContinuousData(Actor):
         should_roll = in_roll_window and current_timestamp == forward_timestamp
         # should_roll = in_roll_window and current_day == forward_day
         
-        # # for debugging
-        # if self.current_id.month.value == "1995H":
-        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-        #     print(
-        #         f"{self.current_id.month.value} {current_timestamp_str}",
-        #         f"{self.forward_id.month.value} {forward_timestamp_str}",
-        #         str(self.roll_date)[:-15],
-        #         str(self.expiry_date)[:-15],
-        #         should_roll,
-        #     )
+        # for debugging
+        if self.current_id.month.value == "2010G":
+            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+            print(
+                f"{self.current_id.month.value} {current_timestamp_str}",
+                f"{self.forward_id.month.value} {forward_timestamp_str}",
+                str(self.roll_date)[:-15],
+                str(self.expiry_date)[:-15],
+                should_roll,
+                current_timestamp >= self.roll_date,
+                current_day <= self.expiry_day,
+            )
             
         if should_roll:
             self.unsubscribe_bars(self.current_bar_type)

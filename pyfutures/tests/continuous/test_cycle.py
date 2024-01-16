@@ -53,3 +53,10 @@ class TestRollCycle:
         assert len(cycle) == 4
         assert str(cycle) == "HMUX"
         assert repr(cycle) == "RollCycle(HMUX)"
+    
+    def test_cycle_next_month_skips_specified_months(self):
+        # Arrange
+        cycle = RollCycle("HMUX", skip_months=["2020H"])
+
+        # Act, Assert
+        
