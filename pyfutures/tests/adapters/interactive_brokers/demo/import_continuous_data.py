@@ -42,10 +42,6 @@ from nautilus_trader.model.objects import Quantity
 TODO: test if contract expires it take next forward price
 TODO: test if forward contract expires before current contract expiry date
 """
-
-ADDED_BARS = {
-    
-}
         
 def process_row(
     trading_class: str,
@@ -97,6 +93,7 @@ def process_row(
     
     # add extra bars
     if trading_class == "FESB":
+        "FESB 2007U - 20070615, 1621, 480.00, 482,00, 479.30, 482.00, 1, 20"
         
         bar = Bar(
                 BarType.from_str("FESB_SX7E=2007U.IB-1-MINUTE-MID-EXTERNAL"),
@@ -108,11 +105,28 @@ def process_row(
                 ts_init=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
                 ts_event=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
             )
-        
         data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
-        for bar in data[ContractMonth("2007U")][:2]:
-            print(bar)
-                    
+        
+    # elif trading_class == "FESU":
+    #     """
+    #     20191227, time, 280.00, 280.60, 273.40, 275.20, 1, 10
+    #     20191221, time 282.40, 283.80, 280.90, 283.80, 1, 13
+    #     2018-12-21 17:53:00
+    #     """
+    #     bars = [
+    #         Bar(
+    #             BarType.from_str("FESU_ESU=2019H.IB-1-MINUTE-MID-EXTERNAL"),
+    #             open=Price.from_str("280.00"),
+    #             high=Price.from_str("280.60"),
+    #             low=Price.from_str("273.40"),
+    #             close=Price.from_str("275.20"),
+    #             volume=Quantity.from_str("10.0"),
+    #             ts_init=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
+    #             ts_event=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
+    #         ),
+    #     ]
+    #     data[ContractMonth("2019H")] = bars + data[ContractMonth("2019H")]
+        
     wrangler.process_bars(list(data.values()))
     
     # start month is start of data
@@ -193,7 +207,7 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
-        if row.trading_class == "EBM":
+        if row.trading_class == "FESU":
             process_row(
                 str(row.trading_class),
                 str(row.symbol),
@@ -217,17 +231,9 @@ if __name__ == "__main__":
     #         int(row.expiry_offset),
     #         int(row.carry_offset),
     #         str(row.start),
-    #         str(row.end),
+    #         list(map(lambda x: x.strip(), row.missing_months.split(","))) if type(row.missing_months) is not float else [],
     #     )
     #     for row in universe.itertuples()
-    #     if row.trading_class in [
-    #         "FESB",
-    #         "FESU",
-    #         "FSTA",
-    #         "FSTS",
-    #         "FSTO",
-    #         "FSTH",
-    #     ]
     # )
     # results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
 

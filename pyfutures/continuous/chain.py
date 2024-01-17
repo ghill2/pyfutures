@@ -8,6 +8,7 @@ from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle import RangedRollCycle
 from pyfutures.continuous.cycle import RollCycleRange
 
+
 from nautilus_trader.model.identifiers import InstrumentId
 
 @dataclass
@@ -16,7 +17,6 @@ class ContractId:
     month: ContractMonth
     approximate_expiry_date_utc: pd.Timestamp
     roll_date_utc: pd.Timestamp
-
 
 class FuturesChain:
     def __init__(
@@ -27,6 +27,21 @@ class FuturesChain:
         self.instrument_id = InstrumentId.from_str(str(config.instrument_id))
         
         skip_months = list(map(ContractMonth, config.skip_months))
+        
+        ranges = []
+        if ">" in config.hold_cycle:
+            subs = config.hold_cycle.replace("", "").split(",")
+            for sub in subs:
+                ranges.append(
+                    RollCycleRange(
+                        start_month=ContractMonth(sub.split(">")[0]),
+                        end_month=ContractMonth(sub.split(">")[1].split("=")[0]),
+                        cycle=RollCycle(sub.split(">")[1].split("=")[1]),
+                    )
+                )
+            self.hold_cycle = RangedRollCycle(ranges=ranges)
+        else:
+            self.hold_cycle = RollCycle(config.hold_cycle, skip_months=skip_months)
         
         if ">" in config.hold_cycle:
             
@@ -44,7 +59,6 @@ class FuturesChain:
             self.hold_cycle = RangedRollCycle(ranges=ranges)
         else:
             self.hold_cycle = RollCycle(config.hold_cycle, skip_months=skip_months)
-        
         
         self.priced_cycle = RollCycle(config.priced_cycle)
         self.roll_offset = config.roll_offset

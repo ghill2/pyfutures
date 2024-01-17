@@ -2,6 +2,7 @@ import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
 from dataclasses import dataclass
+from dataclasses import dataclass
 
 class RollCycle:
     def __init__(self, value: str, skip_months: list[ContractMonth] | None = None):
@@ -133,7 +134,7 @@ class RollCycleRange:
     cycle: RollCycle
     
     def __contains__(self, month: ContractMonth) -> bool:
-        return (month >= self.start_month) and (month <= self.start_month)
+        return (month >= self.start_month) and (month <= self.end_month)
     
 class RangedRollCycle:
     def __init__(self, ranges: list[RollCycleRange]):
@@ -142,13 +143,33 @@ class RangedRollCycle:
         # TODO: check no gap between ranges
         self._ranges = ranges
     
+    def __contains__(self, month: ContractMonth) -> bool:
+        for range in self._ranges:
+            if month in range:
+                return True
+        return False
+    
     def next_month(self, current: ContractMonth) -> ContractMonth:
         
-        for range in self._ranges:
-            if current in range:
-                return range.cycle.next_month()
-            
+        # between ranges
+        for i in range(0, len(self._ranges) - 1):
+            range1 = self._ranges[i]
+            range2 = self._ranges[i + 1]
+            is_between = current >= range1.end_month and current < range2.start_month
+            if is_between:
+                return range2.start_month
+        
+        # in ranges
+        for range_ in self._ranges:
+            if current in range_:
+                return range_.cycle.next_month(current=current)
+                
         raise RuntimeError()
+                
+    
+        
+        
+            
         
 # from abc import ABC, abstractmethod
 

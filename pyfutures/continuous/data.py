@@ -60,6 +60,11 @@ class ContinuousData(Actor):
         self.roll()
 
     def on_bar(self, bar: Bar) -> None:
+        
+        is_expired = unix_nanos_to_dt(bar.ts_event) >= (self.expiry_day + pd.Timedelta(days=1))
+        if is_expired:
+            # TODO: wait for next forward bar != last timestamp
+            raise ValueError(f"ContractExpired {self.current_id}")
             
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return
@@ -68,7 +73,7 @@ class ContinuousData(Actor):
         forward_bar = self.cache.bar(self.forward_bar_type)
         
         # for debugging
-        if self.current_id.month.value == "1999H":
+        if self.current_id.month.value == "2018Z":
             current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
             forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
             print(
@@ -98,13 +103,7 @@ class ContinuousData(Actor):
         in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
         # a valid roll time is where both timestamps are equal
         should_roll = in_roll_window and current_timestamp == forward_timestamp
-        is_expired = current_timestamp >= (self.expiry_day + pd.Timedelta(days=1))
-        # should_roll = in_roll_window and current_day == forward_day
-        
-        if is_expired:
-            # TODO: wait for next forward bar != last timestamp
-            raise ValueError(f"ContractExpired {self.current_id}")
-        elif should_roll:
+        if should_roll:
             self.roll()
             
         self.recv_count += 1

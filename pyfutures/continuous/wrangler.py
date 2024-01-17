@@ -121,6 +121,7 @@ class ContinuousPriceWrangler:
         
         # process
         end_month = ContractMonth("2023F")
+        
         for i, x in enumerate(data):
             bar, is_last = x
             
@@ -128,22 +129,12 @@ class ContinuousPriceWrangler:
             if len(self.prices) > 0 and self.prices[-1].current_month >= end_month:
                 self.prices.pop(-1)
                 break  # done sampling
-            # elif self.continuous.current_id.month in self._skip_months:
-            #     print(f"Skipping month {self.continuous.current_id.month}")
-            #     self.continuous.roll()
             
             self.cache.add_bar(bar)
-            self.continuous.on_bar(bar)
             
-            if is_last and bar.bar_type == self.continuous.current_bar_type:
-                raise ValueError(f" contract failed to roll before last bar of current contract received {self.continuous.current_id}")
-                # if self.current_id.month in self._ignore_failed:
-                #     print("ignoring failed and rolling to next contract")
-                #     self.current_id = self._chain.forward_id(self.current_id)
-                #     self.roll(self._chain.forward_id(self.current_id))
-                # else:
-                    
-        
+            self.continuous.on_bar(bar)
+                
+            
         assert len(self.prices) > 0
         
         last_month = self.prices[-1].current_month
@@ -164,3 +155,21 @@ class ContinuousPriceWrangler:
         # )
         # writer = ContinuousPriceParquetWriter(path=file.path)
         # writer.write_objects(data=self.prices)
+        # if is_last:
+            #     last_received = True
+            # elif last_received:
+            #     raise ValueError(f"contract failed to roll before or on last bar of current contract {self.continuous.current_id}")
+            #     last_received = False
+                
+                # if self.current_id.month in self._ignore_failed:
+                #     print("ignoring failed and rolling to next contract")
+                #     self.current_id = self._chain.forward_id(self.current_id)
+                #     self.roll(self._chain.forward_id(self.current_id))
+                # else:
+                    
+        
+            # elif self.continuous.current_id.month in self._skip_months:
+            #     print(f"Skipping month {self.continuous.current_id.month}")
+            #     self.continuous.roll()
+            
+            # last_received = False
