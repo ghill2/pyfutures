@@ -1,6 +1,7 @@
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
+from dataclasses import dataclass
 
 class RollCycle:
     def __init__(self, value: str, skip_months: list[ContractMonth] | None = None):
@@ -123,17 +124,13 @@ class RollCycle:
                 start = self.next_month(start)
         if direction == -1:
             raise NotImplementedError()  # TODO
-    
+
+@dataclass
 class RollCycleRange:
-    def __init__(
-        self,
-        start_month: ContractMonth,
-        end_month: ContractMonth,
-        cycle: RollCycle,
-    ):
-        self.start_month = start_month
-        self.end_month = end_month
-        self.cycle = cycle
+    
+    start_month: ContractMonth
+    end_month: ContractMonth
+    cycle: RollCycle
     
     def __contains__(self, month: ContractMonth) -> bool:
         return (month >= self.start_month) and (month <= self.start_month)
@@ -152,14 +149,6 @@ class RangedRollCycle:
                 return range.cycle.next_month()
             
         raise RuntimeError()
-                
-                
-        
-        
-    
-        
-        
-            
         
 # from abc import ABC, abstractmethod
 

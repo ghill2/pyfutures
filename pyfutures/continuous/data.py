@@ -101,8 +101,6 @@ class ContinuousData(Actor):
         is_expired = current_timestamp >= (self.expiry_day + pd.Timedelta(days=1))
         # should_roll = in_roll_window and current_day == forward_day
         
-        
-        
         if is_expired:
             # TODO: wait for next forward bar != last timestamp
             raise ValueError(f"ContractExpired {self.current_id}")

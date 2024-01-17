@@ -109,8 +109,6 @@ def process_row(
                 ts_event=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
             )
         
-        "FESB 2007U - 20070615, 1621, 480.00, 482,00, 479.30, 482.00, 1, 20"
-        
         data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
         for bar in data[ContractMonth("2007U")][:2]:
             print(bar)
@@ -195,7 +193,7 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
-        if row.trading_class == "EBM_Z":
+        if row.trading_class == "EBM":
             process_row(
                 str(row.trading_class),
                 str(row.symbol),
