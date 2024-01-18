@@ -288,7 +288,26 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_request_accounts(self, client):
         await client.request_accounts()
-
+    
+    @pytest.mark.asyncio()
+    async def test_request_historical_schedule(self, client):
+        
+        await client.connect()
+        
+        contract = Contract()
+        contract.symbol = "SCI"
+        contract.localSymbol = "FEFF27"
+        contract.exchange = "SGX"
+        contract.secType = "FUT"
+        contract.includeExpired = False
+        df = await client.request_historical_schedule(contract=contract)
+        print(df.iloc[:49])
+        
+    @pytest.mark.skip(reason="unused")
+    @pytest.mark.asyncio()
+    async def test_import_schedules(self, client):
+        pass
+        
     @pytest.mark.skip(reason="unused")
     @pytest.mark.asyncio()
     async def test_subscribe_account_updates(self, client):
@@ -299,7 +318,8 @@ class TestInteractiveBrokersClient:
         await asyncio.sleep(5)
 
         assert callback.call_count > 0
-
+    
+    
     @pytest.mark.asyncio()
     async def test_request_portfolio(self, client):
         await client.request_portfolio()

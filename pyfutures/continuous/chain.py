@@ -43,23 +43,6 @@ class FuturesChain:
         else:
             self.hold_cycle = RollCycle(config.hold_cycle, skip_months=skip_months)
         
-        if ">" in config.hold_cycle:
-            
-            ranges = []
-            for sub in config.hold_cycle.replace(" ", "").split(","):
-                ranges.append(
-                    RollCycleRange(
-                            start_month=ContractMonth(sub.split(">")[0]),
-                            end_month=ContractMonth(sub.split(">")[1].split("=")[0]),
-                            cycle=RollCycle(sub.split("=")[1]),
-                    )
-                )
-            print(ranges)
-            exit()
-            self.hold_cycle = RangedRollCycle(ranges=ranges)
-        else:
-            self.hold_cycle = RollCycle(config.hold_cycle, skip_months=skip_months)
-        
         self.priced_cycle = RollCycle(config.priced_cycle)
         self.roll_offset = config.roll_offset
         self.approximate_expiry_offset = config.approximate_expiry_offset

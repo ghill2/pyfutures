@@ -55,12 +55,22 @@ def process_row(
     missing_months: list[str] | None,
 ):
     
-    
     # load all the data for the data symbol
-    data_folder = Path("/Users/g1/Desktop/output")
-    
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
+    
+    file = ParquetFile(
+        parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
+        bar_type=bar_type,
+        cls=ContinuousPrice,
+    )
+    
+    if file.path.exists():
+        print(f"Skipping {trading_class}")
+        return
+    
+    print(f"Processing {trading_class}")
+    
     start_month = ContractMonth(start)
     
     # ignore_failed = list(map(ContractMonth, ignore_failed))
@@ -78,24 +88,23 @@ def process_row(
         ),
     )
     
+    
     keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
-    paths = list(sorted(data_folder.glob(keyword)))
+    paths = list(sorted(Path("/Users/g1/Desktop/output").glob(keyword)))
     assert len(paths) > 0
     
     # filter the paths by the hold cycle and start year
-    data = {}
+    bars = []
     for path in paths:
-        month = ContractMonth(path.stem.split("=")[1].split(".")[0])
-        if month in wrangler.chain.hold_cycle and month.year >= start_month.year:
-            file = ParquetFile.from_path(path)
-            data[month] = file.read_objects()
-    assert len(data) > 0
+        bars.extend(ParquetFile.from_path(path).read_objects())
+    assert len(bars) > 0
     
     # add extra bars
     if trading_class == "FESB":
         "FESB 2007U - 20070615, 1621, 480.00, 482,00, 479.30, 482.00, 1, 20"
         
-        bar = Bar(
+        bars.append(
+            Bar(
                 BarType.from_str("FESB_SX7E=2007U.IB-1-MINUTE-MID-EXTERNAL"),
                 open=Price.from_str("480.00"),
                 high=Price.from_str("482.00"),
@@ -105,30 +114,45 @@ def process_row(
                 ts_init=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
                 ts_event=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
             )
-        data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
-        
-    # elif trading_class == "FESU":
-    #     """
-    #     20191227, time, 280.00, 280.60, 273.40, 275.20, 1, 10
-    #     20191221, time 282.40, 283.80, 280.90, 283.80, 1, 13
-    #     2018-12-21 17:53:00
-    #     """
-    #     bars = [
-    #         Bar(
-    #             BarType.from_str("FESU_ESU=2019H.IB-1-MINUTE-MID-EXTERNAL"),
-    #             open=Price.from_str("280.00"),
-    #             high=Price.from_str("280.60"),
-    #             low=Price.from_str("273.40"),
-    #             close=Price.from_str("275.20"),
-    #             volume=Quantity.from_str("10.0"),
-    #             ts_init=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
-    #             ts_event=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
-    #         ),
-    #     ]
-    #     data[ContractMonth("2019H")] = bars + data[ContractMonth("2019H")]
-        
-    wrangler.process_bars(list(data.values()))
+        )
+    # data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
+    elif trading_class == "FESU":
+        """
+        20191221, time 282.40, 283.80, 280.90, 283.80, 1, 13
+        20191227, time, 280.00, 280.60, 273.40, 275.20, 1, 10
+        2018-12-21 17:53:00
+        """
+        bars.extend([
+            Bar(
+                BarType.from_str("FESU_ESU=2019H.IB-1-MINUTE-MID-EXTERNAL"),
+                open=Price.from_str("282.40"),
+                high=Price.from_str("283.80"),
+                low=Price.from_str("280.90"),
+                close=Price.from_str("283.80"),
+                volume=Quantity.from_str("13.0"),
+                ts_init=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
+                ts_event=dt_to_unix_nanos(pd.Timestamp("2018-12-21 17:53:00", tz="UTC")),
+            ),
+            Bar(
+                BarType.from_str("FESU_ESU=2019H.IB-1-MINUTE-MID-EXTERNAL"),
+                open=Price.from_str("280.00"),
+                high=Price.from_str("280.60"),
+                low=Price.from_str("273.40"),
+                close=Price.from_str("275.20"),
+                volume=Quantity.from_str("10.0"),
+                ts_init=dt_to_unix_nanos(pd.Timestamp("2018-12-27 17:53:00", tz="UTC")),
+                ts_event=dt_to_unix_nanos(pd.Timestamp("2018-12-27 17:53:00", tz="UTC")),
+            ),
+        ])
     
+    bars = list(sorted(bars, key= lambda x: x.ts_init))
+    prices = wrangler.process_bars(bars)
+    print(len(prices))
+    writer = ContinuousPriceParquetWriter(path=str(file.path))
+    
+    print(f"Writing prices... {str(file.path)}")
+    writer.write_objects(data=prices)
+        
     # start month is start of data
     # start month for debugging
     # idx = paths.index([x for x in paths if "2021Z" in x.stem][0])
@@ -196,45 +220,50 @@ def find_problem_files():
             print(row.trading_class, month.value)
         
 if __name__ == "__main__":
-    	
+    universe = IBTestProviderStubs.universe_dataframe()
+    
+    # for row in universe.itertuples():
+    #     if row.trading_class == "EBM":
+    #         process_row(
+    #             str(row.trading_class),
+    #             str(row.symbol),
+    #             str(row.hold_cycle),
+    #             str(row.priced_cycle),
+    #             int(row.roll_offset),
+    #             int(row.expiry_offset),
+    #             int(row.carry_offset),
+    #             str(row.start),
+    #             row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
+    #             # list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
+    #         )
+    # exit()
+    
+    
+    func_gen = (
+        joblib.delayed(process_row)(
+            str(row.trading_class),
+            str(row.symbol),
+            str(row.hold_cycle),
+            str(row.priced_cycle),
+            int(row.roll_offset),
+            int(row.expiry_offset),
+            int(row.carry_offset),
+            str(row.start),
+            row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
+        )
+        for row in universe.itertuples()
+        # if row.trading_class != "EBM_Z"
+        # if row.trading_class == "I"
+    )
+    results = joblib.Parallel(n_jobs=10, backend="loky")(func_gen)
+
+    # # need carry price bars too
+    # month = ContractMonth(path.stem.split("=")[1].split(".")[0])
+    # if month in (wrangler.chain.hold_cycle) or (month in wrangler.chain.priced_cycle):
+    
     # min_ = find_minimum_day_of_month_within_range(
     #     start=ContractMonth("1999H").timestamp_utc,
     #     end=ContractMonth("2025H").timestamp_utc,
     #     dayname="Thursday",
     #     dayofmonth=2,
     # )
-    
-    universe = IBTestProviderStubs.universe_dataframe()
-
-    for row in universe.itertuples():
-        if row.trading_class == "FESU":
-            process_row(
-                str(row.trading_class),
-                str(row.symbol),
-                str(row.hold_cycle),
-                str(row.priced_cycle),
-                int(row.roll_offset),
-                int(row.expiry_offset),
-                int(row.carry_offset),
-                str(row.start),
-                list(map(lambda x: x.strip(), row.missing_months.split(","))) if type(row.missing_months) is not float else [],
-                # list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
-            )
-    
-    # func_gen = (
-    #     joblib.delayed(process_row)(
-    #         str(row.trading_class),
-    #         str(row.symbol),
-    #         str(row.hold_cycle),
-    #         str(row.priced_cycle),
-    #         int(row.roll_offset),
-    #         int(row.expiry_offset),
-    #         int(row.carry_offset),
-    #         str(row.start),
-    #         list(map(lambda x: x.strip(), row.missing_months.split(","))) if type(row.missing_months) is not float else [],
-    #     )
-    #     for row in universe.itertuples()
-    # )
-    # results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
-
-

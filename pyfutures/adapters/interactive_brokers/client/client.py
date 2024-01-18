@@ -18,6 +18,7 @@ from ibapi.commission_report import CommissionReport as IBCommissionReport
 from ibapi.common import BarData
 from ibapi.common import ListOfHistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalTickLast
+from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import OrderId
 from ibapi.common import TickAttribBidAsk
 from ibapi.common import TickerId
@@ -1265,3 +1266,63 @@ class InteractiveBrokersClient(Component, EWrapper):
             return  # no response found for request_id
 
         request.set_result(request.data)
+
+    ################################################################################################
+    # Realtime historical schedule
+    
+    
+    async def request_historical_schedule(
+        self,
+        contract: IBContract,
+    ) -> ListOfHistoricalSessions:
+        
+        request: ClientRequest = self._create_request()
+
+        self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
+
+        self._client.reqHistoricalData(
+            reqId=request.id,
+            contract=contract,
+            endDateTime="",
+            durationStr="100 Y",
+            # durationStr="5 D",
+            barSizeSetting="1 day",
+            whatToShow="SCHEDULE",
+            useRTH=1,
+            formatDate=2,
+            keepUpToDate=False,
+            chartOptions=[],
+        )
+
+        return await self._wait_for_request(request)
+    
+    def historicalSchedule(
+        self,
+        reqId: int,
+        startDateTime: str,
+        endDateTime: str,
+        timeZone: str,
+        sessions: ListOfHistoricalSessions,
+    ):
+
+        request = self._requests.get(reqId)
+        if request is None:
+            self._log.error(f"No request found for {reqId}")
+            return
+
+        data = [
+            (session.refDate, session.startDateTime, session.endDateTime)
+            for session in sessions
+        ]
+
+        df = pd.DataFrame(data, columns=["day", "start", "end"])
+        
+        df.day = pd.to_datetime(df.day, format="%Y%m%d")
+        df.start = pd.to_datetime(df.start, format="%Y%m%d-%H:%M:%S")
+        df.end = pd.to_datetime(df.end, format="%Y%m%d-%H:%M:%S")
+        df['timezone'] = timeZone
+        
+        df.sort_values(by=['day', 'start'], inplace=True)
+        
+        request.set_result(df)
+        

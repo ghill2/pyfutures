@@ -88,7 +88,8 @@ class ContinuousPriceWrangler:
             start_month=start_month,
             # end_month=end_month,
             handler=self.prices.append,
-            
+            raise_expired=False,
+            ignore_expiry_date=True,
         )
         
         self.continuous.register_base(
@@ -104,27 +105,13 @@ class ContinuousPriceWrangler:
         
         self._skip_months = skip_months or []
     
-    def process_bars(self, bars_list: list[list[Bar]]):
-        
-        # TODO: check contract months
-        
-        # merge and sort the bars and add find is_last boolean
-        data = []
-        for bars in bars_list:
-            for i, bar in enumerate(bars):
-                is_last = i == len(bars) - 1
-                data.append((bar, is_last))
-        data = list(sorted(data, key= lambda x: x[0].ts_init))
-        
-        if len(data) == 0:
-            raise ValueError(f"{self.bar_type} has no data")
-        
+    def process_bars(self, bars: list[Bar]):
+            
         # process
         end_month = ContractMonth("2023F")
         
-        for i, x in enumerate(data):
-            bar, is_last = x
-            
+        for bar in bars:
+                        
             # stop when the data module rolls to year 2024
             if len(self.prices) > 0 and self.prices[-1].current_month >= end_month:
                 self.prices.pop(-1)
@@ -133,9 +120,9 @@ class ContinuousPriceWrangler:
             self.cache.add_bar(bar)
             
             self.continuous.on_bar(bar)
-                
-            
-        assert len(self.prices) > 0
+        
+        if len(self.prices) == 0:
+            raise ValueError(f"{self.bar_type} len(self.prices) > 0")
         
         last_month = self.prices[-1].current_month
         last_year = self.prices[-1].current_month.year
@@ -148,13 +135,8 @@ class ContinuousPriceWrangler:
         if last_year != 2022:
             raise ValueError(f"last_year != 2022 for {self.bar_type}")
         
-        # file = ParquetFile(
-        #     parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
-        #     bar_type=self.bar_type,
-        #     cls=ContinuousPrice,
-        # )
-        # writer = ContinuousPriceParquetWriter(path=file.path)
-        # writer.write_objects(data=self.prices)
+        return self.prices
+        
         # if is_last:
             #     last_received = True
             # elif last_received:
@@ -173,3 +155,17 @@ class ContinuousPriceWrangler:
             #     self.continuous.roll()
             
             # last_received = False
+            # def process_bars(self, bars_list: list[list[Bar]]):
+        
+    #     # TODO: check contract months
+        
+    #     # merge and sort the bars and add find is_last boolean
+    #     data = []
+    #     for bars in bars_list:
+    #         for i, bar in enumerate(bars):
+    #             is_last = i == len(bars) - 1
+    #             data.append((bar, is_last))
+    #     data = list(sorted(data, key= lambda x: x[0].ts_init))
+    
+    #     if len(data) == 0:
+    #         raise ValueError(f"{self.bar_type} has no data")

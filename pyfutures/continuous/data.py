@@ -22,6 +22,8 @@ class ContinuousData(Actor):
         start_month: ContractMonth,
         # end_month: ContractMonth | None,
         handler: Callable | None = None,
+        raise_expired: bool = True,
+        ignore_expiry_date: bool = False,
     ):
         super().__init__()
         
@@ -38,7 +40,8 @@ class ContinuousData(Actor):
         self._instrument_id = bar_type.instrument_id
         self._handler = handler
         self._start_month = start_month
-        self._last_received = False
+        self._raise_expired = raise_expired
+        self._ignore_expiry_date = ignore_expiry_date
         
     @property
     def roll_date_utc(self) -> pd.Timestamp:
@@ -61,10 +64,11 @@ class ContinuousData(Actor):
 
     def on_bar(self, bar: Bar) -> None:
         
-        is_expired = unix_nanos_to_dt(bar.ts_event) >= (self.expiry_day + pd.Timedelta(days=1))
-        if is_expired:
-            # TODO: wait for next forward bar != last timestamp
-            raise ValueError(f"ContractExpired {self.current_id}")
+        if self._raise_expired:
+            is_expired = unix_nanos_to_dt(bar.ts_event) >= (self.expiry_day + pd.Timedelta(days=1))
+            if is_expired:
+                # TODO: wait for next forward bar != last timestamp
+                raise ValueError(f"ContractExpired {self.current_id}")
             
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return
@@ -72,19 +76,19 @@ class ContinuousData(Actor):
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         
-        # for debugging
-        if self.current_id.month.value == "2018Z":
-            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-            print(
-                f"{self.current_id.month.value} {current_timestamp_str}",
-                f"{self.forward_id.month.value} {forward_timestamp_str}",
-                str(self.roll_date)[:-15],
-                str(self.expiry_date)[:-15],
-                # should_roll,
-                # current_timestamp >= self.roll_date,
-                # current_day <= self.expiry_day,
-            )
+        # # for debugging
+        # if self.current_id.month.value == "1987V":
+        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+        #     print(
+        #         f"{self.current_id.month.value} {current_timestamp_str}",
+        #         f"{self.forward_id.month.value} {forward_timestamp_str}",
+        #         str(self.roll_date)[:-15],
+        #         str(self.expiry_date)[:-15],
+        #         # should_roll,
+        #         # current_timestamp >= self.roll_date,
+        #         # current_day <= self.expiry_day,
+        #     )
             
         if current_bar is not None:
             self._send_continous_price()
@@ -96,11 +100,14 @@ class ContinuousData(Actor):
             
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-        current_day = current_timestamp.floor("D")
-        forward_day = forward_timestamp.floor("D")
         
         # in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp.day <= self.expiry_date.day)
-        in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
+        if self._ignore_expiry_date:
+            in_roll_window = (current_timestamp >= self.roll_date)
+        else:
+            current_day = current_timestamp.floor("D")
+            in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
+            
         # a valid roll time is where both timestamps are equal
         should_roll = in_roll_window and current_timestamp == forward_timestamp
         if should_roll:
@@ -171,7 +178,6 @@ class ContinuousData(Actor):
         self.expiry_date = self.current_id.approximate_expiry_date_utc
         self.expiry_day = self.expiry_date.floor("D")
         self.roll_date = self.current_id.roll_date_utc
-        self._last_received = False
         
         print(self.current_id)
 
