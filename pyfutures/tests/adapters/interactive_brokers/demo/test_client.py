@@ -302,6 +302,10 @@ class TestInteractiveBrokersClient:
         contract.includeExpired = False
         df = await client.request_historical_schedule(contract=contract)
         print(df.iloc[:49])
+    
+    @pytest.mark.asyncio()
+    async def test_request_timezones(self, client):
+        pass
         
     @pytest.mark.skip(reason="unused")
     @pytest.mark.asyncio()
