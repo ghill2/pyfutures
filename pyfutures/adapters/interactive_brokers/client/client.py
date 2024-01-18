@@ -1274,6 +1274,7 @@ class InteractiveBrokersClient(Component, EWrapper):
     async def request_historical_schedule(
         self,
         contract: IBContract,
+        durationStr: str | None = None
     ) -> ListOfHistoricalSessions:
         
         request: ClientRequest = self._create_request()
@@ -1284,7 +1285,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             reqId=request.id,
             contract=contract,
             endDateTime="",
-            durationStr="100 Y",
+            durationStr=durationStr or "100 Y",
             # durationStr="5 D",
             barSizeSetting="1 day",
             whatToShow="SCHEDULE",
