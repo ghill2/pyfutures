@@ -62,39 +62,7 @@ class FuturesChain:
         Return the date the roll should occur at the month.
         """
         return self.approximate_expiry_date(month) + pd.Timedelta(days=self.roll_offset)
-    
-    def current_contract(self) -> FuturesContract:
-        pass
-    
-    def forward_contract(self) -> FuturesContract:
-        pass
-    
-    def carry_contract(self) -> FuturesContract:
-        pass
-    
-    @staticmethod
-    def _create_futures_contract(
-        instrument_id: InstrumentId,
-    ):
         
-        return FuturesContract(
-                instrument_id=instrument_id,
-        )
-        
-        
-        Symbol raw_symbol not None,
-        AssetClass asset_class,
-        Currency currency not None,
-        int price_precision,
-        Price price_increment not None,
-        Quantity multiplier,
-        Quantity lot_size not None,
-        str underlying,
-        uint64_t activation_ns,
-        uint64_t expiration_ns,
-        uint64_t ts_event,
-        uint64_t ts_init,
-        dict info = None,
     def carry_id(self, current: ContractId) -> ContractId:
         return self.make_id(self.carry_month(current.month))
 
@@ -144,3 +112,4 @@ class FuturesChain:
         return InstrumentId.from_str(
             f"{base.symbol.value}={month}.{base.venue.value}",
         )
+
