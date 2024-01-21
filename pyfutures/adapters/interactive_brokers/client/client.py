@@ -210,6 +210,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         return request
 
     async def _wait_for_request(self, request: ClientRequest) -> Any:
+        
         try:
             await asyncio.wait_for(request, timeout=request.timeout_seconds)
         except asyncio.TimeoutError:
@@ -221,8 +222,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         del self._requests[request.id]
 
         if isinstance(result, ClientException):
-            # print(request)
-            # self._log.error(result.message)
+            self._log.error(result.message)
             raise result
 
         return result
@@ -294,14 +294,17 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         return details_list[-1].contractMonth
     
-    async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails:
+    async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails | None:
         
         self._log.debug(
             f"Requesting front contract for: {contract.symbol}, {contract.tradingClass}",
         )
         
         details_list = await self.request_contract_details(contract)
-
+        
+        if len(details_list) == 0:
+            return None
+        
         return details_list[0]
     
     async def request_front_contract(self, contract: IBContract) -> IBContract:

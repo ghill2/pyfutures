@@ -134,5 +134,5 @@ class ClientException(Exception):
     def __init__(self, code: int, message: str):
         super().__init__(f"{code}: {message}")
         self.code = code
-        self.message = message
+        self.message = f"Error {code}: {message}"
 
