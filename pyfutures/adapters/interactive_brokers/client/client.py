@@ -250,15 +250,19 @@ class InteractiveBrokersClient(Component, EWrapper):
         if reqId == -1:
             # self._log.debug(f"Notification {errorCode}: {errorString}")
             return
-
+        elif "warning" in errorString.lower():
+            # 2121: Warning: 2 products are trading on the basis other than currency price
+            # disallow warnings to set the result of a pending request
+            self._log.warning(f"{errorCode}: {errorString}")
+            return
+        
         request = self._requests.get(reqId)
         if request is None:
             self.error_events.emit(event)
-
             return  # no response found for request_id
 
         exception = ClientException(code=errorCode, message=errorString)
-
+        
         request.set_result(exception)  # set_exception does not stop awaiting?
 
     ################################################################################################
@@ -275,7 +279,10 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     async def request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
         self._log.debug(
-            f"Requesting contract details for: tradingClass={contract.symbol}, symbol={contract.tradingClass}",
+            f"Requesting contract details for:"
+            f" tradingClass={contract.symbol},"
+            f" symbol={contract.tradingClass},"
+            f" exchange={contract.exchange},"
         )
 
         request = self._create_request(data=[])

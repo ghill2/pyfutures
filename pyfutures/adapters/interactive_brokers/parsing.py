@@ -143,27 +143,37 @@ def _format_instrument_id(
     month = str(ContractMonth.from_int(int(contractMonth)))
     return InstrumentId.from_str(f"{symbol}-{trading_class}={month}.{exchange}")
 
-
-def create_contract(
+def _desanitize_str(value: str):
+    return value.replace("_", ".")
+    
+def _create_contract(
     trading_class: str,
     symbol: str,
     venue: str,
 ) -> IBContract:
+
     contract = IBContract()
 
-    contract.symbol = symbol.replace("_", ".")
-    contract.exchange = venue.replace("_", ".")
-    contract.tradingClass = trading_class.replace("_", ".")
+    contract.symbol = _desanitize_str(symbol)
+    contract.exchange = _desanitize_str(venue)
+    contract.tradingClass = _desanitize_str(trading_class)
     contract.includeExpired = False
     contract.secType = "FUT"
 
     return contract
 
+def row_to_contract(row) -> IBContract:
+    return _create_contract(
+        trading_class=row.trading_class,
+        symbol=row.symbol,
+        venue=row.exchange,
+    )
+    
 def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     
     symbol, trading_class = tuple(instrument_id.symbol.value.split("=")[0].split("-"))
     
-    contract: IBContract = create_contract(
+    contract: IBContract = _create_contract(
         symbol=symbol,
         trading_class=trading_class,
         venue=instrument_id.venue.value,
