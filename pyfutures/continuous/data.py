@@ -6,19 +6,18 @@ import pandas as pd
 
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.chain import FuturesContractChain
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
-from pyfutures.continuous.chain import ContractId
 
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
-        chain: FuturesChain,
+        chain: FuturesContractChain,
         start_month: ContractMonth,
         # end_month: ContractMonth | None,
         handler: Callable | None = None,
@@ -43,14 +42,6 @@ class ContinuousData(Actor):
         self._raise_expired = raise_expired
         self._ignore_expiry_date = ignore_expiry_date
         
-    @property
-    def roll_date_utc(self) -> pd.Timestamp:
-        return self.current_id.roll_date_utc
-    
-    @property
-    def approximate_expiry_date_utc(self) -> pd.Timestamp:
-        return self.current_id.approximate_expiry_date_utc
-    
     def on_start(self) -> None:
         
         # if the start month is in the hold cycle, do nothing
@@ -144,14 +135,14 @@ class ContinuousData(Actor):
 
     def roll(self) -> None:
         
-        assert self.current_id is not None
+        assert self.current_contract is not None
         
-        self.current_id = self._chain.forward_id(self.current_id)
-        self.forward_id = self._chain.forward_id(self.current_id)
-        self.carry_id = self._chain.carry_id(self.current_id)
+        self.current_contract = self._chain.forward_contract(self.current_contract)
+        self.forward_contract = self._chain.forward_contract(self.current_contract)
+        self.carry_contract = self._chain.carry_contract(self.current_contract)
         
         self.current_bar_type = BarType(
-            instrument_id=self.current_id.instrument_id,
+            instrument_id=self.current_contract.instrument_id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
@@ -159,45 +150,22 @@ class ContinuousData(Actor):
         # TODO: unsubscribe to old bars self.unsubscribe_bars(self.current_bar_type)
         
         self.forward_bar_type = BarType(
-            instrument_id=self.forward_id.instrument_id,
+            instrument_id=self.forward_contract.instrument_id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
 
         self.carry_bar_type = BarType(
-            instrument_id=self.carry_id.instrument_id,
+            instrument_id=self.carry_contract.instrument_id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
-
         
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
         self.subscribe_bars(self.carry_bar_type)
         
-        self.expiry_date = self.current_id.approximate_expiry_date_utc
+        self.expiry_date = unix_nanos_to_dt(self.current_contract.expiration_ns)
         self.expiry_day = self.expiry_date.floor("D")
-        self.roll_date = self.current_id.roll_date_utc
-        
-        print(self.current_id)
-
-        # print(f"expiry_date: {expiry_date}")
-
-    # def _try_roll(self, bar: Bar, is_last: bool = False) -> None:
-        # print("_try_roll")
-        
-        # if unix_nanos_to_dt(bar.ts_event) > pd.Timestamp("1987-10-20 14:32:00+00:00", tz="UTC"):
-        #     exit()
-            
-        # if bar.bar_type.instrument_id.symbol.value.endswith("1987Z") \
-        #     or bar.bar_type.instrument_id.symbol.value.endswith("1988H"):
-        #     expiry_date = self.current_id.approximate_expiry_date_utc
-        #     roll_date = self.current_id.roll_date_utc
-        #     current_timestamp = unix_nanos_to_dt(bar.ts_event)
-        #     in_window = (current_timestamp >= roll_date) and (current_timestamp < expiry_date)
-            # if in_window:
-        
-                # roll_date = 1987-10-15 00:00:00+00:00
-                # expiry_date = 1987-12-14 00:00:00+00:00
-                
+        self.roll_date = unix_nanos_to_dt(self.current_contract.roll_date_ns)
         

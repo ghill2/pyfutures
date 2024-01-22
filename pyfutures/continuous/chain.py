@@ -24,12 +24,12 @@ class MockInstrumentProvider(InstrumentProvider):
         self._base = base
         
     def load(self, instrument_id: InstrumentId) -> FuturesContract:
-        month = ContractMonth(instrument_id.symbol.value[-3:])
+        month = ContractMonth(instrument_id.symbol.value.split("[")[1].split("]")[0])
         
         approximate_expiry_date =  month.timestamp_utc \
             + pd.Timedelta(days=self._approximate_expiry_offset)
         
-        roll_date = self.approximate_expiry_date(month) \
+        roll_date = approximate_expiry_date(month) \
             + pd.Timedelta(days=self._roll_offset)
             
         futures_contract = FuturesContract(
@@ -119,7 +119,7 @@ class FuturesContractChain:
         symbol = self.instrument_id.symbol.value
         venue = self.instrument_id.venue.value
         return InstrumentId.from_str(
-            f"{symbol}{month.letter_month}{month.year[2:4]}.{venue}",
+            f"{symbol}[{month.year}{month.letter_month}].{venue}",
         )
         
     # def carry_id(self, current: ContractId) -> ContractId:
