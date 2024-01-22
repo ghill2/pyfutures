@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class FuturesChainConfig:
+class FuturesContractChainConfig:
     """
     Represents the config for a FutureChain.
 
@@ -20,4 +20,4 @@ class FuturesChainConfig:
     roll_offset: int
     approximate_expiry_offset: int
     carry_offset: int
-    skip_months: list[str] | None = None,
+    skip_months: list[str] | None = None

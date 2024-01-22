@@ -1,3 +1,4 @@
+from __future__ import __annotations__
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
@@ -11,7 +12,29 @@ class RollCycle:
         self.value = "".join(sorted(value))
         
         self._skip_months = skip_months or []
-
+    
+    @classmethod
+    def from_str(
+        cls,
+        value: str,
+        skip_months: list[str] | None = None,
+    ) -> RollCycle:
+        
+        ranges = []
+        if ">" in value:
+            subs = value.replace("", "").split(",")
+            for sub in subs:
+                ranges.append(
+                    RollCycleRange(
+                        start_month=ContractMonth(sub.split(">")[0]),
+                        end_month=ContractMonth(sub.split(">")[1].split("=")[0]),
+                        cycle=RollCycle(sub.split(">")[1].split("=")[1]),
+                    )
+                )
+            return RangedRollCycle(ranges=ranges)
+        else:
+            return RollCycle(value, skip_months=skip_months)
+            
     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
         
         month = ContractMonth.from_month_year(timestamp.year, timestamp.month)

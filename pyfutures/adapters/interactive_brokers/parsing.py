@@ -130,7 +130,6 @@ def contract_to_instrument_id(contract: IBContract) -> InstrumentId:
         contractMonth=contract.lastTradeDateOrContractMonth,
     )
 
-
 def _format_instrument_id(
     symbol: str,
     tradingClass: str,
@@ -185,8 +184,6 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
         
     return contract
     
-
-
 def contract_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     
     contract_month = instrument_id.symbol.value.split("=")[1]
