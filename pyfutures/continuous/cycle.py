@@ -3,7 +3,6 @@ import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
 from dataclasses import dataclass
-from dataclasses import dataclass
 
 class RollCycle:
     def __init__(self, value: str, skip_months: list[ContractMonth] | None = None):
