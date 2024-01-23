@@ -1,4 +1,4 @@
-from __future__ import __annotations__
+from __future__ import annotations
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
@@ -18,7 +18,7 @@ class RollCycle:
         cls,
         value: str,
         skip_months: list[str] | None = None,
-    ) -> RollCycle:
+    ) -> RollCycle | RangedRollCycle:
         
         ranges = []
         if ">" in value:
