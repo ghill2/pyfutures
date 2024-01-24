@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pandas as pd
 import pytz
+from msgspec import Meta
+from typing import Annotated
+import datetime
 
+# An integer constrained to values < 0
+NegativeInt = Annotated[int, Meta(lt=0)]
 
 class MarketSchedule:
     def __init__(
@@ -70,7 +75,21 @@ class MarketSchedule:
         open_day = now.floor("D") + pd.Timedelta(days=day_diff)
         open_timestamp = open_day.replace(hour=open_time.hour, minute=open_time.minute)
         return open_timestamp.tz_convert(pytz.UTC)
-
+    
+    def previous_trading_day(self, date: datetime.date, offset: NegativeInt) -> datetime.date:
+        
+        count = abs(offset)
+        
+        matched = 0
+        while True:
+            date -= datetime.timedelta(days=1)
+            if date.weekday() in self._data.dayofweek.values:
+                matched += 1
+            if count == matched:
+                break
+        return date
+                
+            
     def time_until_close(self, now: pd.Timestamp) -> pd.Timedelta | None:
         now = now.tz_convert(self._timezone)
 

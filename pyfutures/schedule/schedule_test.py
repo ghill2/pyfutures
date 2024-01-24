@@ -4,7 +4,7 @@ import pandas as pd
 import pytz
 import pickle
 from pyfutures.schedule.schedule import MarketSchedule
-
+import datetime
 
 class TestMarketSchedule:
     def setup(self):
@@ -29,7 +29,27 @@ class TestMarketSchedule:
 
         # Saturday
         self.data.loc[len(self.data)] = {"dayofweek": 5, "open": time(17, 0), "close": time(23, 59)}
-
+    
+    def test_schedule_previous_trading_day(self):
+        
+        calendar = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
+        
+        now_day = datetime.date(2024, 1, 27)  # Saturday
+        expected = datetime.date(2024, 1, 25)  # Thursday
+        assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
+        
+        now_day = datetime.date(2024, 1, 23)  # Tuesday
+        expected = datetime.date(2024, 1, 20)  # Saturday
+        assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
+        
+        now_day = datetime.date(2024, 1, 25)  # Thursday
+        expected = datetime.date(2024, 1, 24)  # Wedsnesday
+        assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
+        
+        now_day = datetime.date(2024, 1, 26)  # Friday
+        expected = datetime.date(2024, 1, 25)  # Thursday
+        assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
+        
     def test_is_open_utc(self):
         calendar = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
 

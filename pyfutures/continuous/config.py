@@ -34,4 +34,4 @@ class FuturesContractChainConfig(NautilusConfig):
     approximate_expiry_offset: NonNegativeInt
     carry_offset: Literal[1, -1]
     skip_months: list[ContractMonth] | None = None
-    weekly_schedule: MarketSchedule
+    weekly_schedule: MarketSchedule | None = None
