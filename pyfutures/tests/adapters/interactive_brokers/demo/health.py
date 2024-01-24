@@ -50,8 +50,6 @@ async def test_request_front_contract_universe_fix(client):
             print(f"{row.trading_class}")
         else:
             raise e
-    
-    
 
 def test_historic_schedules_with_sessions_out_of_day():
     """

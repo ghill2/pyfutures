@@ -12,8 +12,7 @@ from ibapi.contract import ContractDetails as IBContractDetails
 from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
-from pyfutures.continuous.chain import FuturesContractChain
-from pyfutures.continuous.config import FuturesContractChainConfig
+from pyfutures.continuous.chain import ContractChain
 from nautilus_trader.model.objects import Price
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
@@ -30,7 +29,7 @@ class Session:
     def __init__(
         self,
         name: int,
-        chains: list[FuturesContractChain],
+        chains: list[ContractChain],
         start_time: datetime.time,
         end_time: datetime.time,
     ):
@@ -79,13 +78,15 @@ class IBTestProviderStubs:
             "market_hours_local": str,
             "liquid_hours_local": str,
             "weekly_hours": str,
+            "daily_settle": str,
             "hours_last_edited": str,
             "session": pd.Int64Dtype(),
             "description": str,
             "sector": str,
             "sub_sector": str,
             "region": str,
-            "url": str,
+            "ib_url": str,
+            "ex_url": str,
             "comments": str,
             "open": str,
             "close": str,
@@ -103,7 +104,7 @@ class IBTestProviderStubs:
         return df
 
     @classmethod
-    def universe_future_chains(cls) -> list[FuturesContractChain]:
+    def universe_future_chains(cls) -> list[ContractChain]:
         chains = []
         universe = cls.universe_dataframe()
         

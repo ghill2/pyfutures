@@ -6,18 +6,19 @@ import pandas as pd
 
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import FuturesContractChain
+from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.price import ContinuousPrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
+from nautilus_trader.common.providers import InstrumentProvider
 
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
-        chain: FuturesContractChain,
+        chain: ContractChain,
         start_month: ContractMonth,
         # end_month: ContractMonth | None,
         handler: Callable | None = None,
@@ -29,9 +30,9 @@ class ContinuousData(Actor):
         self.current_bar_type = None  # initialized on start
         self.forward_bar_type = None  # initialized on start
         self.carry_bar_type = None  # initialized on start
-        self.current_id = None  # initialized on start
-        self.forward_id = None  # initialized on start
-        self.carry_id = None  # initialized on start
+        self.current_contract = None  # initialized on start
+        self.forward_contract = None  # initialized on start
+        self.carry_contract = None  # initialized on start
         self.recv_count = 0
         
         self._bar_type = bar_type
@@ -46,11 +47,13 @@ class ContinuousData(Actor):
         
         # if the start month is in the hold cycle, do nothing
         # if the start month is not in the hold cycle, go to next month in the hold cycle
-        start_month = self._start_month
-        if self._start_month not in self._chain.hold_cycle:
-            start_month = self._chain.hold_cycle.next_month(start_month)
+        # start_month = self._start_month
+        # if self._start_month not in self._chain._hold_cycle:
+        #     start_month = self._chain._hold_cycle.next_month(start_month)
             
-        self.current_id = self._chain.make_id(start_month)
+        # self.current_id = self._chain.make_id(start_month)
+        
+        self.current_contract = self._chain.current_contract(self._start_month.timestamp_utc)
         self.roll()
 
     def on_bar(self, bar: Bar) -> None:
@@ -60,26 +63,26 @@ class ContinuousData(Actor):
             if is_expired:
                 # TODO: wait for next forward bar != last timestamp
                 raise ValueError(f"ContractExpired {self.current_id}")
-            
+        print(bar.bar_type, self.current_bar_type, self.forward_bar_type)
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return
                 
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         
-        # # for debugging
-        # if self.current_id.month.value == "1987V":
-        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-        #     print(
-        #         f"{self.current_id.month.value} {current_timestamp_str}",
-        #         f"{self.forward_id.month.value} {forward_timestamp_str}",
-        #         str(self.roll_date)[:-15],
-        #         str(self.expiry_date)[:-15],
-        #         # should_roll,
-        #         # current_timestamp >= self.roll_date,
-        #         # current_day <= self.expiry_day,
-        #     )
+        # for debugging
+        if self.current_id.month.value == "2006H":
+            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+            print(
+                f"{self.current_id.month.value} {current_timestamp_str}",
+                f"{self.forward_id.month.value} {forward_timestamp_str}",
+                str(self.roll_date)[:-15],
+                str(self.expiry_date)[:-15],
+                # should_roll,
+                # current_timestamp >= self.roll_date,
+                # current_day <= self.expiry_day,
+            )
             
         if current_bar is not None:
             self._send_continous_price()
@@ -142,7 +145,7 @@ class ContinuousData(Actor):
         self.carry_contract = self._chain.carry_contract(self.current_contract)
         
         self.current_bar_type = BarType(
-            instrument_id=self.current_contract.instrument_id,
+            instrument_id=self.current_contract.id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
@@ -150,13 +153,13 @@ class ContinuousData(Actor):
         # TODO: unsubscribe to old bars self.unsubscribe_bars(self.current_bar_type)
         
         self.forward_bar_type = BarType(
-            instrument_id=self.forward_contract.instrument_id,
+            instrument_id=self.forward_contract.id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
 
         self.carry_bar_type = BarType(
-            instrument_id=self.carry_contract.instrument_id,
+            instrument_id=self.carry_contract.id,
             bar_spec=self._bar_type.spec,
             aggregation_source=self._bar_type.aggregation_source,
         )
@@ -167,5 +170,5 @@ class ContinuousData(Actor):
         
         self.expiry_date = unix_nanos_to_dt(self.current_contract.expiration_ns)
         self.expiry_day = self.expiry_date.floor("D")
-        self.roll_date = unix_nanos_to_dt(self.current_contract.roll_date_ns)
+        self.roll_date = self._chain.roll_date_utc(self.current_contract)
         

@@ -1,11 +1,10 @@
-from dataclasses import dataclass
-
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.config.validation import NonNegativeInt
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.schedule.market_calendar import MarketSchedule
+from pyfutures.schedule.schedule import MarketSchedule
 from nautilus_trader.config.common import NautilusConfig
+
 from typing import Annotated
 
 from msgspec import Meta
@@ -14,8 +13,7 @@ from typing import Annotated, Literal
 # An integer constrained to values <= 0
 NonPositiveInt = Annotated[int, Meta(le=0)]
 
-@dataclass
-class FuturesContractChainConfig(NautilusConfig):
+class ContractChainConfig(NautilusConfig, frozen=True):
     """
     Represents the config for a FutureChain.
 

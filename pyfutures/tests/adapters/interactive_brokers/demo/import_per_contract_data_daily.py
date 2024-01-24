@@ -16,6 +16,8 @@ import numpy as np
 import joblib
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
+DATA_FOLDER = Path("/Users/g1/Desktop/daily")  # text or .bd files location
+OUT_FOLDER = Path("/Users/g1/Desktop/output_daily")
 
 def process(
     trading_class: str,
@@ -26,7 +28,7 @@ def process(
 ):
         
     # get files in the data folder
-    data_dir = (data_folder / data_symbol)
+    data_dir = (DATA_FOLDER / data_symbol)
     
     files = list(sorted(list(data_dir.glob("*.txt")) + list(data_dir.glob("*.b01"))))
     
@@ -39,7 +41,7 @@ def process(
         contract_month = ContractMonth.from_year_letter_month(year=year, letter_month=letter_month)
         
         instrument_id = InstrumentId.from_str(
-            f"{trading_class}_{symbol}={contract_month}.IB"
+            f"{trading_class}_{symbol}[{contract_month}].IB"
         )
         
         bar_type = BarType.from_str(
@@ -47,7 +49,7 @@ def process(
         )
         
         outfile = ParquetFile(
-            parent=Path("/Users/g1/Desktop/output_daily"),
+            parent=OUT_FOLDER,
             bar_type=bar_type,
             cls=Bar,
             year=year,
@@ -100,11 +102,11 @@ if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
 
     # make sure each file has a related data symbol marked in the universe csv
-    data_folder = Path("/Users/g1/Downloads/Tom Hill 4/Daily")
+    
     missing = []
     for data_symbol in universe.data_symbol.dropna():
-        print(data_folder / data_symbol)
-        if not (data_folder / data_symbol).exists():
+        print(DATA_FOLDER / data_symbol)
+        if not (DATA_FOLDER / data_symbol).exists():
             missing.append(data_symbol)
     if len(missing) > 0:
         for data_symbol in missing:
@@ -112,7 +114,7 @@ if __name__ == "__main__":
         exit()
         
     # check files
-    paths = list(data_folder.rglob("*.txt")) + list(data_folder.rglob("*.bd"))
+    paths = list(DATA_FOLDER.rglob("*.txt")) + list(DATA_FOLDER.rglob("*.bd"))
     no_month = []
     for path in paths:
 

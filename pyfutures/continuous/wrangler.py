@@ -2,8 +2,8 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
@@ -33,14 +33,17 @@ import numpy as np
 import pytest
 import joblib
 from nautilus_trader.model.data import Bar
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from pyfutures.continuous.chain import TestContractProvider
 
 class ContinuousPriceWrangler:
     
     def __init__(
         self,
         bar_type: BarType,
+        base: FuturesContract,
         start_month: ContractMonth,
-        config: FuturesChainConfig,
+        config: ContractChainConfig,
         skip_months: list[ContractMonth] | None = None
     ):
         
@@ -79,7 +82,14 @@ class ContinuousPriceWrangler:
             logger,
         )
         
-        self.chain = FuturesChain(config=config)
+        instrument_provider = TestContractProvider(
+            approximate_expiry_offset=config.approximate_expiry_offset,
+            base=base,
+        )
+        self.chain = ContractChain(
+            config=config,
+            instrument_provider=instrument_provider,
+        )
         
         self.prices = []
         self.continuous = ContinuousData(
@@ -116,7 +126,7 @@ class ContinuousPriceWrangler:
             if len(self.prices) > 0 and self.prices[-1].current_month >= end_month:
                 self.prices.pop(-1)
                 break  # done sampling
-            
+            print(bar)
             self.cache.add_bar(bar)
             
             self.continuous.on_bar(bar)

@@ -2,8 +2,8 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.continuous.wrangler import ContinuousPriceWrangler
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
@@ -11,6 +11,7 @@ from pytower import PACKAGE_ROOT
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 import pandas as pd
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
@@ -37,12 +38,13 @@ import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
+from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.objects import Currency
+from nautilus_trader.model.objects import Quantity
 
-"""
-TODO: test if contract expires it take next forward price
-TODO: test if forward contract expires before current contract expiry date
-"""
-        
+CONTRACT_DATA_FOLDER = Path("/Users/g1/Desktop/output_daily")
+OUT_FOLDER = Path("/Users/g1/Desktop/continuous_daily/data/genericdata_continuous_price")
+
 def process_row(
     trading_class: str,
     symbol: str,
@@ -52,32 +54,48 @@ def process_row(
     approximate_expiry_offset: int,
     carry_offset: int,
     start: str,
+    quote_currency: str,
+    min_tick: float,
+    price_magnifier: int,
+    multiplier: int,
     missing_months: list[str] | None,
 ):
     
     # load all the data for the data symbol
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
-    bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
+    bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     
     file = ParquetFile(
-        parent=Path("/Users/g1/Desktop/continuous/data/genericdata_continuous_price"),
+        parent=OUT_FOLDER,
         bar_type=bar_type,
         cls=ContinuousPrice,
     )
     
-    if file.path.exists():
-        print(f"Skipping {trading_class}")
-        return
+    # if file.path.exists():
+    #     print(f"Skipping {trading_class}")
+    #     return
     
     print(f"Processing {trading_class}")
     
     start_month = ContractMonth(start)
     
+    missing_months = list(map(ContractMonth, missing_months))
+    hold_cycle = RollCycle.from_str(hold_cycle, skip_months=missing_months)
+    priced_cycle = RollCycle(priced_cycle)
+    
+    price_precision = IBTestProviderStubs.price_precision(
+        min_tick=min_tick,
+        price_magnifier=price_magnifier,
+    )
+    price_increment = IBTestProviderStubs.price_increment(
+        min_tick=min_tick,
+        price_magnifier=price_magnifier,
+    )
     # ignore_failed = list(map(ContractMonth, ignore_failed))
     wrangler = ContinuousPriceWrangler(
         bar_type=bar_type,
         start_month=start_month,
-        config=FuturesChainConfig(
+        config=ContractChainConfig(
             instrument_id=instrument_id,
             hold_cycle=hold_cycle,
             priced_cycle=priced_cycle,
@@ -86,14 +104,29 @@ def process_row(
             carry_offset=carry_offset,
             skip_months=missing_months,
         ),
+        base=FuturesContract(
+            instrument_id=instrument_id,
+            raw_symbol=instrument_id.symbol,
+            asset_class=AssetClass.ENERGY,
+            currency=Currency.from_str(quote_currency),
+            price_precision=price_precision,
+            price_increment=price_increment,
+            multiplier=Quantity.from_int(multiplier),
+            lot_size=Quantity.from_int(1),
+            underlying="",
+            activation_ns=0,
+            expiration_ns=0,
+            ts_event=0,
+            ts_init=0,
+        )
     )
     
     
-    keyword = f"{trading_class}_{symbol}=*.IB*.parquet"
-    paths = list(sorted(Path("/Users/g1/Desktop/output").glob(keyword)))
+    keyword = f"{trading_class}_{symbol}*.IB*.parquet"
+    
+    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
     
-    # filter the paths by the hold cycle and start year
     bars = []
     for path in paths:
         bars.extend(ParquetFile.from_path(path).read_objects())
@@ -115,6 +148,7 @@ def process_row(
                 ts_event=dt_to_unix_nanos(pd.Timestamp("2007-06-14 16:48:00", tz="UTC")),
             )
         )
+        
     # data[ContractMonth("2007U")] = [bar] + data[ContractMonth("2007U")]
     elif trading_class == "FESU":
         """
@@ -150,8 +184,8 @@ def process_row(
     print(len(prices))
     writer = ContinuousPriceParquetWriter(path=str(file.path))
     
-    print(f"Writing prices... {str(file.path)}")
-    writer.write_objects(data=prices)
+    # print(f"Writing prices... {str(file.path)}")
+    # writer.write_objects(data=prices)
         
     # start month is start of data
     # start month for debugging
@@ -222,38 +256,47 @@ def find_problem_files():
 if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
     
-    # for row in universe.itertuples():
-    #     if row.trading_class == "EBM":
-    #         process_row(
-    #             str(row.trading_class),
-    #             str(row.symbol),
-    #             str(row.hold_cycle),
-    #             str(row.priced_cycle),
-    #             int(row.roll_offset),
-    #             int(row.expiry_offset),
-    #             int(row.carry_offset),
-    #             str(row.start),
-    #             row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
-    #             # list(map(lambda x: x.strip(), row.ignore_failed.split(","))),
-    #         )
-    # exit()
+    for row in universe.itertuples():
+        if row.trading_class == "DC":
+            process_row(
+                row.trading_class,
+                row.symbol,
+                row.hold_cycle,
+                row.priced_cycle,
+                row.roll_offset,
+                row.expiry_offset,
+                row.carry_offset,
+                row.start,
+                row.quote_currency.split("(")[1].split(")")[0],
+                row.min_tick,
+                row.price_magnifier,
+                row.multiplier,
+                row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
+            )
+    exit()
     
+    rows = [
+        row for row in universe.itertuples()
+        if type(row.daily_settle) is not float
+    ]
     
     func_gen = (
         joblib.delayed(process_row)(
-            str(row.trading_class),
-            str(row.symbol),
-            str(row.hold_cycle),
-            str(row.priced_cycle),
-            int(row.roll_offset),
-            int(row.expiry_offset),
-            int(row.carry_offset),
-            str(row.start),
+            row.trading_class,
+            row.symbol,
+            row.hold_cycle,
+            row.priced_cycle,
+            row.roll_offset,
+            row.expiry_offset,
+            row.carry_offset,
+            row.start,
+            row.quote_currency.split("(")[1].split(")")[0],
+            row.min_tick,
+            row.price_magnifier,
+            row.multiplier,
             row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
         )
         for row in universe.itertuples()
-        # if row.trading_class != "EBM_Z"
-        # if row.trading_class == "I"
     )
     results = joblib.Parallel(n_jobs=10, backend="loky")(func_gen)
 
