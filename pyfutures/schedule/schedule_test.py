@@ -2,8 +2,8 @@ from datetime import time
 
 import pandas as pd
 import pytz
-
-from pytower.data.market_schedule import MarketSchedule
+import pickle
+from pyfutures.schedule.schedule import MarketSchedule
 
 
 class TestMarketSchedule:
@@ -145,7 +145,24 @@ class TestMarketSchedule:
         assert calendar.time_until_close(
             pd.Timestamp("1980-01-02 08:30:00", tz="UTC"),
         ) == pd.Timedelta("0 days 07:30:00")
-
+    
+    def test_equality(self):
+        schedule = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
+        assert schedule == schedule
+        
+    def test_schedule_pickle(self):
+        
+        # Arrange
+        schedule = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
+        
+        # Act
+        pickled = pickle.dumps(schedule)
+        unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)
+        
+        # Assert
+        assert unpickled == schedule
+        
+    
     # def test_ib_pandas_tz(self):
     #     for tz in [
     #         "CST (Central Standard Time)",

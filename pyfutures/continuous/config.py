@@ -1,8 +1,21 @@
 from dataclasses import dataclass
 
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.config.validation import NonNegativeInt
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.schedule.market_calendar import MarketSchedule
+from nautilus_trader.config.common import NautilusConfig
+from typing import Annotated
+
+from msgspec import Meta
+from typing import Annotated, Literal
+
+# An integer constrained to values <= 0
+NonPositiveInt = Annotated[int, Meta(le=0)]
 
 @dataclass
-class FuturesContractChainConfig:
+class FuturesContractChainConfig(NautilusConfig):
     """
     Represents the config for a FutureChain.
 
@@ -14,10 +27,11 @@ class FuturesContractChainConfig:
 
     """
 
-    instrument_id: str
-    hold_cycle: str
-    priced_cycle: str
-    roll_offset: int
-    approximate_expiry_offset: int
-    carry_offset: int
-    skip_months: list[str] | None = None
+    instrument_id: InstrumentId
+    hold_cycle: RollCycle
+    priced_cycle: RollCycle
+    roll_offset: NonPositiveInt
+    approximate_expiry_offset: NonNegativeInt
+    carry_offset: Literal[1, -1]
+    skip_months: list[ContractMonth] | None = None
+    weekly_schedule: MarketSchedule

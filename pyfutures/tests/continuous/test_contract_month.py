@@ -2,6 +2,7 @@ import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
 
+import pickle
 
 class TestContractMonth:
     def test_contract_month_init(self):
@@ -92,3 +93,12 @@ class TestContractMonth:
         # Arrange, Act, Assert
         assert ContractMonth("2021X") <= ContractMonth("2021X")
         assert ContractMonth("2021X") <= ContractMonth("2021Z")
+        
+    def test_contract_month_pickle(self):
+        
+        month = ContractMonth("2021X")
+        pickled = pickle.dumps(month)
+        unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)
+
+        # Assert
+        assert unpickled == month

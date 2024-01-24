@@ -147,6 +147,12 @@ class RollCycle:
                 start = self.next_month(start)
         if direction == -1:
             raise NotImplementedError()  # TODO
+    
+    def __getstate__(self):
+        return (self.value, self._skip_months)
+        
+    def __setstate__(self, state):
+        self.value, self._skip_months = state
 
 @dataclass
 class RollCycleRange:

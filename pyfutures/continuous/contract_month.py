@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 """
@@ -34,6 +34,7 @@ class ContractMonth:
         self.month = letter_month_to_int(value[4])
         self.value = value
         self.timestamp_utc = pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
+        self.timestamp_ns = dt_to_unix_nanos(self.timestamp_utc)
     
     @classmethod
     def from_year_letter_month(cls, year: int, letter_month: str) -> ContractMonth:
@@ -85,7 +86,12 @@ class ContractMonth:
 
     def __str__(self) -> str:
         return self.value
+    
+    def __getstate__(self):
+        return self.value
 
+    def __setstate__(self, state):
+        self.value = state
 
 def letter_month_to_int(letter_month: str) -> int:
     assert letter_month in MONTH_LIST

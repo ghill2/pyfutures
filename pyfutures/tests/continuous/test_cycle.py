@@ -5,6 +5,8 @@ from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle import RollCycleRange
 from pyfutures.continuous.cycle import RangedRollCycle
 
+import pickle
+
 class TestRollCycle:
     
     def test_cycle_previous_month_returns_expected(self):
@@ -108,3 +110,12 @@ class TestRollCycle:
         assert cycle.next_month(ContractMonth("2015F")) == ContractMonth("2015Z")
         assert cycle.next_month(ContractMonth("2015Z")) == ContractMonth("2016Z")
         assert cycle.next_month(ContractMonth("2016Z")) == ContractMonth("2017Z")
+        
+    def test_cycle_pickle(self):
+        
+        cycle = RollCycle("HMUZ")
+        pickled = pickle.dumps(cycle)
+        unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)
+
+        # Assert
+        assert unpickled == cycle
