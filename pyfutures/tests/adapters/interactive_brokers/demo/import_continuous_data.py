@@ -61,6 +61,11 @@ def process_row(
     missing_months: list[str] | None,
 ):
     
+    path = Path("/Users/g1/Desktop/output_daily/DC_DA[2018N].IB-1-DAY-MID-EXTERNAL-BAR-2018.parquet")
+    print(
+        ParquetFile.from_path(path).read_objects(path)
+    )
+    exit()
     # load all the data for the data symbol
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
@@ -126,11 +131,13 @@ def process_row(
     
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
+    print(f"{len(paths)} paths")
     
     bars = []
     for path in paths:
         bars.extend(ParquetFile.from_path(path).read_objects())
     assert len(bars) > 0
+    print(f"{len(bars)} bars")
     
     # add extra bars
     if trading_class == "FESB":
