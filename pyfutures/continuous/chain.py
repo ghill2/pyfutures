@@ -63,7 +63,7 @@ class TestContractProvider(InstrumentProvider):
         symbol = instrument_id.symbol.value
         venue = instrument_id.venue.value
         return InstrumentId.from_str(
-            f"{symbol}[{month.year}{month.letter_month}].{venue}",
+            f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
 
 @dataclass
@@ -80,12 +80,14 @@ class ContractChain:
         instrument_provider: InstrumentProvider,
     ):
         
+        self.hold_cycle = config.hold_cycle
+        
         self._roll_offset = config.roll_offset
         assert self._roll_offset <= 0
         self._instrument_id = InstrumentId.from_str(str(config.instrument_id))
         
         self._carry_offset = config.carry_offset
-        self._hold_cycle = config.hold_cycle
+        
         self._priced_cycle = config.priced_cycle
         
         assert self._carry_offset == 1 or self._carry_offset == -1
@@ -107,8 +109,8 @@ class ContractChain:
         # TODO: factor in the calendar
         return expiry_date + pd.Timedelta(days=offset)
     
-    def current_contract(self, timestamp: pd.Timestamp) -> FuturesContract:
-        month = self.current_month(timestamp)
+    def current_contract(self, month: ContractMonth) -> FuturesContract:
+        month = self.current_month(month)
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
                 month=month,
@@ -131,10 +133,10 @@ class ContractChain:
         )
         return self._instrument_provider.get_contract(self._instrument_id, month)
         
-    def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
+    def current_month_from_timestamp(self, timestamp: pd.Timestamp) -> ContractMonth:
         
-        current = self._hold_cycle.current_month(timestamp)
-
+        current = self.hold_cycle.current_month(timestamp)
+        
         while True:
             roll_date = self._roll_date_utc(
                             expiry_date=current.timestamp_utc,
@@ -144,12 +146,18 @@ class ContractChain:
             if roll_date > timestamp:
                 break
 
-            current = self._hold_cycle.next_month(current)
+            current = self.hold_cycle.next_month(current)
 
         return current
+        
+    def current_month(self, month: ContractMonth) -> ContractMonth:
+        if month in self.hold_cycle:
+            return month
+        
+        return self.forward_month(month)
     
     def forward_month(self, month: ContractMonth) -> ContractMonth:
-        return self._hold_cycle.next_month(month)
+        return self.hold_cycle.next_month(month)
 
     def carry_month(self, month: ContractMonth) -> ContractMonth:
         if self._carry_offset == 1:

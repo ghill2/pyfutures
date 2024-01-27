@@ -8,37 +8,24 @@ import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
 
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.objects import Price
-
-from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.chain import ContractId
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from unittest.mock import Mock
 
-
-
-async def test_add_price_magnifier():
-    pass
-
-
 @pytest.mark.asyncio()
-async def test_xt(client):
+async def test_request_price_magnifier(client):
     
     await client.connect()
     
     contract = IBContract()
-    contract.symbol = "XT"
-    contract.exchange = "SNFE"
-    contract.tradingClass = "XT"
+    contract.tradingClass = "NIFTY"
+    contract.symbol = "NIFTY50"
+    contract.exchange = "NSE"
     contract.includeExpired = False
     contract.secType = "FUT"
     
     details = await client.request_front_contract_details(contract)
-    print(details)
-    details.priceMagnifier
+    print(details.priceMagnifier)
+    print(details.minTick)
     
 @pytest.mark.asyncio()
 async def test_can_just_use_trading_class(client):

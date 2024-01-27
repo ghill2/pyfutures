@@ -61,7 +61,6 @@ class IBTestProviderStubs:
             "ex_symbol": str,
             "data_symbol": str,
             "price_precision": pd.Float64Dtype(),
-            "size_precision": pd.Float64Dtype(),
             "data_start": str,
             "data_end": str,
             "start": str,
@@ -96,7 +95,7 @@ class IBTestProviderStubs:
         df = df[df.data_symbol.notna()]
         
         # temporary skip until rest filled in
-        df = df[df.price_precision.notna() & df.size_precision.notna()]
+        df = df[df.price_precision.notna()]
         
         assert not df.exchange.isna().any()
         assert not df.symbol.isna().any()

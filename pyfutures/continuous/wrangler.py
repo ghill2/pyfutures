@@ -40,7 +40,8 @@ class ContinuousPriceWrangler:
     
     def __init__(
         self,
-        bar_type: BarType,
+        daily_bar_type: BarType,
+        minute_bar_type: BarType,
         base: FuturesContract,
         start_month: ContractMonth,
         config: ContractChainConfig,
@@ -48,7 +49,6 @@ class ContinuousPriceWrangler:
     ):
         
         self.start_month = start_month
-        self.bar_type = bar_type
         
         clock = TestClock()
         logger = Logger(
@@ -90,27 +90,50 @@ class ContinuousPriceWrangler:
             config=config,
             instrument_provider=instrument_provider,
         )
+        self.instrument_id = daily_bar_type.instrument_id
         
-        self.prices = []
-        self.continuous = ContinuousData(
-            bar_type=self.bar_type,
+        # setup daily continuous prices
+        self.daily_bar_type = daily_bar_type
+        self.daily_prices = []
+        self.daily_continuous = ContinuousData(
+            bar_type=daily_bar_type,
             chain=self.chain,
             start_month=start_month,
             # end_month=end_month,
-            handler=self.prices.append,
+            handler=self.daily_prices.append,
             raise_expired=False,
             ignore_expiry_date=True,
         )
-        
-        self.continuous.register_base(
+        self.daily_continuous.register_base(
             portfolio=portfolio,
             msgbus=msgbus,
             cache=self.cache,
             clock=clock,
             logger=logger,
         )
-
-        self.continuous.start()
+        self.daily_continuous.start()
+        
+        # setup minute continuous prices
+        self.minute_prices = []
+        self.minute_continuous = ContinuousData(
+            bar_type=minute_bar_type,
+            chain=self.chain,
+            start_month=start_month,
+            # end_month=end_month,
+            handler=self.minute_prices.append,
+            raise_expired=False,
+            ignore_expiry_date=True,
+            manual_roll=True,
+        )
+        self.minute_continuous.register_base(
+            portfolio=portfolio,
+            msgbus=msgbus,
+            cache=self.cache,
+            clock=clock,
+            logger=logger,
+        )
+        self.minute_continuous.start()
+        
         data_engine.start()
         
         self._skip_months = skip_months or []
@@ -123,30 +146,42 @@ class ContinuousPriceWrangler:
         for bar in bars:
                         
             # stop when the data module rolls to year 2024
-            if len(self.prices) > 0 and self.prices[-1].current_month >= end_month:
-                self.prices.pop(-1)
+            if len(self.daily_prices) > 0 and self.daily_prices[-1].current_month >= end_month:
                 break  # done sampling
-            print(bar)
+            
             self.cache.add_bar(bar)
             
-            self.continuous.on_bar(bar)
+            self.minute_continuous.on_bar(bar)
+            has_rolled = self.daily_continuous.on_bar(bar)
+            if has_rolled:
+                self.minute_continuous.roll()
         
-        if len(self.prices) == 0:
-            raise ValueError(f"{self.bar_type} len(self.prices) > 0")
-        
-        last_month = self.prices[-1].current_month
-        last_year = self.prices[-1].current_month.year
-        
-        print(f"wrangling completed: last_year: {last_year}, last_month: {last_month}")
-        
-        if last_month >= end_month:
-            raise ValueError(f"last_month >= end_month for {self.bar_type}")
-        
-        if last_year != 2022:
-            raise ValueError(f"last_year != 2022 for {self.bar_type}")
-        
-        return self.prices
-        
+        if len(self.daily_prices) == 0:
+            raise ValueError(f"{self.instrument_id} daily len(self.prices) > 0")
+        if len(self.minute_prices) == 0:
+            raise ValueError(f"{self.instrument_id} len(self.prices) > 0")
+        print(len(self.minute_prices))
+        print(len(self.daily_prices))
+        # trim prices to end month
+        while self.daily_prices[-1].current_month >= end_month:
+            self.daily_prices.pop(-1)
+        while self.minute_prices[-1].current_month >= end_month:
+            self.minute_prices.pop(-1)
+                    
+        for prices in (self.minute_prices, self.daily_prices):
+            
+            
+            last_month = prices[-1].current_month
+            last_year = prices[-1].current_month.year
+            
+            print(f"wrangling completed: last_year: {last_year}, last_month: {last_month}")
+            
+            if last_month >= end_month:
+                raise ValueError(f"last_month >= end_month for {prices[0].instrument_id}")
+            
+            if last_year != 2022:
+                raise ValueError(f"last_year != 2022 for {prices[0].instrument_id}")
+            
         # if is_last:
             #     last_received = True
             # elif last_received:

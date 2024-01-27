@@ -191,12 +191,8 @@ class RangedRollCycle:
         for range_ in self._ranges:
             if current in range_:
                 return range_.cycle.next_month(current=current)
-                
+        
         raise RuntimeError()
-                
-    
-        
-        
             
         
 # from abc import ABC, abstractmethod

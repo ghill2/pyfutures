@@ -17,8 +17,6 @@ import joblib
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 
-
-
 def process(
     trading_class: str,
     symbol: str,
@@ -26,7 +24,7 @@ def process(
     min_tick: float,
     price_magnifier: int,
 ):
-        
+    
     # get files in the data folder
     data_dir = (data_folder / data_symbol)
     
@@ -77,13 +75,7 @@ def process(
         )
         assert len(df.columns) == 8
         
-        df['timestamp'] = pd.to_datetime(
-            (df["day"] * 10000 + df["time"]).astype(str),
-            format="%Y%m%d%H%M",
-            utc=True,
-        )
         
-        df.drop(["day", "time", "tick_count"], axis=1, inplace=True)
         
         writer = BarParquetWriter(
             path=outfile.path,

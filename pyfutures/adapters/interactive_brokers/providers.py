@@ -12,8 +12,8 @@ from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_i
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 from pyfutures.adapters.interactive_brokers.parsing import contract_id_to_contract
 
-from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.chain import ContractId
+from pyfutures.continuous.chain import ContractChain
+# from pyfutures.continuous.chain import ContractId
 from pyfutures.continuous.contract_month import ContractMonth
 
 class InteractiveBrokersInstrumentProvider(InstrumentProvider):
@@ -44,16 +44,14 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     
     async def load_contract(
         self,
-        contract_id: ContractId | InstrumentId,
+        contract_id: InstrumentId,
     ) -> FuturesContract | None:
         
         """
         Expects InstrumentId to be in the format TradingClass-Symbol=ContractMonth.Exchange
         """
         
-        if isinstance(contract_id, ContractId):
-            contract: IBContract = contract_id_to_contract(contract_id)
-        elif isinstance(contract_id, InstrumentId):
+        if isinstance(contract_id, InstrumentId):
             contract: IBContract = instrument_id_to_contract(contract_id)
         
         return await self._load_contract(contract)
@@ -77,7 +75,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     
     async def load_futures_chain(
         self,
-        chain: FuturesChain,
+        chain: ContractChain,
     ) -> list[FuturesContract]:
         
         details_list = await self.request_future_chain_details(chain)
@@ -90,7 +88,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         
     async def request_future_chain_details(
         self,
-        chain: FuturesChain,
+        chain: ContractChain,
     ) -> list[IBContractDetails]:
         """
         Excepts a contract with TradingClass and Symbol properties set
