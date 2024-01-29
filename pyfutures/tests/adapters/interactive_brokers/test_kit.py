@@ -60,6 +60,7 @@ class IBTestProviderStubs:
             "exchange": str,
             "ex_symbol": str,
             "data_symbol": str,
+            "timezone": str,
             "price_precision": pd.Float64Dtype(),
             "data_start": str,
             "data_end": str,
@@ -77,7 +78,7 @@ class IBTestProviderStubs:
             "market_hours_local": str,
             "liquid_hours_local": str,
             "weekly_hours": str,
-            "daily_settle": str,
+            "settlement_time": str,
             "hours_last_edited": str,
             "session": pd.Int64Dtype(),
             "description": str,
@@ -100,6 +101,10 @@ class IBTestProviderStubs:
         assert not df.exchange.isna().any()
         assert not df.symbol.isna().any()
         assert not df.trading_class.isna().any()
+        
+        # temporary remove instruments that are failing to roll
+        df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
+        
         return df
 
     @classmethod

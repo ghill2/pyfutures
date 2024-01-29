@@ -61,8 +61,6 @@ class ContinuousData(Actor):
                 # TODO: wait for next forward bar != last timestamp
                 raise ValueError(f"ContractExpired {self.current_id}")
         
-        
-        
         # if "MINUTE" in str(bar.bar_type):
         #     print(self.roll_date, unix_nanos_to_dt(bar.ts_event), bar)
                     

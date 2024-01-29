@@ -6,7 +6,18 @@ import pandas as pd
 import pytest
 from pathlib import Path
 from ibapi.contract import Contract
+from ibapi.contract import ContractDetails
 
+
+@pytest.mark.asyncio()
+async def test_timezones():
+    
+    universe = IBTestProviderStubs.universe_dataframe()
+    for row in universe.itertuples():
+        print()
+        
+        
+        
 @pytest.mark.asyncio()
 async def test_request_front_contract_universe(client):
     """
@@ -15,16 +26,23 @@ async def test_request_front_contract_universe(client):
     await client.connect()
     
     universe = IBTestProviderStubs.universe_dataframe()
+    timezones = []
+    
     for row in universe.itertuples():
         
         contract = row_to_contract(row)
         
         try:
-            contract = await client.request_front_contract(contract)
-            assert type(contract) is Contract
+            details = await client.request_front_contract_details(contract)
+            
+            assert type(details) is ContractDetails
+            timezones.append(details.timeZoneId)
+            print(row.trading_class, details.timeZoneId)
+            
         except ClientException as e:
             if e.code == 200:
-                print(f"{row.trading_class}")
+                timezones.append("None")
+                print(row.trading_class, details.timeZoneId)
             else:
                 raise e
         

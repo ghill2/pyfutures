@@ -43,7 +43,7 @@ from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 
 CONTRACT_DATA_FOLDER = Path("/Users/g1/Desktop/output")
-OUT_FOLDER = Path("/Users/g1/Desktop/continuous_daily/data/genericdata_continuous_price")
+OUT_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
 
 def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
 
@@ -149,10 +149,10 @@ def process_row(
     multiplier: float,
     missing_months: list[str] | None,
 ):
-    
     # path = Path("/Users/g1/Desktop/DC_DA=2010Q.IB-1-DAY-MID-EXTERNAL-BAR-2010.parquet")
     
     # load all the data for the data symbol
+    
     instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     daily_bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     minute_bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
@@ -220,7 +220,6 @@ def process_row(
         )
     )
     
-    
     keyword = f"{trading_class}_{symbol}*.IB*.parquet"
     
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
@@ -230,7 +229,6 @@ def process_row(
     
     bars = []
     for path in paths:
-        print(path)
         bars_ = ParquetFile.from_path(path).read_objects(path)
         assert len(bars_) > 0
         bars.extend(bars_)
@@ -238,7 +236,10 @@ def process_row(
     print(f"{len(bars)} bars")
     
     bars = add_missing_daily_bars(trading_class, bars)
-    bars = list(sorted(bars, key= lambda x: x.ts_init))
+    bars = list(sorted(
+                bars,
+                key=lambda x: (x.ts_init, x.bar_type.instrument_id.symbol.value[-1],
+            ))
     wrangler.process_bars(bars)
     
     daily_prices = wrangler.daily_prices
@@ -247,11 +248,11 @@ def process_row(
     # print(len(prices))
     writer = ContinuousPriceParquetWriter(path=str(daily_file.path))
     print(f"Writing daily prices... {len(daily_prices)} items {str(daily_file.path)}")
-    # writer.write_objects(data=daily_prices)
+    writer.write_objects(data=daily_prices)
     
     writer = ContinuousPriceParquetWriter(path=str(minute_file.path))
     print(f"Writing minute prices... {len(minute_prices)} items {str(minute_file.path)}")
-    # writer.write_objects(data=minute_prices)
+    writer.write_objects(data=minute_prices)
         
     # start month is start of data
     # start month for debugging
@@ -344,17 +345,11 @@ if __name__ == "__main__":
     #             row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
     #         )
     #         exit()
-    rows = [
-        row for row in universe.itertuples()
-        if type(row.daily_settle) is not float
-    ]
     rows = universe.itertuples()
-    # filtered = """"""
-    rows = [
-        row for row in universe.itertuples()
-        # if row.trading_class not in ("YIW", "EBM")
-        if row.trading_class == "EBM"
-    ]
+    # rows = [
+    #     row for row in universe.itertuples()
+    #     # if row.trading_class not in ("YIW", "EBM")
+    # ]
     # for row in rows:
     #     print(row.trading_class)
     func_gen = (
@@ -375,7 +370,7 @@ if __name__ == "__main__":
         )
         for row in rows
     )
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen)
+    results = joblib.Parallel(n_jobs=20, backend="loky")(func_gen)
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])

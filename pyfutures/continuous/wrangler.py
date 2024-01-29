@@ -160,8 +160,7 @@ class ContinuousPriceWrangler:
             raise ValueError(f"{self.instrument_id} daily len(self.prices) > 0")
         if len(self.minute_prices) == 0:
             raise ValueError(f"{self.instrument_id} len(self.prices) > 0")
-        print(len(self.minute_prices))
-        print(len(self.daily_prices))
+        
         # trim prices to end month
         while self.daily_prices[-1].current_month >= end_month:
             self.daily_prices.pop(-1)

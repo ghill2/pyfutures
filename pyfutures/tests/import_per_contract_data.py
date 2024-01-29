@@ -17,7 +17,7 @@ import joblib
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
-OUT_FOLDER = Path("/Users/g1/Desktop/output")
+OUT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 
 def read_dataframe(path: Path) -> pd.DataFrame:
     
@@ -97,7 +97,11 @@ def process(
     symbol: str,
     min_tick: float,
     price_magnifier: int,
+    settlement_time: str,
+    timezone: str,
 ):
+
+        settlement_time = pd.Timestamp(settlement_time, tz=timezone).tz_convert("UTC")
         
         letter_month = path.stem[-1]
         
@@ -129,6 +133,17 @@ def process(
         
         
         df = read_dataframe(path)
+        
+        def _convert_timestamp(value: pd.Timestamp) -> pd.Timestamp:
+            """Add the settlement time to the bar timestamps"""
+            return value.replace(
+                hour=int(settlement_time.split(":")[0]),
+                minute=int(settlement_time.split(":")[1]),
+                tzinfo=timezone(timezone),
+            ).tz_convert("UTC") + pd.Timedelta(seconds=1)
+            
+        df.timestamp = df.timestamp.apply(_convert_timestamp)
+        
         writer = BarParquetWriter(
             path=outfile.path,
             bar_type=bar_type,
@@ -164,12 +179,12 @@ def func_gen():
             
         for path in daily_paths + minute_paths:
             yield joblib.delayed(process)(
-                    path,
-                    row.trading_class,
-                    row.symbol,
-                    row.min_tick,
-                    row.price_magnifier,
-                )
+                path,
+                row.trading_class,
+                row.symbol,
+                row.min_tick,
+                row.price_magnifier,
+            )
         
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())

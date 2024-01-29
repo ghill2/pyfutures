@@ -136,6 +136,7 @@ class TestContinuousPrice:
         assert unpickled == price
 
     def test_continuous_price_serialize_roundtrip(self):
+        
         # Arrange
         register_arrow(
             data_cls=ContinuousPrice,
