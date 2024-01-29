@@ -88,10 +88,20 @@ class ContractMonth:
         return self.value
     
     def __getstate__(self):
-        return self.value
+        return (
+            self.year,
+            self.letter_month,
+            self.month,
+            self.value,
+            self.timestamp_utc,
+        )
 
     def __setstate__(self, state):
-        self.value = state
+        self.year = state[0]
+        self.letter_month = state[1]
+        self.month = state[2]
+        self.value = state[3]
+        self.timestamp_utc = state[4]
 
 def letter_month_to_int(letter_month: str) -> int:
     assert letter_month in MONTH_LIST

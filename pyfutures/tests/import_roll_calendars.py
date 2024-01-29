@@ -40,86 +40,50 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
+from nautilus_trader.core.datetime import unix_nanos_to_dt
+from pyfutures.continuous.chain import TestContractProvider
+
+OUT_FOLDER = Path("/Users/g1/Desktop/calendars")
 
 def process_row(
-    trading_class: str,
-    symbol: str,
-    hold_cycle: str,
-    priced_cycle: str,
-    roll_offset: str,
-    approximate_expiry_offset: int,
-    carry_offset: int,
-    start: str,
-    quote_currency: str,
-    min_tick: float,
-    price_magnifier: int,
-    multiplier: float,
-    missing_months: list[str] | None,
+    row: dict,
 ):
-    instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
     
+    instrument_provider = TestContractProvider(
+        approximate_expiry_offset=row["config"].approximate_expiry_offset,
+        base=row["base"],
+    )
     
     chain = ContractChain(
-        config=ContractChainConfig(
-            instrument_id=instrument_id,
-            hold_cycle=hold_cycle,
-            priced_cycle=priced_cycle,
-            roll_offset=roll_offset,
-            approximate_expiry_offset=approximate_expiry_offset,
-            carry_offset=carry_offset,
-            skip_months=missing_months,
-        )
+        config=row["config"],
+        instrument_provider=instrument_provider,
     )
     
-    provider = TestContractProvider(
-        approximate_expiry_offset=approximate_expiry_offset,
-        base=FuturesContract(
-            instrument_id=instrument_id,
-            raw_symbol=instrument_id.symbol,
-            asset_class=AssetClass.ENERGY,
-            currency=Currency.from_str(quote_currency),
-            price_precision=price_precision,
-            price_increment=price_increment,
-            multiplier=Quantity.from_str(str(multiplier)),
-            lot_size=Quantity.from_int(1),
-            underlying="",
-            activation_ns=0,
-            expiration_ns=0,
-            ts_event=0,
-            ts_init=0,
-        ),
-    )
-            
-    
+    df = pd.DataFrame(columns=["month", "approximate_expiry_date", "roll_date"])
     
     end_month = ContractMonth("2023F")
-    month = ContractMonth(start)
-    df = pd.DataFrame()
-    while month <= end_month:
-        month = chain.next_month(month)
+    contract = chain.current_contract(row["start"])
+    while contract.info["month"] <= end_month:
         
-        
-
-if __name__ == "__main__":
-    universe = IBTestProviderStubs.universe_dataframe()
-    print(universe)
-    exit()
-    func_gen = (
-        joblib.delayed(process_row)(
-            row.trading_class,
-            row.symbol,
-            row.hold_cycle,
-            row.priced_cycle,
-            row.roll_offset,
-            row.expiry_offset,
-            row.carry_offset,
-            row.start,
-            row.quote_currency.split("(")[1].split(")")[0],
-            row.min_tick,
-            row.price_magnifier,
-            row.multiplier,
-            row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
+        df.loc[len(df)] = (
+            contract.info["month"].value,
+            unix_nanos_to_dt(contract.expiration_ns).strftime("%Y-%m-%d"),
+            chain.roll_date_utc(contract).strftime("%Y-%m-%d"),
         )
-        for row in universe.itertuples()
+        
+        contract = chain.forward_contract(contract)
+    
+    path = OUT_FOLDER / f"{row['trading_class']}.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(path, index=False)
+    print(df)
+    
+if __name__ == "__main__":
+    universe = IBTestProviderStubs.universe_dataframe(
+        # filter=["ECO"],
+    )
+    func_gen = (
+        joblib.delayed(process_row)(row)
+        for row in universe.to_dict(orient='records')
     )
     results = joblib.Parallel(n_jobs=20, backend="loky")(func_gen)

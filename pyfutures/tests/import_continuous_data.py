@@ -135,94 +135,29 @@ def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
             )
     return bars
 
-def process_row(
-    trading_class: str,
-    symbol: str,
-    hold_cycle: str,
-    priced_cycle: str,
-    roll_offset: str,
-    approximate_expiry_offset: int,
-    carry_offset: int,
-    start: str,
-    quote_currency: str,
-    min_tick: float,
-    price_magnifier: int,
-    multiplier: float,
-    missing_months: list[str] | None,
-):
-    # path = Path("/Users/g1/Desktop/DC_DA=2010Q.IB-1-DAY-MID-EXTERNAL-BAR-2010.parquet")
+def process_row(row: dict) -> None:
     
-    # load all the data for the data symbol
-    
-    instrument_id = InstrumentId.from_str(f"{trading_class}_{symbol}.IB")
+    instrument_id = row["base"].id
     daily_bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     minute_bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
-    daily_file = ParquetFile(
-        parent=OUT_FOLDER,
-        bar_type=daily_bar_type,
-        cls=ContinuousPrice,
-    )
-    
-    minute_file = ParquetFile(
-        parent=OUT_FOLDER,
-        bar_type=minute_bar_type,
-        cls=ContinuousPrice,
-    )
+    daily_file = ParquetFile(parent=OUT_FOLDER, bar_type=daily_bar_type, cls=ContinuousPrice)
+    minute_file = ParquetFile(parent=OUT_FOLDER, bar_type=minute_bar_type, cls=ContinuousPrice)
     
     # if daily_file.path.exists() and minute_file.path.exists():
     #     print(f"Skipping {trading_class}")
     #     return
     
-    print(f"Processing {trading_class}")
-    
-    start_month = ContractMonth(start)
-    
-    missing_months = list(map(ContractMonth, missing_months))
-    hold_cycle = RollCycle.from_str(hold_cycle, skip_months=missing_months)
-    priced_cycle = RollCycle(priced_cycle)
-    
-    price_precision = IBTestProviderStubs.price_precision(
-        min_tick=min_tick,
-        price_magnifier=price_magnifier,
-    )
-    price_increment = IBTestProviderStubs.price_increment(
-        min_tick=min_tick,
-        price_magnifier=price_magnifier,
-    )
-    
+    print(f"Processing {row['trading_class']}")
     wrangler = ContinuousPriceWrangler(
         daily_bar_type=daily_bar_type,
         minute_bar_type=minute_bar_type,
-        start_month=start_month,
-        config=ContractChainConfig(
-            instrument_id=instrument_id,
-            hold_cycle=hold_cycle,
-            priced_cycle=priced_cycle,
-            roll_offset=roll_offset,
-            approximate_expiry_offset=approximate_expiry_offset,
-            carry_offset=carry_offset,
-            skip_months=missing_months,
-        ),
-        base=FuturesContract(
-            instrument_id=instrument_id,
-            raw_symbol=instrument_id.symbol,
-            asset_class=AssetClass.ENERGY,
-            currency=Currency.from_str(quote_currency),
-            price_precision=price_precision,
-            price_increment=price_increment,
-            multiplier=Quantity.from_str(str(multiplier)),
-            lot_size=Quantity.from_int(1),
-            underlying="",
-            activation_ns=0,
-            expiration_ns=0,
-            ts_event=0,
-            ts_init=0,
-        )
+        start_month=row["start"],
+        config=row["config"],
+        base=row["base"],
     )
     
-    keyword = f"{trading_class}_{symbol}*.IB*.parquet"
-    
+    keyword = f"{row['trading_class']}_{row['symbol']}*.IB*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
     
@@ -236,7 +171,7 @@ def process_row(
     
     print(f"{len(bars)} bars")
     
-    bars = add_missing_daily_bars(trading_class, bars)
+    bars = add_missing_daily_bars(row["trading_class"], bars)
     bars = list(sorted(
                     bars,
                     key=lambda x: (
@@ -258,6 +193,20 @@ def process_row(
     writer = ContinuousPriceParquetWriter(path=str(minute_file.path))
     print(f"Writing minute prices... {len(minute_prices)} items {str(minute_file.path)}")
     writer.write_objects(data=minute_prices)
+    
+    # save csv too
+    table = ContinuousPriceParquetWriter.to_table(data=daily_prices)
+    path = daily_file.path.with_suffix(".csv")
+    df = table.to_pandas()
+    df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
+    df.to_csv(path, index=False)
+    
+    table = ContinuousPriceParquetWriter.to_table(data=minute_prices)
+    path = minute_file.path.with_suffix(".csv")
+    df = table.to_pandas()
+    df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
+    df.to_csv(path, index=False)
+    
         
     # start month is start of data
     # start month for debugging
@@ -291,7 +240,7 @@ def find_minimum_day_of_month_within_range(
     filtered = []
     for key, values in data.items():
         filtered.append(values[dayofmonth - 1])
-
+    
     return pd.Series(filtered).dt.day.min()
 
 def test_find_problem_files():
@@ -331,51 +280,13 @@ def test_find_problem_files():
             print(row.trading_class, month.value)
         
 if __name__ == "__main__":
-    universe = IBTestProviderStubs.universe_dataframe()
-    # for row in universe.itertuples():
-    #     if row.trading_class == "EMA":
-    #         process_row(
-    #             row.trading_class,
-    #             row.symbol,
-    #             row.hold_cycle,
-    #             row.priced_cycle,
-    #             row.roll_offset,
-    #             row.expiry_offset,
-    #             row.carry_offset,
-    #             row.start,
-    #             row.quote_currency.split("(")[1].split(")")[0],
-    #             row.min_tick,
-    #             row.price_magnifier,
-    #             row.multiplier,
-    #             row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
-    #         )
-    #         exit()
-    rows = universe.itertuples()
-    # rows = [
-    #     row for row in universe.itertuples()
-    #     # if row.trading_class not in ("YIW", "EBM")
-    # ]
-    # for row in rows:
-    #     print(row.trading_class)
-    func_gen = (
-        joblib.delayed(process_row)(
-            row.trading_class,
-            row.symbol,
-            row.hold_cycle,
-            row.priced_cycle,
-            row.roll_offset,
-            row.expiry_offset,
-            row.carry_offset,
-            row.start,
-            row.quote_currency.split("(")[1].split(")")[0],
-            row.min_tick,
-            row.price_magnifier,
-            row.multiplier,
-            row.missing_months.replace(" ", "").split(",") if type(row.missing_months) is not float else [],
-        )
-        for row in rows
+    universe = IBTestProviderStubs.universe_dataframe(
+        # filter=["ECO"],
     )
-    results = joblib.Parallel(n_jobs=20, backend="loky")(func_gen)
+    
+    results = joblib.Parallel(n_jobs=20, backend="loky")(
+        joblib.delayed(process_row)(row) for row in universe.to_dict(orient="records")
+    )
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])

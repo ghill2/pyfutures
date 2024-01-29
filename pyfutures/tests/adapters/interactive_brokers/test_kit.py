@@ -8,6 +8,7 @@ from datetime import datetime
 import pandas as pd
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
+from pytz import timezone
 
 from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
@@ -58,7 +59,7 @@ class Session:
 class IBTestProviderStubs:
     
     @staticmethod
-    def universe_dataframe() -> pd.DataFrame:
+    def universe_dataframe(filter: list | None = None) -> pd.DataFrame:
         file = UNIVERSE_CSV_PATH
         assert file.exists()
 
@@ -104,6 +105,11 @@ class IBTestProviderStubs:
         # temporary remove instruments that are failing to roll
         df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
         
+        
+        if filter is not None:
+            df = df[df.trading_class.isin(filter)]
+        
+        
         # skip rows with no data symbol
         df = df[df.data_symbol.notna()]
         
@@ -114,93 +120,67 @@ class IBTestProviderStubs:
         assert not df.min_tick.isna().any()
         assert not df.price_magnifier.isna().any()
         assert not df.quote_currency.isna().any()
-
         
+        df["start"] = df.start.apply(ContractMonth)
+        df["end"] = df.end.apply(ContractMonth)
+        df["timezone"] = df.timezone.apply(timezone)
         
-        # parse quote currency
-        df.quote_currency = df.quote_currency.apply(
-                                lambda x: Currency.from_str(x.split("(")[1].split(")")[0])
-                            )
-        
-        # parse price precision
-        df["price_precision"] = df.apply(
-            lambda row: len(f"{(row.min_tick):.8f}".rstrip("0").split(".")[1]),
-            axis=1,
-        )
-        
-        # parse price increment
-        df["price_increment"] = df.apply(
-            lambda row: Price(row.min_tick, row.price_precision),
-            axis=1,
-        )
-        
-        # for row in df.itertuples():
-            # if row.trading_class == "KE":
-            # if row.price_increment <= 0.0 and row.price_magnifier == 100:
-            #     print(row.trading_class, row.price_magnifier, row.price_precision, row.price_increment)
-        # exit()
-            
-        # parse instrument_id
-        df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
-            axis=1,
-        )
-        
-        # parse missing months
-        data = []
-        for missing_months in df.missing_months:
-            missing_months = missing_months.replace(" ", "").split(",") if type(missing_months) is not float else []
-            data.append(list(map(ContractMonth, missing_months)))
-        df.missing_months = pd.Series(data)
-        
-        df["config"] = df.apply(
-            lambda row: ContractChainConfig(
-                instrument_id=row.instrument_id,
-                hold_cycle=RollCycle.from_str(row.hold_cycle),
-                priced_cycle=RollCycle(row.priced_cycle),
-                roll_offset=row.roll_offset,
-                approximate_expiry_offset=row.expiry_offset,
-                carry_offset=row.carry_offset,
-                skip_months=row.missing_months,
-            ),
-            axis=1,
-        )
-        
+        df["settlement_time"] = df.settlement_time.apply(
+                                    lambda x: pd.Timedelta(
+                                        hours=int(x.split(":")[0]),
+                                        minutes=int(x.split(":")[1]),
+                                    )
+                                )
+                
+        configs = []
+        bases = []
         for row in df.itertuples():
-            FuturesContract(
-                instrument_id=row.instrument_id,
-                raw_symbol=row.instrument_id.symbol,
-                asset_class=AssetClass.ENERGY,
-                currency=row.quote_currency,
-                price_precision=row.price_precision,
-                price_increment=row.price_increment,
-                multiplier=Quantity.from_str(str(row.multiplier)),
-                lot_size=Quantity.from_int(1),
-                underlying="",
-                activation_ns=0,
-                expiration_ns=0,
-                ts_event=0,
-                ts_init=0,
+            
+            instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
+            
+            # parse config
+            missing_months = row.missing_months.replace(" ", "").split(",") \
+                                if not isinstance(row.missing_months, float) \
+                                else []
+            missing_months = list(map(ContractMonth, missing_months))
+            
+            configs.append(
+                ContractChainConfig(
+                    instrument_id=instrument_id,
+                    hold_cycle=RollCycle(row.hold_cycle, skip_months=missing_months),
+                    priced_cycle=RollCycle(row.priced_cycle),
+                    roll_offset=row.roll_offset,
+                    approximate_expiry_offset=row.expiry_offset,
+                    carry_offset=row.carry_offset,
+                    skip_months=missing_months,
+                )
             )
-        
-        df["base"] = df.apply(
-            lambda row: FuturesContract(
-                instrument_id=row.instrument_id,
-                raw_symbol=row.instrument_id.symbol,
-                asset_class=AssetClass.ENERGY,
-                currency=row.quote_currency,
-                price_precision=row.price_precision,
-                price_increment=row.price_increment,
-                multiplier=Quantity.from_str(str(row.multiplier)),
-                lot_size=Quantity.from_int(1),
-                underlying="",
-                activation_ns=0,
-                expiration_ns=0,
-                ts_event=0,
-                ts_init=0,
-            ),
-            axis=1,
-        )
+            
+            # parse base contract
+            price_precision = len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1])
+            
+            
+            bases.append(
+                FuturesContract(
+                    instrument_id=instrument_id,
+                    raw_symbol=instrument_id.symbol,
+                    asset_class=AssetClass.ENERGY,
+                    currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
+                    price_precision=price_precision,
+                    price_increment=Price(row.min_tick * row.price_magnifier, price_precision),
+                    multiplier=Quantity.from_str(str(row.multiplier)),
+                    lot_size=Quantity.from_int(1),
+                    underlying="",
+                    activation_ns=0,
+                    expiration_ns=0,
+                    ts_event=0,
+                    ts_init=0,
+                )
+            )
+            
+                
+        df["config"] = configs
+        df["base"] = bases
         
         # parse settlement time
         remove = [
@@ -208,7 +188,6 @@ class IBTestProviderStubs:
             "description", "region", "session", "hours_last_edited", "data_start", "data_end",
             "data_completes", "minute_transition", "price_magnifier", "min_tick", "multiplier",
             "missing_months", "hold_cycle", "priced_cycle", "roll_offset", "expiry_offset", "carry_offset",
-            "instrument_id", "price_increment", "price_precision", "quote_currency",
         ]
         df = df[[x for x in df.columns if x not in remove]]
         

@@ -13,10 +13,9 @@ OUT_FOLDER = Path("/Users/g1/Desktop/adjusted")
 
 def process(
     path: Path,
-    trading_class: str,
+    row: dict,
 ):
     
-    print(trading_class, path)
     file = ParquetFile.from_path(path)
     continuous_prices = file.read_objects()
     
@@ -27,28 +26,29 @@ def process(
     for price in continuous_prices:
         adjusted_prices.handle_continuous_price(price=price)
     
-    path = OUT_FOLDER / f"{trading_class}.parquet"
-    # adjusted_prices.to_series().to_frame().to_parquet(path, index=False)
-    print(path)
+    path = OUT_FOLDER / f"{row['trading_class']}_adjusted.parquet"
+    df = adjusted_prices.to_series().apply(float).to_frame()
     
-    # convert to series
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(path)
     
-    # save series as parquet
+    path = path.with_suffix(".csv")
+    df.to_csv(path)
     
 def func_gen():
     
-    universe = IBTestProviderStubs.universe_dataframe()
-    
-    paths = MULTIPLE_PRICES_FOLDER.glob("*.parquet")
-    for path in paths:
-        yield joblib.delayed(process)(
-            path=path,
-            trading_class=path.stem.split("_")[0],
-        )
+    universe = IBTestProviderStubs.universe_dataframe(
+        filter=["ECO"],
+    )
+    for row in universe.to_dict(orient="records"):
+        instrument_id = row['base'].id
+        paths = MULTIPLE_PRICES_FOLDER.glob(f"{instrument_id}*.parquet")
+        for path in paths:
+            yield joblib.delayed(process)(
+                path=path,
+                row=row,
+            )
         
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
-    # process(
-    #     path=Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price/VX_VIX.IB-1-DAY-MID-EXTERNAL-CONTINUOUSPRICE-0.parquet"),
-    #     trading_class="VX",
-    # )
+    

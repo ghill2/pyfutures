@@ -152,7 +152,8 @@ class RollCycle:
         return (self.value, self._skip_months)
         
     def __setstate__(self, state):
-        self.value, self._skip_months = state
+        self.value = state[0]
+        self._skip_months = state[1]
 
 @dataclass
 class RollCycleRange:
