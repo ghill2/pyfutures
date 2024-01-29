@@ -278,8 +278,12 @@ def test_find_problem_files():
             if month.value in stems:
                 continue
             print(row.trading_class, month.value)
+
+
         
 if __name__ == "__main__":
+    import_missing_months()
+    exit()
     universe = IBTestProviderStubs.universe_dataframe(
         # filter=["ECO"],
     )

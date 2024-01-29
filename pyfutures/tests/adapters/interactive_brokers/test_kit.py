@@ -103,8 +103,12 @@ class IBTestProviderStubs:
         df = pd.read_csv(file, dtype=dtype)
         
         # temporary remove instruments that are failing to roll
-        df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
-        
+        # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
+        ignored = [
+            # "EBM",
+            "YIW",
+        ]
+        df = df[~df.trading_class.isin(ignored)]
         
         if filter is not None:
             df = df[df.trading_class.isin(filter)]
