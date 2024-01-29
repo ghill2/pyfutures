@@ -46,8 +46,10 @@ class TestContractProvider(InstrumentProvider):
             expiration_ns=dt_to_unix_nanos(approximate_expiry_date),
             ts_event=0,
             ts_init=0,
+            info={
+                "month": month,
+            }
         )
-        futures_contract.month = month  # cdef readonly object month
         
         self._contracts[instrument_id.value] = futures_contract
         
@@ -118,7 +120,7 @@ class ContractChain:
         return self._instrument_provider.get_contract(self._instrument_id, month)
     
     def forward_contract(self, current: FuturesContract) -> FuturesContract:
-        month = self.forward_month(current.month)
+        month = self.forward_month(current.info["month"])
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
                 month=month,
@@ -126,7 +128,7 @@ class ContractChain:
         return self._instrument_provider.get_contract(self._instrument_id, month)
         
     def carry_contract(self, current: FuturesContract) -> FuturesContract:
-        month = self.carry_month(current.month)
+        month = self.carry_month(current.info["month"])
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
                 month=month,

@@ -61,8 +61,20 @@ class ContinuousData(Actor):
                 # TODO: wait for next forward bar != last timestamp
                 raise ValueError(f"ContractExpired {self.current_id}")
         
-        # if "MINUTE" in str(bar.bar_type):
-        #     print(self.roll_date, unix_nanos_to_dt(bar.ts_event), bar)
+        # # for debugging
+        # if "DAY" in str(self._bar_type) and self.current_contract.info["month"].value == "2000H":
+        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+        #     print(
+        #         f"{self.current_contract.info.get('month').value} {current_timestamp_str}",
+        #         f"{self.forward_contract.info.get('month').value} {forward_timestamp_str}",
+        #         str(self.roll_date)[:-15],
+        #         str(self.expiry_date)[:-15],
+        #         # should_roll,
+        #         # current_timestamp >= self.roll_date,
+        #         # current_day <= self.expiry_day,
+        #         # current_timestamp >= self.roll_date,
+        #     )
                     
         # print(bar.bar_type, self.current_bar_type, self.forward_bar_type)
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
@@ -70,28 +82,11 @@ class ContinuousData(Actor):
         
         if current_bar is not None:
             self._send_continous_price()
-        
-        
                 
         # next bar arrived before current or vice versa
         if current_bar is None or forward_bar is None:
             self.recv_count += 1
             return False
-        
-        # for debugging
-        if "DAY" in str(self._bar_type) and self.current_contract.month.value == "2007Z":
-            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-            print(
-                f"{self.current_contract.month.value} {current_timestamp_str}",
-                f"{self.forward_contract.month.value} {forward_timestamp_str}",
-                str(self.roll_date)[:-15],
-                str(self.expiry_date)[:-15],
-                # should_roll,
-                # current_timestamp >= self.roll_date,
-                # current_day <= self.expiry_day,
-                # current_timestamp >= self.roll_date,
-            )
                 
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
@@ -121,15 +116,15 @@ class ContinuousData(Actor):
         continuous_price = ContinuousPrice(
             instrument_id=self._instrument_id,
             current_price=Price(current_bar.close, current_bar.close.precision),
-            current_month=self.current_contract.month,
+            current_month=self.current_contract.info["month"],
             forward_price=Price(forward_bar.close, forward_bar.close.precision)
             if forward_bar is not None
             else None,
-            forward_month=self.forward_contract.month,
+            forward_month=self.forward_contract.info["month"],
             carry_price=Price(carry_bar.close, carry_bar.close.precision)
             if carry_bar is not None
             else None,
-            carry_month=self.carry_contract.month,
+            carry_month=self.carry_contract.info["month"],
             ts_event=current_bar.ts_event,
             ts_init=current_bar.ts_init,
         )
@@ -175,7 +170,7 @@ class ContinuousData(Actor):
         self.expiry_day = self.expiry_date.floor("D")
         self.roll_date = self._chain.roll_date_utc(self.current_contract)
         
-        print(self.current_contract.month)
+        print(self.current_contract.info["month"])
         # if the start month is in the hold cycle, do nothing
         # if the start month is not in the hold cycle, go to next month in the hold cycle
         # start_month = self._start_month

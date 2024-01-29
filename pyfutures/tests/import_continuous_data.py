@@ -42,8 +42,9 @@ from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 
-CONTRACT_DATA_FOLDER = Path("/Users/g1/Desktop/output")
+CONTRACT_DATA_FOLDER = Path("/Users/g1/Desktop/per_contract")
 OUT_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
+MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 
 def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
 
@@ -237,9 +238,13 @@ def process_row(
     
     bars = add_missing_daily_bars(trading_class, bars)
     bars = list(sorted(
-                bars,
-                key=lambda x: (x.ts_init, x.bar_type.instrument_id.symbol.value[-1],
+                    bars,
+                    key=lambda x: (
+                        x.ts_init,
+                        MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,
+                    )
             ))
+        
     wrangler.process_bars(bars)
     
     daily_prices = wrangler.daily_prices
@@ -328,7 +333,7 @@ def test_find_problem_files():
 if __name__ == "__main__":
     universe = IBTestProviderStubs.universe_dataframe()
     # for row in universe.itertuples():
-    #     if row.trading_class == "EBM":
+    #     if row.trading_class == "EMA":
     #         process_row(
     #             row.trading_class,
     #             row.symbol,
