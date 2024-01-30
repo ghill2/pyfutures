@@ -1,13 +1,17 @@
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.continuous.wrangler import ContinuousPriceWrangler
+from pyfutures.continuous.wrangler import MultiplePriceWrangler
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.config import ContractChainConfig
+from pytower.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
+from nautilus_trader.model.data import BarSpecification
+from nautilus_trader.model.enums import BarAggregation
+from nautilus_trader.model.enums import PriceType
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 import pandas as pd
@@ -15,7 +19,7 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
-from pyfutures.continuous.price import ContinuousPrice
+from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.common.clock import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
@@ -23,7 +27,7 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
-from pytower.data.writer import ContinuousPriceParquetWriter
+from pytower.data.writer import MultiplePriceParquetWriter
 from pytower.data.files import ParquetFile
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import InstrumentId
@@ -41,10 +45,61 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
-
+from pytower.core.datetime import dt_to_unix_nanos_vectorized
+from pytower.data.writer import BarParquetWriter
+from nautilus_trader.persistence.wranglers import BarDataWrangler
+        
 CONTRACT_DATA_FOLDER = Path("/Users/g1/Desktop/per_contract")
 OUT_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
+
+def import_missing_ebm_months():
+    
+    # load minute EBM bars from years 2013X, 2014F, 2014X, 2015F
+    row = IBTestProviderStubs.universe_dataframe(filter=["EBM"]).to_dict(orient="records")[0]
+    months = ("2013X", "2014F", "2014X", "2015F")
+    bars_list = []
+    for month in months:
+        
+        bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-MINUTE-MID-EXTERNAL")
+        path = CONTRACT_DATA_FOLDER / f"{bar_type}-BAR-{month[:4]}.parquet"
+        assert path.exists()
+        
+        df = ParquetFile.from_path(path).read()
+        
+        df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
+        
+        df.drop(["ts_event", "ts_init"], inplace=True, axis=1)
+        freq = BarSpecification(1, BarAggregation.MINUTE, PriceType.MID).timedelta
+        
+        ohlc_dict = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "first",
+        }
+        
+        df = df.resample(freq, closed="left", label="left").apply(ohlc_dict).dropna()
+        df.index = df.index.floor("D")
+        df.reset_index(inplace=True)
+        
+        df["ts_event"] = dt_to_unix_nanos_vectorized(df["ts_event"])
+        df["ts_init"] = df["ts_event"].copy()
+        df = df[
+            ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]
+        ]
+        
+        df = BarParquetWriter.from_rust(df)
+        
+        bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-DAY-MID-EXTERNAL")
+        wrangler = BarDataWrangler(
+            bar_type=bar_type,
+            instrument=row["base"],
+        )
+        bars = wrangler.process(data=df)
+        bars_list.extend(bars)
+    return bars_list
 
 def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
 
@@ -133,6 +188,12 @@ def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
                     ts_event=timestamp_ns,
                 ),
             )
+            
+    elif trading_class == "EBM":
+        bars.extend(
+            import_missing_ebm_months()
+        )
+        
     return bars
 
 def process_row(row: dict) -> None:
@@ -141,21 +202,22 @@ def process_row(row: dict) -> None:
     daily_bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     minute_bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
-    daily_file = ParquetFile(parent=OUT_FOLDER, bar_type=daily_bar_type, cls=ContinuousPrice)
-    minute_file = ParquetFile(parent=OUT_FOLDER, bar_type=minute_bar_type, cls=ContinuousPrice)
+    daily_file = ParquetFile(parent=OUT_FOLDER, bar_type=daily_bar_type, cls=MultiplePrice)
+    minute_file = ParquetFile(parent=OUT_FOLDER, bar_type=minute_bar_type, cls=MultiplePrice)
     
     # if daily_file.path.exists() and minute_file.path.exists():
     #     print(f"Skipping {trading_class}")
     #     return
     
     print(f"Processing {row['trading_class']}")
-    wrangler = ContinuousPriceWrangler(
+    wrangler = MultiplePriceWrangler(
         daily_bar_type=daily_bar_type,
         minute_bar_type=minute_bar_type,
         start_month=row["start"],
         config=row["config"],
         base=row["base"],
     )
+    
     
     keyword = f"{row['trading_class']}_{row['symbol']}*.IB*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
@@ -172,6 +234,7 @@ def process_row(row: dict) -> None:
     print(f"{len(bars)} bars")
     
     bars = add_missing_daily_bars(row["trading_class"], bars)
+    
     bars = list(sorted(
                     bars,
                     key=lambda x: (
@@ -179,6 +242,7 @@ def process_row(row: dict) -> None:
                         MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,
                     )
             ))
+    
         
     wrangler.process_bars(bars)
     
@@ -186,106 +250,33 @@ def process_row(row: dict) -> None:
     minute_prices = wrangler.minute_prices
     
     # print(len(prices))
-    writer = ContinuousPriceParquetWriter(path=str(daily_file.path))
+    writer = MultiplePriceParquetWriter(path=str(daily_file.path))
     print(f"Writing daily prices... {len(daily_prices)} items {str(daily_file.path)}")
     writer.write_objects(data=daily_prices)
     
-    writer = ContinuousPriceParquetWriter(path=str(minute_file.path))
+    writer = MultiplePriceParquetWriter(path=str(minute_file.path))
     print(f"Writing minute prices... {len(minute_prices)} items {str(minute_file.path)}")
     writer.write_objects(data=minute_prices)
     
     # save csv too
-    table = ContinuousPriceParquetWriter.to_table(data=daily_prices)
+    table = MultiplePriceParquetWriter.to_table(data=daily_prices)
     path = daily_file.path.with_suffix(".csv")
     df = table.to_pandas()
     df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
     df.to_csv(path, index=False)
     
-    table = ContinuousPriceParquetWriter.to_table(data=minute_prices)
+    table = MultiplePriceParquetWriter.to_table(data=minute_prices)
     path = minute_file.path.with_suffix(".csv")
     df = table.to_pandas()
     df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
     df.to_csv(path, index=False)
-    
         
-    # start month is start of data
-    # start month for debugging
-    # idx = paths.index([x for x in paths if "2021Z" in x.stem][0])
-    # paths = paths[idx:]
-    # start_month = ContractMonth(paths[0].stem.split("=")[1].split(".")[0])
-    
-    #########################
-
-def find_minimum_day_of_month_within_range(
-    start: pd.Timestamp | str,
-    end: pd.Timestamp | str,
-    dayname: str, # Friday, Tuesday etc
-    dayofmonth: int, # 1, 2, 3, 4 etc
-):
-    
-    # find minimum x day of each month within a date range
-    import pandas as pd
-    df = pd.DataFrame({'date': pd.date_range(start=start, end=end)})
-    days = df[df['date'].dt.day_name() == dayname]
-
-    data = {}
-    for date in days.date:
-        
-        key = f"{date.year}{date.month}"
-        if data.get(key) is None:
-            data[key] = []
-            
-        data[key].append(date)
-        
-    filtered = []
-    for key, values in data.items():
-        filtered.append(values[dayofmonth - 1])
-    
-    return pd.Series(filtered).dt.day.min()
-
-def test_find_problem_files():
-    """
-    find trading_classes where the files do have the hold cycle in every year
-    """
-    universe = IBTestProviderStubs.universe_dataframe()
-    data_folder = Path("/Users/g1/Desktop/portara data george/DAY")
-    for row in universe.itertuples():
-        print(row.trading_class)
-        data_dir = (data_folder / row.data_symbol)
-        paths = list(data_dir.glob("*.txt")) \
-                    + list(data_dir.glob("*.b01")) \
-                    + list(data_dir.glob("*.bd"))
-                    
-        paths = list(sorted(paths))
-        assert len(paths) > 0
-        
-        start_month = ContractMonth(row.data_start)
-        end_month = ContractMonth(row.data_end)
-        required_months = []
-        
-        cycle = RollCycle.from_str(row.hold_cycle)
-        
-        while True:
-            required_months.append(start_month)
-            start_month = cycle.next_month(start_month)
-            if start_month >= end_month:
-                break
-        
-        stems = [
-            x.stem[-5:] for x in paths
-        ]
-        for month in required_months:
-            if month.value in stems:
-                continue
-            print(row.trading_class, month.value)
-
 
         
 if __name__ == "__main__":
-    import_missing_months()
-    exit()
+    
     universe = IBTestProviderStubs.universe_dataframe(
-        # filter=["ECO"],
+        filter=["ECO"],
     )
     
     results = joblib.Parallel(n_jobs=20, backend="loky")(

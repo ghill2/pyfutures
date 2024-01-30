@@ -12,7 +12,7 @@ import pandas as pd
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
-from pyfutures.continuous.price import ContinuousPrice
+from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.common.clock import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
@@ -20,7 +20,7 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
-from pytower.data.writer import ContinuousPriceParquetWriter
+from pytower.data.writer import MultiplePriceParquetWriter
 from pytower.data.files import ParquetFile
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import InstrumentId
@@ -36,7 +36,7 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.continuous.chain import TestContractProvider
 
-class ContinuousPriceWrangler:
+class MultiplePriceWrangler:
     
     def __init__(
         self,

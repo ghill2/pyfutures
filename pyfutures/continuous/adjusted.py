@@ -1,5 +1,5 @@
 import pandas as pd
-from pyfutures.continuous.price import ContinuousPrice
+from pyfutures.continuous.price import MultiplePrice
 from collections import deque
 from copy import copy
 from nautilus_trader.core.datetime import unix_nanos_to_dt
@@ -8,9 +8,9 @@ class AdjustedPrices:
     def __init__(self, lookback: int):
         self._adjusted_prices = deque(maxlen=lookback)
         self._adjusted_timestamps = deque(maxlen=lookback)
-        self._last: ContinuousPrice | None = None
+        self._last: MultiplePrice | None = None
 
-    def handle_continuous_price(self, price: ContinuousPrice) -> None:
+    def handle_continuous_price(self, price: MultiplePrice) -> None:
         
         if self._last is None or self._last.current_month == price.current_month:
             self._adjusted_prices.append(price.current_price)

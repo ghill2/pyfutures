@@ -8,7 +8,7 @@ from nautilus_trader.common.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.price import ContinuousPrice
+from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
@@ -81,7 +81,7 @@ class ContinuousData(Actor):
             return False
         
         if current_bar is not None:
-            self._send_continous_price()
+            self._send_multiple_price()
                 
         # next bar arrived before current or vice versa
         if current_bar is None or forward_bar is None:
@@ -107,13 +107,13 @@ class ContinuousData(Actor):
         self.recv_count += 1
         return False
             
-    def _send_continous_price(self) -> None:
+    def _send_multiple_price(self) -> None:
         
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         carry_bar = self.cache.bar(self.carry_bar_type)
         
-        continuous_price = ContinuousPrice(
+        multiple_price = MultiplePrice(
             instrument_id=self._instrument_id,
             current_price=Price(current_bar.close, current_bar.close.precision),
             current_month=self.current_contract.info["month"],
@@ -130,9 +130,9 @@ class ContinuousData(Actor):
         )
 
         if self._handler is not None:
-            self._handler(continuous_price)
+            self._handler(multiple_price)
 
-        self._msgbus.publish(topic=f"{self._bar_type}0", msg=continuous_price)
+        self._msgbus.publish(topic=f"{self._bar_type}0", msg=multiple_price)
 
     def roll(self) -> None:
         

@@ -7,7 +7,7 @@ from nautilus_trader.model.data import Bar
 from pytower.data.writer import BarParquetWriter
 from ibapi.contract import Contract as IBContract
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
-import pytz
+
 from pytower.data.files import ParquetFile
 
 from pathlib import Path
@@ -20,9 +20,7 @@ MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
 OUT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 
-def read_dataframe(
-    path: Path,
-) -> pd.DataFrame:
+def read_dataframe(path: Path) -> pd.DataFrame:
     
     with open(path, 'r') as file:
         column_count = len(file.readline().split(","))
@@ -80,87 +78,75 @@ def read_dataframe(
         df['timestamp'] = pd.to_datetime(
             (df["day"] * 10000 + df["time"]).astype(str),
             format="%Y%m%d%H%M",
+            utc=True,
         )
         df.drop(["time"], axis=1, inplace=True)
     else:
         df['timestamp'] = pd.to_datetime(
             df["day"],
             format="%Y%m%d",
+            utc=True,
         )
 
     df.drop(["day", "tick_count"], axis=1, inplace=True)
         
     return df
 
-def create_destination(path: Path, row: dict) -> ParquetFile:
-    contract_month = ContractMonth(path.stem[-5:])
-    aggregation = path.parent.parent.stem
-    instrument_id = InstrumentId(
-        symbol=Symbol(row["base"].id.symbol.value + "=" + contract_month.value),
-        venue=row["base"].id.venue,
-    )
-    bar_type = BarType.from_str(
-        f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
-    )
-    
-    return ParquetFile(
-        parent=OUT_FOLDER,
-        bar_type=bar_type,
-        cls=Bar,
-        year=contract_month.year,
-    )
-    
-def process_timestamps(
-    data: pd.Series,
-    settlement_time: pd.Timedelta,
-    timezone: pytz.timezone,
-    is_daily: bool,
-) -> pd.Series:
-    """
-    processes timezone naive timestamps to UTC timestamps
-    minute data needs to be localize to the timezone of the exchange
-    daily data needs settlement time added from midnight
-    """
-    if is_daily:
-        return (data + settlement_time + pd.Timedelta(seconds=1)).tz_convert("UTC")
-    else:  # is minute data
-        return data.tz_localize(timezone).tz_convert("UTC")
-    
 def process(
     path: Path,
     row: dict,
 ):
 
-    outfile = create_destination(path=path, row=row)
+        # settlement_time = pd.Timestamp(settlement_time, tz=timezone).tz_convert("UTC")
         
-    if outfile.path.exists():
-        print(f"Skipping {path}...")
-        return
-    else:
-        print(f"Importing {path}...")
-    
-    if path.parent.stem == "DAY":
-        df.timestamp = process_timestamps
+        contract_month = ContractMonth(path.stem[-5:])
+        aggregation = path.parent.parent.stem
+        instrument_id = InstrumentId(
+            symbol=Symbol(row["base"].id.symbol.value + "=" + contract_month.value),
+            venue=row["base"].id.venue,
+        )
+        bar_type = BarType.from_str(
+            f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
+        )
         
-    df = read_dataframe(
-        path,
-        settlement_time=row["settlement_time"],
-        timezone=row["timezone"],
-    )
-    
-    writer = BarParquetWriter(
-        path=outfile.path,
-        bar_type=outfile.bar_type,
-        price_precision=row["price_precision"],
-        size_precision=1,
-    )
-    
-    writer.write_dataframe(df)
+        outfile = ParquetFile(
+            parent=OUT_FOLDER,
+            bar_type=bar_type,
+            cls=Bar,
+                year=contract_month.year,
+        )
+        
+        if outfile.path.exists():
+            print(f"Skipping {path}...")
+            return
+        else:
+            print(f"Importing {path}...")
+        
+        
+        df = read_dataframe(path)
+        
+        def _convert_timestamp(value: pd.Timestamp) -> pd.Timestamp:
+            """Add the settlement time to the bar timestamps"""
+            return value.replace(
+                hour=row["settlement_time"].hours,
+                minute=row["settlement_time"].minutes,
+                tzinfo=row["timezone"],
+            ).tz_convert("UTC") + pd.Timedelta(seconds=1)
+            
+        df.timestamp = df.timestamp.apply(_convert_timestamp)
+        
+        writer = BarParquetWriter(
+            path=outfile.path,
+            bar_type=bar_type,
+            price_precision=row["price_precision"],
+            size_precision=1,
+        )
+        
+        writer.write_dataframe(df)
 
-    
 def func_gen():
     universe = IBTestProviderStubs.universe_dataframe(
-        # filter=["ECO"],
+        filter=["EBM"],
     )
     
     for row in universe.to_dict(orient="records"):
@@ -179,47 +165,13 @@ def func_gen():
         for path in daily_paths + minute_paths:
             yield joblib.delayed(process)(path, row)
             
-def import_missing_months():
+def export_missing_months():
     """
     those missing EBM arent accessible for portara
     so we will either need to skip them or create them from the min data
     2013X, 2014F, 2014X, 2015F are missing
     """
-    universe = IBTestProviderStubs.universe_dataframe(
-        filter=["EBM"],
-    )
-    row = universe.to_dict(orient="records")[0]
-    
-    minute_folder = (DATA_FOLDER / "MINUTE" / row["data_symbol"])
-    
-    for month in ("2013X", "2014F", "2014X", "2015F"):
-        
-        path = minute_folder / f"PV{month}.txt"
-        assert path.exists()
-        
-        outfile = create_destination(path=path, row=row)
-        
-        df = read_dataframe(
-            path,
-            settlement_time=row["settlement_time"],
-            timezone=row["timezone"],
-        )
-        print(df)
-        exit()
-        writer = BarParquetWriter(
-            path=outfile.path,
-            bar_type=outfile.bar_type,
-            price_precision=row["price_precision"],
-            size_precision=1,
-        )
-            
-        
-        
-    
-    
 if __name__ == "__main__":
-    import_missing_months()
-    exit()
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
             
             

@@ -26,7 +26,8 @@ def process(
     for price in continuous_prices:
         adjusted_prices.handle_continuous_price(price=price)
     
-    path = OUT_FOLDER / f"{row['trading_class']}_adjusted.parquet"
+    path = OUT_FOLDER / f"{path.stem}_adjusted.parquet"
+    print(f"Writing {path}...")
     df = adjusted_prices.to_series().apply(float).to_frame()
     
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -43,6 +44,7 @@ def func_gen():
     for row in universe.to_dict(orient="records"):
         instrument_id = row['base'].id
         paths = MULTIPLE_PRICES_FOLDER.glob(f"{instrument_id}*.parquet")
+        
         for path in paths:
             yield joblib.delayed(process)(
                 path=path,

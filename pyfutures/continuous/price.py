@@ -9,7 +9,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
 
-class ContinuousPrice(Data):
+class MultiplePrice(Data):
     def __init__(
         self,
         instrument_id: InstrumentId,
@@ -43,7 +43,7 @@ class ContinuousPrice(Data):
         return self._ts_init
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ContinuousPrice):
+        if not isinstance(other, MultiplePrice):
             return False
         return (
             self.instrument_id == other.instrument_id
@@ -88,7 +88,7 @@ class ContinuousPrice(Data):
         )
 
     @staticmethod
-    def to_dict(obj: ContinuousPrice) -> dict:
+    def to_dict(obj: MultiplePrice) -> dict:
         return {
             "instrument_id": obj.instrument_id.value,
             "current_price": str(obj.current_price),
@@ -102,9 +102,9 @@ class ContinuousPrice(Data):
         }
 
     @staticmethod
-    def from_dict(values: dict) -> ContinuousPrice:
+    def from_dict(values: dict) -> MultiplePrice:
         PyCondition.not_none(values, "values")
-        return ContinuousPrice(
+        return MultiplePrice(
             instrument_id=InstrumentId.from_str(values["instrument_id"]),
             current_price=Price.from_str(values["current_price"]),
             current_month=ContractMonth(values["current_month"]),
