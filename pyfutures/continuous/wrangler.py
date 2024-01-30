@@ -144,7 +144,7 @@ class MultiplePriceWrangler:
         end_month = ContractMonth("2023F")
         
         for bar in bars:
-            print(bar)
+
             # stop when the data module rolls to year 2024
             if len(self.daily_prices) > 0 and self.daily_prices[-1].current_month >= end_month:
                 break  # done sampling

@@ -21,7 +21,7 @@ def process(
     
     # create adusted prices
     instrument_id = row.base.id
-    bar_type = BarType.from_str(f"{instrument_id}-1-DAY-EXTERNAL")
+    bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     adjusted_prices = AdjustedPrices(
         bar_type=bar_type,
         lookback=None,

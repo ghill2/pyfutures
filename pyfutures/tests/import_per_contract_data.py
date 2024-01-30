@@ -103,6 +103,7 @@ def process(
             symbol=Symbol(row.base.id.symbol.value + "=" + contract_month.value),
             venue=row.base.id.venue,
         )
+        
         bar_type = BarType.from_str(
             f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
         )
@@ -113,7 +114,8 @@ def process(
             cls=Bar,
             year=contract_month.year,
         )
-        
+        return
+    
         # if outfile.path.exists():
         #     print(f"Skipping {path}...")
         #     return
@@ -122,8 +124,6 @@ def process(
         
         
         df = read_dataframe(path)
-        
-        
         
         writer = BarParquetWriter(
             path=outfile.path,
