@@ -97,13 +97,11 @@ def process(
     row: dict,
 ):
 
-        # settlement_time = pd.Timestamp(settlement_time, tz=timezone).tz_convert("UTC")
-        
         contract_month = ContractMonth(path.stem[-5:])
         aggregation = path.parent.parent.stem
         instrument_id = InstrumentId(
-            symbol=Symbol(row["base"].id.symbol.value + "=" + contract_month.value),
-            venue=row["base"].id.venue,
+            symbol=Symbol(row.base.id.symbol.value + "=" + contract_month.value),
+            venue=row.base.id.venue,
         )
         bar_type = BarType.from_str(
             f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
@@ -113,7 +111,7 @@ def process(
             parent=OUT_FOLDER,
             bar_type=bar_type,
             cls=Bar,
-                year=contract_month.year,
+            year=contract_month.year,
         )
         
         if outfile.path.exists():
@@ -128,9 +126,9 @@ def process(
         def _convert_timestamp(value: pd.Timestamp) -> pd.Timestamp:
             """Add the settlement time to the bar timestamps"""
             return value.replace(
-                hour=row["settlement_time"].hours,
-                minute=row["settlement_time"].minutes,
-                tzinfo=row["timezone"],
+                hour=row.settlement_time.hours,
+                minute=row.settlement_time.minutes,
+                tzinfo=row.timezone,
             ).tz_convert("UTC") + pd.Timedelta(seconds=1)
             
         df.timestamp = df.timestamp.apply(_convert_timestamp)
@@ -145,11 +143,11 @@ def process(
         writer.write_dataframe(df)
 
 def func_gen():
-    universe = IBTestProviderStubs.universe_dataframe(
+    rows = IBTestProviderStubs.universe_rows(
         filter=["EBM"],
     )
     
-    for row in universe.to_dict(orient="records"):
+    for row in rows:
         
         daily_folder = (DATA_FOLDER / "DAY" / row["data_symbol"])
         minute_folder = (DATA_FOLDER / "MINUTE" / row["data_symbol"])
@@ -165,12 +163,6 @@ def func_gen():
         for path in daily_paths + minute_paths:
             yield joblib.delayed(process)(path, row)
             
-def export_missing_months():
-    """
-    those missing EBM arent accessible for portara
-    so we will either need to skip them or create them from the min data
-    2013X, 2014F, 2014X, 2015F are missing
-    """
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
             

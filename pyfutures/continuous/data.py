@@ -114,7 +114,7 @@ class ContinuousData(Actor):
         carry_bar = self.cache.bar(self.carry_bar_type)
         
         multiple_price = MultiplePrice(
-            instrument_id=self._instrument_id,
+            bar_type=self._bar_type,
             current_price=Price(current_bar.close, current_bar.close.precision),
             current_month=self.current_contract.info["month"],
             forward_price=Price(forward_bar.close, forward_bar.close.precision)

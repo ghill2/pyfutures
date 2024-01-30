@@ -1,6 +1,7 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pytower.data.files import ParquetFile
 from pyfutures.continuous.adjusted import AdjustedPrices
+from nautilus_trader.model.data import BarType
 
 from pathlib import Path
 import pandas as pd
@@ -12,20 +13,30 @@ MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_conti
 OUT_FOLDER = Path("/Users/g1/Desktop/adjusted")
 
 def process(
-    path: Path,
+    paths: Path,
     row: dict,
 ):
     
-    file = ParquetFile.from_path(path)
-    continuous_prices = file.read_objects()
     
     # create adusted prices
-    adjusted_prices = AdjustedPrices(lookback=None)
+    instrument_id = row.base.id
+    bar_type = BarType.from_str(f"{instrument_id}-1-DAY-EXTERNAL")
+    adjusted_prices = AdjustedPrices(
+        bar_type=bar_type,
+        lookback=None,
+    )
     
-    # handle multiple prices on the adjusted prices
+    # read prices
+    continuous_prices = []
+    for path in paths:
+        file = ParquetFile.from_path(path)
+        continuous_prices.extend(file.read_objects())
+    
+    # multiple prices -> adjusted prices
     for price in continuous_prices:
         adjusted_prices.handle_continuous_price(price=price)
     
+    # write
     path = OUT_FOLDER / f"{path.stem}_adjusted.parquet"
     print(f"Writing {path}...")
     df = adjusted_prices.to_dataframe()
@@ -39,18 +50,17 @@ def process(
     
 def func_gen():
     
-    universe = IBTestProviderStubs.universe_dataframe(
+    rows = IBTestProviderStubs.universe_rows(
         filter=["ECO"],
     )
-    for row in universe.to_dict(orient="records"):
-        instrument_id = row['base'].id
+    
+    for row in rows:
+        instrument_id = row.base.id
         paths = MULTIPLE_PRICES_FOLDER.glob(f"{instrument_id}*.parquet")
-        
-        for path in paths:
-            yield joblib.delayed(process)(
-                path=path,
-                row=row,
-            )
+        yield joblib.delayed(process)(
+            paths=paths,
+            row=row,
+        )
         
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())

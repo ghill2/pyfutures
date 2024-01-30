@@ -67,7 +67,7 @@ def import_missing_ebm_months():
         
         df = ParquetFile.from_path(path).read()
         
-        df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
+        df.index = unix_nanos_to_dt_vectorized(df.ts_event)
         
         df.drop(["ts_event", "ts_init"], inplace=True, axis=1)
         freq = BarSpecification(1, BarAggregation.MINUTE, PriceType.MID).timedelta
@@ -84,8 +84,8 @@ def import_missing_ebm_months():
         df.index = df.index.floor("D")
         df.reset_index(inplace=True)
         
-        df["ts_event"] = dt_to_unix_nanos_vectorized(df["ts_event"])
-        df["ts_init"] = df["ts_event"].copy()
+        df.ts_event = dt_to_unix_nanos_vectorized(df.ts_event)
+        df.ts_init = df.ts_event.copy()
         df = df[
             ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]
         ]
@@ -95,7 +95,7 @@ def import_missing_ebm_months():
         bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-DAY-MID-EXTERNAL")
         wrangler = BarDataWrangler(
             bar_type=bar_type,
-            instrument=row["base"],
+            instrument=row.base,
         )
         bars = wrangler.process(data=df)
         bars_list.extend(bars)
@@ -198,7 +198,7 @@ def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
 
 def process_row(row: dict) -> None:
     
-    instrument_id = row["base"].id
+    instrument_id = row.base.id
     daily_bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     minute_bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
@@ -209,7 +209,7 @@ def process_row(row: dict) -> None:
     #     print(f"Skipping {trading_class}")
     #     return
     
-    print(f"Processing {row['trading_class']}")
+    print(f"Processing {row.trading_class}")
     wrangler = MultiplePriceWrangler(
         daily_bar_type=daily_bar_type,
         minute_bar_type=minute_bar_type,
@@ -218,7 +218,7 @@ def process_row(row: dict) -> None:
         base=row["base"],
     )
     
-    keyword = f"{row['trading_class']}_{row['symbol']}*.IB*.parquet"
+    keyword = f"{row.trading_class}_{row.symbol}*.IB*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
     
@@ -232,7 +232,7 @@ def process_row(row: dict) -> None:
     
     print(f"{len(bars)} bars")
     
-    bars = add_missing_daily_bars(row["trading_class"], bars)
+    bars = add_missing_daily_bars(row.trading_class, bars)
     
     bars = list(sorted(
                     bars,
@@ -272,12 +272,12 @@ def process_row(row: dict) -> None:
         
 if __name__ == "__main__":
     
-    universe = IBTestProviderStubs.universe_dataframe(
+    rows = IBTestProviderStubs.universe_rows(
         filter=["ECO"],
     )
     
     results = joblib.Parallel(n_jobs=20, backend="loky")(
-        joblib.delayed(process_row)(row) for row in universe.to_dict(orient="records")
+        joblib.delayed(process_row)(row) for row in rows
     )
 
     # # need carry price bars too

@@ -47,19 +47,19 @@ def process_row(
     row: dict,
 ):
     instrument_provider = TestContractProvider(
-        approximate_expiry_offset=row["config"].approximate_expiry_offset,
-        base=row["base"],
+        approximate_expiry_offset=row.config.approximate_expiry_offset,
+        base=row.base,
     )
     
     chain = ContractChain(
-        config=row["config"],
+        config=row.config,
         instrument_provider=instrument_provider,
     )
     
     df = pd.DataFrame(columns=["month", "approximate_expiry_date", "roll_date"])
     
     end_month = ContractMonth("2023F")
-    contract = chain.current_contract(row["start"])
+    contract = chain.current_contract(row.start)
     while contract.info["month"] <= end_month:
         
         df.loc[len(df)] = (
@@ -70,17 +70,17 @@ def process_row(
         
         contract = chain.forward_contract(contract)
     
-    path = OUT_FOLDER / f"{row['trading_class']}_roll_calendar.csv"
+    path = OUT_FOLDER / f"{row.trading_class}_roll_calendar.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
     
 if __name__ == "__main__":
-    universe = IBTestProviderStubs.universe_dataframe(
+    rows = IBTestProviderStubs.universe_rows(
         filter=["ECO"],
     )
     
     func_gen = (
         joblib.delayed(process_row)(row)
-        for row in universe.to_dict(orient='records')
+        for row in rows
     )
     results = joblib.Parallel(n_jobs=20, backend="loky")(func_gen)

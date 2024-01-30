@@ -4,7 +4,7 @@ import pathlib
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesContract
 from datetime import datetime
-
+from collections import namedtuple
 import pandas as pd
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
@@ -196,7 +196,21 @@ class IBTestProviderStubs:
         df = df[[x for x in df.columns if x not in remove]]
         
         return df
-
+    
+    @staticmethod
+    def universe_rows(filter: list | None = None) -> list[dict]:
+        universe = IBTestProviderStubs.universe_dataframe(
+            filter=["ECO"],
+        )
+        rows = universe.to_dict(orient="records")
+        assert len(rows) > 0
+        
+        Row = namedtuple("Row", list(rows[0].keys()))
+        rows = [
+            Row(**row) for row in rows
+        ]
+        return rows
+    
     @classmethod
     def universe_future_chains(cls) -> list[ContractChain]:
         chains = []

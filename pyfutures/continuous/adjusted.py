@@ -16,6 +16,7 @@ class AdjustedPrices:
         self._adjusted_prices = deque(maxlen=self._lookback)
         self._adjusted_timestamps = deque(maxlen=self._lookback)
         self._multiple_prices = deque(maxlen=self._lookback)
+        self._bar_type = bar_type
     
     def handle_continuous_price(self, price: MultiplePrice) -> None:
         
@@ -35,16 +36,21 @@ class AdjustedPrices:
                     maxlen=self._lookback,
                 )
                 
-        self._adjusted_prices[price.instrument_id].append(price.current_price)
-        self._multiple_prices[].append(price)
+        self._adjusted_prices[price.bar_type].append(price.current_price)
+        self._multiple_prices[price.bar_type].append(price)
         assert len(self._multiple_prices) == len(self._adjusted_prices)
     
     def to_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame(
-            list(map(MultiplePrice.to_dict, self._multiple_prices))
-        )
-        df["adjusted"] = list(map(float, self._adjusted_prices))
-        df["timestamp"] = list(map(unix_nanos_to_dt, df["ts_event"]))
+        dfs = []
+        for bar_type, prices in self._multiple_prices.items():
+            df = pd.DataFrame(
+                list(map(MultiplePrice.to_dict, prices))
+            )
+            df[f"adjusted_{bar_type.spec}"] = list(map(float, self._adjusted_prices[bar_type]))
+            df["timestamp"] = list(map(unix_nanos_to_dt, df["ts_event"]))
+            dfs.append(dfs)
+        df = pd.concat([dfs], axis=1)
+        df.sort_values("timestamp", inplace=True)
         return df
     
     
