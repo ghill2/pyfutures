@@ -80,7 +80,7 @@ class ContinuousData(Actor):
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return False
         
-        if current_bar is not None:
+        if bar.bar_type == self.current_bar_type and current_bar is not None:
             self._send_multiple_price()
                 
         # next bar arrived before current or vice versa

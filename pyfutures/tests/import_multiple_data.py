@@ -218,7 +218,6 @@ def process_row(row: dict) -> None:
         base=row["base"],
     )
     
-    
     keyword = f"{row['trading_class']}_{row['symbol']}*.IB*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
@@ -270,8 +269,6 @@ def process_row(row: dict) -> None:
     df = table.to_pandas()
     df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
     df.to_csv(path, index=False)
-        
-
         
 if __name__ == "__main__":
     

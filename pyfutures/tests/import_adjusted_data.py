@@ -28,13 +28,14 @@ def process(
     
     path = OUT_FOLDER / f"{path.stem}_adjusted.parquet"
     print(f"Writing {path}...")
-    df = adjusted_prices.to_series().apply(float).to_frame()
+    df = adjusted_prices.to_dataframe()
     
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(path)
+    df.to_parquet(path, index=False)
     
     path = path.with_suffix(".csv")
-    df.to_csv(path)
+    print(f"Writing {path}...")
+    df.to_csv(path, index=False)
     
 def func_gen():
     

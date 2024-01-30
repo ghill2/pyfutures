@@ -7,12 +7,12 @@ from nautilus_trader.core.data import Data
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
-
+from nautilus_trader.model.data import BarType
 
 class MultiplePrice(Data):
     def __init__(
         self,
-        instrument_id: InstrumentId,
+        bar_type: BarType,
         forward_price: Price | None,
         forward_month: ContractMonth,
         current_price: Price,
@@ -24,7 +24,8 @@ class MultiplePrice(Data):
     ):
         super().__init__()
 
-        self.instrument_id = instrument_id
+        self.bar_type = bar_type
+        self.instrument_id = bar_type.instrument_id
         self.current_price = current_price
         self.current_month = current_month
         self.forward_price = forward_price
@@ -46,7 +47,7 @@ class MultiplePrice(Data):
         if not isinstance(other, MultiplePrice):
             return False
         return (
-            self.instrument_id == other.instrument_id
+            self.bar_type == other.bar_type
             and self.current_price == other.current_price
             and self.current_month == other.current_month
             and self.forward_price == other.forward_price
@@ -60,7 +61,7 @@ class MultiplePrice(Data):
     def __repr__(self):
         return (
             f"{type(self).__name__}("
-            f"instrument_id={self.instrument_id}, "
+            f"bar_type={self.bar_type}, "
             f"current_price={self.current_price}, "
             f"current_month={self.current_month}, "
             f"forward_price={self.forward_price}, "
@@ -75,7 +76,7 @@ class MultiplePrice(Data):
     def schema() -> pa.Schema:
         return pa.schema(
             [
-                pa.field("instrument_id", pa.dictionary(pa.int64(), pa.string())),
+                pa.field("bar_type", pa.dictionary(pa.int16(), pa.string())),
                 pa.field("current_price", pa.string()),
                 pa.field("current_month", pa.string()),
                 pa.field("forward_price", pa.string(), nullable=True),
@@ -90,7 +91,7 @@ class MultiplePrice(Data):
     @staticmethod
     def to_dict(obj: MultiplePrice) -> dict:
         return {
-            "instrument_id": obj.instrument_id.value,
+            "bar_type": str(obj.bar_type),
             "current_price": str(obj.current_price),
             "current_month": obj.current_month.value,
             "forward_price": str(obj.forward_price) if obj.forward_price is not None else None,
@@ -105,7 +106,7 @@ class MultiplePrice(Data):
     def from_dict(values: dict) -> MultiplePrice:
         PyCondition.not_none(values, "values")
         return MultiplePrice(
-            instrument_id=InstrumentId.from_str(values["instrument_id"]),
+            bar_type=BarType.from_str(values["bar_type"]),
             current_price=Price.from_str(values["current_price"]),
             current_month=ContractMonth(values["current_month"]),
             forward_price=Price.from_str(values["forward_price"])
@@ -122,7 +123,7 @@ class MultiplePrice(Data):
 
     def __getstate__(self):
         return (
-            self.instrument_id.value,
+            str(self.bar_type),
             str(self.current_price),
             self.current_month.value,
             str(self.forward_price),
@@ -134,7 +135,7 @@ class MultiplePrice(Data):
         )
 
     def __setstate__(self, state):
-        self.instrument_id = InstrumentId.from_str(state[0])
+        self.bar_type = BarType.from_str(state[0])
         self.current_price = Price.from_str(state[1])
         self.current_month = ContractMonth(state[2])
         self.forward_price = Price.from_str(state[3])

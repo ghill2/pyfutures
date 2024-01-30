@@ -8,30 +8,31 @@ from nautilus_trader.serialization.arrow.serializer import make_dict_deserialize
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+from nautilus_trader.test_kit.stubs.data import TestDataStubs
 
 
 class TestMultiplePrice:
     def test_continuous_price_equality(self):
         # Arrange
         price1 = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
         price2 = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             current_price=None,
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             carry_price=None,
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
@@ -43,13 +44,13 @@ class TestMultiplePrice:
     def test_continuous_price_str_and_repr(self):
         # Arrange
         price = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
@@ -57,23 +58,23 @@ class TestMultiplePrice:
         # Act, Assert
         assert (
             str(price)
-            == "MultiplePrice(instrument_id=GBP/USD.SIM, current_price=1.1, current_month=X21, forward_price=1.0, forward_month=Z21, carry_price=1.0, carry_month=Z21, ts_event=0, ts_init=0)"  # noqa
+            == "MultiplePrice(bar_type=AUD/USD.SIM-1-MINUTE-BID-EXTERNAL, current_price=1.1, current_month=2021X, forward_price=1.0, forward_month=2021Z, carry_price=1.0, carry_month=2021Z, ts_event=0, ts_init=0)"  # noqa
         )
         assert (
             repr(price)
-            == "MultiplePrice(instrument_id=GBP/USD.SIM, current_price=1.1, current_month=X21, forward_price=1.0, forward_month=Z21, carry_price=1.0, carry_month=Z21, ts_event=0, ts_init=0)"  # noqa
+            == "MultiplePrice(bar_type=AUD/USD.SIM-1-MINUTE-BID-EXTERNAL, current_price=1.1, current_month=2021X, forward_price=1.0, forward_month=2021Z, carry_price=1.0, carry_month=2021Z, ts_event=0, ts_init=0)"  # noqa
         )
 
     def test_to_dict(self):
         # Arrange
         price = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
@@ -83,13 +84,13 @@ class TestMultiplePrice:
 
         # Assert
         assert values == {
-            "instrument_id": "GBP/USD.SIM",
+            "bar_type": "AUD/USD.SIM-1-MINUTE-BID-EXTERNAL",
             "current_price": "1.1",
-            "current_month": "X21",
+            "current_month": "2021X",
             "forward_price": "1.0",
-            "forward_month": "Z21",
+            "forward_month": "2021Z",
             "carry_price": "1.0",
-            "carry_month": "Z21",
+            "carry_month": "2021Z",
             "ts_event": 0,
             "ts_init": 0,
         }
@@ -97,13 +98,13 @@ class TestMultiplePrice:
     def test_from_dict_returns_expected_price(self):
         # Arrange
         price = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
@@ -117,13 +118,13 @@ class TestMultiplePrice:
     def test_pickle_bar(self):
         # Arrange
         price = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
@@ -146,13 +147,13 @@ class TestMultiplePrice:
         )
 
         price = MultiplePrice(
-            instrument_id=TestIdStubs.gbpusd_id(),
+            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("X21"),
+            current_month=ContractMonth("2021X"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("Z21"),
+            forward_month=ContractMonth("2021Z"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("Z21"),
+            carry_month=ContractMonth("2021Z"),
             ts_event=0,
             ts_init=0,
         )
