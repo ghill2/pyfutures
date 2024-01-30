@@ -7,6 +7,7 @@ from pyfutures.continuous.config import ContractChainConfig
 from pytower.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.contract_month import ContractMonth
+from pytower.data.files import bars_from_rust
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
 from nautilus_trader.model.data import BarSpecification
@@ -90,7 +91,7 @@ def import_missing_ebm_months():
             ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]
         ]
         
-        df = BarParquetWriter.from_rust(df)
+        df = bars_from_rust(df)
         
         bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-DAY-MID-EXTERNAL")
         wrangler = BarDataWrangler(
@@ -213,22 +214,46 @@ def process_row(row: dict) -> None:
     wrangler = MultiplePriceWrangler(
         daily_bar_type=daily_bar_type,
         minute_bar_type=minute_bar_type,
-        start_month=row["start"],
-        config=row["config"],
-        base=row["base"],
+        start_month=row.start,
+        config=row.config,
+        base=row.base,
     )
     
-    keyword = f"{row.trading_class}_{row.symbol}*.IB*.parquet"
-    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
-    assert len(paths) > 0
-    
-    print(f"{len(paths)} paths")
     
     bars = []
+    
+    # read daily bars
+    keyword = f"{row.base.id.value}*1-DAY-MID*.IB*.parquet"
+    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
+    assert len(paths) > 0
+    print(f"{len(paths)} paths")
+    
     for path in paths:
-        bars_ = ParquetFile.from_path(path).read_objects(path)
+        df = ParquetFile.from_path(path).read()
+        assert len(df) > 0
+        df = bars_from_rust(df)
+        
+        # add settlement time to daily bars
+        if "DAY" in path.stem:
+            df.index = (df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=1))
+            df.index = df.index.tz_localize(row.timezone)
+            df.index = df.index.tz_convert("UTC")
+            
+        wrangler = BarDataWrangler(
+            bar_type=daily_bar_type,
+            instrument=row.base,
+        )
+        
+    # read minute bars
+    keyword = f"{row.base.id.value}*1-MINUTE-MID*.IB*.parquet"
+    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
+    assert len(paths) > 0
+    print(f"{len(paths)} paths")
+    
+    for path in paths:
+        bars_ = ParquetFile.from_path(path).read_objects()
         assert len(bars_) > 0
-        bars.extend(bars_)
+        bars.extend(bars)
     
     print(f"{len(bars)} bars")
     

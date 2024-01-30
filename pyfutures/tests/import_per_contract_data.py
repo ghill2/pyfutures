@@ -123,15 +123,7 @@ def process(
         
         df = read_dataframe(path)
         
-        def _convert_timestamp(value: pd.Timestamp) -> pd.Timestamp:
-            """Add the settlement time to the bar timestamps"""
-            return value.replace(
-                hour=row.settlement_time.hours,
-                minute=row.settlement_time.minutes,
-                tzinfo=row.timezone,
-            ).tz_convert("UTC") + pd.Timedelta(seconds=1)
-            
-        df.timestamp = df.timestamp.apply(_convert_timestamp)
+        
         
         writer = BarParquetWriter(
             path=outfile.path,

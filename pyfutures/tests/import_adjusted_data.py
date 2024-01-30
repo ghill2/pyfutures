@@ -2,6 +2,7 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 from pytower.data.files import ParquetFile
 from pyfutures.continuous.adjusted import AdjustedPrices
 from nautilus_trader.model.data import BarType
+from collections import namedtuple
 
 from pathlib import Path
 import pandas as pd
@@ -13,9 +14,9 @@ MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_conti
 OUT_FOLDER = Path("/Users/g1/Desktop/adjusted")
 
 def process(
-    paths: Path,
-    row: dict,
-):
+    paths: list[Path],
+    row: namedtuple,
+) -> None:
     
     
     # create adusted prices
@@ -47,21 +48,18 @@ def process(
     path = path.with_suffix(".csv")
     print(f"Writing {path}...")
     df.to_csv(path, index=False)
-    
-def func_gen():
+
+if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
         filter=["ECO"],
     )
     
-    for row in rows:
-        instrument_id = row.base.id
-        paths = MULTIPLE_PRICES_FOLDER.glob(f"{instrument_id}*.parquet")
-        yield joblib.delayed(process)(
-            paths=paths,
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
+        joblib.delayed(process)(
+            paths=list(MULTIPLE_PRICES_FOLDER.glob(f"{row.base.id}*.parquet")),
             row=row,
         )
-        
-if __name__ == "__main__":
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
+        for row in rows
+    )
     
