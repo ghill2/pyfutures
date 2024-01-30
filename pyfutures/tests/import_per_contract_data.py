@@ -114,11 +114,11 @@ def process(
             year=contract_month.year,
         )
         
-        if outfile.path.exists():
-            print(f"Skipping {path}...")
-            return
-        else:
-            print(f"Importing {path}...")
+        # if outfile.path.exists():
+        #     print(f"Skipping {path}...")
+        #     return
+        # else:
+        #     print(f"Importing {path}...")
         
         
         df = read_dataframe(path)
@@ -128,7 +128,7 @@ def process(
         writer = BarParquetWriter(
             path=outfile.path,
             bar_type=bar_type,
-            price_precision=row["price_precision"],
+            price_precision=row.base.price_precision,
             size_precision=1,
         )
         
@@ -136,13 +136,13 @@ def process(
 
 def func_gen():
     rows = IBTestProviderStubs.universe_rows(
-        filter=["EBM"],
+        filter=["ECO"],
     )
     
     for row in rows:
         
-        daily_folder = (DATA_FOLDER / "DAY" / row["data_symbol"])
-        minute_folder = (DATA_FOLDER / "MINUTE" / row["data_symbol"])
+        daily_folder = (DATA_FOLDER / "DAY" / row.data_symbol)
+        minute_folder = (DATA_FOLDER / "MINUTE" / row.data_symbol)
         assert daily_folder.exists()
         assert minute_folder.exists()
         

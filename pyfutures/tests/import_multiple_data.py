@@ -211,41 +211,41 @@ def process_row(row: dict) -> None:
     #     return
     
     print(f"Processing {row.trading_class}")
-    wrangler = MultiplePriceWrangler(
-        daily_bar_type=daily_bar_type,
-        minute_bar_type=minute_bar_type,
-        start_month=row.start,
-        config=row.config,
-        base=row.base,
-    )
+    
     
     
     bars = []
     
     # read daily bars
-    keyword = f"{row.base.id.value}*1-DAY-MID*.IB*.parquet"
+    keyword = f"{instrument_id.symbol}*-1-DAY-MID-EXTERNAL*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
     print(f"{len(paths)} paths")
     
     for path in paths:
+        print(path)
         df = ParquetFile.from_path(path).read()
         assert len(df) > 0
         df = bars_from_rust(df)
         
         # add settlement time to daily bars
-        if "DAY" in path.stem:
-            df.index = (df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=1))
-            df.index = df.index.tz_localize(row.timezone)
-            df.index = df.index.tz_convert("UTC")
-            
+        df.index = (df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30))
+        df.index = df.index.tz_localize(row.timezone)
+        df.index = df.index.tz_convert("UTC")
+        
         wrangler = BarDataWrangler(
             bar_type=daily_bar_type,
             instrument=row.base,
         )
-        
+        bars.extend(
+            wrangler.process(
+                data=df,
+            )
+        )
+    assert len(bars) > 0
+    
     # read minute bars
-    keyword = f"{row.base.id.value}*1-MINUTE-MID*.IB*.parquet"
+    keyword = f"{instrument_id.symbol}*-1-MINUTE-MID-EXTERNAL*.parquet"
     paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
     assert len(paths) > 0
     print(f"{len(paths)} paths")
@@ -258,7 +258,6 @@ def process_row(row: dict) -> None:
     print(f"{len(bars)} bars")
     
     bars = add_missing_daily_bars(row.trading_class, bars)
-    
     bars = list(sorted(
                     bars,
                     key=lambda x: (
@@ -267,7 +266,14 @@ def process_row(row: dict) -> None:
                     )
             ))
     
-        
+    print(f"{len(bars)} bars")
+    wrangler = MultiplePriceWrangler(
+        daily_bar_type=daily_bar_type,
+        minute_bar_type=minute_bar_type,
+        start_month=row.start,
+        config=row.config,
+        base=row.base,
+    )
     wrangler.process_bars(bars)
     
     daily_prices = wrangler.daily_prices
