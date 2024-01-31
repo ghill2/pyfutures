@@ -162,6 +162,7 @@ class IBTestProviderStubs:
                     approximate_expiry_offset=row.expiry_offset,
                     carry_offset=row.carry_offset,
                     skip_months=missing_months,
+                    start_month=row.start,
                 )
             )
             

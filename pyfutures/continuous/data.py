@@ -14,36 +14,34 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.model.enums import BarAggregation
-
+from pyfutures.continuous.signal import RollSignal
+    
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
         chain: ContractChain,
-        start_month: ContractMonth,
-        # end_month: ContractMonth | None,
         handler: Callable | None = None,
-        
     ):
         super().__init__()
+        
         self.recv_count = 0
         
         self._bar_type = bar_type
         self._chain = chain
         self._instrument_id = bar_type.instrument_id
         self._handler = handler
-        self._start_month = start_month
-                
-    def on_start(self) -> None:
-        
-        self.current_contract = self._chain.current_contract(self._start_month)
-        self.roll()
 
     def on_bar(self, bar: Bar) -> None:
         
-        current_bar = self.cache.bar(self.current_bar_type)
+        current_bar_type = self._chain.current_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
+        )
+        
+        current_bar = self.cache.bar(current_bar_type)
             
-        if bar.bar_type == self.current_bar_type and current_bar is not None:
+        if bar.bar_type == current_bar_type and current_bar is not None:
             self._send_multiple_price()
         
         self.recv_count += 1
@@ -75,32 +73,4 @@ class ContinuousData(Actor):
 
         self._msgbus.publish(topic=f"{self._bar_type}0", msg=multiple_price)
 
-    def roll(self) -> None:
-        
-        self._chain.roll()
-        
-        self.current_bar_type = BarType(
-            instrument_id=self.current_contract.id,
-            bar_spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-        
-        # TODO: unsubscribe to old bars self.unsubscribe_bars(self.current_bar_type)
-        
-        self.forward_bar_type = BarType(
-            instrument_id=self.forward_contract.id,
-            bar_spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-
-        self.carry_bar_type = BarType(
-            instrument_id=self.carry_contract.id,
-            bar_spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-        
-        self.subscribe_bars(self.current_bar_type)
-        self.subscribe_bars(self.forward_bar_type)
-        self.subscribe_bars(self.carry_bar_type)
-        
-        print(self.current_contract.info["month"])
+    

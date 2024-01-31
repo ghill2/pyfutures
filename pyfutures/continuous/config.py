@@ -33,3 +33,4 @@ class ContractChainConfig(NautilusConfig, frozen=True):
     carry_offset: Literal[1, -1]
     skip_months: list[ContractMonth] | None = None
     weekly_schedule: MarketSchedule | None = None
+    start_month: ContractMonth | None = None

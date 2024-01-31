@@ -35,20 +35,15 @@ import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.continuous.providers import TestContractProvider
+from pyfutures.continuous.signal import RollSignal
 
 class MultiplePriceWrangler:
     
     def __init__(
         self,
-        daily_bar_type: BarType,
-        minute_bar_type: BarType,
-        base: FuturesContract,
-        start_month: ContractMonth,
-        config: ContractChainConfig,
-        skip_months: list[ContractMonth] | None = None
+        signal: RollSignal,
+        continuous_data: list[ContinuousData],
     ):
-        
-        self.start_month = start_month
         
         clock = TestClock()
         logger = Logger(
@@ -82,133 +77,135 @@ class MultiplePriceWrangler:
             logger,
         )
         
-        instrument_provider = TestContractProvider(
-            approximate_expiry_offset=config.approximate_expiry_offset,
-            base=base,
-        )
-        self.chain = ContractChain(
-            config=config,
-            instrument_provider=instrument_provider,
-        )
-        self.instrument_id = daily_bar_type.instrument_id
+        # self.instrument_id = instrument_id
         
-        # setup daily continuous prices
-        self.daily_bar_type = daily_bar_type
-        self.daily_prices = []
-        self.daily_continuous = ContinuousData(
-            bar_type=daily_bar_type,
-            chain=self.chain,
-            start_month=start_month,
-            # end_month=end_month,
-            handler=self.daily_prices.append,
-            raise_expired=False,
-            ignore_expiry_date=True,
-        )
-        self.daily_continuous.register_base(
-            portfolio=portfolio,
-            msgbus=msgbus,
-            cache=self.cache,
-            clock=clock,
-            logger=logger,
-        )
-        self.daily_continuous.start()
-        
-        # setup minute continuous prices
-        self.minute_prices = []
-        self.minute_continuous = ContinuousData(
-            bar_type=minute_bar_type,
-            chain=self.chain,
-            start_month=start_month,
-            # end_month=end_month,
-            handler=self.minute_prices.append,
-            raise_expired=False,
-            ignore_expiry_date=True,
-            manual_roll=True,
-        )
-        self.minute_continuous.register_base(
-            portfolio=portfolio,
-            msgbus=msgbus,
-            cache=self.cache,
-            clock=clock,
-            logger=logger,
-        )
-        self.minute_continuous.start()
-        
+        for data in continuous_data:
+            data.register_base(
+                portfolio=portfolio,
+                msgbus=msgbus,
+                cache=self.cache,
+                clock=clock,
+                logger=logger,
+            )
+            data.start()
+            
         data_engine.start()
         
-        self._skip_months = skip_months or []
-    
+        self._end_month = ContractMonth("2023F")
+        
     def process_bars(self, bars: list[Bar]):
             
         # process
-        end_month = ContractMonth("2023F")
         
         for bar in bars:
-
+            
+            self._signal.on_bar(bar)
+            
             # stop when the data module rolls to year 2024
-            if len(self.daily_prices) > 0 and self.daily_prices[-1].current_month >= end_month:
+            current_month = self._signal.chain.current_details.current_contract.info["month"]
+            if current_month >= self._end_month:
                 break
             
             self.cache.add_bar(bar)
             
-            self.minute_continuous.on_bar(bar)
-            has_rolled = self.daily_continuous.on_bar(bar)
-            if has_rolled:
-                self.minute_continuous.roll()
+            for data in self._continuous_data:
+                data.on_bar(bar)
+                
         
-        if len(self.daily_prices) == 0:
-            raise ValueError(f"{self.instrument_id} daily len(self.prices) > 0")
-        if len(self.minute_prices) == 0:
-            raise ValueError(f"{self.instrument_id} len(self.prices) > 0")
+        self._verify_result()
         
-        # trim prices to end month
-        while self.daily_prices[-1].current_month >= end_month:
-            self.daily_prices.pop(-1)
-        while self.minute_prices[-1].current_month >= end_month:
-            self.minute_prices.pop(-1)
-                    
-        for prices in (self.minute_prices, self.daily_prices):
+    def _verify_result(self) -> None:
+        for data in self._continuous_data:
             
-            last_month = prices[-1].current_month
-            last_year = prices[-1].current_month.year
+            if len(data.prices) == 0:
+                raise ValueError(f"{self.instrument_id} daily len(self.prices) > 0")
+            
+            # trim prices to end month
+            while data.prices[-1].current_month >= self._end_month:
+                data.prices.pop(-1)
+            
+            last_month = data.prices[-1].current_month
+            last_year = data.prices[-1].current_month.year
             
             print(f"wrangling completed: last_year: {last_year}, last_month: {last_month}")
             
             if last_month >= end_month:
-                raise ValueError(f"last_month >= end_month for {prices[0].instrument_id}")
+                raise ValueError(f"last_month >= end_month for {data.instrument_id}")
             
             if last_year != 2022:
-                raise ValueError(f"last_year != 2022 for {prices[0].instrument_id}")
+                raise ValueError(f"last_year != 2022 for {data.instrument_id}")
             
         # if is_last:
-            #     last_received = True
-            # elif last_received:
-            #     raise ValueError(f"contract failed to roll before or on last bar of current contract {self.continuous.current_id}")
-            #     last_received = False
-                
-                # if self.current_id.month in self._ignore_failed:
-                #     print("ignoring failed and rolling to next contract")
-                #     self.current_id = self._chain.forward_id(self.current_id)
-                #     self.roll(self._chain.forward_id(self.current_id))
-                # else:
-                    
-        
-            # elif self.continuous.current_id.month in self._skip_months:
-            #     print(f"Skipping month {self.continuous.current_id.month}")
-            #     self.continuous.roll()
-            
-            # last_received = False
-            # def process_bars(self, bars_list: list[list[Bar]]):
-        
-    #     # TODO: check contract months
-        
-    #     # merge and sort the bars and add find is_last boolean
-    #     data = []
-    #     for bars in bars_list:
-    #         for i, bar in enumerate(bars):
-    #             is_last = i == len(bars) - 1
-    #             data.append((bar, is_last))
-    #     data = list(sorted(data, key= lambda x: x[0].ts_init))
+#     last_received = True
+# elif last_received:
+#     raise ValueError(f"contract failed to roll before or on last bar of current contract {self.continuous.current_id}")
+#     last_received = False
     
-    #     if len(data) == 0:
-    #         raise ValueError(f"{self.bar_type} has no data")
+    # if self.current_id.month in self._ignore_failed:
+    #     print("ignoring failed and rolling to next contract")
+    #     self.current_id = self._chain.forward_id(self.current_id)
+    #     self.roll(self._chain.forward_id(self.current_id))
+    # else:
+        
+
+# elif self.continuous.current_id.month in self._skip_months:
+#     print(f"Skipping month {self.continuous.current_id.month}")
+#     self.continuous.roll()
+
+# last_received = False
+# def process_bars(self, bars_list: list[list[Bar]]):
+
+#     # TODO: check contract months
+
+#     # merge and sort the bars and add find is_last boolean
+#     data = []
+#     for bars in bars_list:
+#         for i, bar in enumerate(bars):
+#             is_last = i == len(bars) - 1
+#             data.append((bar, is_last))
+#     data = list(sorted(data, key= lambda x: x[0].ts_init))
+
+#     if len(data) == 0:
+#         raise ValueError(f"{self.bar_type} has no data")
+# instrument_provider = TestContractProvider(
+#     approximate_expiry_offset=config.approximate_expiry_offset,
+#     base=base,
+# )
+# self.chain = ContractChain(
+#     config=config,
+#     instrument_provider=instrument_provider,
+# )
+
+# # setup daily continuous prices
+# self.daily_bar_type = daily_bar_type
+# self.daily_prices = []
+# self.daily_continuous = ContinuousData(
+#     bar_type=daily_bar_type,
+#     chain=self.chain,
+#     start_month=start_month,
+#     # end_month=end_month,
+#     handler=self.daily_prices.append,
+#     raise_expired=False,
+#     ignore_expiry_date=True,
+# )
+# self.daily_continuous.register_base(
+#     portfolio=portfolio,
+#     msgbus=msgbus,
+#     cache=self.cache,
+#     clock=clock,
+#     logger=logger,
+# )
+# self.daily_continuous.start()
+
+# # setup minute continuous prices
+# self.minute_prices = []
+# self.minute_continuous = ContinuousData(
+#     bar_type=minute_bar_type,
+#     chain=self.chain,
+        #     start_month=start_month,
+        #     # end_month=end_month,
+        #     handler=self.minute_prices.append,
+        #     raise_expired=False,
+        #     ignore_expiry_date=True,
+        #     manual_roll=True,
+        # )

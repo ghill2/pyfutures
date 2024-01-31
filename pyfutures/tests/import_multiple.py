@@ -190,12 +190,14 @@ def process_row(row: dict) -> None:
     
     instrument_id = row.base.id
     daily_bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
+    hour_bar_type = BarType.from_str(f"{instrument_id}-1-HOUR-MID-EXTERNAL")
     minute_bar_type = BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL")
     
     daily_file = ParquetFile(parent=OUT_FOLDER, bar_type=daily_bar_type, cls=MultiplePrice)
+    hour_file = ParquetFile(parent=OUT_FOLDER, bar_type=hour_bar_type, cls=MultiplePrice)
     minute_file = ParquetFile(parent=OUT_FOLDER, bar_type=minute_bar_type, cls=MultiplePrice)
     
-    # if daily_file.path.exists() and minute_file.path.exists():
+    # if daily_file.path.exists() and minute_file.path.exists() and hour_file.path.exists():
     #     print(f"Skipping {trading_class}")
     #     return
     
@@ -249,13 +251,53 @@ def process_row(row: dict) -> None:
     
     print(f"{len(bars)} bars")
     
-    wrangler = MultiplePriceWrangler(
-        daily_bar_type=daily_bar_type,
-        minute_bar_type=minute_bar_type,
-        start_month=row.start,
-        config=row.config,
+    from pyfutures.continuous.signal import RollSignal
+    from pyfutures.continuous.providers import TestContractProvider
+    
+    instrument_provider = TestContractProvider(
+        approximate_expiry_offset=row.config.approximate_expiry_offset,
         base=row.base,
     )
+    chain = ContractChain(
+        config=row.config,
+        instrument_provider=instrument_provider,
+    )
+    
+    prices = {}
+    prices[BarAggregation.DAY] = []
+    prices[BarAggregation.HOUR] = []
+    prices[BarAggregation.MINUTE] = []
+    
+    signal = RollSignal(
+        bar_type=daily_bar_type,
+        chain=chain,
+        raise_expired=True,
+        ignore_expiry_date=False,
+    )
+    
+    continuous_data = [
+        ContinuousData(
+            bar_type=daily_bar_type,
+            chain=chain,
+            handler=prices[BarAggregation.DAY].append,
+        ),
+        ContinuousData(
+            bar_type=hour_bar_type,
+            chain=chain,
+            handler=prices[BarAggregation.HOUR].append,
+        ),
+        ContinuousData(
+            bar_type=minute_bar_type,
+            chain=chain,
+            handler=prices[BarAggregation.MINUTE].append,
+        ),
+    ]
+    
+    wrangler = MultiplePriceWrangler(
+        signal=signal,
+        data=continuous_data,
+    )
+    
     wrangler.process_bars(bars)
     
     daily_prices = wrangler.daily_prices
