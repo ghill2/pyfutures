@@ -23,18 +23,9 @@ class ContinuousData(Actor):
         start_month: ContractMonth,
         # end_month: ContractMonth | None,
         handler: Callable | None = None,
-        raise_expired: bool = True,
-        ignore_expiry_date: bool = False,
-        manual_roll: bool = False,
+        
     ):
         super().__init__()
-
-        self.current_bar_type = None  # initialized on start
-        self.forward_bar_type = None  # initialized on start
-        self.carry_bar_type = None  # initialized on start
-        self.current_contract = None  # initialized on start
-        self.forward_contract = None  # initialized on start
-        self.carry_contract = None  # initialized on start
         self.recv_count = 0
         
         self._bar_type = bar_type
@@ -42,75 +33,20 @@ class ContinuousData(Actor):
         self._instrument_id = bar_type.instrument_id
         self._handler = handler
         self._start_month = start_month
-        self._raise_expired = raise_expired
-        self._ignore_expiry_date = ignore_expiry_date
-        self._manual_roll = manual_roll
                 
     def on_start(self) -> None:
+        
         self.current_contract = self._chain.current_contract(self._start_month)
         self.roll()
 
-    def on_bar(self, bar: Bar) -> bool:
+    def on_bar(self, bar: Bar) -> None:
         
         current_bar = self.cache.bar(self.current_bar_type)
-        forward_bar = self.cache.bar(self.forward_bar_type)
-        
-        
-        if self._raise_expired:
-            is_expired = unix_nanos_to_dt(bar.ts_event) >= (self.expiry_day + pd.Timedelta(days=1))
-            if is_expired:
-                # TODO: wait for next forward bar != last timestamp
-                raise ValueError(f"ContractExpired {self.current_id}")
-                    
-        # print(bar.bar_type, self.current_bar_type, self.forward_bar_type)
-        
-        if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
-            return False
-        
-        # for debugging
-        if "MINUTE" in str(self._bar_type) and self.current_contract.info["month"].value == "1998X":
-            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-            print(
-                f"{self.current_contract.info.get('month').value} {current_timestamp_str}",
-                f"{self.forward_contract.info.get('month').value} {forward_timestamp_str}",
-                str(self.roll_date)[:-15],
-                str(self.expiry_date)[:-15],
-                bar.bar_type == self.current_bar_type,
-                current_bar is not None,
-                self.roll_date,
-                # should_roll,
-                # current_timestamp >= self.roll_date,
-                # current_day <= self.expiry_day,
-                # current_timestamp >= self.roll_date,
-            )
             
         if bar.bar_type == self.current_bar_type and current_bar is not None:
             self._send_multiple_price()
-                
-        # next bar arrived before current or vice versa
-        if current_bar is None or forward_bar is None:
-            self.recv_count += 1
-            return False
-                
-        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
-        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-            
-        # in_roll_window = (current_timestamp >= self.roll_date) and (current_timestamp.day <= self.expiry_date.day)
-        if self._ignore_expiry_date:
-            in_roll_window = (current_timestamp >= self.roll_date)
-        else:
-            current_day = current_timestamp.floor("D")
-            in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
-                
-        # a valid roll time is where both timestamps are equal
-        should_roll = in_roll_window and current_timestamp == forward_timestamp
-        if should_roll and not self._manual_roll:
-            self.roll()
-            return True
-            
+        
         self.recv_count += 1
-        return False
             
     def _send_multiple_price(self) -> None:
         
@@ -141,11 +77,7 @@ class ContinuousData(Actor):
 
     def roll(self) -> None:
         
-        assert self.current_contract is not None
-        
-        self.current_contract = self._chain.forward_contract(self.current_contract)
-        self.forward_contract = self._chain.forward_contract(self.current_contract)
-        self.carry_contract = self._chain.carry_contract(self.current_contract)
+        self._chain.roll()
         
         self.current_bar_type = BarType(
             instrument_id=self.current_contract.id,
@@ -171,15 +103,4 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.forward_bar_type)
         self.subscribe_bars(self.carry_bar_type)
         
-        self.expiry_date = unix_nanos_to_dt(self.current_contract.expiration_ns)
-        self.expiry_day = self.expiry_date.floor("D")
-        self.roll_date = self._chain.roll_date_utc(self.current_contract)
-        
         print(self.current_contract.info["month"])
-        # if the start month is in the hold cycle, do nothing
-        # if the start month is not in the hold cycle, go to next month in the hold cycle
-        # start_month = self._start_month
-        # if self._start_month not in self._chain._hold_cycle:
-        #     start_month = self._chain._hold_cycle.next_month(start_month)
-            
-        # self.current_id = self._chain.make_id(start_month)

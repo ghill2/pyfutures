@@ -29,36 +29,42 @@ class ContractChain:
         instrument_provider: InstrumentProvider,
     ):
         
+        self.current_bar_type = None  # initialized on start
+        self.forward_bar_type = None  # initialized on start
+        self.carry_bar_type = None  # initialized on start
+        self.current_contract = None  # initialized on start
+        self.forward_contract = None  # initialized on start
+        self.carry_contract = None  # initialized on start
         self.hold_cycle = config.hold_cycle
         
         self._roll_offset = config.roll_offset
-        assert self._roll_offset <= 0
         self._instrument_id = InstrumentId.from_str(str(config.instrument_id))
-        
         self._carry_offset = config.carry_offset
-        
         self._priced_cycle = config.priced_cycle
+        self._instrument_provider = instrument_provider
         
+        assert self._roll_offset <= 0
         assert self._carry_offset == 1 or self._carry_offset == -1
         
-        self._instrument_provider = instrument_provider
-    
     @property
     def instrument_provider(self) -> InstrumentProvider:
         return self._instrument_provider
     
-    def roll_date_utc(self, contract: FuturesContract) -> pd.Timestamp:
-        return self._roll_date_utc(
-                    expiry_date=unix_nanos_to_dt(contract.expiration_ns),
-                    offset=self._roll_offset,
-        )
-                
-    @staticmethod
-    def _roll_date_utc(expiry_date: pd.Timestamp, offset: NonPositiveInt):
-        # TODO: factor in the calendar
-        return expiry_date + pd.Timedelta(days=offset)
+    def roll(self) -> None:
+        
+        assert self.current_contract is not None
+        self.current_contract = self._forward_contract(self.current_contract)
+        self.forward_contract = self.forward_contract(self.current_contract)
+        self.carry_contract = self.carry_contract(self.current_contract)
+        self.expiry_date = unix_nanos_to_dt(self.current_contract.expiration_ns)
+        self.expiry_day = self.expiry_date.floor("D")
+        self.roll_date = self._roll_date(self.current_contract)
     
-    def current_contract(self, month: ContractMonth) -> FuturesContract:
+    def _roll_date(self, contract: FuturesContract) -> pd.Timestamp:
+        # TODO: factor in the calendar
+        return unix_nanos_to_dt(contract.expiration_ns) + pd.Timedelta(days=self._roll_offset)
+            
+    def _current_contract(self, month: ContractMonth) -> FuturesContract:
         month = self.current_month(month)
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
@@ -66,7 +72,7 @@ class ContractChain:
         )
         return self._instrument_provider.get_contract(self._instrument_id, month)
     
-    def forward_contract(self, current: FuturesContract) -> FuturesContract:
+    def _forward_contract(self, current: FuturesContract) -> FuturesContract:
         month = self.forward_month(current.info["month"])
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
@@ -74,7 +80,7 @@ class ContractChain:
         )
         return self._instrument_provider.get_contract(self._instrument_id, month)
         
-    def carry_contract(self, current: FuturesContract) -> FuturesContract:
+    def _carry_contract(self, current: FuturesContract) -> FuturesContract:
         month = self.carry_month(current.info["month"])
         self._instrument_provider.load_contract(
                 instrument_id=self._instrument_id,
