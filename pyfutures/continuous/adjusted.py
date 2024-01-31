@@ -11,60 +11,58 @@ class AdjustedPrices:
         self,
         lookback: int,
         bar_type: BarType,  # bar type that triggers the adjustment
+        manual: bool = False,
     ):
         self._lookback = lookback
-        self._adjusted_prices = {}
-        self._multiple_prices = {}
+        self._adjusted_prices = deque(maxlen=self._lookback)
+        self._multiple_prices = deque(maxlen=self._lookback)
         
         self._bar_type = bar_type
+        self._manual = manual
     
-    def handle_continuous_price(self, price: MultiplePrice) -> None:
+    def handle_price(self, price: MultiplePrice) -> float | None:
         
-        if self._adjusted_prices.get(str(price.bar_type)) is None:
-            self._adjusted_prices[str(price.bar_type)] = deque(maxlen=self._lookback)
+        value = None
+        if (
+            not self._manual
+            and len(self._multiple_prices) > 0
+            and self._multiple_prices[-1].current_month != price.current_month
+        ):
             
-        if self._multiple_prices.get(str(price.bar_type)) is None:
-            self._multiple_prices[str(price.bar_type)] = deque(maxlen=self._lookback)
+            last = self._multiple_prices[-1]
+            if last.forward_price is None or last.current_price is None:
+                print(f"No forward or current price found for {price.instrument_id}")
+                exit()
             
-        if len(self._multiple_prices[str(price.bar_type)]) > 0:
+            value = self.adjustment_value
+            self.adjust(value)
             
-            last = self._multiple_prices[str(price.bar_type)][-1]
-            
-            if last.current_month != price.current_month:
-                
-                if last.forward_price is None or last.current_price is None:
-                    print(f"No forward or current price found for {price.instrument_id}")
-                    exit()
-                
-                roll_differential = float(last.forward_price) - float(last.current_price)
-                self._adjusted_prices[str(price.bar_type)] = deque(
-                    pd.Series(self._adjusted_prices[str(price.bar_type)]) + roll_differential,
-                    maxlen=self._lookback,
-                )
-            
-        self._adjusted_prices[str(price.bar_type)].append(price.current_price)
-        self._multiple_prices[str(price.bar_type)].append(price)
+        self._adjusted_prices.append(price.current_price)
+        self._multiple_prices.append(price)
         
-        assert len(self._multiple_prices[str(price.bar_type)]) == len(self._adjusted_prices[str(price.bar_type)])
+        assert len(self._multiple_prices) == len(self._adjusted_prices)
+        return value
     
+    @property
+    def adjustment_value(self) -> float:
+        last = self._multiple_prices[-1]
+        roll_differential = float(last.forward_price) - float(last.current_price)
+        return roll_differential
+        
+    def adjust(self, value: float) -> None:
+        self._adjusted_prices = deque(
+            pd.Series(self._adjusted_prices) + value,
+            maxlen=self._lookback,
+        )
+        
     def to_dataframe(self) -> pd.DataFrame:
-        dfs = []
-        for bar_type, prices in self._multiple_prices.items():
-            df = pd.DataFrame(
-                list(map(MultiplePrice.to_dict, prices))
-            )
-            
-            adjusted = self._adjusted_prices[str(bar_type)]
-            df[f"adjusted_{bar_type.spec}"] = list(map(float, adjusted))
-            
-            df["timestamp"] = list(map(unix_nanos_to_dt, df["ts_event"]))
-            dfs.append(dfs)
-            
-        df = pd.concat([dfs], axis=1)
-        df.sort_values("timestamp", inplace=True)
+        df = pd.DataFrame(
+            list(map(MultiplePrice.to_dict, self._multiple_prices))
+        )
+        df["adjusted"] = list(map(float, self._adjusted_prices))
+        df["timestamp"] = list(map(unix_nanos_to_dt, df["ts_event"]))
         return df
-    
-    
+
     # def to_series(self) -> pd.Series:
     #     return pd.Series(
     #         self._adjusted_prices,

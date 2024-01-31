@@ -1,6 +1,7 @@
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.continuous.wrangler import MultiplePriceWrangler
+from nautilus_trader.model.enums import bar_aggregation_to_str
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.config import ContractChainConfig
@@ -57,41 +58,28 @@ MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 def import_missing_ebm_months():
     
     # load minute EBM bars from years 2013X, 2014F, 2014X, 2015F
-    row = IBTestProviderStubs.universe_dataframe(filter=["EBM"]).to_dict(orient="records")[0]
+    rows = IBTestProviderStubs.universe_rows(filter=["EBM"])
+    assert len(rows) == 1
+    row = rows[0]
+    
     months = ("2013X", "2014F", "2014X", "2015F")
+    
     bars_list = []
     for month in months:
         
-        bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-MINUTE-MID-EXTERNAL")
-        path = CONTRACT_DATA_FOLDER / f"{bar_type}-BAR-{month[:4]}.parquet"
-        assert path.exists()
+        files = IBTestProviderStubs.bar_files(
+            "EBM",
+            BarAggregation.MINUTE,
+            month=month,
+        )
         
-        df = ParquetFile.from_path(path).read()
+        assert len(files) == 1
+        file = files[0]
         
-        df.index = unix_nanos_to_dt_vectorized(df.ts_event)
-        
-        df.drop(["ts_event", "ts_init"], inplace=True, axis=1)
-        freq = BarSpecification(1, BarAggregation.MINUTE, PriceType.MID).timedelta
-        
-        ohlc_dict = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-            "volume": "first",
-        }
-        
-        df = df.resample(freq, closed="left", label="left").apply(ohlc_dict).dropna()
-        df.index = df.index.floor("D")
-        df.reset_index(inplace=True)
-        
-        df.ts_event = dt_to_unix_nanos_vectorized(df.ts_event)
-        df.ts_init = df.ts_event.copy()
-        df = df[
-            ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]
-        ]
-        
-        df = bars_from_rust(df)
+        df = file.read(
+            timestamp_delta=(row.settlement_time, row.timezone),
+            to_aggregation=(1, BarAggregation.DAY),
+        )
         
         bar_type = BarType.from_str(f"EBM_EBM={month}.IB-1-DAY-MID-EXTERNAL")
         wrangler = BarDataWrangler(
@@ -100,6 +88,7 @@ def import_missing_ebm_months():
         )
         bars = wrangler.process(data=df)
         bars_list.extend(bars)
+    
     return bars_list
 
 def add_missing_daily_bars(trading_class: str, bars: list[Bar]) -> list[Bar]:
@@ -211,69 +200,55 @@ def process_row(row: dict) -> None:
     #     return
     
     print(f"Processing {row.trading_class}")
+    bars = []
     
-    
-    
-    bars_list = []
-    
-    # read daily bars
-    print("Reading daily bars...")
-    keyword = f"{instrument_id.symbol}*-1-DAY-MID-EXTERNAL*.parquet"
-    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
-    assert len(paths) > 0
-    print(f"{len(paths)} paths")
-    
-    for path in paths:
-        print(path)
-        file = ParquetFile.from_path(path)
-        df = file.read()
-        assert len(df) > 0
-        df = bars_from_rust(df)
+    # read minute bars
+    print("Reading minute bars...")
+    files = IBTestProviderStubs.bar_files(
+        row.trading_class, BarAggregation.MINUTE,
+    )
+    print(f"{len(files)} files")
+    for file in files:
+        bars.extend(file.read_objects())
         
-        # add settlement time to daily bars
-        df.index = (df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30))
-        df.index = df.index.tz_localize(row.timezone)
-        df.index = df.index.tz_convert("UTC")
+    # read hourly bars
+    print("Reading daily bars...")
+    files = IBTestProviderStubs.bar_files(
+        row.trading_class, BarAggregation.DAY,
+    )
+    
+    print(f"{len(files)} files")
+    for file in files:
+        df = file.read(
+            timestamp_delta=(row.settlement_time, row.timezone),
+        )
+        assert len(df) > 0
         
         wrangler = BarDataWrangler(
             bar_type=file.bar_type,
             instrument=row.base,
         )
-        bars_list.extend(
+        bars.extend(
             wrangler.process(
                 data=df,
             )
         )
-    assert len(bars_list) > 0
-    
-    # read minute bars
-    print("Reading minute bars...")
-    keyword = f"{instrument_id.symbol}*-1-MINUTE-MID-EXTERNAL*.parquet"
-    paths = list(sorted(CONTRACT_DATA_FOLDER.glob(keyword)))
-    assert len(paths) > 0
-    print(f"{len(paths)} paths")
-    
-    for path in paths:
-        bars = ParquetFile.from_path(path).read_objects()
-        if str(bars[0].bar_type) == "ECO_ECO.IB-1-DAY-MID-EXTERNAL":
-            print(path)
-            exit()
-        print(len(bars))
-        assert len(bars) > 0
-        bars_list.extend(bars)
-    
-    print(f"{len(bars_list)} bars")
-    
-    bars_list = add_missing_daily_bars(row.trading_class, bars_list)
-    bars_list = list(sorted(
-                    bars_list,
+        
+    assert len(bars) > 0
+    bars = add_missing_daily_bars(row.trading_class, bars)
+    bars = list(sorted(
+                    bars,
                     key=lambda x: (
                         x.ts_init,
                         MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,
                     )
             ))
     
-    print(f"{len(bars_list)} bars")
+    aggregations = {bar_aggregation_to_str(bar.bar_type.spec.aggregation) for bar in bars}
+    assert len(aggregations) == 2
+    
+    print(f"{len(bars)} bars")
+    
     wrangler = MultiplePriceWrangler(
         daily_bar_type=daily_bar_type,
         minute_bar_type=minute_bar_type,
@@ -281,27 +256,29 @@ def process_row(row: dict) -> None:
         config=row.config,
         base=row.base,
     )
-    wrangler.process_bars(bars_list)
+    wrangler.process_bars(bars)
     
     daily_prices = wrangler.daily_prices
     minute_prices = wrangler.minute_prices
     
-    # print(len(prices))
+    # write daily prices parquet
     writer = MultiplePriceParquetWriter(path=str(daily_file.path))
     print(f"Writing daily prices... {len(daily_prices)} items {str(daily_file.path)}")
     writer.write_objects(data=daily_prices)
     
+    # write minute prices parquet
     writer = MultiplePriceParquetWriter(path=str(minute_file.path))
     print(f"Writing minute prices... {len(minute_prices)} items {str(minute_file.path)}")
     writer.write_objects(data=minute_prices)
     
-    # save csv too
+    # write daily prices csv
     table = MultiplePriceParquetWriter.to_table(data=daily_prices)
     path = daily_file.path.with_suffix(".csv")
     df = table.to_pandas()
     df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
     df.to_csv(path, index=False)
     
+    # write minute prices csv
     table = MultiplePriceParquetWriter.to_table(data=minute_prices)
     path = minute_file.path.with_suffix(".csv")
     df = table.to_pandas()

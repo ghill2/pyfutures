@@ -6,6 +6,7 @@ import pathlib
 from datetime import datetime
 from collections import namedtuple
 import pandas as pd
+from pathlib import Path
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from pytz import timezone
@@ -13,6 +14,8 @@ from pytz import timezone
 from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
+from nautilus_trader.model.enums import BarAggregation
+from pytower.data.files import ParquetFile
 from pyfutures.continuous.chain import ContractChain
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Price
@@ -23,16 +26,19 @@ from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
+from nautilus_trader.model.functions import bar_aggregation_to_str
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
+PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
+MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
+ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
-
 
 class Session:
     def __init__(
@@ -54,7 +60,6 @@ class Session:
         for chain in self.chains:
             contracts.append(chain.current_contract(timestamp))
         return contracts
-
 
 class IBTestProviderStubs:
     
@@ -186,6 +191,7 @@ class IBTestProviderStubs:
         df["config"] = configs
         df["base"] = bases
         
+        
         # parse settlement time
         remove = [
             "comments", "open", "close", "ex_url", "ib_url", "sector", "sub_sector", "ex_symbol",
@@ -200,7 +206,7 @@ class IBTestProviderStubs:
     @staticmethod
     def universe_rows(filter: list | None = None) -> list[dict]:
         universe = IBTestProviderStubs.universe_dataframe(
-            filter=["ECO"],
+            filter=filter,
         )
         rows = universe.to_dict(orient="records")
         assert len(rows) > 0
@@ -211,6 +217,37 @@ class IBTestProviderStubs:
         ]
         return rows
     
+    @staticmethod
+    def bar_files(
+        trading_class: str,
+        aggregation: BarAggregation,
+        month: str | None = None,
+    ) -> list[ParquetFile]:
+        aggregation = bar_aggregation_to_str(aggregation)
+        month = month or "*"
+        glob_str = f"{trading_class}*={month}.IB-1-{aggregation}-MID*.parquet"
+        print(glob_str)
+        paths = list(PER_CONTRACT_FOLDER.glob(glob_str))
+        paths = list(sorted(paths))
+        files = list(map(ParquetFile.from_path, paths))
+        assert len(files) > 0
+        return files
+    
+    @staticmethod
+    def adjusted_file(
+        trading_class: str,
+        aggregation: BarAggregation,
+    ) -> list[ParquetFile]:
+        aggregation = bar_aggregation_to_str(aggregation)
+        month = month or "*"
+        glob_str = f"{trading_class}*={month}.IB-1-{aggregation}-MID*.parquet"
+        print(glob_str)
+        paths = list(ADJUSTED_PRICES_FOLDER.glob(glob_str))
+        paths = list(sorted(paths))
+        files = list(map(ParquetFile.from_path, paths))
+        assert len(files) > 0
+        return files
+        
     @classmethod
     def universe_future_chains(cls) -> list[ContractChain]:
         chains = []
@@ -235,23 +272,8 @@ class IBTestProviderStubs:
             )
         return chains
     
-    @staticmethod
-    def price_precision(
-        min_tick: float,
-        price_magnifier: int,
-    ) -> int:
-        min_tick = min_tick * price_magnifier
-        price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
-        return price_precision
     
-    @staticmethod
-    def price_increment(
-        min_tick: float,
-        price_magnifier: int,
-    ) -> Price:
-        min_tick = min_tick * price_magnifier
-        price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
-        return Price(min_tick, price_precision)
+    
     
     @classmethod
     def universe_continuous_data(cls) -> list:
@@ -318,3 +340,21 @@ class IBTestProviderStubs:
             dict_to_contract_details(json.loads(path.read_text()))
             for path in sorted(folder.glob("*.json"))
         ]
+        
+    # @staticmethod
+    # def price_precision(
+    #     min_tick: float,
+    #     price_magnifier: int,
+    # ) -> int:
+    #     min_tick = min_tick * price_magnifier
+    #     price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+    #     return price_precision
+    
+    # @staticmethod
+    # def price_increment(
+    #     min_tick: float,
+    #     price_magnifier: int,
+    # ) -> Price:
+    #     min_tick = min_tick * price_magnifier
+    #     price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+    #     return Price(min_tick, price_precision)

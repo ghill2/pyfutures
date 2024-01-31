@@ -55,31 +55,36 @@ class ContinuousData(Actor):
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         
+        
         if self._raise_expired:
             is_expired = unix_nanos_to_dt(bar.ts_event) >= (self.expiry_day + pd.Timedelta(days=1))
             if is_expired:
                 # TODO: wait for next forward bar != last timestamp
                 raise ValueError(f"ContractExpired {self.current_id}")
-        
-        # # for debugging
-        # if "DAY" in str(self._bar_type) and self.current_contract.info["month"].value == "2000H":
-        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
-        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-        #     print(
-        #         f"{self.current_contract.info.get('month').value} {current_timestamp_str}",
-        #         f"{self.forward_contract.info.get('month').value} {forward_timestamp_str}",
-        #         str(self.roll_date)[:-15],
-        #         str(self.expiry_date)[:-15],
-        #         # should_roll,
-        #         # current_timestamp >= self.roll_date,
-        #         # current_day <= self.expiry_day,
-        #         # current_timestamp >= self.roll_date,
-        #     )
                     
         # print(bar.bar_type, self.current_bar_type, self.forward_bar_type)
+        
         if bar.bar_type != self.current_bar_type and bar.bar_type != self.forward_bar_type:
             return False
         
+        # for debugging
+        if "MINUTE" in str(self._bar_type) and self.current_contract.info["month"].value == "1998X":
+            current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+            forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+            print(
+                f"{self.current_contract.info.get('month').value} {current_timestamp_str}",
+                f"{self.forward_contract.info.get('month').value} {forward_timestamp_str}",
+                str(self.roll_date)[:-15],
+                str(self.expiry_date)[:-15],
+                bar.bar_type == self.current_bar_type,
+                current_bar is not None,
+                self.roll_date,
+                # should_roll,
+                # current_timestamp >= self.roll_date,
+                # current_day <= self.expiry_day,
+                # current_timestamp >= self.roll_date,
+            )
+            
         if bar.bar_type == self.current_bar_type and current_bar is not None:
             self._send_multiple_price()
                 

@@ -34,7 +34,7 @@ import pytest
 import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from pyfutures.continuous.chain import TestContractProvider
+from pyfutures.continuous.providers import TestContractProvider
 
 class MultiplePriceWrangler:
     
@@ -147,7 +147,7 @@ class MultiplePriceWrangler:
 
             # stop when the data module rolls to year 2024
             if len(self.daily_prices) > 0 and self.daily_prices[-1].current_month >= end_month:
-                break  # done sampling
+                break
             
             self.cache.add_bar(bar)
             
@@ -168,7 +168,6 @@ class MultiplePriceWrangler:
             self.minute_prices.pop(-1)
                     
         for prices in (self.minute_prices, self.daily_prices):
-            
             
             last_month = prices[-1].current_month
             last_year = prices[-1].current_month.year
