@@ -20,20 +20,19 @@ from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
 import pytz
-from pytower.data.conversion import bar_to_bar
+from pyfutures.data.conversion import bar_to_bar
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.persistence.funcs import urisafe_instrument_id
-from pytower.core.datetime import unix_nanos_to_dt_vectorized
-from pytower.data.writer import BarParquetWriter
-from pytower.data.writer import ParquetWriter
-from pytower.data.writer import QuoteTickParquetWriter
+from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
+from pyfutures.data.writer import BarParquetWriter
+from pyfutures.data.writer import ParquetWriter
+from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
-from pytower.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.continuous.contract_month import ContractMonth
 
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:

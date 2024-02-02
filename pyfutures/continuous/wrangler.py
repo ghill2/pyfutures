@@ -70,7 +70,7 @@ class MultiplePriceWrangler:
         )
         
         self.data_engine.register_client(client)
-        
+            
         for actor in continuous_data + [signal]:
             actor.register_base(
                 portfolio=portfolio,
