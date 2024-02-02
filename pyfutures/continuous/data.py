@@ -10,9 +10,11 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
 from collections import deque
-from pyfutures.continuous.actor import ChainActor
-    
-class ContinuousData(ChainActor):
+from pyfutures.continuous.actor import Actor
+from nautilus_trader.core.datetime import unix_nanos_to_dt
+from datetime import timedelta
+
+class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
@@ -20,25 +22,70 @@ class ContinuousData(ChainActor):
         handler: Callable | None = None,
         lookback: int | None = 10_000,
     ):
-        super().__init__(
-            bar_type=bar_type,
-            chain=chain,
-        )
+        super().__init__()
         
+        self._bar_type = bar_type
+        self._chain = chain
         self.recv_count = 0
         self.prices = deque(maxlen=lookback)
         self._handler = handler
+    
+    @property
+    def current_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.current_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
         
+    @property
+    def forward_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.forward_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
+        
+    @property
+    def carry_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.carry_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
+        
+    @property
+    def current_bar(self):
+        return self.cache.bar(self.current_bar_type)
+    
+    @property
+    def forward_bar(self):
+        return self.cache.bar(self.forward_bar_type)
+    
+    @property
+    def carry_bar(self):
+        return self.cache.bar(self.carry_bar_type)
+    
     def on_bar(self, bar: Bar) -> None:
         
-        current_bar = self.current_bar
         
-        if bar.bar_type != self.current_bar_type or self.current_bar is None:
-            self.recv_count += 1
+        is_forward_or_current = \
+            (bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type)
+            
+        if not is_forward_or_current:
             return
+            
+        current_timestamp = unix_nanos_to_dt(self.current_bar.ts_event)
+        forward_timestamp = unix_nanos_to_dt(self.forward_bar.ts_event)
         
-        forward_bar = self.forward_bar
+        if current_timestamp == forward_timestamp:
+            self.send_multiple_price()
+        
+    def _send_multiple_price(self):
+        
         carry_bar = self.carry_bar
+        forward_bar = self.forward_bar
+        current_bar = self.current_bar
         
         multiple_price = MultiplePrice(
             bar_type=self.bar_type,
@@ -63,5 +110,5 @@ class ContinuousData(ChainActor):
 
         self._msgbus.publish(topic=f"{self.bar_type}0", msg=multiple_price)
         
-        self.recv_count += 1
+        
     

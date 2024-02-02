@@ -180,7 +180,7 @@ def process_row(row: dict, skip: bool = True) -> None:
 if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
-        filter=["EMA"],
+        filter=["ECO"],
         # skip=["167", "06", "NIFTY"],
             
     )

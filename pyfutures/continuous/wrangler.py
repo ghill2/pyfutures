@@ -18,6 +18,7 @@ from nautilus_trader.data.engine import DataEngine
 import pandas as pd
 from nautilus_trader.model.data import Bar
 from pyfutures.continuous.signal import RollSignal
+from pyfutures.continuous.chain import ContractChain
 
 class MultiplePriceWrangler:
     
@@ -45,7 +46,7 @@ class MultiplePriceWrangler:
             logger=logger,
         )
 
-        data_engine = DataEngine(
+        self.data_engine = DataEngine(
             msgbus=msgbus,
             cache=self.cache,
             clock=clock,
@@ -70,7 +71,7 @@ class MultiplePriceWrangler:
             )
             actor.start()
             
-        data_engine.start()
+        self.data_engine.start()
         
         self._end_month = end_month
         self._continuous_data = continuous_data
@@ -78,20 +79,19 @@ class MultiplePriceWrangler:
         
     def process_bars(self, bars: list[Bar]):
         
-        # process
         for bar in bars:
             
-            self._signal.on_bar(bar)
-            
-            # stop when the data module rolls to year 2024
+            # stop when the data module rolls to end month
             current_month = self._signal.chain.current_month
             if current_month >= self._end_month:
                 break
             
-            self.cache.add_bar(bar)
+            self.data_engine.handle_bar(bar)
             
-            for data in self._continuous_data:
-                data.on_bar(bar)
+            # self.cache.add_bar(bar)
+            
+            # for data in self._continuous_data:
+            #     data.on_bar(bar)
         
         self._verify_result()
         

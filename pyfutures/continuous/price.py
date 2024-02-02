@@ -41,7 +41,32 @@ class MultiplePrice(Data):
     @property
     def ts_init(self) -> int:
         return self._ts_init
-
+    
+        
+    @property
+    def current_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.current_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
+        
+    @property
+    def forward_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.forward_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
+        
+    @property
+    def carry_bar_type(self):
+        return BarType(
+            instrument_id=self._chain.carry_contract.id,
+            bar_spec=self._bar_spec,
+            aggregation_source=self._aggregation_source,
+        )
+    
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MultiplePrice):
             return False

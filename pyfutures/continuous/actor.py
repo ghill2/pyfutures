@@ -30,40 +30,6 @@ class ChainActor(Actor):
     def chain(self) -> ContractChain:
         return self._chain
     
-    @property
-    def current_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.current_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
-        )
-        
-    @property
-    def forward_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.forward_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
-        )
-        
-    @property
-    def carry_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.carry_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
-        )
-        
-    @property
-    def current_bar(self):
-        return self.cache.bar(self.current_bar_type)
     
-    @property
-    def forward_bar(self):
-        return self.cache.bar(self.forward_bar_type)
-    
-    @property
-    def carry_bar(self):
-        return self.cache.bar(self.carry_bar_type)
     
     
