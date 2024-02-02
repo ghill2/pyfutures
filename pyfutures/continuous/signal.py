@@ -12,7 +12,8 @@ from nautilus_trader.model.data import BarType
 from pyfutures.continuous.price import MultiplePrice
 class RollSignal(Actor):
     """
-    Listens to contract bars and triggers a roll event
+    Listens to MultiplePrice objects and triggers a roll event
+    Stores the current position in the chain
     """
     def __init__(
         self,
@@ -28,14 +29,17 @@ class RollSignal(Actor):
         self._raise_expired = raise_expired
         self._ignore_expiry_date = ignore_expiry_date
     
+    @property
+    def chain(self) -> ContractChain:
+        return self._chain
+    
     def on_start(self) -> None:
-        # TODO: handle subscribe and unsubscribe of current and forward contracts
+        
         self.msgbus.subscribe(
             topic=f"{self._bar_type}0",
             handler=self.on_multiple_price,
         )
-        # subscribe_data
-    
+        
     def on_multiple_price(self, price: MultiplePrice) -> None:
         
         expiry_day = self._chain.expiry_date.floor("D")
@@ -45,7 +49,6 @@ class RollSignal(Actor):
         if not self._ignore_expiry_date:
             is_expired = current_timestamp >= (expiry_day + pd.Timedelta(days=1))
             if is_expired and self._raise_expired:
-                # TODO: wait for next forward bar != last timestamp
                 raise ValueError(f"ContractExpired {self._bar_type}")
         
         if self._ignore_expiry_date:
@@ -54,9 +57,22 @@ class RollSignal(Actor):
             current_day = current_timestamp.floor("D")
             in_roll_window = (current_timestamp >= roll_date) and (current_day <= expiry_day)
         
+        class RollEvent:
+            pass
+        
         if in_roll_window:
-            # TODO: self.msgbus.topics, handle subscribe and unsubscribe of current and forward contracts
-            self._chain.roll()
+            
+            self.msgbus.publish(
+                topic=f"{self._bar_type}r",
+                msg=RollEvent(),
+            )
+            
+            
+    
+            
+        
+        
+        
         
     
     

@@ -19,6 +19,8 @@ import pandas as pd
 from nautilus_trader.model.data import Bar
 from pyfutures.continuous.signal import RollSignal
 from pyfutures.continuous.chain import ContractChain
+from nautilus_trader.backtest.data_client import BacktestMarketDataClient
+from nautilus_trader.model.identifiers import ClientId
 
 class MultiplePriceWrangler:
     
@@ -32,8 +34,8 @@ class MultiplePriceWrangler:
         clock = TestClock()
         logger = Logger(
             clock=TestClock(),
-            level_stdout=LogLevel.INFO,
-            bypass=True,
+            level_stdout=LogLevel.DEBUG,
+            # bypass=True,
         )
 
         msgbus = MessageBus(
@@ -42,30 +44,38 @@ class MultiplePriceWrangler:
             logger=logger,
         )
 
-        self.cache = Cache(
+        cache = Cache(logger=logger)
+        
+        portfolio = Portfolio(
+            msgbus,
+            cache,
+            clock,
+            logger,
+        )
+        
+        client = BacktestMarketDataClient(
+            client_id=ClientId("IB"),
+            msgbus=msgbus,
+            cache=cache,
+            clock=clock,
             logger=logger,
         )
-
+        
         self.data_engine = DataEngine(
             msgbus=msgbus,
-            cache=self.cache,
+            cache=cache,
             clock=clock,
             logger=logger,
             config=DataEngineConfig(debug=True),
         )
-
-        portfolio = Portfolio(
-            msgbus,
-            self.cache,
-            clock,
-            logger,
-        )
+        
+        self.data_engine.register_client(client)
         
         for actor in continuous_data + [signal]:
             actor.register_base(
                 portfolio=portfolio,
                 msgbus=msgbus,
-                cache=self.cache,
+                cache=cache,
                 clock=clock,
                 logger=logger,
             )
@@ -86,7 +96,7 @@ class MultiplePriceWrangler:
             if current_month >= self._end_month:
                 break
             
-            self.data_engine.handle_bar(bar)
+            self.data_engine.process(bar)
             
             # self.cache.add_bar(bar)
             

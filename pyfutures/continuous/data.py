@@ -19,39 +19,45 @@ class ContinuousData(Actor):
         self,
         bar_type: BarType,
         chain: ContractChain,
+        signal: RollSignal,
         handler: Callable | None = None,
         lookback: int | None = 10_000,
     ):
         super().__init__()
         
+        self.prices = deque(maxlen=lookback)
+        
         self._bar_type = bar_type
         self._chain = chain
-        self.recv_count = 0
-        self.prices = deque(maxlen=lookback)
         self._handler = handler
     
     @property
-    def current_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.current_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
+    def instrument_id(self):
+        return self.bar_type.instrument_id
+    
+    @property
+    def bar_type(self):
+        return self._bar_type
+    
+    @property
+    def current_bar_type(self) -> BarType:
+        return self._chain.current_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
         )
         
     @property
-    def forward_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.forward_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
+    def forward_bar_type(self) -> BarType:
+        return self._chain.forward_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
         )
         
     @property
-    def carry_bar_type(self):
-        return BarType(
-            instrument_id=self._chain.carry_contract.id,
-            bar_spec=self._bar_spec,
-            aggregation_source=self._aggregation_source,
+    def carry_bar_type(self) -> BarType:
+        return self._chain.carry_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
         )
         
     @property
@@ -66,49 +72,88 @@ class ContinuousData(Actor):
     def carry_bar(self):
         return self.cache.bar(self.carry_bar_type)
     
-    def on_bar(self, bar: Bar) -> None:
+    def on_start(self) -> None:
+        self._manage_subscriptions()
         
+    def on_bar(self, bar: Bar) -> None:
         
         is_forward_or_current = \
             (bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type)
             
         if not is_forward_or_current:
             return
-            
-        current_timestamp = unix_nanos_to_dt(self.current_bar.ts_event)
-        forward_timestamp = unix_nanos_to_dt(self.forward_bar.ts_event)
         
-        if current_timestamp == forward_timestamp:
-            self.send_multiple_price()
-        
-    def _send_multiple_price(self):
-        
-        carry_bar = self.carry_bar
-        forward_bar = self.forward_bar
         current_bar = self.current_bar
+        forward_bar = self.forward_bar
         
-        multiple_price = MultiplePrice(
-            bar_type=self.bar_type,
-            current_price=Price(current_bar.close, current_bar.close.precision),
-            current_month=self._chain.current_month,
-            forward_price=Price(forward_bar.close, forward_bar.close.precision)
-            if forward_bar is not None
-            else None,
-            forward_month=self._chain.forward_month,
-            carry_price=Price(carry_bar.close, carry_bar.close.precision)
-            if carry_bar is not None
-            else None,
-            carry_month=self._chain.carry_month,
-            ts_event=current_bar.ts_event,
-            ts_init=current_bar.ts_init,
-        )
-
+        if current_bar is None or forward_bar is None:
+            return
+        
+        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
+        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
+        
+        if current_timestamp != forward_timestamp:
+            return
+            
+        multiple_price: MultiplePrice = self._create_multiple_price()
+        
         if self._handler is not None:
             self._handler(multiple_price)
             
         self.prices.append(multiple_price)
 
+        # attempt to roll
+                
         self._msgbus.publish(topic=f"{self.bar_type}0", msg=multiple_price)
         
-        
+             
+        # self._manage_subscriptions()
+        self.msgbus.subscribe(
+            topic=f"{self._bar_type}0",
+            handler=self.on_multiple_price,
+        )
     
+    def _create_multiple_price(self) -> MultiplePrice:
+        
+        carry_bar = self.carry_bar
+        forward_bar = self.forward_bar
+        current_bar = self.current_bar
+        
+        return MultiplePrice(
+            bar_type=self.bar_type,
+            current_price=Price(current_bar.close, current_bar.close.precision),
+            current_bar_type=self.current_bar_type,
+            current_month=self._chain.current_month,
+            forward_price=Price(forward_bar.close, forward_bar.close.precision)
+            if forward_bar is not None
+            else None,
+            forward_bar_type=self.forward_bar_type,
+            forward_month=self._chain.forward_month,
+            carry_price=Price(carry_bar.close, carry_bar.close.precision)
+            if carry_bar is not None
+            else None,
+            carry_month=self._chain.carry_month,
+            carry_bar_type=self.carry_bar_type,
+            ts_event=current_bar.ts_event,
+            ts_init=current_bar.ts_init,
+        )
+        
+    def _manage_subscriptions(self) -> None:
+        
+        current_contract = self._chain.current_contract
+        forward_contract = self._chain.forward_contract
+        
+        if self.cache.instrument(current_contract.id) is None:
+            self.cache.add_instrument(self._chain.current_contract)
+        
+        if self.cache.instrument(forward_contract.id) is None:
+            self.cache.add_instrument(forward_contract)
+        
+        self.subscribe_bars(self.current_bar_type)
+        self.subscribe_bars(self.forward_bar_type)
+        
+    # def on_roll_event(self, event: RollEvent) -> None:
+    #     """
+    #     on startup, the data module gets the current, forward and carry bar type
+    #     """
+    #     pass
