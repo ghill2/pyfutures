@@ -1,8 +1,8 @@
 import json
 
 from pytower import PACKAGE_ROOT
-from pytower.data.schedule.factory import TIMEZONE_FOR_EXCHANGE
-from pytower.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.schedule.factory import TIMEZONE_FOR_EXCHANGE
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 class TestExchangeCalendarFactory:

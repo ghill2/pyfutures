@@ -2,7 +2,6 @@ from nautilus_trader.common.clock import LiveClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.common.providers import InstrumentProvider
-from pytower.common.util import SingletonMeta
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 from decimal import Decimal

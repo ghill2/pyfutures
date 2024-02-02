@@ -11,13 +11,8 @@ from nautilus_trader.model.enums_c import aggregation_source_from_str
 from nautilus_trader.model.enums_c import price_type_from_str
 from nautilus_trader.model.identifiers import InstrumentId
 from pytower import PACKAGE_ROOT
-from pytower.data.files import YearlyParquetFile
-from pytower.data.files import bars_rust_to_normal
-from pytower.data.ib.globals import IB_DATA_DIR
-from pytower.instruments.pysys.provider import MissingPysysData
-from pytower.instruments.pysys.provider import MissingPysysInstrument
-from pytower.instruments.pysys.provider import PysysProvider
-
+from pyfutures.data.files import YearlyParquetFile
+from pyfutures.data.files import bars_rust_to_normal
 
 class Correlation:
     def __init__(self):

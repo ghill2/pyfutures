@@ -73,6 +73,15 @@ class ContinuousData(Actor):
         return self.cache.bar(self.carry_bar_type)
     
     def on_start(self) -> None:
+        
+        """
+        subscribe to roll events from the RollSignal actor for handling subscriptions after roll
+        
+        """
+        self.msgbus.subscribe(
+            topic=self.signal.topic,
+            handler=self._manage_subscriptions,
+        )
         self._manage_subscriptions()
         
     def on_bar(self, bar: Bar) -> None:
@@ -94,7 +103,11 @@ class ContinuousData(Actor):
         
         if current_timestamp != forward_timestamp:
             return
-            
+    
+        self._send_multiple_price()
+        
+    def _send_multiple_price(self) -> None:
+        
         multiple_price: MultiplePrice = self._create_multiple_price()
         
         if self._handler is not None:
@@ -102,17 +115,8 @@ class ContinuousData(Actor):
             
         self.prices.append(multiple_price)
 
-        # attempt to roll
-                
         self._msgbus.publish(topic=f"{self.bar_type}0", msg=multiple_price)
-        
              
-        # self._manage_subscriptions()
-        self.msgbus.subscribe(
-            topic=f"{self._bar_type}0",
-            handler=self.on_multiple_price,
-        )
-    
     def _create_multiple_price(self) -> MultiplePrice:
         
         carry_bar = self.carry_bar

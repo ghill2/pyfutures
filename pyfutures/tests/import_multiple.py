@@ -9,18 +9,13 @@ from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.data import ContinuousData
 from nautilus_trader.model.enums import BarAggregation
-from nautilus_trader.core.datetime import dt_to_unix_nanos
-import pandas as pd
 from pyfutures.continuous.price import MultiplePrice
-from pytower.data.writer import MultiplePriceParquetWriter
-from pytower.data.files import ParquetFile
+from pyfutures.data.writer import MultiplePriceParquetWriter
+from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import BarType
 import pandas as pd
 import joblib
 from nautilus_trader.model.data import Bar
-from nautilus_trader.model.objects import Price
-from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.objects import Quantity
 from nautilus_trader.persistence.wranglers import BarDataWrangler
 from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
 from pyfutures.continuous.contract_month import MONTH_LIST

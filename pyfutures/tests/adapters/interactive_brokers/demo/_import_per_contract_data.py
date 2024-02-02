@@ -3,11 +3,8 @@ from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import Bar
-from pytower.data.writer import BarParquetWriter
-from ibapi.contract import Contract as IBContract
-from pandas.core.dtypes.dtypes import DatetimeTZDtype
-
-from pytower.data.files import ParquetFile
+from pyfutures.data.writer import BarParquetWriter
+from pyfutures.data.files import ParquetFile
 
 from pathlib import Path
 import pandas as pd

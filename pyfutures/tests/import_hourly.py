@@ -1,7 +1,7 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pytower.data.writer import BarParquetWriter
+from pyfutures.data.writer import BarParquetWriter
 from nautilus_trader.model.data import Bar
-from pytower.data.files import ParquetFile
+from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.enums import BarAggregation
 import joblib
 from nautilus_trader.model.data import BarType

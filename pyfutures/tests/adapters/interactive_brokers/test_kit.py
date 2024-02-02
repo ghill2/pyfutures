@@ -15,7 +15,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
 from nautilus_trader.model.enums import BarAggregation
-from pytower.data.files import ParquetFile
+from pyfutures.data.files import ParquetFile
 from pyfutures.continuous.chain import ContractChain
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Price
@@ -280,74 +280,67 @@ class IBTestProviderStubs:
             )
         return chains
     
-    
-    
-    
-    @classmethod
-    def universe_continuous_data(cls) -> list:
-        pass
-        
-    @classmethod
-    def sessions(cls, names: int | None = None) -> list[Session]:
-        universe = cls.universe_dataframe()
+    # @classmethod
+    # def sessions(cls, names: int | None = None) -> list[Session]:
+    #     universe = cls.universe_dataframe()
 
-        sessions = []
+    #     sessions = []
 
-        grouped = list(universe.groupby("session"))
-        for session, df in grouped:
-            chains = []
-            for row in df.itertuples():
-                instrument_id = f"{row.tradingClass}-{row.symbol}.{row.exchange}"
-                chains.append(
-                    FuturesChain(
-                        config=FuturesChainConfig(
-                            instrument_id=instrument_id,
-                            hold_cycle=row.hold_cycle,
-                            priced_cycle=row.priced_cycle,
-                            roll_offset=row.roll_offset,
-                            expiry_offset=row.expiry_offset,
-                            carry_offset=row.carry_offset,
-                        ),
-                    ),
-                )
+    #     grouped = list(universe.groupby("session"))
+    #     for session, df in grouped:
+    #         chains = []
+    #         for row in df.itertuples():
+    #             instrument_id = f"{row.tradingClass}-{row.symbol}.{row.exchange}"
+    #             chains.append(
+    #                 FuturesChain(
+    #                     config=FuturesChainConfig(
+    #                         instrument_id=instrument_id,
+    #                         hold_cycle=row.hold_cycle,
+    #                         priced_cycle=row.priced_cycle,
+    #                         roll_offset=row.roll_offset,
+    #                         expiry_offset=row.expiry_offset,
+    #                         carry_offset=row.carry_offset,
+    #                     ),
+    #                 ),
+    #             )
 
-            sessions.append(
-                Session(
-                    name=session,
-                    chains=chains,
-                    start_time=df.open.max(),
-                    end_time=df.close.min(),
-                ),
-            )
+    #         sessions.append(
+    #             Session(
+    #                 name=session,
+    #                 chains=chains,
+    #                 start_time=df.open.max(),
+    #                 end_time=df.close.min(),
+    #             ),
+    #         )
 
-        if names is not None:
-            sessions = [x for x in sessions if x.name in names]
-        return sessions
+    #     if names is not None:
+    #         sessions = [x for x in sessions if x.name in names]
+    #     return sessions
 
-    @classmethod
-    def universe_instrument_ids(cls) -> set[InstrumentId]:
-        instrument_ids = []
-        for chain in IBTestProviderStubs.universe_future_chains():
-            for instrument_id in chain.instrument_ids(
-                start=pd.Timestamp.utcnow(),
-                end=UNIVERSE_END,
-            ):
-                instrument_ids.append(instrument_id)
-        assert len(instrument_ids) == len(set(instrument_ids))
-        return set(instrument_ids)
+    # @classmethod
+    # def universe_instrument_ids(cls) -> set[InstrumentId]:
+    #     instrument_ids = []
+    #     for chain in IBTestProviderStubs.universe_future_chains():
+    #         for instrument_id in chain.instrument_ids(
+    #             start=pd.Timestamp.utcnow(),
+    #             end=UNIVERSE_END,
+    #         ):
+    #             instrument_ids.append(instrument_id)
+    #     assert len(instrument_ids) == len(set(instrument_ids))
+    #     return set(instrument_ids)
 
-    @staticmethod
-    def universe_contract_details() -> list[IBContractDetails]:
-        """
-        Return the unexpired contract details for all FutureChains in the universe of
-        instruments.
-        """
-        folder = CONTRACT_DETAILS_PATH
-        assert folder.exists()
-        return [
-            dict_to_contract_details(json.loads(path.read_text()))
-            for path in sorted(folder.glob("*.json"))
-        ]
+    # @staticmethod
+    # def universe_contract_details() -> list[IBContractDetails]:
+    #     """
+    #     Return the unexpired contract details for all FutureChains in the universe of
+    #     instruments.
+    #     """
+    #     folder = CONTRACT_DETAILS_PATH
+    #     assert folder.exists()
+    #     return [
+    #         dict_to_contract_details(json.loads(path.read_text()))
+    #         for path in sorted(folder.glob("*.json"))
+    #     ]
         
     # @staticmethod
     # def price_precision(

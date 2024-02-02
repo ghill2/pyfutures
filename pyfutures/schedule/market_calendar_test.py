@@ -3,8 +3,7 @@ from datetime import time
 import pandas as pd
 import pytz
 
-from pytower.data.market_calendar.market_calendar import MarketCalendar
-
+from pyfutures.schedule.market_calendar import MarketCalendar
 
 class TestMarketCalendar:
     def setup(self):

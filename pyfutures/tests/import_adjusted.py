@@ -1,7 +1,6 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pytower.data.files import ParquetFile
+from pyfutures.data.files import ParquetFile
 from pyfutures.continuous.adjusted import AdjustedPrices
-from nautilus_trader.model.data import BarType
 from collections import namedtuple
 
 from pathlib import Path

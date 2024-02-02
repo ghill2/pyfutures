@@ -5,9 +5,9 @@ from nautilus_trader.model.identifiers import Symbol
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import Bar
-from pytower.data.writer import BarParquetWriter
-from pytower.data.portara import PortaraData
-from pytower.data.files import ParquetFile
+from pyfutures.data.writer import BarParquetWriter
+from pyfutures.pyfutures.data.portara import PortaraData
+from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import Bar
 
 from pathlib import Path

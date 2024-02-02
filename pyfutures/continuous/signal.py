@@ -7,13 +7,11 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-
-# from pyfutures.continuous.actor import ChainActor
 from pyfutures.continuous.price import MultiplePrice
+
 class RollSignal(Actor):
     """
     Listens to MultiplePrice objects and triggers a roll event
-    Stores the current position in the chain
     """
     def __init__(
         self,
@@ -38,6 +36,7 @@ class RollSignal(Actor):
         self.msgbus.subscribe(
             topic=f"{self._bar_type}0",
             handler=self.on_multiple_price,
+            # TODO determine priority
         )
         
     def on_multiple_price(self, price: MultiplePrice) -> None:
@@ -64,7 +63,7 @@ class RollSignal(Actor):
             
             self.msgbus.publish(
                 topic=f"{self._bar_type}r",
-                msg=RollEvent(),
+                # msg=RollEvent(),
             )
             
             
