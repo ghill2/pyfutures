@@ -7,32 +7,31 @@ from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
-
+from nautilus_trader.model.data import BarType
 
 class TestMultiplePrice:
     def test_continuous_price_equality(self):
         # Arrange
         price1 = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
         price2 = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             current_price=None,
-            current_month=ContractMonth("2021X"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
             carry_price=None,
-            carry_month=ContractMonth("2021Z"),
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
@@ -44,13 +43,13 @@ class TestMultiplePrice:
     def test_continuous_price_str_and_repr(self):
         # Arrange
         price = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
@@ -58,23 +57,23 @@ class TestMultiplePrice:
         # Act, Assert
         assert (
             str(price)
-            == "MultiplePrice(bar_type=AUD/USD.SIM-1-MINUTE-BID-EXTERNAL, current_price=1.1, current_month=2021X, forward_price=1.0, forward_month=2021Z, carry_price=1.0, carry_month=2021Z, ts_event=0, ts_init=0)"  # noqa
+            == "MultiplePrice(bar_type=MES.SIM-1-DAY-MID-EXTERNAL, current_price=1.1, current_bar_type=MES=2021X.SIM-1-DAY-MID-EXTERNAL, forward_price=1.0, forward_bar_type=MES=2021Z.SIM-1-DAY-MID-EXTERNAL, carry_price=1.0, carry_bar_type=MES=2021Z.SIM-1-DAY-MID-EXTERNAL, ts_event=0, ts_init=0)"  # noqa
         )
         assert (
             repr(price)
-            == "MultiplePrice(bar_type=AUD/USD.SIM-1-MINUTE-BID-EXTERNAL, current_price=1.1, current_month=2021X, forward_price=1.0, forward_month=2021Z, carry_price=1.0, carry_month=2021Z, ts_event=0, ts_init=0)"  # noqa
+            == "MultiplePrice(bar_type=MES.SIM-1-DAY-MID-EXTERNAL, current_price=1.1, current_bar_type=MES=2021X.SIM-1-DAY-MID-EXTERNAL, forward_price=1.0, forward_bar_type=MES=2021Z.SIM-1-DAY-MID-EXTERNAL, carry_price=1.0, carry_bar_type=MES=2021Z.SIM-1-DAY-MID-EXTERNAL, ts_event=0, ts_init=0)"  # noqa
         )
 
     def test_to_dict(self):
         # Arrange
         price = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
@@ -84,13 +83,13 @@ class TestMultiplePrice:
 
         # Assert
         assert values == {
-            "bar_type": "AUD/USD.SIM-1-MINUTE-BID-EXTERNAL",
+            "bar_type": "MES.SIM-1-DAY-MID-EXTERNAL",
             "current_price": "1.1",
-            "current_month": "2021X",
+            "current_bar_type": "MES=2021X.SIM-1-DAY-MID-EXTERNAL",
             "forward_price": "1.0",
-            "forward_month": "2021Z",
+            "forward_bar_type": "MES=2021Z.SIM-1-DAY-MID-EXTERNAL",
             "carry_price": "1.0",
-            "carry_month": "2021Z",
+            "carry_bar_type": "MES=2021Z.SIM-1-DAY-MID-EXTERNAL",
             "ts_event": 0,
             "ts_init": 0,
         }
@@ -98,13 +97,13 @@ class TestMultiplePrice:
     def test_from_dict_returns_expected_price(self):
         # Arrange
         price = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
             forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
@@ -118,13 +117,13 @@ class TestMultiplePrice:
     def test_pickle_bar(self):
         # Arrange
         price = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
-            forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
-            carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
+            forward_price=None,
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
+            carry_price=None,
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
@@ -147,13 +146,13 @@ class TestMultiplePrice:
         )
 
         price = MultiplePrice(
-            bar_type=TestDataStubs.bartype_audusd_1min_bid(),
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_price=Price.from_str("1.1"),
-            current_month=ContractMonth("2021X"),
-            forward_price=Price.from_str("1.0"),
-            forward_month=ContractMonth("2021Z"),
-            carry_price=Price.from_str("1.0"),
-            carry_month=ContractMonth("2021Z"),
+            current_bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
+            forward_price=None,
+            forward_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
+            carry_price=None,
+            carry_bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
             ts_event=0,
             ts_init=0,
         )
