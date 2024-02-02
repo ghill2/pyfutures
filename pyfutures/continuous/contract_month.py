@@ -4,6 +4,7 @@ import pandas as pd
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
+
 """
 F = Jan, 1
 G = Feb, 2
@@ -12,7 +13,7 @@ J = April, 4
 K = May, 5
 M = June, 6
 N = July, 7
-Q = AUgust, 8
+Q = August, 8
 U = September, 9
 V = October, 10
 X = November, 11
@@ -34,7 +35,6 @@ class ContractMonth:
         self.month = letter_month_to_int(value[4])
         self.value = value
         self.timestamp_utc = pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
-        # self.timestamp_ns = dt_to_unix_nanos(self.timestamp_utc)
     
     @classmethod
     def from_year_letter_month(cls, year: int, letter_month: str) -> ContractMonth:

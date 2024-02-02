@@ -1,19 +1,10 @@
-
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pytower.data.writer import BarParquetWriter
-from nautilus_trader.persistence.wranglers import BarDataWrangler
 from nautilus_trader.model.data import Bar
 from pytower.data.files import ParquetFile
-from pyfutures.continuous.adjusted import AdjustedPrices
 from nautilus_trader.model.enums import BarAggregation
-
-from pathlib import Path
-import pandas as pd
-import pytest
-import numpy as np
 import joblib
 from nautilus_trader.model.data import BarType
-
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
 
 def process(file: ParquetFile, row: dict) -> None:
@@ -42,7 +33,7 @@ def process(file: ParquetFile, row: dict) -> None:
 def func_gen():
     
     rows = IBTestProviderStubs.universe_rows(
-        filter=["ECO"],
+        # filter=["ECO"],
     )
     
     for row in rows:

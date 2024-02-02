@@ -1,31 +1,11 @@
-from dataclasses import dataclass
-
 import pandas as pd
 
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.common.providers import InstrumentProvider
-from copy import deepcopy
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.config import NonPositiveInt
-
-from nautilus_trader.config.validation import PositiveInt
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import BarSpecification
-from nautilus_trader.model.enums import AggregationSource
-
-@dataclass
-class ChainDetails:
-    instrument_id: InstrumentId
-    current_contract: FuturesContract
-    forward_contract: FuturesContract
-    carry_contract: FuturesContract
-    expiry_date: pd.Timestamp
-    roll_date: pd.Timestamp
 
 class ContractChain:
     def __init__(
@@ -47,111 +27,95 @@ class ContractChain:
         assert self._roll_offset <= 0
         assert self._carry_offset == 1 or self._carry_offset == -1
     
-        self._current_details = None  # initialized on start
-    
-    def on_start(self) -> None:
-        current = self.current_contract(self._start_month)
-        self._create_details(current=current)
+        self._current_month = None  # initialized on start
     
     @property
     def instrument_provider(self) -> InstrumentProvider:
         return self._instrument_provider
-        
+    
     @property
-    def current_details(self) -> ChainDetails:
-        return self._current_details
+    def expiry_date(self) -> pd.Timestamp:
+        return unix_nanos_to_dt(self.current_contract.expiration_ns)
     
-    def roll(self) -> None:
-        
-        assert self._current_details is not None
-        forward = self.forward_contract(self._current_details.current_contract)
-        self._create_details(current=forward)
-        
-    def _create_details(self, current: FuturesContract) -> None:
-        
-        self._current_details = ChainDetails(
-            instrument_id=self._instrument_id,
-            current_contract=current,
-            forward_contract=self.forward_contract(current),
-            carry_contract=self.carry_contract(current),
-            expiry_date=unix_nanos_to_dt(current.expiration_ns),
-            roll_date=self.get_roll_date(current),
-        )
-        
-        print(self._current_details.current_contract.info["month"])
+    @property
+    def roll_date(self) -> pd.Timestamp:
+        # TODO: factor in the trading calendar
+        return self.expiry_date + pd.Timedelta(days=self._roll_offset)
     
-    def current_bar_type(
-        self,
-        spec: BarSpecification,
-        aggregation_source: AggregationSource,
-    ) -> BarType:
-        instrument_id = self._current_details.current_contract.id
-        return BarType(
-            instrument_id=instrument_id,
-            bar_spec=spec,
-            aggregation_source=aggregation_source,
-        )
-        
-    def forward_bar_type(
-        self,
-        spec: BarSpecification,
-        aggregation_source: AggregationSource,
-    ) -> BarType:
-        instrument_id = self._current_details.forward_contract.id
-        return BarType(
-            instrument_id=instrument_id,
-            bar_spec=spec,
-            aggregation_source=aggregation_source,
-        )
+    @property
+    def current_contract(self) -> FuturesContract:
+        return self._fetch_contract(self._current_month)
     
-    def carry_bar_type(
-        self,
-        spec: BarSpecification,
-        aggregation_source: AggregationSource,
-    ) -> BarType:
-        instrument_id = self._current_details.carry_contract.id
-        return BarType(
-            instrument_id=instrument_id,
-            bar_spec=spec,
-            aggregation_source=aggregation_source,
-        )
-        
-    def get_roll_date(self, contract: FuturesContract) -> pd.Timestamp:
-        # TODO: 
-        # TODO: factor in the calendar
-        return unix_nanos_to_dt(contract.expiration_ns) + pd.Timedelta(days=self._roll_offset)
-            
-    def current_contract(self, month: ContractMonth) -> FuturesContract:
-        month = self.current_month(month)
-        self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
-        return self._instrument_provider.get_contract(self._instrument_id, month)
+    @property
+    def forward_contract(self) -> FuturesContract:
+        return self._fetch_contract(self.forward_month)
     
-    def forward_contract(self, current: FuturesContract) -> FuturesContract:
-        month = self.forward_month(current.info["month"])
-        self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
-        return self._instrument_provider.get_contract(self._instrument_id, month)
-        
-    def carry_contract(self, current: FuturesContract) -> FuturesContract:
-        month = self.carry_month(current.info["month"])
-        self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
-        return self._instrument_provider.get_contract(self._instrument_id, month)
-        
-    def current_month(self, month: ContractMonth) -> ContractMonth:
-        if month in self.hold_cycle:
-            return month
-        
-        return self.forward_month(month)
+    @property
+    def carry_contract(self) -> FuturesContract:
+        return self._fetch_contract(self.carry_month)
     
-    def forward_month(self, month: ContractMonth) -> ContractMonth:
-        return self.hold_cycle.next_month(month)
-
-    def carry_month(self, month: ContractMonth) -> ContractMonth:
+    @property
+    def current_month(self) -> ContractMonth:
+        return self._current_month
+    
+    @property
+    def forward_month(self) -> ContractMonth:
+        return self.hold_cycle.next_month(self._current_month)
+    
+    @property
+    def carry_month(self) -> ContractMonth:
         if self._carry_offset == 1:
-            return self._priced_cycle.next_month(month)
+            return self._priced_cycle.next_month(self._current_month)
         elif self._carry_offset == -1:
-            return self._priced_cycle.previous_month(month)
+            return self._priced_cycle.previous_month(self._current_month)
         else:
             raise ValueError("carry offset must be 1 or -1")
+        
+    def on_start(self) -> None:
+        
+        month = self._start_month
+        if month not in self.hold_cycle:
+            month = self.hold_cycle.next_month(month)
+            
+        self._current_month = month
+        print(self._current_month)
+        
+    def roll(self) -> None:
+        self._current_month = self.hold_cycle.next_month(self._current_month)
+        print(self._current_month)
+    
+    def _fetch_contract(self, month: ContractMonth) -> FuturesContract:
+        if self._instrument_provider.get_contract(self._instrument_id, month) is None:
+            self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
+        return self._instrument_provider.get_contract(self._instrument_id, month)
+        
+    
+    # @property
+    # def current_details(self) -> ChainDetails:
+    #     return self._current_details
+        
+    # def _create_details(self, current: FuturesContract) -> None:
+        
+    #     self._current_details = ChainDetails(
+    #         instrument_id=self._instrument_id,
+    #         current_contract=current,
+    #         forward_contract=self.forward_contract(current),
+    #         carry_contract=self.carry_contract(current),
+    #         expiry_date=unix_nanos_to_dt(current.expiration_ns),
+    #         roll_date=self.get_roll_date(current),
+    #     )
+        
+    # def current_month(self, month: ContractMonth) -> ContractMonth:
+    #     if month in self.hold_cycle:
+    #         return month
+        
+    #     return self.forward_month(month)
+    
+    # def forward_month(self, month: ContractMonth) -> ContractMonth:
+    #     return self.hold_cycle.next_month(month)
+
+    # def carry_month(self, month: ContractMonth) -> ContractMonth:
+    
     
     
     
@@ -213,3 +177,76 @@ class ContractChain:
 #     month: ContractMonth
 #     approximate_expiry_date_utc: pd.Timestamp
 #     roll_date_utc: pd.Timestamp
+
+# def current_contract(self, month: ContractMonth) -> FuturesContract:
+    #     month = self.current_month(month)
+    #     self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
+    #     return self._instrument_provider.get_contract(self._instrument_id, month)
+    
+    # def forward_contract(self, current: FuturesContract) -> FuturesContract:
+    #     month = self.forward_month(current.info["month"])
+    #     self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
+    #     return self._instrument_provider.get_contract(self._instrument_id, month)
+        
+    # def carry_contract(self, current: FuturesContract) -> FuturesContract:
+    #     month = self.carry_month(current.info["month"])
+    #     self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
+    #     return self._instrument_provider.get_contract(self._instrument_id, month)
+        
+    # def current_month(self, month: ContractMonth) -> ContractMonth:
+    #     if month in self.hold_cycle:
+    #         return month
+        
+    #     return self.forward_month(month)
+    
+    # def forward_month(self, month: ContractMonth) -> ContractMonth:
+    #     return self.hold_cycle.next_month(month)
+
+    # def carry_month(self, month: ContractMonth) -> ContractMonth:
+    #     if self._carry_offset == 1:
+    #         return self._priced_cycle.next_month(month)
+    #     elif self._carry_offset == -1:
+    #         return self._priced_cycle.previous_month(month)
+    #     else:
+    #         raise ValueError("carry offset must be 1 or -1")
+    # @dataclass
+# class ChainDetails:
+#     instrument_id: InstrumentId
+#     current_contract: FuturesContract
+#     forward_contract: FuturesContract
+#     carry_contract: FuturesContract
+#     expiry_date: pd.Timestamp
+#     roll_date: pd.Timestamp
+# def current_bar_type(
+    #     self,
+    #     spec: BarSpecification,
+    #     aggregation_source: AggregationSource,
+    # ) -> BarType:
+    #     return BarType(
+    #         instrument_id=self.current_contract().id,
+    #         bar_spec=spec,
+    #         aggregation_source=aggregation_source,
+    #     )
+        
+    # def forward_bar_type(
+    #     self,
+    #     spec: BarSpecification,
+    #     aggregation_source: AggregationSource,
+    # ) -> BarType:
+    #     return BarType(
+    #         instrument_id=self.forward_contract().id,
+    #         bar_spec=spec,
+    #         aggregation_source=aggregation_source,
+    #     )
+    
+    # def carry_bar_type(
+    #     self,
+    #     spec: BarSpecification,
+    #     aggregation_source: AggregationSource,
+    # ) -> BarType:
+    #     return BarType(
+    #         instrument_id=self.carry_contract().id,
+    #         bar_spec=spec,
+    #         aggregation_source=aggregation_source,
+    #     )
+        

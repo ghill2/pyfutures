@@ -3,7 +3,7 @@ from datetime import time
 import pandas as pd
 import pytz
 import pickle
-from pyfutures.schedule.schedule import MarketSchedule
+from pyfutures.continuous.schedule import MarketSchedule
 import datetime
 
 class TestMarketSchedule:

@@ -6,8 +6,6 @@ from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import Bar
 from pytower.data.writer import BarParquetWriter
-from ibapi.contract import Contract as IBContract
-from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pytower.data.portara import PortaraData
 from pytower.data.files import ParquetFile
 from nautilus_trader.model.data import Bar
@@ -18,15 +16,9 @@ import pytest
 import numpy as np
 import joblib
 
-
-MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
-
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
 
-def process(
-    path: Path,
-    row: dict,
-):
+def process(path: Path, row: dict) -> None:
 
     contract_month = ContractMonth(path.stem[-5:])
     aggregation = path.parent.parent.stem
@@ -39,7 +31,7 @@ def process(
         f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
     )
     
-    outfile = ParquetFile(
+    file = ParquetFile(
         parent=PER_CONTRACT_FOLDER,
         bar_type=bar_type,
         cls=Bar,
@@ -54,27 +46,53 @@ def process(
     df = PortaraData.read_dataframe(path)
     
     writer = BarParquetWriter(
-        path=outfile.path,
+        path=file.path,
         bar_type=bar_type,
         price_precision=row.base.price_precision,
         size_precision=1,
     )
     
-    print(f"Writing {bar_type} {outfile}...")
+    print(f"Writing {bar_type} {file}...")
+    
     writer.write_dataframe(df)
+    
+    # MINUTE -> HOUR
+    if path.parent.parent.stem == "MINUTE":
+        
+        df = file.read(
+            to_aggregation=(1, BarAggregation.HOUR),
+        )
+        
+        bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
+        
+        file = ParquetFile(
+            parent=PER_CONTRACT_FOLDER,
+            bar_type=bar_type,
+            cls=Bar,
+        )
+        
+        writer = BarParquetWriter(
+            path=file.path,
+            bar_type=bar_type,
+            price_precision=row.base.price_precision,
+            size_precision=1,
+        )
+        
+        print(f"Writing {bar_type} {file}...")
+        writer.write_dataframe(df)
 
 def func_gen():
     
     rows = IBTestProviderStubs.universe_rows(
-        filter=["ECO"],
+        filter=["EBM"],
     )
     
     for row in rows:
         
-        paths = set(
+        paths = list(sorted(set(
             PortaraData.get_paths(row.data_symbol, BarAggregation.DAY) \
             + PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        )
+        )))
         
         for path in paths:
             yield joblib.delayed(process)(path, row)

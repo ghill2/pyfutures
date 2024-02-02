@@ -4,73 +4,64 @@ from collections.abc import Callable
 
 import pandas as pd
 
-from nautilus_trader.common.actor import Actor
-from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
-from nautilus_trader.common.providers import InstrumentProvider
-from nautilus_trader.model.enums import BarAggregation
-from pyfutures.continuous.signal import RollSignal
+from collections import deque
+from pyfutures.continuous.actor import ChainActor
     
-class ContinuousData(Actor):
+class ContinuousData(ChainActor):
     def __init__(
         self,
         bar_type: BarType,
         chain: ContractChain,
         handler: Callable | None = None,
+        lookback: int | None = 10_000,
     ):
-        super().__init__()
-        
-        self.recv_count = 0
-        
-        self._bar_type = bar_type
-        self._chain = chain
-        self._instrument_id = bar_type.instrument_id
-        self._handler = handler
-
-    def on_bar(self, bar: Bar) -> None:
-        
-        current_bar_type = self._chain.current_bar_type(
-            spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
+        super().__init__(
+            bar_type=bar_type,
+            chain=chain,
         )
         
-        current_bar = self.cache.bar(current_bar_type)
-            
-        if bar.bar_type == current_bar_type and current_bar is not None:
-            self._send_multiple_price()
+        self.recv_count = 0
+        self.prices = deque(maxlen=lookback)
+        self._handler = handler
         
-        self.recv_count += 1
-            
-    def _send_multiple_price(self) -> None:
+    def on_bar(self, bar: Bar) -> None:
         
-        current_bar = self.cache.bar(self.current_bar_type)
-        forward_bar = self.cache.bar(self.forward_bar_type)
-        carry_bar = self.cache.bar(self.carry_bar_type)
+        current_bar = self.current_bar
+        
+        if bar.bar_type != self.current_bar_type or self.current_bar is None:
+            self.recv_count += 1
+            return
+        
+        forward_bar = self.forward_bar
+        carry_bar = self.carry_bar
         
         multiple_price = MultiplePrice(
-            bar_type=self._bar_type,
+            bar_type=self.bar_type,
             current_price=Price(current_bar.close, current_bar.close.precision),
-            current_month=self.current_contract.info["month"],
+            current_month=self._chain.current_month,
             forward_price=Price(forward_bar.close, forward_bar.close.precision)
             if forward_bar is not None
             else None,
-            forward_month=self.forward_contract.info["month"],
+            forward_month=self._chain.forward_month,
             carry_price=Price(carry_bar.close, carry_bar.close.precision)
             if carry_bar is not None
             else None,
-            carry_month=self.carry_contract.info["month"],
+            carry_month=self._chain.carry_month,
             ts_event=current_bar.ts_event,
             ts_init=current_bar.ts_init,
         )
 
         if self._handler is not None:
             self._handler(multiple_price)
+            
+        self.prices.append(multiple_price)
 
-        self._msgbus.publish(topic=f"{self._bar_type}0", msg=multiple_price)
-
+        self._msgbus.publish(topic=f"{self.bar_type}0", msg=multiple_price)
+        
+        self.recv_count += 1
     

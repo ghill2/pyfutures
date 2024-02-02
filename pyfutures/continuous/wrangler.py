@@ -1,9 +1,5 @@
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import ContinuousData
 from pytower import PACKAGE_ROOT
@@ -12,7 +8,6 @@ import pandas as pd
 from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
-from pyfutures.continuous.price import MultiplePrice
 from nautilus_trader.common.clock import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
@@ -20,21 +15,8 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
-from pytower.data.writer import MultiplePriceParquetWriter
-from pytower.data.files import ParquetFile
-from nautilus_trader.model.identifiers import Symbol
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.identifiers import Venue
-from nautilus_trader.model.data import BarType
-from pathlib import Path
 import pandas as pd
-import pytest
-import numpy as np
-import pytest
-import joblib
 from nautilus_trader.model.data import Bar
-from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.signal import RollSignal
 
 class MultiplePriceWrangler:
@@ -43,6 +25,7 @@ class MultiplePriceWrangler:
         self,
         signal: RollSignal,
         continuous_data: list[ContinuousData],
+        end_month: ContractMonth,
     ):
         
         clock = TestClock()
@@ -77,32 +60,31 @@ class MultiplePriceWrangler:
             logger,
         )
         
-        # self.instrument_id = instrument_id
-        
-        for data in continuous_data:
-            data.register_base(
+        for actor in continuous_data + [signal]:
+            actor.register_base(
                 portfolio=portfolio,
                 msgbus=msgbus,
                 cache=self.cache,
                 clock=clock,
                 logger=logger,
             )
-            data.start()
+            actor.start()
             
         data_engine.start()
         
-        self._end_month = ContractMonth("2023F")
+        self._end_month = end_month
+        self._continuous_data = continuous_data
+        self._signal = signal
         
     def process_bars(self, bars: list[Bar]):
-            
-        # process
         
+        # process
         for bar in bars:
             
             self._signal.on_bar(bar)
             
             # stop when the data module rolls to year 2024
-            current_month = self._signal.chain.current_details.current_contract.info["month"]
+            current_month = self._signal.chain.current_month
             if current_month >= self._end_month:
                 break
             
@@ -110,7 +92,6 @@ class MultiplePriceWrangler:
             
             for data in self._continuous_data:
                 data.on_bar(bar)
-                
         
         self._verify_result()
         
@@ -118,22 +99,18 @@ class MultiplePriceWrangler:
         for data in self._continuous_data:
             
             if len(data.prices) == 0:
-                raise ValueError(f"{self.instrument_id} daily len(self.prices) > 0")
+                raise ValueError(f"{data.instrument_id} daily len(self.prices) > 0")
             
             # trim prices to end month
             while data.prices[-1].current_month >= self._end_month:
                 data.prices.pop(-1)
             
             last_month = data.prices[-1].current_month
-            last_year = data.prices[-1].current_month.year
-            
-            print(f"wrangling completed: last_year: {last_year}, last_month: {last_month}")
-            
-            if last_month >= end_month:
+            if last_month >= self._end_month:
                 raise ValueError(f"last_month >= end_month for {data.instrument_id}")
             
-            if last_year != 2022:
-                raise ValueError(f"last_year != 2022 for {data.instrument_id}")
+            print(f"wrangling completed, last_month: {last_month}")
+            
             
         # if is_last:
 #     last_received = True

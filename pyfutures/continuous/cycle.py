@@ -27,9 +27,10 @@ class RollCycle:
                     RollCycleRange(
                         start_month=ContractMonth(sub.split(">")[0]),
                         end_month=ContractMonth(sub.split(">")[1].split("=")[0]),
-                        cycle=RollCycle(sub.split(">")[1].split("=")[1]),
+                        cycle=RollCycle(sub.split(">")[1].split("=")[1], skip_months=skip_months),
                     )
                 )
+            
             return RangedRollCycle(ranges=ranges)
         else:
             return RollCycle(value, skip_months=skip_months)
@@ -185,6 +186,7 @@ class RangedRollCycle:
             range1 = self._ranges[i]
             range2 = self._ranges[i + 1]
             is_between = current >= range1.end_month and current < range2.start_month
+            
             if is_between:
                 return range2.start_month
         

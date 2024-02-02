@@ -64,7 +64,7 @@ class Session:
 class IBTestProviderStubs:
     
     @staticmethod
-    def universe_dataframe(filter: list | None = None) -> pd.DataFrame:
+    def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
         file = UNIVERSE_CSV_PATH
         assert file.exists()
 
@@ -117,6 +117,9 @@ class IBTestProviderStubs:
         
         if filter is not None:
             df = df[df.trading_class.isin(filter)]
+            
+        if skip is not None:
+            df = df[~df.trading_class.isin(skip)]
         
         
         # skip rows with no data symbol
@@ -156,7 +159,7 @@ class IBTestProviderStubs:
             configs.append(
                 ContractChainConfig(
                     instrument_id=instrument_id,
-                    hold_cycle=RollCycle(row.hold_cycle, skip_months=missing_months),
+                    hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=missing_months),
                     priced_cycle=RollCycle(row.priced_cycle),
                     roll_offset=row.roll_offset,
                     approximate_expiry_offset=row.expiry_offset,
@@ -205,9 +208,13 @@ class IBTestProviderStubs:
         return df
     
     @staticmethod
-    def universe_rows(filter: list | None = None) -> list[dict]:
+    def universe_rows(
+        filter: list | None = None,
+        skip: list | None = None,
+    ) -> list[dict]:
         universe = IBTestProviderStubs.universe_dataframe(
             filter=filter,
+            skip=skip,
         )
         rows = universe.to_dict(orient="records")
         assert len(rows) > 0

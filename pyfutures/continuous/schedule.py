@@ -21,8 +21,6 @@ class MarketSchedule:
         self._timezone = timezone
 
         self._data = data
-        # self._schedule.open = self._schedule.open.dt.tz_localize(self._timezone)
-        # self._schedule.close = self._schedule.close.dt.tz_localize(self._timezone)
 
         # TODO: removes duplicates
         # TODO: check for overlapping times
@@ -30,7 +28,7 @@ class MarketSchedule:
         # TODO: check open and close are same day
         # TODO: ensure integer index
         # TODO: ensure no missing days, close days have time 00:00 to 00:00
-        # TODO: timestamps all have no timezone information before localizing
+        # TODO: no timezone information before localizing
 
     def is_open(self, now: pd.Timestamp) -> bool:
         now = now.tz_convert(self._timezone)
