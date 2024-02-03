@@ -22,6 +22,9 @@ class RollSignal(Actor):
     ):
         
         super().__init__()
+        
+        self.topic = f"{bar_type}r"
+        
         self._bar_type = bar_type
         self._chain = chain
         self._raise_expired = raise_expired
@@ -62,11 +65,19 @@ class RollSignal(Actor):
         if in_roll_window:
             
             self.msgbus.publish(
-                topic=f"{self._bar_type}r",
-                # msg=RollEvent(),
+                topic=self.topic,
+                msg=RollEvent(),
             )
             
-            
+    """
+    current position stored on chain, multiple positions for each data module
+    each roll signal has a position
+    
+    RollSignal updates ChainView to change bar types for positions in chain
+    Each RollSignal should store current position in chain.
+    get current, contract, carry bar_type from signal
+    ContractData -> RollSignal -> ContractChain
+    """
     
             
         

@@ -19,7 +19,6 @@ class ContinuousData(Actor):
         self,
         bar_type: BarType,
         chain: ContractChain,
-        signal: RollSignal,
         handler: Callable | None = None,
         lookback: int | None = 10_000,
     ):
@@ -39,38 +38,9 @@ class ContinuousData(Actor):
     def bar_type(self):
         return self._bar_type
     
-    @property
-    def current_bar_type(self) -> BarType:
-        return self._chain.current_bar_type(
-            spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-        
-    @property
-    def forward_bar_type(self) -> BarType:
-        return self._chain.forward_bar_type(
-            spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-        
-    @property
-    def carry_bar_type(self) -> BarType:
-        return self._chain.carry_bar_type(
-            spec=self._bar_type.spec,
-            aggregation_source=self._bar_type.aggregation_source,
-        )
-        
-    @property
-    def current_bar(self):
-        return self.cache.bar(self.current_bar_type)
     
-    @property
-    def forward_bar(self):
-        return self.cache.bar(self.forward_bar_type)
+        
     
-    @property
-    def carry_bar(self):
-        return self.cache.bar(self.carry_bar_type)
     
     def on_start(self) -> None:
         
