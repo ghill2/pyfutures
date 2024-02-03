@@ -5,15 +5,14 @@ from collections.abc import Callable
 import pandas as pd
 
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.price import MultiplePrice
+from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
-from collections import deque
 from pyfutures.continuous.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 
-class ContinuousData(Actor):
+class MultipleData(Actor):
     def __init__(
         self,
         bar_type: BarType,
@@ -23,19 +22,15 @@ class ContinuousData(Actor):
         
         self.bar_type = bar_type
         self.topic = f"{self.bar_type}0"
-        self._chain = chain
+        self.chain = chain
     
     def on_start(self) -> None:
         self._manage_subscriptions()
-    
-        
         
     def on_bar(self, bar: Bar) -> None:
         
-        
         is_forward_or_current = \
             (bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type)
-             
 
         if not is_forward_or_current:
             return
@@ -66,11 +61,11 @@ class ContinuousData(Actor):
         
         multiple_price: MultiplePrice = self._create_multiple_price()
         
-        current_month = self._chain.current_month
+        current_month = self.chain.current_month
         
         self._msgbus.publish(topic=self.topic, msg=multiple_price)
         
-        has_rolled = current_month != self._chain.current_month
+        has_rolled = current_month != self.chain.current_month
         if has_rolled:
             self._manage_subscriptions()
 
@@ -84,16 +79,16 @@ class ContinuousData(Actor):
             bar_type=self.bar_type,
             current_price=Price(current_bar.close, current_bar.close.precision),
             current_bar_type=self.current_bar_type,
-            current_month=self._chain.current_month,
+            current_month=self.chain.current_month,
             forward_price=Price(forward_bar.close, forward_bar.close.precision)
             if forward_bar is not None
             else None,
             forward_bar_type=self.forward_bar_type,
-            forward_month=self._chain.forward_month,
+            forward_month=self.chain.forward_month,
             carry_price=Price(carry_bar.close, carry_bar.close.precision)
             if carry_bar is not None
             else None,
-            carry_month=self._chain.carry_month,
+            carry_month=self.chain.carry_month,
             carry_bar_type=self.carry_bar_type,
             ts_event=current_bar.ts_event,
             ts_init=current_bar.ts_init,
@@ -103,9 +98,9 @@ class ContinuousData(Actor):
         
         self._log.debug("Managing subscriptions...")
         
-        current_contract = self._chain.current_contract
-        forward_contract = self._chain.forward_contract
-        carry_contract = self._chain.carry_contract
+        current_contract = self.chain.current_contract
+        forward_contract = self.chain.forward_contract
+        carry_contract = self.chain.carry_contract
         
         if self.cache.instrument(current_contract.id) is None:
             self.cache.add_instrument(current_contract)
@@ -117,25 +112,25 @@ class ContinuousData(Actor):
             self.cache.add_instrument(carry_contract)
         
         self.current_bar_type = BarType(
-            instrument_id=self._chain.current_contract.id,
+            instrument_id=self.chain.current_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
         
         self.previous_bar_type = BarType(
-            instrument_id=self._chain.previous_contract.id,
+            instrument_id=self.chain.previous_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
         
         self.forward_bar_type = BarType(
-            instrument_id=self._chain.forward_contract.id,
+            instrument_id=self.chain.forward_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
         
         self.carry_bar_type = BarType(
-            instrument_id=self._chain.carry_contract.id,
+            instrument_id=self.chain.carry_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )

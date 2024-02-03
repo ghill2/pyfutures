@@ -1,11 +1,6 @@
-
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import ContinuousData
-from pytower import PACKAGE_ROOT
+from pyfutures.continuous.data import MultipleData
 from nautilus_trader.portfolio.portfolio import Portfolio
-import pandas as pd
-from pathlib import Path
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.clock import TestClock
@@ -15,19 +10,17 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.logging import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
-import pandas as pd
 from nautilus_trader.model.data import Bar
-from pyfutures.continuous.signal import RollSignal
-from pyfutures.continuous.chain import ContractChain
+from nautilus_trader.model.data import BarType
 from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.model.identifiers import ClientId
+from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
 
 class MultiplePriceWrangler:
     
     def __init__(
         self,
-        signal: RollSignal,
-        continuous_data: list[ContinuousData],
+        continuous_data: list[MultipleData],
         end_month: ContractMonth,
     ):
         
@@ -70,8 +63,9 @@ class MultiplePriceWrangler:
         )
         
         self.data_engine.register_client(client)
-            
-        for actor in continuous_data + [signal]:
+        
+        chains = list(set([x.chain for x in continuous_data]))
+        for actor in continuous_data + chains:
             actor.register_base(
                 portfolio=portfolio,
                 msgbus=msgbus,
@@ -85,23 +79,23 @@ class MultiplePriceWrangler:
         
         self._end_month = end_month
         self._continuous_data = continuous_data
-        self._signal = signal
         
-    def process_bars(self, bars: list[Bar]):
+        self.prices = {}
+        for data in continuous_data:
+            self.prices[data.bar_type] = []
+            self.msgbus.subscribe(
+                topic=data.topic,
+                handler=self.prices[data.bar_type].append,
+            )
+        
+    def process_bars(self, bars: list[Bar]) -> dict[BarType, list[MultiplePrice]]:
         
         for bar in bars:
             
-            # stop when the data module rolls to end month
-            current_month = self._signal.chain.current_month
-            if current_month >= self._end_month:
-                break
+            if bar.bar_type.instrument_id.symbol.value.endswith(self._end_month.value):
+                continue
             
             self.data_engine.process(bar)
-            
-            # self.cache.add_bar(bar)
-            
-            # for data in self._continuous_data:
-            #     data.on_bar(bar)
         
         self._verify_result()
         
@@ -196,3 +190,11 @@ class MultiplePriceWrangler:
         #     ignore_expiry_date=True,
         #     manual_roll=True,
         # )
+        # # stop when the data module rolls to end month
+            # current_month = self._signal.chain.current_month
+            # if current_month >= self._end_month:
+            #     break
+            # self.cache.add_bar(bar)
+            
+            # for data in self._continuous_data:
+            #     data.on_bar(bar)

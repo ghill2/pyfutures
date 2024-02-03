@@ -11,7 +11,7 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import BarSpecification
 from nautilus_trader.model.enums import AggregationSource
-from pyfutures.continuous.price import MultiplePrice
+from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.common.actor import Actor
 
 class ContractChain(Actor):

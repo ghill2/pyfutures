@@ -21,7 +21,7 @@ from pytower.data.writer import QuoteTickParquetWriter
 from pytower.data.writer import MultiplePriceParquetWriter
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.price import ContinuousPrice
+from pyfutures.pyfutures.continuous.multiple_price import ContinuousPrice
 from nautilus_trader.model.objects import Price
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs

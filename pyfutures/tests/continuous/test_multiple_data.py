@@ -7,7 +7,7 @@ from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.model.data import capsule_to_list
 from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import ContinuousData
+from pyfutures.continuous.data import MultipleData
 from pyfutures import PACKAGE_ROOT
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.model.data import BarType
@@ -118,11 +118,11 @@ class TestMultipleData:
             instrument_provider=self.instrument_provider,
         )
         
-        data_d1 = ContinuousData(
+        data_d1 = MultipleData(
             bar_type=BarType.from_str("MES.IB-1-DAY-MID-EXTERNAL"),
             chain=chain,
         )
-        data_m1 = ContinuousData(
+        data_m1 = MultipleData(
             bar_type=BarType.from_str("MES.IB-1-MINUTE-MID-EXTERNAL"),
             chain=chain,
         )
@@ -170,7 +170,7 @@ class TestMultipleData:
             config=self.chain_config,
             instrument_provider=self.instrument_provider,
         )
-        data_d1 = ContinuousData(
+        data_d1 = MultipleData(
             bar_type=BarType.from_str("MES.IB-1-DAY-MID-EXTERNAL"),
             chain=chain_d1,
         )
@@ -180,7 +180,7 @@ class TestMultipleData:
             config=self.chain_config,
             instrument_provider=self.instrument_provider,
         )
-        data_m1 = ContinuousData(
+        data_m1 = MultipleData(
             bar_type=BarType.from_str("MES.IB-1-MINUTE-MID-EXTERNAL"),
             chain=chain_m1,
         )

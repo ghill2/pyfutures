@@ -15,7 +15,7 @@ from nautilus_trader.data.engine import DataEngine
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import ContinuousData
+from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import capsule_to_list
@@ -61,7 +61,7 @@ class TestContinuousData:
         chain = FuturesChain(config=config)
 
         self.bar_type = BarType.from_str("MES.IB-1-DAY-MID-EXTERNAL")
-        self.data = ContinuousData(
+        self.data = MultipleData(
             bar_type=self.bar_type,
             chain=chain,
             start_time_utc=ContractMonth("Z21"),

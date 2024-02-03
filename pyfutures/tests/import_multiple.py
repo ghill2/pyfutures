@@ -7,9 +7,9 @@ from pyfutures.continuous.signal import RollSignal
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.data import ContinuousData
+from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.enums import BarAggregation
-from pyfutures.continuous.price import MultiplePrice
+from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
 from pyfutures.data.writer import MultiplePriceParquetWriter
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import BarType
@@ -103,39 +103,35 @@ def process_row(row: dict, skip: bool = True) -> None:
         base=row.base,
     )
     chain = ContractChain(
+        bar_type=files[BarAggregation.DAY].bar_type,
         config=row.config,
         instrument_provider=instrument_provider,
-    )
-    chain.on_start()
-    
-    signal = RollSignal(
-        bar_type=files[BarAggregation.DAY].bar_type,
-        chain=chain,
         ignore_expiry_date=True,
     )
     
     continuous_data = [
-        ContinuousData(
+        MultipleData(
             bar_type=files[BarAggregation.DAY].bar_type,
             chain=chain,
-            lookback=None,
         ),
-        ContinuousData(
+        MultipleData(
             bar_type=files[BarAggregation.HOUR].bar_type,
             chain=chain,
-            lookback=None,
         ),
-        ContinuousData(
+        MultipleData(
             bar_type=files[BarAggregation.MINUTE].bar_type,
             chain=chain,
-            lookback=None,
         ),
     ]
+    
+    
+    
+    
+    
     bar_types = [data.bar_type for data in continuous_data]
     assert len(bar_types) == 3
     
     wrangler = MultiplePriceWrangler(
-        signal=signal,
         continuous_data=continuous_data,
         end_month=ContractMonth("2024F"),
     )
