@@ -3,7 +3,7 @@ from nautilus_trader.model.data import BarType
 class ChainView:
     
     def __init__(self):
-        
+        pass
     
     @property
     def current_bar(self):

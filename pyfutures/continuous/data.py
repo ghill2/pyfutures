@@ -13,11 +13,13 @@ from collections import deque
 from pyfutures.continuous.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from datetime import timedelta
+from pyfutures.continuous.signal import RollSignal
 
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
+        signal: RollSignal,
         chain: ContractChain,
         handler: Callable | None = None,
         lookback: int | None = 10_000,
@@ -29,6 +31,7 @@ class ContinuousData(Actor):
         self._bar_type = bar_type
         self._chain = chain
         self._handler = handler
+        self._signal = signal
     
     @property
     def instrument_id(self):
@@ -38,9 +41,38 @@ class ContinuousData(Actor):
     def bar_type(self):
         return self._bar_type
     
-    
+    @property
+    def current_bar_type(self) -> BarType:
+        return self._chain.current_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
+        )
         
+    @property
+    def forward_bar_type(self) -> BarType:
+        return self._chain.forward_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
+        )
+        
+    @property
+    def carry_bar_type(self) -> BarType:
+        return self._chain.carry_bar_type(
+            spec=self._bar_type.spec,
+            aggregation_source=self._bar_type.aggregation_source,
+        )
+        
+    @property
+    def current_bar(self):
+        return self.cache.bar(self.current_bar_type)
     
+    @property
+    def forward_bar(self):
+        return self.cache.bar(self.forward_bar_type)
+    
+    @property
+    def carry_bar(self):
+        return self.cache.bar(self.carry_bar_type)
     
     def on_start(self) -> None:
         
@@ -49,7 +81,7 @@ class ContinuousData(Actor):
         
         """
         self.msgbus.subscribe(
-            topic=self.signal.topic,
+            topic=f"{self._signal.topic}r",
             handler=self._manage_subscriptions,
         )
         self._manage_subscriptions()

@@ -31,6 +31,10 @@ class RollSignal(Actor):
         self._ignore_expiry_date = ignore_expiry_date
     
     @property
+    def bar_type(self) -> BarType:
+        return self._bar_type
+    
+    @property
     def chain(self) -> ContractChain:
         return self._chain
     

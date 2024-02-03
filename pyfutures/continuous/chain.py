@@ -6,7 +6,6 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import BarSpecification
 from nautilus_trader.model.enums import AggregationSource
