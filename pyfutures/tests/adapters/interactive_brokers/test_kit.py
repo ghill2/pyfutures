@@ -225,6 +225,9 @@ class IBTestProviderStubs:
         ]
         return rows
     
+    # def mes_instrument(self) -> FuturesContract:
+        
+        
     @staticmethod
     def bar_files(
         trading_class: str,

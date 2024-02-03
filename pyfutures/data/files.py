@@ -1,6 +1,6 @@
 from __future__ import annotations
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
-from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
+
 from nautilus_trader.model.data import capsule_to_list
 import os
 
@@ -147,6 +147,7 @@ class ParquetFile:
         return df
     
     def read_objects(self, nrows: int | None = None) -> pd.DataFrame:
+        
         session = DataBackendSession()
 
         if self.cls is Bar or self.cls is QuoteTick:
