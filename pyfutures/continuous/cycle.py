@@ -215,47 +215,58 @@ class RangedRollCycle:
         return RangedRollCycle(ranges=ranges)
     
     def __contains__(self, month: ContractMonth) -> bool:
-        return any(month in r for r in self.ranges)
-    
+        
+        for r in self.ranges:
+            if month in r and month in r.cycle:
+                return True
+        return False
+                
     def next_month(self, current: ContractMonth) -> ContractMonth:
         
-        # between ranges
-        for i in range(0, len(self.ranges) - 1):
-            range1 = self.ranges[i]
-            range2 = self.ranges[i + 1]
-            is_between = current >= range1.end_month and current < range2.start_month
+        for i, r in enumerate(self.ranges):
             
-            if is_between:
-                return range2.start_month
-        
-        # in ranges
-        for range_ in self.ranges:
-            if current in range_:
-                return range_.cycle.next_month(current=current)
-        
+            if i != len(self.ranges) - 1:
+                next_r = self.ranges[i + 1]
+                if current >= r.end_month and current < next_r.start_month:
+                    return next_r.start_month
+            
+            if current in r:
+                return r.cycle.next_month(current=current)
+            
         raise RuntimeError()
     
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         
-        # # between ranges
-        # for i in range(0, len(self.ranges) - 1):
-        #     range1 = self.ranges[i]
-        #     range2 = self.ranges[i + 1]
-        #     is_between = (current >= range1.end_month) \
-        #                 and current < range2.start_month
-            
-        #     if is_between:
-        #         return range1.end_month
-        
-        # in ranges
         for i, r in enumerate(self.ranges):
-            if i > 0 and r.start_month == current:
+            
+            if i > 0:
                 last = self.ranges[i - 1]
-                return last.end_month
+                if current > last.end_month and current <= r.start_month:
+                    return last.end_month
+            
             if current in r:
                 return r.cycle.previous_month(current=current)
-            if i > 0 and (current > self.ranges[i - 1].end_month) and current <= self.ranges[i].start_month:
-                return self.ranges[i - 1].end_month
+
+        raise RuntimeError()
+    
+    
+    
+# from abc import ABC, abstractmethod
+
+# class CycleIterator(ABC):
+    
+#     @abstractmethod
+#     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
+#         pass
+    
+#     @abstractmethod
+#     def next_month(self, current: ContractMonth) -> ContractMonth:
+#         pass
+    
+#     @abstractmethod
+#     def previous_month(self, current: ContractMonth) -> ContractMonth:
+#         pass
+        
         # for range_ in self.ranges:
         #     if current in range_:
         #         return range_.cycle.previous_month(current=current)
@@ -278,26 +289,15 @@ class RangedRollCycle:
             
         # is_between = all(current not in r for r in self.ranges)
         # print(is_between)
-        exit()
+        
+        # # between ranges
+        # for i in range(0, len(self.ranges) - 1):
+        #     range1 = self.ranges[i]
+        #     range2 = self.ranges[i + 1]
+        #     is_between = (current >= range1.end_month) \
+        #                 and current < range2.start_month
+            
+        #     if is_between:
+        #         return range1.end_month
+        
         # in ranges
-        
-        
-        raise RuntimeError()
-    
-    
-# from abc import ABC, abstractmethod
-
-# class CycleIterator(ABC):
-    
-#     @abstractmethod
-#     def current_month(self, timestamp: pd.Timestamp) -> ContractMonth:
-#         pass
-    
-#     @abstractmethod
-#     def next_month(self, current: ContractMonth) -> ContractMonth:
-#         pass
-    
-#     @abstractmethod
-#     def previous_month(self, current: ContractMonth) -> ContractMonth:
-#         pass
-        

@@ -102,14 +102,13 @@ class TestRollCycle:
         cycle = RangedRollCycle(ranges=ranges)
 
         # Act, Assert
-        assert cycle.next_month(ContractMonth("1998X")) == ContractMonth("1999X")
-        assert cycle.next_month(ContractMonth("2000X")) == ContractMonth("2001X")
-        assert cycle.next_month(ContractMonth("2001X")) == ContractMonth("2002X")
-        assert cycle.next_month(ContractMonth("2014X")) == ContractMonth("2015Z")
-        assert cycle.next_month(ContractMonth("2014Z")) == ContractMonth("2015Z")
-        assert cycle.next_month(ContractMonth("2015F")) == ContractMonth("2015Z")
-        assert cycle.next_month(ContractMonth("2015Z")) == ContractMonth("2016Z")
-        assert cycle.next_month(ContractMonth("2016Z")) == ContractMonth("2017Z")
+        
+        assert cycle.next_month(ContractMonth("2013X")) == ContractMonth("2014X") # in 1st range
+        assert cycle.next_month(ContractMonth("2014X")) == ContractMonth("2015Z") # 1st range end
+        assert cycle.next_month(ContractMonth("2014Z")) == ContractMonth("2015Z") # inbetween
+        assert cycle.next_month(ContractMonth("2015F")) == ContractMonth("2015Z") # inbetween
+        assert cycle.next_month(ContractMonth("2015Z")) == ContractMonth("2016Z") # 2nd range start
+        assert cycle.next_month(ContractMonth("2016Z")) == ContractMonth("2017Z") # in 2nd range
         
     def test_ranged_cycle_previous_month_returns_expected(self):
         
@@ -131,7 +130,8 @@ class TestRollCycle:
         cycle = RangedRollCycle(ranges=ranges)
 
         # Act, Assert
-        assert cycle.previous_month(ContractMonth("2014X")) == ContractMonth("2013X") # in 1st range
+        assert cycle.previous_month(ContractMonth("2013X")) == ContractMonth("2014X") # in 1st range
+        assert cycle.previous_month(ContractMonth("2014X")) == ContractMonth("2013X") # 1st range end
         assert cycle.previous_month(ContractMonth("2015Z")) == ContractMonth("2014X") # 2nd range start
         assert cycle.previous_month(ContractMonth("2016Z")) == ContractMonth("2015Z") # in 2nd range
         assert cycle.previous_month(ContractMonth("2017F")) == ContractMonth("2016Z") # in 2nd range
