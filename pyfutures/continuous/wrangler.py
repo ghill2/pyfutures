@@ -14,7 +14,8 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.model.identifiers import ClientId
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
+
 
 class MultiplePriceWrangler:
     
@@ -22,13 +23,14 @@ class MultiplePriceWrangler:
         self,
         continuous_data: list[MultipleData],
         end_month: ContractMonth,
+        debug: bool = False,
     ):
         
         clock = TestClock()
         logger = Logger(
             clock=TestClock(),
             level_stdout=LogLevel.DEBUG,
-            # bypass=True,
+            bypass=not debug,
         )
 
         msgbus = MessageBus(
@@ -65,7 +67,7 @@ class MultiplePriceWrangler:
         self.data_engine.register_client(client)
         
         chains = list(set([x.chain for x in continuous_data]))
-        for actor in continuous_data + chains:
+        for actor in chains + continuous_data:
             actor.register_base(
                 portfolio=portfolio,
                 msgbus=msgbus,
@@ -83,7 +85,7 @@ class MultiplePriceWrangler:
         self.prices = {}
         for data in continuous_data:
             self.prices[data.bar_type] = []
-            self.msgbus.subscribe(
+            msgbus.subscribe(
                 topic=data.topic,
                 handler=self.prices[data.bar_type].append,
             )
@@ -92,24 +94,27 @@ class MultiplePriceWrangler:
         
         for bar in bars:
             
-            if bar.bar_type.instrument_id.symbol.value.endswith(self._end_month.value):
-                continue
+            # month = ContractMonth(bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+            # if month >= self._end_month:
+            #     continue
             
             self.data_engine.process(bar)
         
         self._verify_result()
         
+        return self.prices
+        
     def _verify_result(self) -> None:
         for data in self._continuous_data:
             
-            if len(data.prices) == 0:
+            if len(self.prices[data.bar_type]) == 0:
                 raise ValueError(f"{data.instrument_id} daily len(self.prices) > 0")
             
             # trim prices to end month
-            while data.prices[-1].current_month >= self._end_month:
-                data.prices.pop(-1)
+            while self.prices[data.bar_type][-1].current_month >= self._end_month:
+                self.prices[data.bar_type].pop(-1)
             
-            last_month = data.prices[-1].current_month
+            last_month = self.prices[data.bar_type][-1].current_month
             if last_month >= self._end_month:
                 raise ValueError(f"last_month >= end_month for {data.instrument_id}")
             

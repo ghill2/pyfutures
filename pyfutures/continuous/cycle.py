@@ -12,26 +12,14 @@ class RollCycle:
         
         self._skip_months = skip_months or []
     
-    @classmethod
+    @staticmethod
     def from_str(
-        cls,
         value: str,
         skip_months: list[str] | None = None,
     ) -> RollCycle | RangedRollCycle:
         
-        ranges = []
         if ">" in value:
-            subs = value.replace("", "").split(",")
-            for sub in subs:
-                ranges.append(
-                    RollCycleRange(
-                        start_month=ContractMonth(sub.split(">")[0]),
-                        end_month=ContractMonth(sub.split(">")[1].split("=")[0]),
-                        cycle=RollCycle(sub.split(">")[1].split("=")[1], skip_months=skip_months),
-                    )
-                )
-            
-            return RangedRollCycle(ranges=ranges)
+            return RangedRollCycle.from_str(value)
         else:
             return RollCycle(value, skip_months=skip_months)
             
@@ -127,6 +115,8 @@ class RollCycle:
         return len(self.value)
 
     def __eq__(self, other):
+        if not isinstance(other, RollCycle):
+            return False
         return self.value == other.value
 
     def __str__(self) -> str:
@@ -159,45 +149,126 @@ class RollCycle:
 @dataclass
 class RollCycleRange:
     
-    start_month: ContractMonth
-    end_month: ContractMonth
+    start_month: ContractMonth | None
+    end_month: ContractMonth | None
     cycle: RollCycle
     
     def __contains__(self, month: ContractMonth) -> bool:
-        return (month >= self.start_month) and (month <= self.end_month)
+        return (self.start_month is None or month >= self.start_month) \
+                and (self.end_month is None or month <= self.end_month)
     
+    
+@dataclass
 class RangedRollCycle:
-    def __init__(self, ranges: list[RollCycleRange]):
+    
+    # TODO: check ranges are not overlapping
+    # TODO: check no gap between ranges
+    # TODO: check start range can only have None start_month
+    # TODO: check end range can only have None end_month
+    
+    ranges: list[RollCycleRange]
+    
+    @staticmethod
+    def from_str(
+        value: str,
+        skip_months: list[str] | None = None,
+    ) -> RangedRollCycle:
         
-        # TODO: check ranges are not overlapping
-        # TODO: check no gap between ranges
-        self._ranges = ranges
+        parts = value.strip().replace("", "").split(",")
+        assert len(parts) >= 2
+        
+        # parse start
+        value = parts.pop(0)
+        ranges = [
+            RollCycleRange(
+                start_month=None,
+                end_month=ContractMonth(value.split("=")[0]),
+                cycle=RollCycle(value.split("=")[1], skip_months=skip_months),
+            )
+        ]
+        
+        # parse start
+        value = parts.pop(-1)
+        ranges.append(
+            RollCycleRange(
+                start_month=ContractMonth(value.split("=")[0]),
+                end_month=None,
+                cycle=RollCycle(value.split("=")[1], skip_months=skip_months),
+            )
+        )
+        
+        # parse mid
+        if len(parts) > 1:
+            for value in parts:
+                ranges.insert(
+                    1,
+                    RollCycleRange(
+                        start_month=ContractMonth(value.split(">")[0]),
+                        end_month=ContractMonth(value.split(">")[1].split("=")[0]),
+                        cycle=RollCycle(value.split(">")[1].split("=")[1], skip_months=skip_months),
+                    ),
+                )
+        
+        return RangedRollCycle(ranges=ranges)
     
     def __contains__(self, month: ContractMonth) -> bool:
-        for range in self._ranges:
-            if month in range:
-                return True
-        return False
+        return any(month in r for r in self.ranges)
     
     def next_month(self, current: ContractMonth) -> ContractMonth:
         
         # between ranges
-        for i in range(0, len(self._ranges) - 1):
-            range1 = self._ranges[i]
-            range2 = self._ranges[i + 1]
+        for i in range(0, len(self.ranges) - 1):
+            range1 = self.ranges[i]
+            range2 = self.ranges[i + 1]
             is_between = current >= range1.end_month and current < range2.start_month
             
             if is_between:
                 return range2.start_month
         
         # in ranges
-        for range_ in self._ranges:
+        for range_ in self.ranges:
             if current in range_:
                 return range_.cycle.next_month(current=current)
         
         raise RuntimeError()
-            
+    
+    def previous_month(self, current: ContractMonth) -> ContractMonth:
         
+        # between ranges
+        for i in range(0, len(self.ranges) - 1):
+            range1 = self.ranges[i]
+            range2 = self.ranges[i + 1]
+            is_between = (current >= range1.end_month) \
+                        and current < range2.start_month
+            
+            if is_between:
+                return range1.end_month
+            
+        is_between = current not in self
+        if is_between:
+            r = [
+                r for r in self.ranges
+                if r.end_month <= current
+            ][-1]
+            return r.end_month
+        else:
+            r = [
+                r for r in self.ranges
+                if r.end_month <= current
+            ][-1]
+            return r.end_month
+            
+        # is_between = all(current not in r for r in self.ranges)
+        # print(is_between)
+        exit()
+        # in ranges
+        for range_ in self.ranges:
+            if current in range_:
+                return range_.cycle.previous_month(current=current)
+        
+        raise RuntimeError()
+    
+    
 # from abc import ABC, abstractmethod
 
 # class CycleIterator(ABC):

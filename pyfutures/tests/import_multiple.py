@@ -3,13 +3,12 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 from pyfutures.continuous.wrangler import MultiplePriceWrangler
 from nautilus_trader.model.enums import bar_aggregation_to_str
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.signal import RollSignal
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.enums import BarAggregation
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
 from pyfutures.data.writer import MultiplePriceParquetWriter
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import BarType
@@ -28,15 +27,20 @@ def load_bars(row: dict) -> list[Bar]:
     
     # read minute bars
     files = IBTestProviderStubs.bar_files(
-        row.trading_class, BarAggregation.MINUTE,
+        row.trading_class,
+        row.symbol,
+        BarAggregation.MINUTE,
     )
+    
     print(f"Reading minute bars... {len(files)} files")
     for file in files:
         bars.extend(file.read_objects())
         
     # read hourly bars
     files = IBTestProviderStubs.bar_files(
-        row.trading_class, BarAggregation.HOUR,
+        row.trading_class,
+        row.symbol,
+        BarAggregation.HOUR,
     )
     print(f"Reading hourly bars... {len(files)} files")
     for file in files:
@@ -44,8 +48,11 @@ def load_bars(row: dict) -> list[Bar]:
     
     # read daily bars
     files = IBTestProviderStubs.bar_files(
-        row.trading_class, BarAggregation.DAY,
+        row.trading_class,
+        row.symbol,
+        BarAggregation.DAY,
     )
+    
     print(f"Reading daily bars... {len(files)} files")
     for file in files:
         df = file.read(timestamp_delta=(row.settlement_time, row.timezone))
@@ -71,7 +78,7 @@ def load_bars(row: dict) -> list[Bar]:
     print(f"{len(bars)} bars")
     return bars
 
-def process_row(row: dict, skip: bool = True) -> None:
+def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
     
     print(f"Processing {row.trading_class}")
     
@@ -124,21 +131,18 @@ def process_row(row: dict, skip: bool = True) -> None:
         ),
     ]
     
-    
-    
-    
-    
     bar_types = [data.bar_type for data in continuous_data]
     assert len(bar_types) == 3
     
     wrangler = MultiplePriceWrangler(
         continuous_data=continuous_data,
         end_month=ContractMonth("2024F"),
+        debug=debug,
     )
     
     bars = load_bars(row)
     
-    wrangler.process_bars(bars)
+    prices = wrangler.process_bars(bars)
     
     bar_types = [data.bar_type for data in continuous_data]
     assert len(bar_types) == 3
@@ -149,9 +153,11 @@ def process_row(row: dict, skip: bool = True) -> None:
         file = files[aggregation]
         path = str(file.path)
         writer = MultiplePriceParquetWriter(path=path)
-        prices = list(data.prices)
         
-        if data.prices[-1].current_month.year != 2023:
+        prices_ = prices[data.bar_type]
+        
+        end_year = prices_[-1].current_month.year
+        if end_year != 2023:
             print(
                 f"data.prices[-1].current_month.year != 2023 {row.symbol}"
             )
@@ -159,25 +165,29 @@ def process_row(row: dict, skip: bool = True) -> None:
         
         print(
             f"Writing {bar_aggregation_to_str(aggregation)} prices... "
-            f"{len(prices)} items {path}"
+            f"{len(prices_)} items {path}"
         )
-        writer.write_objects(data=prices)
+        # write parquet
+        writer.write_objects(data=prices_)
         
+        # write csv
         path = file.path.with_suffix(".csv")
-        df = MultiplePriceParquetWriter.to_table(data=prices).to_pandas()
+        df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
         df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
         df.to_csv(path, index=False)
     
 if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
-        filter=["ECO"],
-        # skip=["167", "06", "NIFTY"],
+        # filter=["EBM"],
+        skip=[
+            "EBM",
+        ],
             
     )
     
     results = joblib.Parallel(n_jobs=10, backend="loky")(
-        joblib.delayed(process_row)(row, skip=False) for row in rows
+        joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows
     )
 
     # # need carry price bars too

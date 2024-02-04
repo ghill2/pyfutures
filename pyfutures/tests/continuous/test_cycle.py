@@ -87,14 +87,14 @@ class TestRollCycle:
         # Arrange
         ranges = [
             RollCycleRange(
-                start_month=ContractMonth("1998X"),
+                start_month=None,
                 end_month=ContractMonth("2014X"),
                 cycle=RollCycle("X")
                 
             ),
             RollCycleRange(
                 start_month=ContractMonth("2015Z"),
-                end_month=ContractMonth("2025Z"),
+                end_month=None,
                 cycle=RollCycle("Z")
                 
             ),
@@ -110,6 +110,63 @@ class TestRollCycle:
         assert cycle.next_month(ContractMonth("2015F")) == ContractMonth("2015Z")
         assert cycle.next_month(ContractMonth("2015Z")) == ContractMonth("2016Z")
         assert cycle.next_month(ContractMonth("2016Z")) == ContractMonth("2017Z")
+        
+    def test_ranged_cycle_previous_month_returns_expected(self):
+        
+        # Arrange
+        ranges = [
+            RollCycleRange(
+                start_month=None,
+                end_month=ContractMonth("2014X"),
+                cycle=RollCycle("X")
+                
+            ),
+            RollCycleRange(
+                start_month=ContractMonth("2015Z"),
+                end_month=None,
+                cycle=RollCycle("Z")
+                
+            ),
+        ]
+        cycle = RangedRollCycle(ranges=ranges)
+
+        # Act, Assert
+        # assert cycle.previous_month(ContractMonth("2025Z")) == ContractMonth("2024Z")
+        # assert cycle.previous_month(ContractMonth("2016Z")) == ContractMonth("2015Z")
+        assert cycle.previous_month(ContractMonth("2015Z")) == ContractMonth("2014X")
+        
+        # assert cycle.previous_month(ContractMonth("2014X")) == ContractMonth("2013X")
+        # assert cycle.previous_month(ContractMonth("2014Z")) == ContractMonth("2014X")
+        # assert cycle.previous_month(ContractMonth("2015F")) == ContractMonth("2014X")
+        
+        # assert cycle.previous_month(ContractMonth("1999X")) == ContractMonth("1998X")
+        
+        # assert cycle.next_month(ContractMonth("1998X")) == ContractMonth("1999X")
+        # assert cycle.next_month(ContractMonth("2000X")) == ContractMonth("2001X")
+        # assert cycle.next_month(ContractMonth("2001X")) == ContractMonth("2002X")
+        # assert cycle.next_month(ContractMonth("2014X")) == ContractMonth("2015Z")
+        # assert cycle.next_month(ContractMonth("2014Z")) == ContractMonth("2015Z")
+        # assert cycle.next_month(ContractMonth("2015F")) == ContractMonth("2015Z")
+        # assert cycle.next_month(ContractMonth("2015Z")) == ContractMonth("2016Z")
+        # assert cycle.next_month(ContractMonth("2016Z")) == ContractMonth("2017Z")
+    
+    def test_ranged_roll_cycle_from_str(self):
+        value = "2014X=X,2015Z=Z"
+        
+        cycle = RangedRollCycle.from_str(value)
+        
+        assert cycle.ranges == [
+            RollCycleRange(
+                start_month=None,
+                end_month=ContractMonth("2014X"),
+                cycle=RollCycle("X"),
+            ),
+            RollCycleRange(
+                start_month=ContractMonth("2015Z"),
+                end_month=None,
+                cycle=RollCycle("Z"),
+            )
+        ]
         
     def test_cycle_pickle(self):
         

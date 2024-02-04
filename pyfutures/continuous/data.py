@@ -5,12 +5,14 @@ from collections.abc import Callable
 import pandas as pd
 
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
 from pyfutures.continuous.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
+from pyfutures.continuous.chain import RollEvent
+from nautilus_trader.model.enums import BarAggregation
 
 class MultipleData(Actor):
     def __init__(
@@ -21,12 +23,25 @@ class MultipleData(Actor):
         super().__init__()
         
         self.bar_type = bar_type
+        self.instrument_id = bar_type.instrument_id
         self.topic = f"{self.bar_type}0"
         self.chain = chain
     
     def on_start(self) -> None:
-        self._manage_subscriptions()
         
+        
+        self.msgbus.subscribe(
+            topic="events.roll",
+            handler=self._handle_roll_event,
+            # TODO determine priority
+        )
+        
+        self._manage_subscriptions()
+    
+    def _handle_roll_event(self, event: RollEvent) -> None:
+        if event.bar_type == self.chain.bar_type:
+            self._manage_subscriptions()
+            
     def on_bar(self, bar: Bar) -> None:
         
         is_forward_or_current = \
@@ -39,15 +54,15 @@ class MultipleData(Actor):
         forward_bar = self.cache.bar(self.forward_bar_type)
         
         # # for debugging
-        # if "MINUTE" in str(self.bar_type) and self._chain.current_month.value == "1998M":
+        # if "DAY" in str(self.bar_type) and self.chain.current_month.value == "2008M":
         #     # self._log.debug(repr(bar))
         #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
         #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
-        #     self._log.debug(
-        #         f"{self._chain.current_month.value} {current_timestamp_str} "
-        #         f"{self._chain.forward_month.value} {forward_timestamp_str} "
-        #         f"{str(self._chain.roll_date)[:-15]} "
-        #         f"{str(self._chain.expiry_date)[:-15]} "
+        #     print(
+        #         f"{self.chain.current_month.value} {current_timestamp_str} "
+        #         f"{self.chain.forward_month.value} {forward_timestamp_str} "
+        #         f"{str(self.chain.roll_date)[:-15]} "
+        #         f"{str(self.chain.expiry_date)[:-15]} "
         #     )
 
         if current_bar is None or forward_bar is None:
@@ -61,14 +76,8 @@ class MultipleData(Actor):
         
         multiple_price: MultiplePrice = self._create_multiple_price()
         
-        current_month = self.chain.current_month
-        
         self._msgbus.publish(topic=self.topic, msg=multiple_price)
         
-        has_rolled = current_month != self.chain.current_month
-        if has_rolled:
-            self._manage_subscriptions()
-
     def _create_multiple_price(self) -> MultiplePrice:
         
         carry_bar = self.cache.bar(self.carry_bar_type)

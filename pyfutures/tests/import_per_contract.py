@@ -6,7 +6,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import Bar
 from pyfutures.data.writer import BarParquetWriter
-from pyfutures.pyfutures.data.portara import PortaraData
+from pyfutures.data.portara import PortaraData
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import Bar
 
@@ -84,7 +84,7 @@ def process(path: Path, row: dict) -> None:
 def func_gen():
     
     rows = IBTestProviderStubs.universe_rows(
-        filter=["EBM"],
+        # filter=["EBM"],
     )
     
     for row in rows:

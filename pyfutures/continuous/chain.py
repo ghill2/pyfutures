@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
 
@@ -9,11 +10,13 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import BarSpecification
-from nautilus_trader.model.enums import AggregationSource
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.common.actor import Actor
 
+@dataclass
+class RollEvent:
+    bar_type: BarType
+            
 class ContractChain(Actor):
     def __init__(
         self,
@@ -27,13 +30,15 @@ class ContractChain(Actor):
         super().__init__()
         
         self.hold_cycle = config.hold_cycle
+        self.bar_type = bar_type
+        self.topic = f"{self.bar_type}r"
         
         self._roll_offset = config.roll_offset
         self._instrument_id = InstrumentId.from_str(str(config.instrument_id))
         self._carry_offset = config.carry_offset
         self._priced_cycle = config.priced_cycle
         self._start_month = config.start_month
-        self._bar_type = bar_type
+        
         self._instrument_provider = instrument_provider
         
         assert self._roll_offset <= 0
@@ -66,7 +71,7 @@ class ContractChain(Actor):
         
         
         self.msgbus.subscribe(
-            topic=f"{self._bar_type}0",
+            topic=f"{self.bar_type}0",
             handler=self.on_multiple_price,
             # TODO determine priority
         )
@@ -80,7 +85,7 @@ class ContractChain(Actor):
         if not self._ignore_expiry_date:
             is_expired = current_timestamp >= (expiry_day + pd.Timedelta(days=1))
             if is_expired and self._raise_expired:
-                raise ValueError(f"ContractExpired {self._bar_type}")
+                raise ValueError(f"ContractExpired {self.bar_type}")
         
         if self._ignore_expiry_date:
             in_roll_window = (current_timestamp >= roll_date)
@@ -103,7 +108,6 @@ class ContractChain(Actor):
         
         self._log.debug(f"Rolling to month {to_month}...")
         
-        
         self.current_month: ContractMonth = to_month
         self.previous_month: ContractMonth = self.hold_cycle.previous_month(self.current_month)
         self.forward_month: ContractMonth = self.hold_cycle.next_month(self.current_month)
@@ -123,7 +127,13 @@ class ContractChain(Actor):
         
         # TODO: factor in the trading calendar
         self.roll_date: pd.Timestamp = self.expiry_date + pd.Timedelta(days=self._roll_offset)
-    
+        
+        self.msgbus.publish(
+            topic="events.roll",
+            msg=RollEvent(bar_type=self.bar_type),
+            # TODO determine priority
+        )
+        
     def _fetch_contract(self, month: ContractMonth) -> FuturesContract:
         if self._instrument_provider.get_contract(self._instrument_id, month) is None:
             self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)

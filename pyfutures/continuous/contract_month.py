@@ -67,6 +67,8 @@ class ContractMonth:
         return hash(self.value)
 
     def __eq__(self, other) -> bool:
+        if not isinstance(other, ContractMonth):
+            return False
         return self.value == other.value
 
     def __repr__(self) -> str:

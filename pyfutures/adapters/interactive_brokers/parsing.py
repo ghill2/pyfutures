@@ -136,16 +136,16 @@ def _format_instrument_id(
     exchange: str,
     contractMonth: str,
 ) -> InstrumentId:
-    symbol = symbol.replace(".", "_")
-    trading_class = tradingClass.replace(".", "_")
-    exchange = exchange.replace(".", "_")
+    symbol = symbol.replace(".", ",")
+    trading_class = tradingClass.replace(".", ",")
+    exchange = exchange.replace(".", ",")
     month = str(ContractMonth.from_int(int(contractMonth)))
     return InstrumentId.from_str(f"{symbol}-{trading_class}={month}.{exchange}")
 
 def _desanitize_str(value: str):
     return value.replace("_", ".")
     
-def _create_contract(
+def create_contract(
     trading_class: str,
     symbol: str,
     venue: str,
@@ -162,7 +162,7 @@ def _create_contract(
     return contract
 
 def row_to_contract(row) -> IBContract:
-    return _create_contract(
+    return create_contract(
         trading_class=row.trading_class,
         symbol=row.symbol,
         venue=row.exchange,
@@ -172,7 +172,7 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     
     symbol, trading_class = tuple(instrument_id.symbol.value.split("=")[0].split("-"))
     
-    contract: IBContract = _create_contract(
+    contract: IBContract = create_contract(
         symbol=symbol,
         trading_class=trading_class,
         venue=instrument_id.venue.value,
@@ -192,9 +192,9 @@ def contract_id_to_contract(instrument_id: InstrumentId) -> IBContract:
 
     contract = IBContract()
 
-    contract.symbol = symbol.replace("_", ".")
-    contract.exchange = exchange.replace("_", ".")
-    contract.tradingClass = trading_class.replace("_", ".")
+    contract.symbol = symbol.replace(",", ".")
+    contract.exchange = exchange.replace(",", ".")
+    contract.tradingClass = trading_class.replace(",", ".")
     contract.lastTradeDateOrContractMonth = str(ContractMonth.from_str(contract_month).to_int())
     contract.includeExpired = False
     contract.secType = "FUT"

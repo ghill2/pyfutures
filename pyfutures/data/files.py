@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 import pyarrow.parquet as pq
-
+from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.model.data import BarAggregation
 from nautilus_trader.model.data import DataType
 from nautilus_trader.model.data import Bar
@@ -28,7 +28,7 @@ from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer

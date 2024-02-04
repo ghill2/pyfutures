@@ -1,6 +1,6 @@
 import json
 import pathlib
-
+from datetime import time
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesContract
 from datetime import datetime
@@ -10,6 +10,7 @@ from pathlib import Path
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from pytz import timezone
+from pyfutures.adapters.interactive_brokers.parsing import create_contract
 
 from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
@@ -22,6 +23,7 @@ from nautilus_trader.model.objects import Price
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.objects import Currency
 from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.schedule import MarketSchedule
 from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Currency
@@ -69,6 +71,7 @@ class IBTestProviderStubs:
         assert file.exists()
 
         dtype = {
+            "uname": str,
             "tradingClass": str,
             "symbol": str,
             "exchange": str,
@@ -101,9 +104,9 @@ class IBTestProviderStubs:
             "region": str,
             "ib_url": str,
             "ex_url": str,
-            "comments": str,
             "open": str,
             "close": str,
+            "comments": str,
         }
         df = pd.read_csv(file, dtype=dtype)
         
@@ -146,9 +149,13 @@ class IBTestProviderStubs:
                 
         configs = []
         bases = []
+        contracts = []
+        instrument_ids = []
+        liquid_schedules = []
         for row in df.itertuples():
             
             instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
+            instrument_ids.append(instrument_id)
             
             # parse config
             missing_months = row.missing_months.replace(" ", "").split(",") \
@@ -172,12 +179,11 @@ class IBTestProviderStubs:
             # parse base contract
             price_precision = len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1])
             
-            
             bases.append(
                 FuturesContract(
                     instrument_id=instrument_id,
                     raw_symbol=instrument_id.symbol,
-                    asset_class=AssetClass.ENERGY,
+                    asset_class=AssetClass.COMMODITY,
                     currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
                     price_precision=price_precision,
                     price_increment=Price(row.min_tick * row.price_magnifier, price_precision),
@@ -191,10 +197,43 @@ class IBTestProviderStubs:
                 )
             )
             
-                
+            # parse contract
+            contracts.append(
+                create_contract(
+                    trading_class=row.trading_class,
+                    symbol=row.symbol,
+                    venue=row.exchange,
+                )
+            )
+            
+            # parse liquid schedule
+            # 08:30-13:20
+            for value in row.liquid_hours_local.replace(" ", "").split(","):
+                start, end = tuple(value.split("-"))
+                start_hour, start_minutes = tuple(start.split(":"))
+                end_hour, end_minutes = tuple(end.split(":"))
+            data = pd.DataFrame(columns=["dayofweek", "open", "close"])
+            for dayofweek in range(5):
+                # create dataframe
+                data.loc[len(data)] = {
+                    "dayofweek": dayofweek,
+                    "open": time(int(start_hour), int(start_minutes)),
+                    "close": time(int(end_hour), int(end_minutes)),
+                }
+                    
+            liquid_schedules.append(
+                MarketSchedule(
+                    name=str(instrument_id),
+                    data=data,
+                    timezone=row.timezone,
+                ),
+            )
+        
+        df["instrument_id"] = instrument_ids
         df["config"] = configs
         df["base"] = bases
-        
+        df["contract"] = contracts
+        df["liquid_schedule"] = liquid_schedules
         
         # parse settlement time
         remove = [
@@ -216,6 +255,7 @@ class IBTestProviderStubs:
             filter=filter,
             skip=skip,
         )
+        
         rows = universe.to_dict(orient="records")
         assert len(rows) > 0
         
@@ -231,12 +271,13 @@ class IBTestProviderStubs:
     @staticmethod
     def bar_files(
         trading_class: str,
+        symbol: str,
         aggregation: BarAggregation,
         month: str | None = None,
     ) -> list[ParquetFile]:
         aggregation = bar_aggregation_to_str(aggregation)
         month = month or "*"
-        glob_str = f"{trading_class}*={month}.IB-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}_{symbol}={month}.IB-1-{aggregation}-MID*.parquet"
         print(glob_str)
         paths = list(PER_CONTRACT_FOLDER.glob(glob_str))
         paths = list(sorted(paths))
@@ -251,7 +292,7 @@ class IBTestProviderStubs:
     ) -> list[ParquetFile]:
         aggregation = bar_aggregation_to_str(aggregation)
         month = month or "*"
-        glob_str = f"{trading_class}*={month}.IB-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}={month}.IB-1-{aggregation}-MID*.parquet"
         print(glob_str)
         paths = list(ADJUSTED_PRICES_FOLDER.glob(glob_str))
         paths = list(sorted(paths))
