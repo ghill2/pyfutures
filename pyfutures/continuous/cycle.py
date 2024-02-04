@@ -165,6 +165,9 @@ class RangedRollCycle:
     # TODO: check no gap between ranges
     # TODO: check start range can only have None start_month
     # TODO: check end range can only have None end_month
+    # TODO: start end can't be the same
+    # TODO first range needs start month as None
+    # TODO last range needs end month as None
     
     ranges: list[RollCycleRange]
     
@@ -234,37 +237,50 @@ class RangedRollCycle:
     
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         
-        # between ranges
-        for i in range(0, len(self.ranges) - 1):
-            range1 = self.ranges[i]
-            range2 = self.ranges[i + 1]
-            is_between = (current >= range1.end_month) \
-                        and current < range2.start_month
+        # # between ranges
+        # for i in range(0, len(self.ranges) - 1):
+        #     range1 = self.ranges[i]
+        #     range2 = self.ranges[i + 1]
+        #     is_between = (current >= range1.end_month) \
+        #                 and current < range2.start_month
             
-            if is_between:
-                return range1.end_month
-            
-        is_between = current not in self
-        if is_between:
-            r = [
-                r for r in self.ranges
-                if r.end_month <= current
-            ][-1]
-            return r.end_month
-        else:
-            r = [
-                r for r in self.ranges
-                if r.end_month <= current
-            ][-1]
-            return r.end_month
+        #     if is_between:
+        #         return range1.end_month
+        
+        # in ranges
+        for i, r in enumerate(self.ranges):
+            if i > 0 and r.start_month == current:
+                last = self.ranges[i - 1]
+                return last.end_month
+            if current in r:
+                return r.cycle.previous_month(current=current)
+            if i > 0 and (current > self.ranges[i - 1].end_month) and current <= self.ranges[i].start_month:
+                return self.ranges[i - 1].end_month
+        # for range_ in self.ranges:
+        #     if current in range_:
+        #         return range_.cycle.previous_month(current=current)
+                    
+        # is_between = current not in self
+        # if is_between:
+        #     r = [
+        #         r for r in self.ranges
+        #         if r.end_month <= current
+        #     ][-1]
+        #     return r.end_month
+        # else:
+        #     r = [
+        #         r for r in self.ranges
+        #         if r.end_month is None or r.end_month <= current
+        #     ][-1]
+        #     print(r)
+        #     exit()
+        #     return r.end_month
             
         # is_between = all(current not in r for r in self.ranges)
         # print(is_between)
         exit()
         # in ranges
-        for range_ in self.ranges:
-            if current in range_:
-                return range_.cycle.previous_month(current=current)
+        
         
         raise RuntimeError()
     

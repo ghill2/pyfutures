@@ -180,11 +180,12 @@ if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
         # filter=["EBM"],
-        skip=[
-            "EBM",
-        ],
+        # skip=[
+        #     "EBM",
+        # ],
             
     )
+    exit()
     
     results = joblib.Parallel(n_jobs=10, backend="loky")(
         joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows

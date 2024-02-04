@@ -131,16 +131,19 @@ class TestRollCycle:
         cycle = RangedRollCycle(ranges=ranges)
 
         # Act, Assert
+        assert cycle.previous_month(ContractMonth("2014X")) == ContractMonth("2013X") # in 1st range
+        assert cycle.previous_month(ContractMonth("2015Z")) == ContractMonth("2014X") # 2nd range start
+        assert cycle.previous_month(ContractMonth("2016Z")) == ContractMonth("2015Z") # in 2nd range
+        assert cycle.previous_month(ContractMonth("2017F")) == ContractMonth("2016Z") # in 2nd range
+        assert cycle.previous_month(ContractMonth("2015X")) == ContractMonth("2014X") # inbetween
+        
+        
+        
         # assert cycle.previous_month(ContractMonth("2025Z")) == ContractMonth("2024Z")
         # assert cycle.previous_month(ContractMonth("2016Z")) == ContractMonth("2015Z")
-        assert cycle.previous_month(ContractMonth("2015Z")) == ContractMonth("2014X")
-        
-        # assert cycle.previous_month(ContractMonth("2014X")) == ContractMonth("2013X")
         # assert cycle.previous_month(ContractMonth("2014Z")) == ContractMonth("2014X")
         # assert cycle.previous_month(ContractMonth("2015F")) == ContractMonth("2014X")
-        
         # assert cycle.previous_month(ContractMonth("1999X")) == ContractMonth("1998X")
-        
         # assert cycle.next_month(ContractMonth("1998X")) == ContractMonth("1999X")
         # assert cycle.next_month(ContractMonth("2000X")) == ContractMonth("2001X")
         # assert cycle.next_month(ContractMonth("2001X")) == ContractMonth("2002X")
