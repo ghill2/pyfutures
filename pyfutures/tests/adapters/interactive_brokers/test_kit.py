@@ -237,8 +237,8 @@ class IBTestProviderStubs:
         
         # parse settlement time
         remove = [
-            "comments", "open", "close", "ex_url", "ib_url", "sector", "sub_sector", "ex_symbol",
-            "description", "region", "session", "hours_last_edited", "data_start", "data_end",
+            "comments", "open", "close", "ex_url", "ib_url", "ex_symbol",
+            "description", "session", "hours_last_edited", "data_start", "data_end",
             "data_completes", "minute_transition", "price_magnifier", "min_tick", "multiplier",
             "missing_months", "hold_cycle", "priced_cycle", "roll_offset", "expiry_offset", "carry_offset",
         ]
@@ -288,17 +288,17 @@ class IBTestProviderStubs:
     @staticmethod
     def adjusted_file(
         trading_class: str,
+        symbol: str,
         aggregation: BarAggregation,
-    ) -> list[ParquetFile]:
+    ) -> ParquetFile:
         aggregation = bar_aggregation_to_str(aggregation)
-        month = month or "*"
-        glob_str = f"{trading_class}={month}.IB-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}_{symbol}.IB-1-{aggregation}-MID*.parquet"
         print(glob_str)
         paths = list(ADJUSTED_PRICES_FOLDER.glob(glob_str))
         paths = list(sorted(paths))
         files = list(map(ParquetFile.from_path, paths))
-        assert len(files) > 0
-        return files
+        assert len(files) == 1
+        return files[0]
         
     @classmethod
     def universe_future_chains(cls) -> list[ContractChain]:

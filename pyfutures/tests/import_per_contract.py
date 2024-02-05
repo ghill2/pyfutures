@@ -12,7 +12,6 @@ from nautilus_trader.model.data import Bar
 
 from pathlib import Path
 import pandas as pd
-import pytest
 import numpy as np
 import joblib
 
@@ -23,26 +22,14 @@ def process(path: Path, row: dict) -> None:
     contract_month = ContractMonth(path.stem[-5:])
     aggregation = path.parent.parent.stem
     instrument_id = InstrumentId(
-        symbol=Symbol(row.base.id.symbol.value + "=" + contract_month.value),
-        venue=row.base.id.venue,
+        symbol=Symbol(row.instrument_id.symbol.value + "=" + contract_month.value),
+        venue=row.instrument_id.venue,
     )
 
     bar_type = BarType.from_str(
         f"{instrument_id}-1-{aggregation}-MID-EXTERNAL"
     )
-    
-    file = ParquetFile(
-        parent=PER_CONTRACT_FOLDER,
-        bar_type=bar_type,
-        cls=Bar,
-    )
 
-    # if outfile.path.exists():
-    #     print(f"Skipping {path}...")
-    #     return
-    # else:
-    #     print(f"Importing {path}...")
-    
     df = PortaraData.read_dataframe(path)
     
     writer = BarParquetWriter(
@@ -52,6 +39,11 @@ def process(path: Path, row: dict) -> None:
         size_precision=1,
     )
     
+    file = ParquetFile(
+        parent=PER_CONTRACT_FOLDER,
+        bar_type=bar_type,
+        cls=Bar,
+    )
     print(f"Writing {bar_type} {file}...")
     
     writer.write_dataframe(df)
@@ -84,7 +76,7 @@ def process(path: Path, row: dict) -> None:
 def func_gen():
     
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["EBM"],
+        filter=["EBM"],
     )
     
     for row in rows:

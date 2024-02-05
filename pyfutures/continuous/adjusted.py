@@ -1,5 +1,5 @@
 import pandas as pd
-from pyfutures.pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_price import MultiplePrice
 from collections import deque
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType

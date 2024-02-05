@@ -82,21 +82,21 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
     
     print(f"Processing {row.trading_class}")
     
-    instrument_id = row.base.id
+    
     files = {
         BarAggregation.DAY: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL"),
+            bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
             cls=MultiplePrice,
         ),
         BarAggregation.HOUR: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{instrument_id}-1-HOUR-MID-EXTERNAL"),
+            bar_type=BarType.from_str(f"{row.instrument_id}-1-HOUR-MID-EXTERNAL"),
             cls=MultiplePrice,
         ),
         BarAggregation.MINUTE: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{instrument_id}-1-MINUTE-MID-EXTERNAL"),
+            bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
             cls=MultiplePrice,
         ),
     }
@@ -185,9 +185,8 @@ if __name__ == "__main__":
         # ],
             
     )
-    exit()
-    
-    results = joblib.Parallel(n_jobs=10, backend="loky")(
+
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
         joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows
     )
 

@@ -66,9 +66,8 @@ class ContractChain(Actor):
         month = self._start_month
         if month not in self.hold_cycle:
             month = self.hold_cycle.next_month(month)
-            
-        self._roll(to_month=month)
         
+        self._roll(to_month=month)
         
         self.msgbus.subscribe(
             topic=f"{self.bar_type}0",

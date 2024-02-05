@@ -22,8 +22,6 @@ def process(
     
     
     # create adusted prices
-    instrument_id = row.base.id
-    # bar_type = BarType.from_str(f"{instrument_id}-1-DAY-MID-EXTERNAL")
     paths = list(sorted(paths))
     
     files = {
@@ -79,6 +77,7 @@ def process(
         path = ADJUSTED_PRICES_FOLDER / files[aggregation].path.name
         path.parent.mkdir(parents=True, exist_ok=True)
         df = adjusted[aggregation].to_dataframe()
+        assert not df.adjusted.isna().any()
         df = df[["timestamp", "adjusted"]]
         df.rename({"adjusted": "price"}, axis=0, inplace=True)
         df.to_parquet(path, index=False)
@@ -106,9 +105,9 @@ if __name__ == "__main__":
         # filter=["CL"],
     )
     
-    results = joblib.Parallel(n_jobs=10, backend="loky")(
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
         joblib.delayed(process)(
-            paths=list(MULTIPLE_PRICES_FOLDER.glob(f"{row.base.id}*.parquet")),
+            paths=list(MULTIPLE_PRICES_FOLDER.glob(f"{row.instrument_id}*.parquet")),
             row=row,
         )
         for row in rows

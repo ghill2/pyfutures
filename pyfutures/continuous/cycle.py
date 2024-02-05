@@ -18,7 +18,7 @@ class RollCycle:
         skip_months: list[str] | None = None,
     ) -> RollCycle | RangedRollCycle:
         
-        if ">" in value:
+        if "," in value:
             return RangedRollCycle.from_str(value)
         else:
             return RollCycle(value, skip_months=skip_months)
@@ -178,7 +178,7 @@ class RangedRollCycle:
     ) -> RangedRollCycle:
         
         parts = value.strip().replace("", "").split(",")
-        assert len(parts) >= 2
+        assert len(parts) == 2
         
         # parse start
         value = parts.pop(0)
@@ -200,17 +200,17 @@ class RangedRollCycle:
             )
         )
         
-        # parse mid
-        if len(parts) > 1:
-            for value in parts:
-                ranges.insert(
-                    1,
-                    RollCycleRange(
-                        start_month=ContractMonth(value.split(">")[0]),
-                        end_month=ContractMonth(value.split(">")[1].split("=")[0]),
-                        cycle=RollCycle(value.split(">")[1].split("=")[1], skip_months=skip_months),
-                    ),
-                )
+        # TODO parse mid
+        # if len(parts) > 1:
+        #     for value in parts:
+        #         ranges.insert(
+        #             1,
+        #             RollCycleRange(
+        #                 start_month=ContractMonth(value.split(">")[0]),
+        #                 end_month=ContractMonth(value.split(">")[1].split("=")[0]),
+        #                 cycle=RollCycle(value.split(">")[1].split("=")[1], skip_months=skip_months),
+        #             ),
+        #         )
         
         return RangedRollCycle(ranges=ranges)
     
