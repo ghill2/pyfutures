@@ -177,7 +177,7 @@ class InteractiveBrokersClient(Component, EWrapper):
     ################################################################################################
     # Responses
 
-    def _next_request_id(self) -> int:
+    def _next_req_id(self) -> int:
         current = self._request_id_seq
         self._request_id_seq -= 1
         return current
@@ -190,7 +190,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         id: int | None = None,
     ) -> ClientRequest:
         if id is None:
-            id: int = self._next_request_id()
+            id: int = self._next_req_id()
         elif isinstance(id, str):
             id: int = self._request_id_map.get(id)
             if id is None:
@@ -945,7 +945,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         callback: Callable,
         use_rth: bool = True,
     ) -> ClientSubscription:
-        request_id = self._next_request_id()
+        request_id = self._next_req_id()
 
         if bar_size == BarSize._5_SECOND:
             
@@ -1078,7 +1078,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         contract: IBContract,
         callback: Callable,
     ):
-        request_id = self._next_request_id()
+        request_id = self._next_req_id()
 
         subscribe = functools.partial(
             self._client.reqTickByTickData,
@@ -1166,7 +1166,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         """
         accounts = await self.request_accounts()
 
-        request_id = self._next_request_id()
+        request_id = self._next_req_id()
 
         subscribe = functools.partial(
             self._client.reqAccountUpdates,
@@ -1336,4 +1336,3 @@ class InteractiveBrokersClient(Component, EWrapper):
         df.sort_values(by=['day', 'start'], inplace=True)
         
         request.set_result(df)
-        
