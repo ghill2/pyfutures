@@ -31,51 +31,52 @@ def process(path: Path, row: dict) -> None:
     )
 
     df = PortaraData.read_dataframe(path)
-    print(len(df))
-    writer = BarParquetWriter(
-        path=path,
-        bar_type=bar_type,
-        price_precision=row.base.price_precision,
-        size_precision=1,
-    )
+    
     
     file = ParquetFile(
         parent=PER_CONTRACT_FOLDER,
         bar_type=bar_type,
         cls=Bar,
     )
-    # file.path.parent.mkdir(exist_ok=True, parents=True)
+    
+    writer = BarParquetWriter(
+        path=file.path,
+        bar_type=bar_type,
+        price_precision=row.base.price_precision,
+        size_precision=1,
+    )
+    
+    file.path.parent.mkdir(exist_ok=True, parents=True)
     print(f"Writing {bar_type} {file}...")
     
     writer.write_dataframe(df)
     
-    # if aggregation == "MINUTE":
-    
-    
-    # assert file.path.exists()
-    
-    # # MINUTE -> HOUR
-    # df = file.read(
-    #     to_aggregation=(1, BarAggregation.HOUR),
-    # )
-    
-    # bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
-    
-    # file = ParquetFile(
-    #     parent=PER_CONTRACT_FOLDER,
-    #     bar_type=bar_type,
-    #     cls=Bar,
-    # )
-    # # file.path.parent.mkdir(exist_ok=True, parents=True)
-    # writer = BarParquetWriter(
-    #     path=file.path,
-    #     bar_type=bar_type,
-    #     price_precision=row.base.price_precision,
-    #     size_precision=1,
-    # )
-    
-    # print(f"Writing {bar_type} {file}...")
-    # writer.write_dataframe(df)
+    if aggregation == "MINUTE":
+        
+        assert file.path.exists()
+        
+        # MINUTE -> HOUR
+        df = file.read(
+            to_aggregation=(1, BarAggregation.HOUR),
+        )
+        
+        bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
+        
+        file = ParquetFile(
+            parent=PER_CONTRACT_FOLDER,
+            bar_type=bar_type,
+            cls=Bar,
+        )
+        file.path.parent.mkdir(exist_ok=True, parents=True)
+        writer = BarParquetWriter(
+            path=file.path,
+            bar_type=bar_type,
+            price_precision=row.base.price_precision,
+            size_precision=1,
+        )
+        
+        print(f"Writing {bar_type} {file}...")
+        writer.write_dataframe(df)
 
 def func_gen():
     

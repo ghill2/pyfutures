@@ -33,7 +33,7 @@ from nautilus_trader.model.functions import bar_aggregation_to_str
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
-PER_CONTRACT_FOLDER = Path("/Users/g1/Downloads/per_contract")
+PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
