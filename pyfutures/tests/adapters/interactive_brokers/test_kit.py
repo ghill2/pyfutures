@@ -37,7 +37,7 @@ PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
-
+MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")

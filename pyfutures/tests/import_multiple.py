@@ -68,7 +68,7 @@ def load_bars(row: dict) -> list[Bar]:
                     bars,
                     key=lambda x: (
                         x.ts_init,
-                        x.bar_type.instrument_id.symbol.value[-1] in row.config.priced_cycle,  # carry bar first
+                        ContractMonth(x.bar_type.instrument_id.symbol.value.split("=")[-1]) in row.config.priced_cycle,  # carry bar first
                         MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1, # forward then current bar
                     )
             ))
@@ -180,7 +180,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
 if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
+        # filter=["EBM"],
         # skip=[
         #     "EBM",
         # ],
