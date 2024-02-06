@@ -50,33 +50,32 @@ def process(path: Path, row: dict) -> None:
     print(f"Writing {bar_type} {file}...")
     
     writer.write_dataframe(df)
+
+def process_hour(file: ParquetFile, row: tuple) -> None:
+    assert file.path.exists()
     
-    if aggregation == "MINUTE":
-        
-        assert file.path.exists()
-        
-        # MINUTE -> HOUR
-        df = file.read(
-            to_aggregation=(1, BarAggregation.HOUR),
-        )
-        
-        bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
-        
-        file = ParquetFile(
-            parent=PER_CONTRACT_FOLDER,
-            bar_type=bar_type,
-            cls=Bar,
-        )
-        file.path.parent.mkdir(exist_ok=True, parents=True)
-        writer = BarParquetWriter(
-            path=file.path,
-            bar_type=bar_type,
-            price_precision=row.base.price_precision,
-            size_precision=1,
-        )
-        
-        print(f"Writing {bar_type} {file}...")
-        writer.write_dataframe(df)
+    # MINUTE -> HOUR
+    df = file.read(
+        to_aggregation=(1, BarAggregation.HOUR),
+    )
+    
+    bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
+    
+    file = ParquetFile(
+        parent=PER_CONTRACT_FOLDER,
+        bar_type=bar_type,
+        cls=Bar,
+    )
+    file.path.parent.mkdir(exist_ok=True, parents=True)
+    writer = BarParquetWriter(
+        path=file.path,
+        bar_type=bar_type,
+        price_precision=row.base.price_precision,
+        size_precision=1,
+    )
+    
+    print(f"Writing {bar_type} {file}...")
+    writer.write_dataframe(df)
 
 def func_gen():
     
@@ -85,13 +84,21 @@ def func_gen():
     )
     
     for row in rows:
-        
         files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
         paths = list(sorted(set(files_d1 + files_m1)))
         for path in paths:
             yield joblib.delayed(process)(path, row)
             
+    for row in rows:
+        files = IBTestProviderStubs.bar_files(
+            trading_class=row.trading_class,
+            symbol=row.symbol,
+            aggregation=BarAggregation.MINUTE,
+        )
+        for file in files:
+            yield joblib.delayed(process_hour)(file, row)
+        
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
             

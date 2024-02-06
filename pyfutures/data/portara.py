@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara_data_george")
+PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
 
 class PortaraData:
     
