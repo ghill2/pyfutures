@@ -68,7 +68,8 @@ def load_bars(row: dict) -> list[Bar]:
                     bars,
                     key=lambda x: (
                         x.ts_init,
-                        MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,
+                        x.bar_type.instrument_id.symbol.value[-1] in row.config.priced_cycle,  # carry bar first
+                        MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1, # forward then current bar
                     )
             ))
     
@@ -179,14 +180,14 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
 if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["EBM"],
+        filter=["ECO"],
         # skip=[
         #     "EBM",
         # ],
             
     )
 
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(
+    results = joblib.Parallel(n_jobs=20, backend="loky")(
         joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows
     )
 

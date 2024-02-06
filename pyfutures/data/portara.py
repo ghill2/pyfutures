@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
+PORTARA_DATA_FOLDER = Path("/Users/g1/Downloads/portara_data_george")
 
 class PortaraData:
     
@@ -29,8 +29,13 @@ class PortaraData:
         
         path = Path(path)
         
-        with open(path, 'r') as file:
-            column_count = len(file.readline().split(","))
+        try:
+            with open(path, 'r', encoding="utf-8") as f:
+                column_count = len(f.readline().split(","))
+        except UnicodeDecodeError as e:  # corrupted file
+            print(path)
+            raise e
+            
         
         if path.suffix == ".bd" and column_count == 8: # daily .bd file
             dtype = {
@@ -84,7 +89,7 @@ class PortaraData:
         else:
             raise RuntimeError(str(path))
         
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             body = f.read()
             
         missing = _get_missing_rows(path)

@@ -1,130 +1,224 @@
-import os
-from pathlib import Path
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+import joblib
+import gc
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.data.files import ParquetFile
 import pandas as pd
+from pyfutures.continuous.adjusted import AdjustedPrices
+from pathlib import Path
+from nautilus_trader.model.enums import BarAggregation
+import polars as pl
+if __name__ == "__main__":
 
-from nautilus_trader.model.data.bar import Bar
-from nautilus_trader.model.data.bar import BarSpecification
-from nautilus_trader.model.data.bar import BarType
-from nautilus_trader.model.data.bar_aggregation import BarAggregation
-from nautilus_trader.model.enums_c import aggregation_source_from_str
-from nautilus_trader.model.enums_c import price_type_from_str
-from nautilus_trader.model.identifiers import InstrumentId
-from pytower import PACKAGE_ROOT
-from pyfutures.data.files import YearlyParquetFile
-from pyfutures.data.files import bars_rust_to_normal
-
-class Correlation:
-    def __init__(self):
-
-        repo_dir = Path(os.path.expanduser("~")) / "dev/app/trading/pysystemtrade"
-        self.pysys_provider = PysysProvider(repo_dir=repo_dir)
+    rows = IBTestProviderStubs.universe_rows()
     
+    sector_map = {row.uname:row.sector for row in rows}
+    sub_sector_map = {row.uname:row.sub_sector for row in rows}
+    region_map = {row.uname:row.region for row in rows}
     
-    def universe(self):
-        """
-        Gets all.
-        """
-        path = PACKAGE_ROOT / "instruments/universe.csv"
-        df_universe = pd.read_csv(path)
-        all_ids = []
-        all_sector = []
-        all_region = []
-        all_sub_sector = []
-        all_series_prices = []
-        all_series_returns = []
-        all_m_series = []
-
-        missing_pysys_tickers = []
-        missing_ib_tickers = []
-        # for row in UniverseProvider().instrument_ids():
-        for row in df_universe.iterrows():
-            exchange = row[1]["Exchange"]
-            ex_symbol = row[1]["EX Symbol"]
-            ib_symbol = row[1]["IB Symbol"]
-            if exchange == "LMAX":
-                continue
-            instrument_id_str = f"{ex_symbol}.{exchange}"
-            if self._should_load_pysys(exchange=exchange, ib_symbol=ib_symbol):
-                try:
-                    df = self.pysys_provider._adjusted_hourly_to_daily(
-                        exchange=exchange,
-                        ib_symbol=ib_symbol,
-                    )
-                except (MissingPysysInstrument, MissingPysysData) as e:
-                    print(e)
-                    missing_pysys_tickers.append((exchange, ex_symbol))
-                    continue
-                else:
-                    price_col_name = "price"
-            else:
-                bar_spec = BarSpecification(
-                    step=1,
-                    aggregation=BarAggregation.DAY,
-                    price_type=price_type_from_str("LAST"),
-                )
-                bar_type = BarType(
-                    instrument_id=InstrumentId.from_str(instrument_id_str),
-                    bar_spec=bar_spec,
-                    aggregation_source=aggregation_source_from_str("EXTERNAL"),
-                )
-                file = YearlyParquetFile(
-                    parent=Path(IB_DATA_DIR) / "CONTFUT",
-                    bar_type=bar_type,
-                    cls=Bar,
-                    year=0,
-                )
-                if not file.path.exists():
-                    missing_ib_tickers.append((exchange, ex_symbol))
-                    continue
-                df = bars_rust_to_normal(file.read())
-                df.volume = (df.volume / 1e9).astype(float)
-                df = df.set_index("timestamp")
-                price_col_name = "close"
+    dfs = []
+    for row in rows:
+        
+        file = IBTestProviderStubs.adjusted_file(
+            trading_class=row.trading_class,
+            symbol=row.symbol,
+            aggregation=BarAggregation.DAY,
+        )
+        
+        df = pd.read_parquet(file.path)
+        assert df.adjusted.notna().any()
+        assert df.timestamp.is_monotonic_increasing
+        
+        # prices
+        dfs.append(
+            # Convert Pandas DataFrame to Polars DataFrame
             
-            series_prices = df[price_col_name]
-            series_prices = series_prices.rename(instrument_id_str)
-            all_series_prices.append(series_prices)
+            pl.DataFrame(
+                {
+                    "timestamp": df.timestamp.dt.floor("D").values,
+                    row.uname: df.adjusted.values
+                }
+            )
+        )
+    
+    # merge the dataframes
+    print("Merging dataframes")
+    prices_corr = pd.DataFrame(columns=["timestamp"])
+    
+    def chunkify(l, n):
+        """Yield n number of striped chunks from l."""
+        new_list = []
+        for i in range(0, n):
+            chunk = l[i::n]
+            if chunk != []:
+                new_list.append(chunk)
+        return new_list
+    
+    def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+        total_count = len(dfs)
+        i = 0
+        total = pd.DataFrame(columns=["timestamp"])
+        while len(dfs) > 0:
+            df = dfs.pop(-1)
+            # prices_corr = prices_corr.set_index("timestamp").combine_first(df.set_index("timestamp")).reset_index()
+            total = pd.merge_ordered(
+                total,
+                df,
+                left_on="timestamp",
+                right_on="timestamp",
+                how="outer",
+            )
+            total.sort_values(by="timestamp", inplace=True)
+            print(f"Merged: {len(df)} items. {i + 1}/{total_count}")
+            del df
+            gc.collect()
+            i += 1
+        del dfs
+        gc.collect()
+        return total
+    
+    def merge_dataframes_polars(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+        total_count = len(dfs)
+        i = 0
+        total = dfs.pop(-1)
+        while len(dfs) > 0:
+            df = dfs.pop(-1)
+            total = total.join(
+                df,
+                
+                on="timestamp",
+                how="outer",
+            )
+            
+            total = total.with_columns([
+                pl.when(total['timestamp'].is_null()) \
+                    .then(total['timestamp_right']) \
+                    .otherwise(total['timestamp']) \
+                    .alias("timestamp")
+            ])
+            total = total.drop('timestamp_right')
+            print(f"Merged: {len(df)} items. {i + 1}/{total_count}")
+            del df
+            gc.collect()
+            i += 1
+        del dfs
+        gc.collect()
+        return total
+    
+    # df = merge_dataframes_polars(dfs)
+    for n_jobs in (24, 12, 6, 3):
+        chunks = chunkify(dfs, n_jobs)
+        assert len(chunks) == n_jobs
+        dfs = joblib.Parallel(n_jobs=n_jobs, backend="loky")(
+            joblib.delayed(merge_dataframes_polars)(chunk) for chunk in chunks
+        )
+        assert len(dfs) == n_jobs
+        
+        # n_jobs=12
+        # chunks = chunkify(dfs, n_jobs)
+        # assert len(chunks) == n_jobs
+        # dfs = joblib.Parallel(n_jobs=n_jobs, backend="loky")(
+        #     joblib.delayed(merge_dataframes_polars)(chunk) for chunk in chunks
+        # )
+        # assert len(dfs) == n_jobs
+        
+        # n_jobs=6
+        # chunks = chunkify(dfs, n_jobs)
+        # assert len(chunks) == n_jobs
+        # dfs = joblib.Parallel(n_jobs=n_jobs, backend="loky")(
+        #     joblib.delayed(merge_dataframes_polars)(chunk) for chunk in chunks
+        # )
+        # assert len(chunks) == n_jobs
+        
+        # n_jobs=3
+        # chunks = chunkify(dfs, n_jobs)
+        # assert len(chunks) == n_jobs
+        # dfs = joblib.Parallel(n_jobs=n_jobs, backend="loky")(
+        #     joblib.delayed(merge_dataframes_polars)(chunk) for chunk in chunks
+        # )
+        # assert len(chunks) == n_jobs
+    
+    print("DONE")
+    # df = merge_dataframes_polars(dfs)
+    
+    exit()
+    
+    gc.collect()
+    
+    print("Performing correlation")
+    df = pd.DataFrame(columns=["timestamp"])
+    
+    df.drop("timestamp", axis=1, inplace=True)
+    corr = df.corr()  # don't use ffil
+    corr["region"] = [region_map[x] for x in corr.index.values]
+    corr["sector"] = [sector_map[x] for x in corr.index.values]
+    corr["sub_sector"] = [sub_sector_map[x] for x in corr.index.values]
+    print(corr)
+        
+    # returns_corr = pd.DataFrame(columns=["timestamp"])
+    # for df in returns_dfs:
+    #     returns_corr = returns_corr.merge(df, left_on="timestamp", right_on="timestamp", how="outer")
+            
+def correlate(df: pd.DataFrame) -> pd.DataFrame:
+    pass
+    
+        
+    
 
-            series_returns = df[price_col_name].diff()
-            series_returns = series_returns.rename(instrument_id_str)
-            all_series_returns.append(series_returns)
-
-            sector = row[1]["Sector"]
-            region = row[1]["Region"]
-            sub_sector = row[1]["Sub Sector"]
-            all_sector.append(sector)
-            all_region.append(region)
-            all_sub_sector.append(sub_sector)
-            all_ids.append(instrument_id_str)
-            m_series = pd.Series([sector, region, sub_sector], name=instrument_id_str)
-            all_m_series.append(m_series)
-
-        df_prices = pd.concat(all_series_prices, axis=1)
-        df_returns = pd.concat(all_series_returns, axis=1)
-        df_corr = df_returns.corr()
-
-        df_meta = pd.concat(all_m_series, axis=1)
-        print(df_meta)
-        df_corr_meta = pd.concat([df_meta, df_corr], ignore_index=True)
-        df_corr_meta.insert(loc=0, column="Sub Sector", value=["", "", "", *all_sub_sector])
-        df_corr_meta.insert(loc=0, column="Region", value=["", "", "", *all_region])
-        df_corr_meta.insert(loc=0, column="Sector", value=["", "", "", *all_sector])
-        df_corr_meta.insert(loc=0, column="InstrumentId", value=["", "", "", *all_ids])
-
-        print(df_corr_meta)
-        print(missing_pysys_tickers)
-        print(missing_ib_tickers)
-
-        outpath = "/Users/f1/tmp/universe_correlations.xlsx"
-        df_prices.index = df_prices.index.astype(str)
-        df_returns.index = df_returns.index.astype(str)
-        with pd.ExcelWriter(
-            outpath,
-            engine="openpyxl",
-            mode="w",
-        ) as writer:
-            df_prices.to_excel(writer, sheet_name="source_prices", index=True)
-            df_returns.to_excel(writer, sheet_name="source_returns", index=True)
-            df_corr_meta.to_excel(writer, sheet_name="correlation", index=False)
-
+    
+    
+    
+    # outpath = "/Users/g1/Desktop/universe_correlations.xlsx"
+    # df_prices.index = df_prices.index.astype(str)
+    # df_returns.index = df_returns.index.astype(str)
+    # with pd.ExcelWriter(
+    #     outpath,
+    #     engine="openpyxl",
+    #     mode="w",
+    # ) as writer:
+    #     df_prices.to_excel(writer, sheet_name="source_prices", index=True)
+    #     df_returns.to_excel(writer, sheet_name="source_returns", index=True)
+    #     df_corr_meta.to_excel(writer, sheet_name="correlation", index=False)
+        # series_returns = adjusted_prices.diff()
+        # m_series = pd.Series([row.sector, row.region, row.sub_sector], name=str(row.instrument_id))
+        # all_ids = []
+    # all_sector = []
+    # all_region = []
+    # all_sub_sector = []
+    # all_series_prices = []
+    # all_series_returns = []
+    # all_m_series = []
+    # returns
+        # returns_dfs.append(
+        #     pd.DataFrame(
+        #         {
+        #             "timestamp": df.timestamp.iloc[1:].dt.floor("D").values,
+        #             row.uname: df.adjusted.diff().iloc[1:].values
+        #         }
+        #     )
+        # )
+        # key="timestamp",
+            # # Replace null values in 'timestamp' with values from 'timestamp_right'
+            # total = total.with_columns(
+            #     pl.when(total['timestamp'].is_null(), total['timestamp_right'])
+            #     .otherwise(total['timestamp'])
+            #     .alias('timestamp')
+            # )
+            # merged = []
+            # for left, right in zip(
+            #     total['timestamp'],
+            #     total['timestamp_right'],
+            # ):
+            #     merged.append(right if left is None else left)
+            
+            # total = total.with_columns("timestamp", merged)
+            # total.timestamp = merged
+            # Drop the 'timestamp_right' column if needed
+            # mask = total["timestamp"].is_null()
+            # print(total.filter(mask))
+            # ["timestamp"] = total[mask]["timestamp_right"]
+            
+            
+            
+            

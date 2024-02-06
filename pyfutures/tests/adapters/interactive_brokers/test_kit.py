@@ -33,7 +33,7 @@ from nautilus_trader.model.functions import bar_aggregation_to_str
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
-PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
+PER_CONTRACT_FOLDER = Path("/Users/g1/Downloads/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_continuous_price")
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
@@ -79,13 +79,11 @@ class IBTestProviderStubs:
             "data_symbol": str,
             "timezone": str,
             "price_precision": pd.Float64Dtype(),
-            "data_start": str,
-            "data_end": str,
+            "data_start_minute": str,
+            "data_start_day": str,
             "start": str,
-            "end": str,
             "skip_months": str,
             "data_completes": pd.BooleanDtype(),
-            "minute_transition": pd.BooleanDtype(),
             "price_magnifier":	pd.Int64Dtype(),
             "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,
@@ -114,7 +112,7 @@ class IBTestProviderStubs:
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
         ignored = [
             # "EBM",
-            "YIW",
+            # "YIW",
         ]
         df = df[~df.trading_class.isin(ignored)]
         
@@ -129,15 +127,16 @@ class IBTestProviderStubs:
         df = df[df.data_symbol.notna()]
         
         # check for missing values
-        assert not df.exchange.isna().any()
-        assert not df.symbol.isna().any()
-        assert not df.trading_class.isna().any()
-        assert not df.min_tick.isna().any()
-        assert not df.price_magnifier.isna().any()
-        assert not df.quote_currency.isna().any()
+        assert df.exchange.notna().all()
+        assert df.symbol.notna().all()
+        assert df.trading_class.notna().all()
+        assert df.min_tick.notna().all()
+        assert df.price_magnifier.notna().all()
+        assert df.quote_currency.notna().all()
         
         df["start"] = df.start.apply(ContractMonth)
-        df["end"] = df.end.apply(ContractMonth)
+        df["data_start_day"] = df.data_start_day.apply(ContractMonth)
+        df["data_start_minute"] = df.data_start_minute.apply(ContractMonth)
         df["timezone"] = df.timezone.apply(timezone)
         
         df["settlement_time"] = df.settlement_time.apply(
