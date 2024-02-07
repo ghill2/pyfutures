@@ -33,9 +33,9 @@ from ibapi.wrapper import EWrapper
 
 
 from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.clock import LiveClock
+from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import Component
-from nautilus_trader.common.logging import Logger
+from nautilus_trader.common.component import Logger
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.common.component import MessageBus
 from pyfutures.adapters.interactive_brokers import IB_VENUE

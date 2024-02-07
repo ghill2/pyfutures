@@ -4,7 +4,7 @@ import asyncio
 
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component.clock import LiveClock
-from nautilus_trader.common.logging import Logger
+from nautilus_trader.common.component import Logger
 from nautilus_trader.live.data_client import LiveMarketDataClient
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId

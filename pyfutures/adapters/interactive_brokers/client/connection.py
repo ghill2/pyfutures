@@ -4,8 +4,8 @@ import functools
 import sys
 import psutil
 import os
-from nautilus_trader.common.logging import Logger
-from nautilus_trader.common.logging import LoggerAdapter
+from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import LoggerAdapter
 
 from collections.abc import Coroutine
 

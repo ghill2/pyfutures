@@ -182,7 +182,7 @@ class IBTestProviderStubs:
                 FuturesContract(
                     instrument_id=instrument_id,
                     raw_symbol=instrument_id.symbol,
-                    asset_class=AssetClass.COMMODITY,
+                    asset_class=InstrumentClass.COMMODITY,
                     currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
                     price_precision=price_precision,
                     price_increment=Price(row.min_tick * row.price_magnifier, price_precision),

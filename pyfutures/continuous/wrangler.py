@@ -7,7 +7,7 @@ from nautilus_trader.common.clock import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.common.logging import Logger
+from nautilus_trader.common.component import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
 from nautilus_trader.model.data import Bar

@@ -4,8 +4,8 @@ import pandas as pd
 from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
 
-from nautilus_trader.common.logging import Logger
-from nautilus_trader.common.logging import LoggerAdapter
+from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import LoggerAdapter
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize

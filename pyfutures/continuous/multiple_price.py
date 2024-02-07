@@ -24,7 +24,6 @@ class MultiplePrice(Data):
         ts_event: int,
         ts_init: int,
     ):
-        super().__init__()
 
         self.bar_type = bar_type
         self.instrument_id = bar_type.instrument_id

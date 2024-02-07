@@ -2,8 +2,8 @@ import asyncio
 import struct
 import sys
 
-from nautilus_trader.common.logging import Logger
-from nautilus_trader.common.logging import LoggerAdapter
+from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import LoggerAdapter
 
 from collections.abc import Coroutine
 

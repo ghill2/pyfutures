@@ -166,7 +166,7 @@ BAR_TABLE_SCHEMA = pa.schema(
 
 # NAME_MAPS = {
 #     "DUKA": {
-#         AssetClass.FX: {
+#         InstrumentClass.FX: {
 #             "QuoteTick": {
 #                 "bid": "Bid",
 #                 "ask": "Ask",

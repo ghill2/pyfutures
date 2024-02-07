@@ -1,6 +1,6 @@
-from nautilus_trader.common.clock import LiveClock
+from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.logging import Logger
+from nautilus_trader.common.component import Logger
 from nautilus_trader.common.providers import InstrumentProvider
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
@@ -12,7 +12,7 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.enums import AssetType
+from nautilus_trader.model.enums import InstrumentClass
 
 class UniverseInstrumentProvider(InstrumentProvider):
     """
@@ -35,7 +35,7 @@ class UniverseInstrumentProvider(InstrumentProvider):
                 Instrument(
                     instrument_id=InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
                     raw_symbol=Symbol(row.symbol),
-                    asset_class=AssetClass.COMMODITY,
+                    asset_class=InstrumentClass.COMMODITY,
                     asset_type=AssetType.FUTURE,
                     quote_currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
                     is_inverse=False,
