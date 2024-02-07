@@ -12,38 +12,41 @@ class AdjustedPrices:
         bar_type: BarType,  # bar type that triggers the adjustment
         manual: bool = False,
     ):
-        self._lookback = lookback
-        self._adjusted_prices = deque(maxlen=self._lookback)
-        self._multiple_prices = deque(maxlen=self._lookback)
-        
+        self.lookback = lookback
+        self._adjusted_prices = deque(maxlen=self.lookback)
+        # self._multiple_prices = deque(maxlen=self._lookback)
+        # self.topic = f"{bar_type}a"
         self._bar_type = bar_type
         self._instrument_id = self._bar_type.instrument_id
         self._manual = manual
+        self._last = None
+    
+    @property
+    def prices(self) -> deque:
+        return self._adjusted_prices
     
     def handle_price(self, price: MultiplePrice) -> float | None:
         
         value = None
         has_rolled = (
             not self._manual
-            and len(self._multiple_prices) > 0
-            and self._multiple_prices[-1].current_month != price.current_month
+            and self._last is not None
+            and self._last.current_month != price.current_month
         )
         
         if has_rolled:
-            last = self._multiple_prices[-1]
-            value = float(price.current_price) - float(last.current_price)
+            value = float(price.current_price) - float(self._last.current_price)
             self.adjust(value)
             
         self._adjusted_prices.append(price.current_price)
-        self._multiple_prices.append(price)
+        self._last = price
         
-        assert len(self._multiple_prices) == len(self._adjusted_prices)
         return value
     
     def adjust(self, value: float) -> None:
         self._adjusted_prices = deque(
             list(pd.Series(self._adjusted_prices) + value),
-            maxlen=self._lookback,
+            maxlen=self.lookback,
         )
     
     def to_dataframe(self) -> pd.DataFrame:

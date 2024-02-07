@@ -12,7 +12,6 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.enums import InstrumentClass
 
 class UniverseInstrumentProvider(InstrumentProvider):
     """
@@ -35,8 +34,8 @@ class UniverseInstrumentProvider(InstrumentProvider):
                 Instrument(
                     instrument_id=InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
                     raw_symbol=Symbol(row.symbol),
-                    asset_class=InstrumentClass.COMMODITY,
-                    asset_type=AssetType.FUTURE,
+                    asset_class=AssetClass.COMMODITY,
+                    asset_type=InstrumentClass.FUTURE,
                     quote_currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
                     is_inverse=False,
                     price_precision=IBTestProviderStubs.price_precision(

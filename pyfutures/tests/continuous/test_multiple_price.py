@@ -141,8 +141,8 @@ class TestMultiplePrice:
         register_arrow(
             data_cls=MultiplePrice,
             schema=MultiplePrice.schema(),
-            serializer=make_dict_serializer(schema=MultiplePrice.schema()),
-            deserializer=make_dict_deserializer(data_cls=MultiplePrice),
+            encoder=make_dict_serializer(schema=MultiplePrice.schema()),
+            decoder=make_dict_deserializer(data_cls=MultiplePrice),
         )
 
         price = MultiplePrice(

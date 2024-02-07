@@ -196,8 +196,8 @@ class MultiplePriceParquetWriter(ParquetWriter):
         register_arrow(
             data_cls=MultiplePrice,
             schema=MultiplePrice.schema(),
-            serializer=make_dict_serializer(schema=MultiplePrice.schema()),
-            deserializer=make_dict_deserializer(data_cls=MultiplePrice),
+            encoder=make_dict_serializer(schema=MultiplePrice.schema()),
+            decoder=make_dict_deserializer(data_cls=MultiplePrice),
         )
         batch = ArrowSerializer.serialize(data=data, data_cls=MultiplePrice)
         self.write_table(pa.Table.from_batches([batch]), append=append)
@@ -207,8 +207,8 @@ class MultiplePriceParquetWriter(ParquetWriter):
         register_arrow(
             data_cls=MultiplePrice,
             schema=MultiplePrice.schema(),
-            serializer=make_dict_serializer(schema=MultiplePrice.schema()),
-            deserializer=make_dict_deserializer(data_cls=MultiplePrice),
+            encoder=make_dict_serializer(schema=MultiplePrice.schema()),
+            decoder=make_dict_deserializer(data_cls=MultiplePrice),
         )
         batch = ArrowSerializer.serialize(data=data, data_cls=MultiplePrice)
         return batch

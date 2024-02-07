@@ -24,8 +24,9 @@ from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.objects import Currency
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.schedule import MarketSchedule
-from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.enums import AssetClass
+from pyfutures.continuous.cycle import RollCycle
+from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.functions import bar_aggregation_to_str
@@ -182,7 +183,7 @@ class IBTestProviderStubs:
                 FuturesContract(
                     instrument_id=instrument_id,
                     raw_symbol=instrument_id.symbol,
-                    asset_class=InstrumentClass.COMMODITY,
+                    asset_class=AssetClass.COMMODITY,
                     currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
                     price_precision=price_precision,
                     price_increment=Price(row.min_tick * row.price_magnifier, price_precision),
