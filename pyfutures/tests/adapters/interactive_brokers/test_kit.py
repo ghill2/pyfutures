@@ -30,6 +30,7 @@ from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.functions import bar_aggregation_to_str
+import re
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
@@ -198,13 +199,14 @@ class IBTestProviderStubs:
             )
             
             # parse contract
-            contracts.append(
-                create_contract(
+            currency = re.search(r"\((.*?)\)", row.quote_currency).group(1)
+            contract = create_contract(
                     trading_class=row.trading_class,
                     symbol=row.symbol,
                     venue=row.exchange,
-                )
             )
+            contract.currency=currency
+            contracts.append(contract)
             
             # parse liquid schedule
             # 08:30-13:20
