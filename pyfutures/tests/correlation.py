@@ -1,5 +1,6 @@
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+import time
 import joblib
 import gc
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
@@ -9,6 +10,7 @@ from pyfutures.continuous.adjusted import AdjustedPrices
 from pathlib import Path
 from nautilus_trader.model.enums import BarAggregation
 import polars as pl
+import itertools
 
 def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     total_count = len(dfs)
@@ -32,15 +34,58 @@ def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     gc.collect()
     return total
 
+def process_correlation(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    
+    keys = list(data.keys())
+    combinations = itertools.combinations(keys, 2)
+    total = pd.DataFrame(index=keys, columns=keys)
+    for combination in combinations:
+        key1, key2 = combination
+        df = merge_dataframes_pandas(
+            [data[key1], data[key2]]
+        )
+        df.drop("timestamp", axis=1, inplace=True)
+        df = df.corr()  # don't use ffil
+        for x in df.index:
+            for y in df.columns:
+                total.at[x, y] = df.at[x, y]
+        del df
+        gc.collect()
+        
+    return total
+
+def insert_headers(df: pd.DataFrame) -> pd.DataFrame:
+    
+    format_func = lambda x: '{:.{}f}'.format(x, 3)
+    df = df.applymap(format_func)
+    df = df.astype(str)
+    
+    df = df.reset_index().rename({"index": "uname"}, axis=1)
+    
+    df.reset_index(drop=True, inplace=True)
+    
+    # TODO
+    # df.loc[0] = pd.Series(map(sector_map.get, df.columns), index=df.columns)
+    # df.loc[1] = pd.Series(map(region_map.get, df.columns), index=df.columns)
+    # df.loc[2] = pd.Series(map(sub_sector_map.get, df.columns), index=df.columns)
+    
+    df.insert(1, "sector", list(map(sector_map.get, df.uname.values)))
+    df.insert(2, "region", list(map(region_map.get, df.uname.values)))
+    df.insert(3, "sub_sector", list(map(sub_sector_map.get, df.uname.values)))
+    
+    df.fillna("", inplace=True)
+    return df
+    
 if __name__ == "__main__":
 
-    rows = IBTestProviderStubs.universe_rows()[:10]
+    rows = IBTestProviderStubs.universe_rows()
     
     sector_map = {row.uname:row.sector for row in rows}
     sub_sector_map = {row.uname:row.sub_sector for row in rows}
     region_map = {row.uname:row.region for row in rows}
     
-    dfs = {}
+    prices_dfs = {}
+    returns_dfs = {}
     for row in rows:
         
         file = IBTestProviderStubs.adjusted_file(
@@ -54,53 +99,46 @@ if __name__ == "__main__":
         assert df.timestamp.is_monotonic_increasing
         
         # prices
-        dfs[row.uname] = pd.DataFrame(
-                {
-                    "timestamp": df.timestamp.dt.floor("D").values,
-                    row.uname: df.adjusted.values
-                }
-            )
+        prices_dfs[row.uname] = pd.DataFrame(
+            {
+                "timestamp": df.timestamp.dt.floor("D").values,
+                row.uname: df.adjusted.values
+            }
+        )
+        
+        returns_dfs[row.uname] = pd.DataFrame(
+            {
+                "timestamp": df.timestamp.iloc[1:].dt.floor("D").values,
+                row.uname: df.adjusted.diff().iloc[1:].values
+            }
+        )
     
-    
-    for row1 in rows:
-        for row2 in rows:
-            if row1.uname == row2.uname:
-                corr = 1
-            else:
-                df = merge_dataframes_pandas(
-                    [dfs[row1.uname], dfs[row2.uname]]
-                )
-                print(df)
-                exit()
-                
-    # merge the dataframes
-    print("Merging dataframes")
-    # prices_corr = pd.DataFrame(columns=["timestamp"])
-    
-    
-    
+    start_time = time.perf_counter()
+    prices_corr = process_correlation(prices_dfs)
+    del prices_dfs
     gc.collect()
     
-    print("Performing correlation")
-    df = pd.DataFrame(columns=["timestamp"])
     
-    df.drop("timestamp", axis=1, inplace=True)
-    corr = df.corr()  # don't use ffil
-    corr["region"] = [region_map[x] for x in corr.index.values]
-    corr["sector"] = [sector_map[x] for x in corr.index.values]
-    corr["sub_sector"] = [sub_sector_map[x] for x in corr.index.values]
-    print(corr)
-        
-    # returns_corr = pd.DataFrame(columns=["timestamp"])
-    # for df in returns_dfs:
-    #     returns_corr = returns_corr.merge(df, left_on="timestamp", right_on="timestamp", how="outer")
+    returns_corr = process_correlation(returns_dfs)
+    del returns_dfs
+    gc.collect()
+    
+    prices_corr = insert_headers(prices_corr)
+    returns_corr = insert_headers(returns_corr)
+    
+    stop_time = time.perf_counter()
+    elapsed = stop_time - start_time
+    
+    print(prices_corr)
+    print(returns_corr)
+    print(f"Elapsed = {elapsed}s")
+    
+    out_folder = Path("/Users/g1/Desktop/correlation")
+    out_folder.mkdir(parents=True, exist_ok=True)
+    
+    prices_corr.to_csv(out_folder / "prices.csv", index=False)
+    returns_corr.to_csv(out_folder / "returns.csv", index=False)
             
-def correlate(df: pd.DataFrame) -> pd.DataFrame:
-    pass
-    
-        
-    
-
     
     
     
