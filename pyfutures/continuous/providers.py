@@ -9,8 +9,6 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.common.providers import InstrumentProvider
-from copy import deepcopy
-from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.config import NonPositiveInt
 
 from nautilus_trader.config.validation import PositiveInt

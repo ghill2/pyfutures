@@ -34,24 +34,35 @@ def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     gc.collect()
     return total
 
+
+def _process(
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
+) -> pd.DataFrame:
+    df = merge_dataframes_pandas([df1, df2])
+    df.drop("timestamp", axis=1, inplace=True)
+    df = df.corr()  # don't use ffil
+    del df1
+    del df2
+    gc.collect()
+    return df
+    
 def process_correlation(data: dict[str, pd.DataFrame]) -> pd.DataFrame:
     
     keys = list(data.keys())
-    combinations = itertools.combinations(keys, 2)
     total = pd.DataFrame(index=keys, columns=keys)
-    for combination in combinations:
-        key1, key2 = combination
-        df = merge_dataframes_pandas(
-            [data[key1], data[key2]]
-        )
-        df.drop("timestamp", axis=1, inplace=True)
-        df = df.corr()  # don't use ffil
+    
+    combinations = itertools.combinations(keys, 2)
+    results: list[pd.DataFrame] = joblib.Parallel(n_jobs=-1, backend="loky")(
+        joblib.delayed(_process)(data[comb[0]], data[comb[1]]) for comb in combinations
+    )
+    
+    for df in results:
         for x in df.index:
             for y in df.columns:
                 total.at[x, y] = df.at[x, y]
-        del df
-        gc.collect()
-        
+    
+    gc.collect()
     return total
 
 def insert_headers(df: pd.DataFrame) -> pd.DataFrame:
@@ -64,16 +75,16 @@ def insert_headers(df: pd.DataFrame) -> pd.DataFrame:
     
     df.reset_index(drop=True, inplace=True)
     
-    # TODO
-    # df.loc[0] = pd.Series(map(sector_map.get, df.columns), index=df.columns)
-    # df.loc[1] = pd.Series(map(region_map.get, df.columns), index=df.columns)
-    # df.loc[2] = pd.Series(map(sub_sector_map.get, df.columns), index=df.columns)
+    df.loc[-3] = pd.Series(map(sector_map.get, df.columns), index=df.columns)
+    df.loc[-2] = pd.Series(map(region_map.get, df.columns), index=df.columns)
+    df.loc[-1] = pd.Series(map(sub_sector_map.get, df.columns), index=df.columns)
+    df = df.sort_index(ascending=True).reset_index(drop=True)
     
     df.insert(1, "sector", list(map(sector_map.get, df.uname.values)))
     df.insert(2, "region", list(map(region_map.get, df.uname.values)))
     df.insert(3, "sub_sector", list(map(sub_sector_map.get, df.uname.values)))
-    
     df.fillna("", inplace=True)
+    
     return df
     
 if __name__ == "__main__":
@@ -139,9 +150,6 @@ if __name__ == "__main__":
     prices_corr.to_csv(out_folder / "prices.csv", index=False)
     returns_corr.to_csv(out_folder / "returns.csv", index=False)
             
-    
-    
-    
     # outpath = "/Users/g1/Desktop/universe_correlations.xlsx"
     # df_prices.index = df_prices.index.astype(str)
     # df_returns.index = df_returns.index.astype(str)
