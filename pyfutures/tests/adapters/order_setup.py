@@ -81,8 +81,6 @@ class OrderSetup:
         price: Price = None,
         active: bool = True,
     ) -> LimitOrder:
-        print(instrument_id)
-        print(self._instrument_provider.list_all())
         instrument = self._instrument_provider.find(instrument_id=instrument_id)
         assert instrument is not None
 
@@ -157,7 +155,7 @@ class OrderSetup:
             if report.instrument_id == instrument_id
         ]
         for report in reports:
-            self._close_position(report)
+            await self._close_position(report)
 
     async def _close_all_positions(self) -> None:
         for report in await self.exec_client.generate_position_status_reports():
