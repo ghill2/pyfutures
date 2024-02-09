@@ -153,7 +153,7 @@ class InteractiveBrokersClient(Component, EWrapper):
     # Connection
 
     async def reset(self) -> None:
-        self._conn.reset()
+        self._conn._reset()
     
     @property
     def is_connected(self) -> bool:
