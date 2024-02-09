@@ -5,7 +5,6 @@ from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
 
 from nautilus_trader.common.component import Logger
-from nautilus_trader.common.component import LoggerAdapter
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize
@@ -18,7 +17,7 @@ from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 class InteractiveBrokersHistoric:
     def __init__(self, client: InteractiveBrokersClient, logger: Logger):
         self._client = client
-        self._log = LoggerAdapter(type(self).__name__, logger)
+        self._log = Logger(type(self).__name__, logger)
 
     async def download(
         self,

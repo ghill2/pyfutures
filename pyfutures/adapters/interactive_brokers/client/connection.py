@@ -5,7 +5,6 @@ import sys
 import psutil
 import os
 from nautilus_trader.common.component import Logger
-from nautilus_trader.common.component import LoggerAdapter
 
 from collections.abc import Coroutine
 
@@ -27,7 +26,7 @@ class Connection:
         subscriptions: ValuesView,
     ):
         
-        self._log = LoggerAdapter(type(self).__name__, logger)
+        self._log = Logger(type(self).__name__, logger)
         self._loop = loop
         self._handler = handler
         

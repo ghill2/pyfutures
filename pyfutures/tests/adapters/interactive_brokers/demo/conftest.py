@@ -4,8 +4,8 @@ import pytest
 import os
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.enums import LogLevel
+
 from nautilus_trader.common.component import Logger
-from nautilus_trader.common.component import LoggerAdapter
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
 from nautilus_trader.model.identifiers import AccountId
@@ -28,6 +28,7 @@ from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersE
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.tests.adapters.order_setup import OrderSetup
 from pyfutures.adapters.interactive_brokers.client.socket import Socket
+from pyfutures.tests.adapters.interactive_brokers.test_kit import BytestringInteractiveBrokersClient
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -78,8 +79,8 @@ def logger(request, clock, instrument_id) -> Logger:
     )
 
 @pytest.fixture(scope="session")
-def log(logger) -> LoggerAdapter:
-    return LoggerAdapter("pytest", logger)
+def log(logger) -> Logger:
+    return Logger("pytest", logger)
 
 @pytest.fixture(scope="session")
 def msgbus(clock, logger):
@@ -104,19 +105,7 @@ def socket(event_loop, logger) -> InteractiveBrokersClient:
             callback=None,
     )
     
-@pytest.fixture(scope="session")
-def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
-    client = InteractiveBrokersClient(
-            loop=event_loop,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            logger=logger,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-    )
-    return client
+
 
 @pytest.fixture(scope="session")
 def instrument_provider(client, logger) -> InteractiveBrokersInstrumentProvider:
@@ -228,3 +217,36 @@ def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:
     event_loop.run_until_complete(asyncio.sleep(1))
     yield order_setup
     event_loop.run_until_complete(order_setup.close_all())
+
+
+
+       
+
+
+@pytest.fixture(scope="session")
+def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
+    client = InteractiveBrokersClient(
+            loop=event_loop,
+            msgbus=msgbus,
+            cache=cache,
+            clock=clock,
+            logger=logger,
+            host="127.0.0.1",
+            port=4002,
+            client_id=1,
+    )
+    return client
+
+
+@pytest.fixture(scope="session")
+def bytestring_client(event_loop, msgbus, cache, clock, logger):
+    return BytestringInteractiveBrokersClient(
+       loop=event_loop, 
+       msgbus=msgbus,
+       cache=cache,
+       clock=clock,
+       logger=logger,
+       host="127.0.0.1",
+       port=4002,
+       client_id=1
+    )

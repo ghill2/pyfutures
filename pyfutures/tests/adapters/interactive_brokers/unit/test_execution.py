@@ -708,5 +708,3 @@ class TestInteractiveBrokersExecution:
 #         ibg_client_id=1,
 #     )
 
-
-#     self._log = LoggerAdapter(type(self).__name__, logger)

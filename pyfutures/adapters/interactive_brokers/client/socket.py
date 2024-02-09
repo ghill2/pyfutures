@@ -26,7 +26,7 @@ class Socket(asyncio.Protocol):
         disconnect_handler: Coroutine,
     ):
         
-        self._log = LoggerAdapter(type(self).__name__, logger)
+        self._log = Logger(type(self).__name__, logger)
         self._loop = loop
         self._host = host
         self._port = port
