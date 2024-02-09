@@ -139,7 +139,9 @@ class MarketSchedule:
     ) -> pd.DataFrame:
         times = pd.date_range(start=start_date, end=end_date, freq=frequency, tz=self._timezone)
         return [
-            time for time in times if self.is_open(time) + pd.Timedelta(frequency=frequency)
+            time for time in times
+                if self.is_open(time) \
+                and self.is_open(time + pd.Timedelta(frequency=frequency))
         ]
         
             

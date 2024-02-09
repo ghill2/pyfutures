@@ -11,8 +11,6 @@ async def test_import_spread(client):
     """
     so sample one tick every hour in the liquid session
     """
-
-    
     
     row = IBTestProviderStubs.universe_rows(filter=["ECO"])[0]
     
@@ -25,6 +23,7 @@ async def test_import_spread(client):
     )
     for time in times:
         print(time.dayofweek, time)
+        
     exit()
     
     # find liquid hours within historical schedule session
