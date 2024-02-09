@@ -3,15 +3,14 @@ import asyncio
 import pytest
 import os
 from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.enums import LogLevel
-
-from nautilus_trader.common.component import Logger
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
 from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Price
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
@@ -27,7 +26,6 @@ from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInst
 from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.tests.adapters.order_setup import OrderSetup
-from pyfutures.adapters.interactive_brokers.client.socket import Socket
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -67,21 +65,6 @@ def clock() -> LiveClock:
     return LiveClock()
 
 @pytest.fixture(scope="session")
-def logger(request, clock, instrument_id) -> Logger:
-    file_logging = request.config.getoption('--file-logging')
-    file_log_path = request.config.getoption('--file-log-path')
-    return Logger(
-        clock,
-        level_stdout=LogLevel.DEBUG,
-        file_logging=bool(file_logging),
-        file_name=file_log_path,
-    )
-
-@pytest.fixture(scope="session")
-def log(logger) -> Logger:
-    return Logger("pytest")
-
-@pytest.fixture(scope="session")
 def msgbus(clock):
     return MessageBus(
         TestIdStubs.trader_id(),
@@ -93,20 +76,7 @@ def cache():
     return TestComponentStubs.cache()
 
 @pytest.fixture(scope="session")
-def socket(event_loop, logger) -> InteractiveBrokersClient:
-    return Socket(
-            loop=event_loop,
-            logger=logger,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-            callback=None,
-    )
-    
-
-
-@pytest.fixture(scope="session")
-def instrument_provider(client, logger) -> InteractiveBrokersInstrumentProvider:
+def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     config = InteractiveBrokersInstrumentProviderConfig(
         chain_filters={
@@ -122,9 +92,7 @@ def instrument_provider(client, logger) -> InteractiveBrokersInstrumentProvider:
 
     instrument_provider = InteractiveBrokersInstrumentProvider(
         client=client,
-        logger=logger,
         config=config,
-
     )
 
     return instrument_provider
@@ -147,7 +115,7 @@ def instrument(event_loop, cache, instrument_provider, instrument_id) -> Futures
 
 
 @pytest.fixture(scope="session")
-def exec_client(event_loop, msgbus, cache, clock, logger, client, instrument_provider) -> InteractiveBrokersExecutionClient:
+def exec_client(event_loop, msgbus, cache, clock, client, instrument_provider) -> InteractiveBrokersExecutionClient:
 
     return InteractiveBrokersExecutionClient(
             loop=event_loop,
@@ -156,7 +124,6 @@ def exec_client(event_loop, msgbus, cache, clock, logger, client, instrument_pro
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            logger=logger,
             instrument_provider=instrument_provider,
             ibg_client_id=1,
     )
@@ -192,7 +159,6 @@ def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger, instrumen
         msgbus=msgbus,
         cache=cache,
         clock=clock,
-        logger=logger,
     )
 
     portfolio.set_specific_venue(IB_VENUE)
@@ -200,10 +166,21 @@ def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger, instrumen
 
     return exec_engine
 
-@pytest.fixture()
-def delay() -> OrderSetup:
-    # asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.25))
-    return
+@pytest.fixture(scope="session")
+def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
+    client = InteractiveBrokersClient(
+            loop=event_loop,
+            msgbus=msgbus,
+            cache=cache,
+            clock=clock,
+            host="127.0.0.1",
+            port=4002,
+            client_id=1,
+    )
+    
+    init_logging(level_stdout=LogLevel.DEBUG)
+    
+    return client
 
 @pytest.fixture(scope="session")
 def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:
@@ -215,36 +192,31 @@ def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:
     event_loop.run_until_complete(asyncio.sleep(1))
     yield order_setup
     event_loop.run_until_complete(order_setup.close_all())
+    
+# @pytest.fixture(scope="session")
+# def socket(event_loop) -> InteractiveBrokersClient:
+#     return Socket(
+#             loop=event_loop,
+#             host="127.0.0.1",
+#             port=4002,
+#             client_id=1,
+#             callback=None,
+#     )
+
+# @pytest.fixture()
+# def delay() -> OrderSetup:
+#     # asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.25))
+#     return
+
+# @pytest.fixture(scope="session")
+# def log(request, clock, instrument_id) -> None:
+#     file_logging = request.config.getoption('--file-logging')
+#     file_log_path = request.config.getoption('--file-log-path')
+    
+
+    
 
 
-
-       
-
-
-@pytest.fixture(scope="session")
-def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
-    client = InteractiveBrokersClient(
-            loop=event_loop,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            logger=logger,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-    )
-    return client
-
-
-@pytest.fixture(scope="session")
-def bytestring_client(event_loop, msgbus, cache, clock, logger):
-    return BytestringInteractiveBrokersClient(
-       loop=event_loop, 
-       msgbus=msgbus,
-       cache=cache,
-       clock=clock,
-       logger=logger,
-       host="127.0.0.1",
-       port=4002,
-       client_id=1
-    )
+# @pytest.fixture(scope="session")
+# def log(logger) -> Logger:
+#     return Logger("pytest")

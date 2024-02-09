@@ -18,7 +18,6 @@ class Connection:
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        logger: Logger,
         handler: Coroutine,
         host: str,
         port: int,

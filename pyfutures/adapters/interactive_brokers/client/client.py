@@ -35,10 +35,8 @@ from ibapi.wrapper import EWrapper
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import Component
-from nautilus_trader.common.component import Logger
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.common.component import MessageBus
-from nautilus_trader.config import NautilusConfig
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
@@ -79,7 +77,6 @@ class InteractiveBrokersClient(Component, EWrapper):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-        logger: Logger,
         host: str = "127.0.0.1",
         port: int = 7497,
         client_id: int = 1,
@@ -119,7 +116,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         self._conn = Connection(
             loop=loop,
-            logger=logger,
             handler=self._handle_msg,
             host=host,
             port=port,

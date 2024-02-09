@@ -20,7 +20,7 @@ from ibapi.common import MarketDataTypeEnum as IBMarketDataTypeEnum
 from nautilus_trader.config import InstrumentProviderConfig
 from nautilus_trader.config import LiveDataClientConfig
 from nautilus_trader.config import LiveExecClientConfig
-from nautilus_trader.config import NautilusConfig
+from nautilus_trader.common.config import NautilusConfig
 
 
 class InteractiveBrokersInstrumentProviderConfig(InstrumentProviderConfig, frozen=True):
