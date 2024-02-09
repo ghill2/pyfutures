@@ -133,26 +133,6 @@ class TestInteractiveBrokersClient:
 
         assert str(timestamp) == "2022-03-29 08:00:00+00:00"
 
-    @pytest.mark.skip()
-    @pytest.mark.asyncio()
-    async def test_request_head_timestamp_universe(self, client):
-        for contract in IBTestProviderStubs.universe_contracts():
-            timestamp = await client.request_head_timestamp(
-                contract=contract,
-                what_to_show=WhatToShow.BID,
-            )
-            if timestamp is None:
-                print(
-                    f"No head timestamp for {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-                )
-                continue
-            else:
-                print(
-                    f"Head timestamp found: {timestamp}  {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-                )
-
-            time.sleep(1)
-
     @pytest.mark.asyncio()
     async def test_request_historical_schedule(self):
         pass

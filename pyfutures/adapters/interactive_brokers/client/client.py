@@ -831,23 +831,37 @@ class InteractiveBrokersClient(Component, EWrapper):
         end_time: pd.Timestamp | None = None,
         use_rth: bool = True,
     ) -> list[IBQuoteTick]:
+        
+        """
+        End Date/Time: The date, time, or time-zone entered is invalid.
+        The correct format is yyyymmdd hh:mm:ss xx/xxxx where yyyymmdd and xx/xxxx are optional.
+        E.g.: 20031126 15:59:00 US/Eastern
+        Note that there is a space between the date and time, and between the time and time-zone.
+        If no date is specified, current date is assumed.
+        If no time-zone is specified, local time-zone is assumed(deprecated).
+        You can also provide yyyymmddd-hh:mm:ss time is in UTC.
+        Note that there is a dash between the date and time in UTC notation.
+        """
+        # TODO assert start_time is tz-aware
+        # TODO assert end_time is tz-aware
+        
         request = self._create_request(data=[], name=name)
-
+        
         if start_time is None:
             start_time = ""
         else:
-            start_time = start_time.strftime("%Y%m%d %H:%M:%S %Z")
+            start_time = start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
             
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
-        end_time = end_time.strftime("%Y%m%d %H:%M:%S %Z")
+        end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
         
         self._client.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
             startDateTime=start_time,
             endDateTime=end_time,
-            numberOfTicks=count,
+            numberOfTicks=count,  # Max is 1000 per request.
             whatToShow="BID_ASK",
             useRth=use_rth,
             ignoreSize=False,

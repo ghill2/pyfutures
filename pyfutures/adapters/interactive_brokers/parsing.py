@@ -149,6 +149,7 @@ def create_contract(
     trading_class: str,
     symbol: str,
     venue: str,
+    sec_type: str | None = None,
 ) -> IBContract:
 
     contract = IBContract()
@@ -157,7 +158,7 @@ def create_contract(
     contract.exchange = _desanitize_str(venue)
     contract.tradingClass = _desanitize_str(trading_class)
     contract.includeExpired = False
-    contract.secType = "FUT"
+    contract.secType = sec_type or "FUT"
 
     return contract
 

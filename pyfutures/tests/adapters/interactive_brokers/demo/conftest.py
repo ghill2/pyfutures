@@ -80,7 +80,7 @@ def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     config = InteractiveBrokersInstrumentProviderConfig(
         chain_filters={
-            'FMEU': lambda x: not x.contract.localSymbol.endswith("D"),
+            'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
         },
         parsing_overrides={
             "MIX": {

@@ -1,3 +1,5 @@
+import time
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.adapters.interactive_brokers.parsing import row_to_contract
 from nautilus_trader.model.identifiers import InstrumentId
@@ -5,19 +7,63 @@ from pyfutures.adapters.interactive_brokers.client.objects import ClientExceptio
 import pandas as pd
 import pytest
 from pathlib import Path
-from ibapi.contract import Contract
-from ibapi.contract import ContractDetails
-
+from ibapi.contract import Contract as IBContract
+from ibapi.contract import ContractDetails as IBContractDetails
 
 @pytest.mark.asyncio()
-async def test_timezones():
+async def test_request_head_timestamp_contfut(client):
     
-    universe = IBTestProviderStubs.universe_dataframe()
-    for row in universe.itertuples():
-        print()
+    contract = IBContract()
+    
+    contract.tradingClass = "DC"
+    contract.symbol = "DA"
+    contract.exchange = "CME"
+    contract.secType = "CONTFUT"
+    
+    # await client.connect()
+    
+    # contract = await client.request_front_contract(contract)
+    
+    contract = IBContract()
+    
+    contract.tradingClass = "FMEU"
+    contract.symbol = "M7EU"
+    contract.exchange = "EUREX"
+    contract.secType = "CONTFUT"
+    
+    await client.connect()
+    
+    details = await client.request_contract_details(contract)
+    print(len(details))
+    
+    
+    
+@pytest.mark.asyncio()
+async def test_request_head_timestamp_universe(client):
+    
+    
+    await client.connect()
+    rows = IBTestProviderStubs.universe_rows()
+    
+    for row in rows:
         
+        contract = await client.request_front_contract(row.contract)
         
+        timestamp = await client.request_head_timestamp(
+            contract=row.contract,
+            what_to_show=WhatToShow.BID,
+            
+        )
         
+        if timestamp is None:
+            print(
+                f"No head timestamp for {row.instrument_id} {contract.lastTradeDateOrContractMonth}",
+            )
+            continue
+        # print(
+        #     f"Head timestamp found: {timestamp}  {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
+        # )
+    
 @pytest.mark.asyncio()
 async def test_request_front_contract_universe(client):
     """
@@ -117,41 +163,43 @@ def find_minimum_day_of_month_within_range(
     
     return pd.Series(filtered).dt.day.min()
 
-def test_find_problem_files():
-    """
-    find trading_classes where the files do have the hold cycle in every year
-    """
-    universe = IBTestProviderStubs.universe_dataframe()
-    data_folder = Path("/Users/g1/Desktop/portara data george/DAY")
-    for row in universe.itertuples():
-        
-        data_dir = (data_folder / row.data_symbol)
-        paths = list(data_dir.glob("*.txt")) \
-                    + list(data_dir.glob("*.b01")) \
-                    + list(data_dir.glob("*.bd"))
-                    
-        paths = list(sorted(paths))
-        assert len(paths) > 0
-        
-        start_month = ContractMonth(row.data_start)
-        end_month = ContractMonth(row.data_end)
-        required_months = []
-        
-        cycle = RollCycle.from_str(row.hold_cycle)
-        
-        while True:
-            required_months.append(start_month)
-            start_month = cycle.next_month(start_month)
-            if start_month >= end_month:
-                break
-        
-        stems = [
-            x.stem[-5:] for x in paths
-        ]
-        for month in required_months:
-            if month.value in stems:
-                continue
-            print(row.trading_class, month.value)
+
             
 if __name__ == "__main__":
     test_historic_schedules_with_sessions_out_of_day()
+    
+# def test_find_problem_files():
+#     """
+#     find trading_classes where the files do have the hold cycle in every year
+#     """
+#     universe = IBTestProviderStubs.universe_dataframe()
+#     data_folder = Path("/Users/g1/Desktop/portara data george/DAY")
+#     for row in universe.itertuples():
+        
+#         data_dir = (data_folder / row.data_symbol)
+#         paths = list(data_dir.glob("*.txt")) \
+#                     + list(data_dir.glob("*.b01")) \
+#                     + list(data_dir.glob("*.bd"))
+                    
+#         paths = list(sorted(paths))
+#         assert len(paths) > 0
+        
+#         start_month = ContractMonth(row.data_start)
+#         end_month = ContractMonth(row.data_end)
+#         required_months = []
+        
+#         cycle = RollCycle.from_str(row.hold_cycle)
+        
+#         while True:
+#             required_months.append(start_month)
+#             start_month = cycle.next_month(start_month)
+#             if start_month >= end_month:
+#                 break
+        
+#         stems = [
+#             x.stem[-5:] for x in paths
+#         ]
+#         for month in required_months:
+#             if month.value in stems:
+#                 continue
+#             print(row.trading_class, month.value)

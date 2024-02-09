@@ -46,6 +46,7 @@ ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
+FX_RATES_FOLDER = Path("/Users/g1/Desktop/fx_rates")
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
 
 
@@ -157,6 +158,7 @@ class IBTestProviderStubs:
         configs = []
         bases = []
         contracts = []
+        contracts_cont = []
         instrument_ids = []
         liquid_schedules = []
         for row in df.itertuples():
@@ -186,12 +188,13 @@ class IBTestProviderStubs:
             # parse base contract
             price_precision = len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1])
             
+            currency_str = re.search(r"\((.*?)\)", row.quote_currency).group(1)
             bases.append(
                 FuturesContract(
                     instrument_id=instrument_id,
                     raw_symbol=instrument_id.symbol,
                     asset_class=AssetClass.COMMODITY,
-                    currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
+                    currency=Currency.from_str(currency_str),
                     price_precision=price_precision,
                     price_increment=Price(row.min_tick * row.price_magnifier, price_precision),
                     multiplier=Quantity.from_str(str(row.multiplier)),
@@ -205,14 +208,24 @@ class IBTestProviderStubs:
             )
             
             # parse contract
-            currency = re.search(r"\((.*?)\)", row.quote_currency).group(1)
             contract = create_contract(
                     trading_class=row.trading_class,
                     symbol=row.symbol,
                     venue=row.exchange.replace(",", "."),
+                    sec_type="FUT",
             )
-            contract.currency=currency
+            contract.currency = currency_str
+            
+            contract_cont = create_contract(
+                    trading_class=row.trading_class,
+                    symbol=row.symbol,
+                    venue=row.exchange.replace(",", "."),
+                    sec_type="CONTFUT",
+            )
+            contract_cont.currency = currency_str
+            
             contracts.append(contract)
+            contracts_cont.append(contract)
             
             # parse liquid schedule
             # 08:30-13:20
@@ -241,6 +254,7 @@ class IBTestProviderStubs:
         df["config"] = configs
         df["base"] = bases
         df["contract"] = contracts
+        df["contract_cont"] = contracts_cont
         df["liquid_schedule"] = liquid_schedules
         
         # parse settlement time
