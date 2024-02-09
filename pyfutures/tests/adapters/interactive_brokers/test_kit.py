@@ -14,7 +14,6 @@ from pyfutures.adapters.interactive_brokers.parsing import create_contract
 
 from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures import PACKAGE_ROOT
-from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
 from nautilus_trader.model.enums import BarAggregation
 from pyfutures.data.files import ParquetFile
 from pyfutures.continuous.chain import ContractChain
@@ -43,6 +42,7 @@ MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
+
 
 class Session:
     def __init__(
@@ -261,46 +261,64 @@ class IBTestProviderStubs:
         rows = universe.to_dict(orient="records")
         assert len(rows) > 0
         
-        Row = namedtuple("Row", list(rows[0].keys()))
+        UniverseRow = namedtuple("Row", list(rows[0].keys()))
         rows = [
-            Row(**row) for row in rows
+            UniverseRow(**row) for row in rows
         ]
         return rows
     
     # def mes_instrument(self) -> FuturesContract:
         
         
-    @staticmethod
+    @classmethod
     def bar_files(
+        cls,
         trading_class: str,
         symbol: str,
-        aggregation: BarAggregation,
+        aggregation: BarAggregation | None = None,
         month: str | None = None,
     ) -> list[ParquetFile]:
-        aggregation = bar_aggregation_to_str(aggregation)
+        
+        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
         month = month or "*"
-        glob_str = f"{trading_class}_{symbol}={month}.IB-1-{aggregation}-MID*.parquet"
-        print(glob_str)
-        paths = list(PER_CONTRACT_FOLDER.glob(glob_str))
-        paths = list(sorted(paths))
-        files = list(map(ParquetFile.from_path, paths))
-        assert len(files) > 0
-        return files
+        glob_str=f"{trading_class}_{symbol}={month}.IB-1-{aggregation}-MID*.parquet"
+        return cls._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
     
-    @staticmethod
-    def adjusted_file(
+    @classmethod
+    def multiple_files(
+        cls,
         trading_class: str,
         symbol: str,
         aggregation: BarAggregation,
     ) -> ParquetFile:
         aggregation = bar_aggregation_to_str(aggregation)
         glob_str = f"{trading_class}_{symbol}.IB-1-{aggregation}-MID*.parquet"
-        print(glob_str)
-        paths = list(ADJUSTED_PRICES_FOLDER.glob(glob_str))
+        files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
+        return files
+    
+    @classmethod
+    def adjusted_files(
+        cls,
+        trading_class: str,
+        symbol: str,
+        aggregation: BarAggregation,
+    ) -> ParquetFile:
+        
+        aggregation = bar_aggregation_to_str(aggregation)
+        glob_str = f"{trading_class}_{symbol}.IB-1-{aggregation}-MID*.parquet"
+        files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
+        return files
+    
+    @staticmethod
+    def _get_files(
+        parent: Path,
+        glob: str,
+    ) -> ParquetFile:
+        paths = list(parent.glob(glob))
         paths = list(sorted(paths))
         files = list(map(ParquetFile.from_path, paths))
-        assert len(files) == 1
-        return files[0]
+        assert len(files) > 0
+        return files
         
     @classmethod
     def universe_future_chains(cls) -> list[ContractChain]:

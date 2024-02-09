@@ -1,31 +1,51 @@
 import pandas as pd
+from nautilus_trader.model.data import DataType
 from pyfutures.continuous.multiple_price import MultiplePrice
 from collections import deque
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
+from nautilus_trader.common.actor import Actor
 
-class AdjustedPrices:
+class AdjustedPrices(Actor):
     
     def __init__(
         self,
-        lookback: int,
+        maxlen: int,
         bar_type: BarType,  # bar type that triggers the adjustment
         manual: bool = False,
     ):
-        self.lookback = lookback
-        self._adjusted_prices = deque(maxlen=self.lookback)
-        # self._multiple_prices = deque(maxlen=self._lookback)
-        # self.topic = f"{bar_type}a"
+        
+        super().__init__()
+        super().__init__()
+        
+        self.maxlen = maxlen
+        self._prices: deque[float] = deque(maxlen=maxlen)
         self._bar_type = bar_type
         self._instrument_id = self._bar_type.instrument_id
         self._manual = manual
         self._last = None
+        
     
+    def on_start(self) -> None:
+        self.subscribe_data(DataType(MultiplePrice))  # route MultiplePrices to this Actor
+        
     @property
     def prices(self) -> deque:
-        return self._adjusted_prices
+        return self._prices
     
-    def handle_price(self, price: MultiplePrice) -> float | None:
+    def __len__(self):
+        return len(self._prices)
+    
+    def __getitem__(self, index):
+        return self._prices[index]
+    
+    def __iter__(self):
+        return iter(self._prices)
+    
+    def __next__(self):
+        return next(self._prices)
+        
+    def on_data(self, price: MultiplePrice) -> float | None:
         
         value = None
         has_rolled = (
@@ -38,17 +58,17 @@ class AdjustedPrices:
             value = float(price.current_price) - float(self._last.current_price)
             self.adjust(value)
             
-        self._adjusted_prices.append(price.current_price)
+        self._prices.append(float(price.current_price))
         self._last = price
         
         return value
     
     def adjust(self, value: float) -> None:
-        self._adjusted_prices = deque(
-            list(pd.Series(self._adjusted_prices) + value),
-            maxlen=self.lookback,
+        self._prices = deque(
+            [x + value for x in self._prices],
+            maxlen=self.maxlen
         )
-    
+        
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
             list(map(MultiplePrice.to_dict, self._multiple_prices))

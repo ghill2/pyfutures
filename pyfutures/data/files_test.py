@@ -1,19 +1,19 @@
 from pathlib import Path
-
+from pyfutures import PACKAGE_ROOT
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from pytower.data.files import ParquetFile
+from pyfutures.data.files import ParquetFile
 
 
 # from pytower.data.files import YearlyParquetFile
 
 
 class TestParquetFile:
-    def setup(self):
-        self.filename = "/parent/ES.CME-1-DAY-BID-EXTERNAL-BAR-2019.parquet"
 
     def test_from_path(self):
-        file = ParquetFile.from_path(self.filename)
+        
+        filename = "/parent/ES.CME-1-DAY-BID-EXTERNAL-BAR-2019.parquet"
+        file = ParquetFile.from_path(filename)
 
         assert file.parent == Path("/parent")
         assert file.bar_type == BarType.from_str("ES.CME-1-DAY-BID-EXTERNAL")
@@ -21,7 +21,9 @@ class TestParquetFile:
         assert file.year == 2019
 
     def test_path(self):
-        assert ParquetFile.from_path(self.filename).path == Path(self.filename)
+        
+        filename = "/parent/ES.CME-1-DAY-BID-EXTERNAL-BAR-2019.parquet"
+        assert ParquetFile.from_path(filename).path == Path(filename)
 
         file = ParquetFile(
             parent="/parent",
@@ -29,9 +31,14 @@ class TestParquetFile:
             cls=Bar,
             year=2019,
         )
-        assert file.path == Path(self.filename)
+        assert file.path == Path(filename)
 
-
+    def test_read(self):
+        
+        path = Path(PACKAGE_ROOT / "tests/data/test_files/MES_MES=2021Z.IB-1-DAY-MID-EXTERNAL-BAR-0.parquet")
+        file = ParquetFile.from_path(path)
+        df = file.read(bar_to_quote=True)
+    
 # class TestContractParquetFile:
 #     def setup(self):
 #         self.filename = "/parent/CME-MES-2023Z.IB-1-DAY-BID-EXTERNAL-BAR.parquet"

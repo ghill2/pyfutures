@@ -3,7 +3,3 @@ name = "pyfutures"
 version = "0.1"
 description = "pyfutures"
 authors = ["ghill2"]
-
-
-[tool.poetry.dependencies]
-fastparquet = "*"

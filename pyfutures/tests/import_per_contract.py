@@ -9,7 +9,8 @@ from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.portara import PortaraData
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import Bar
-
+from nautilus_trader.model.data import QuoteTick
+from pyfutures.data.writer import QuoteTickParquetWriter
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -77,27 +78,61 @@ def process_hour(file: ParquetFile, row: tuple) -> None:
     print(f"Writing {bar_type} {file}...")
     writer.write_dataframe(df)
 
+def process_as_ticks(file: ParquetFile, row: tuple) -> None:
+    """
+    Export the bar parquet files as QuoteTick objects
+    """
+    
+    df = file.read(
+        bar_to_quote=True,
+    )
+    
+    file = ParquetFile(
+        parent=PER_CONTRACT_FOLDER,
+        bar_type=file.bar_type,
+        cls=QuoteTick,
+    )
+    
+    file.path.parent.mkdir(exist_ok=True, parents=True)
+    
+    writer = QuoteTickParquetWriter(
+        path=file.path,
+        instrument_id=row.instrument_id,
+        price_precision=row.base.price_precision,
+        size_precision=1,
+    )
+    
+    writer.write_dataframe(df)
+    
 def func_gen():
     
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["EBM"],
+        filter=["EBM"],
     )
     
-    for row in rows:
-        files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        paths = list(sorted(set(files_d1 + files_m1)))
-        for path in paths:
-            yield joblib.delayed(process)(path, row)
+    # for row in rows:
+    #     files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+    #     files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+    #     paths = list(sorted(set(files_d1 + files_m1)))
+    #     for path in paths:
+    #         yield joblib.delayed(process)(path, row)
+            
+    # for row in rows:
+    #     files = IBTestProviderStubs.bar_files(
+    #         trading_class=row.trading_class,
+    #         symbol=row.symbol,
+    #         aggregation=BarAggregation.MINUTE,
+    #     )
+    #     for file in files:
+    #         yield joblib.delayed(process_hour)(file, row)
             
     for row in rows:
         files = IBTestProviderStubs.bar_files(
             trading_class=row.trading_class,
             symbol=row.symbol,
-            aggregation=BarAggregation.MINUTE,
         )
         for file in files:
-            yield joblib.delayed(process_hour)(file, row)
+            yield joblib.delayed(process_as_ticks)(file, row)
         
 if __name__ == "__main__":
     results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())

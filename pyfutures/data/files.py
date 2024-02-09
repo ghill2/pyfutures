@@ -30,10 +30,10 @@ from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.continuous.multiple_price import MultiplePrice
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
-from nautilus_trader.serialization.arrow.serializer import register_arrow
+
+
 from pyfutures.continuous.contract_month import ContractMonth
+from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
@@ -45,6 +45,18 @@ def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df["timestamp"] = unix_nanos_to_dt_vectorized(df.ts_event).rename("timestamp")
     df.drop(["ts_init", "ts_event"], axis=1, inplace=True)
     df = df[["open", "high", "low", "close", "volume", "timestamp"]]
+    df.set_index("timestamp", inplace=True)
+    return df
+
+def quotes_from_rust(df: pd.DataFrame) -> pd.DataFrame:
+    df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
+    df.bid = (df["bid"] / 1e9).astype("float64")
+    df.ask = (df["ask"] / 1e9).astype("float64")
+    df.bid_size = (df["bid_size"] / 1e9).astype("float64")
+    df.ask_size = (df["ask_size"] / 1e9).astype("float64")
+    df["timestamp"] = unix_nanos_to_dt_vectorized(df.ts_event).rename("timestamp")
+    df.drop(["ts_init", "ts_event"], axis=1, inplace=True)
+    df = df[["bid", "ask", "bid_size", "ask_size", "timestamp"]]
     df.set_index("timestamp", inplace=True)
     return df
 
@@ -117,6 +129,7 @@ class ParquetFile:
         timestamp_delta: tuple[pd.Timedelta, pytz.timezone] | None = None,
         to_aggregation: tuple[int, BarAggregation] | None = None,
         nrows: int | None = None,
+        bar_to_quote: bool = False,
     ) -> pd.DataFrame:
         
         if nrows is None:
@@ -126,17 +139,30 @@ class ParquetFile:
         for batch in pq.ParquetFile(str(self)).iter_batches(batch_size=nrows):
             df = batch.to_pandas()
             
-        rust_cols = ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]
-        if list(df.columns) == rust_cols:
+        if list(df.columns) == ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]:
             df = bars_from_rust(df)
-        
-        if to_aggregation is not None:
-            step, aggregation = to_aggregation
-            df = bar_to_bar(
-                bars=df,
-                step=step,
-                aggregation=aggregation,
-            )
+            if to_aggregation is not None:
+                step, aggregation = to_aggregation
+                df = bar_to_bar(
+                    bars=df,
+                    step=step,
+                    aggregation=aggregation,
+                )
+            if bar_to_quote:
+                df = pd.DataFrame(
+                    {
+                        "bid": df.close.values,
+                        "ask": df.close.values,
+                        "bid_size": df.volume.values,
+                        "ask_size": df.volume.values,
+                        "timestamp": df.index.values,
+                    }
+                )
+                df.set_index("timestamp", inplace=True)
+                
+        elif list(df.columns) == ["bid", "ask", "bid_size", "ask_size", "ts_event", "ts_init"]:
+            df = quotes_from_rust(df)
+            # TODO: add quote sampleing
         
         if timestamp_delta is not None:
             delta, timezone = timestamp_delta
@@ -152,10 +178,7 @@ class ParquetFile:
 
         if self.cls is Bar or self.cls is QuoteTick:
             
-            if self.cls == Bar:
-                nautilus_type = NautilusDataType.Bar
-            elif self.cls == QuoteTick:
-                nautilus_type = NautilusDataType.QuoteTick
+            nautilus_type = ParquetDataCatalog._nautilus_data_cls_to_data_type(self.cls)
             
             session.add_file(nautilus_type, "data", str(self.path))
             data = []
@@ -168,12 +191,7 @@ class ParquetFile:
         
         elif self.cls is MultiplePrice:
             
-            register_arrow(
-                data_cls=MultiplePrice,
-                schema=MultiplePrice.schema(),
-                encoder=make_dict_serializer(schema=MultiplePrice.schema()),
-                decoder=make_dict_deserializer(data_cls=MultiplePrice),
-            )
+            
             
             prices = []
             for batch in pq.ParquetFile(str(self)).iter_batches():

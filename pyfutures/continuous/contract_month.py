@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-from nautilus_trader.core.datetime import dt_to_unix_nanos
 
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 

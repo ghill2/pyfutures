@@ -19,11 +19,25 @@ class TestContractProvider(InstrumentProvider):
         approximate_expiry_offset: int,
         base: FuturesContract,
     ):
-        
+        super().__init__()
         self._approximate_expiry_offset = approximate_expiry_offset
         self._base = base
         self._contracts: dict[str, FuturesContract] = {}
+    
+    async def load_async(
+        self,
+        instrument_id: InstrumentId,
+        filters: dict | None = None,
+    ) -> None:
         
+        parts = instrument_id.symbol.value.split("=")
+        month = ContractMonth(parts[1])
+        instrument_id = InstrumentId.from_str(
+            f"{parts[0]}.{instrument_id.venue}"
+        )
+        return self.load_contract(instrument_id, month)
+        
+            
     def load_contract(self, instrument_id: InstrumentId, month: ContractMonth) -> None:
         
         approximate_expiry_date = month.timestamp_utc \
@@ -49,11 +63,12 @@ class TestContractProvider(InstrumentProvider):
             }
         )
         
-        self._contracts[instrument_id.value] = futures_contract
+        self.add(futures_contract)
+        return futures_contract
         
     def get_contract(self, instrument_id: InstrumentId, month: ContractMonth) -> None:
         instrument_id = self._fmt_instrument_id(self._base.id, month)
-        return self._contracts.get(instrument_id.value)
+        return self.find(instrument_id)
     
     @staticmethod
     def _fmt_instrument_id(instrument_id: InstrumentId, month: ContractMonth) -> InstrumentId:
