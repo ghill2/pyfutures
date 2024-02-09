@@ -1,15 +1,10 @@
 import asyncio
 import struct
-import functools
-import sys
 import psutil
 import os
 from nautilus_trader.common.component import Logger
-
 from collections.abc import Coroutine
-
 from ibapi import comm
-from ibapi.wrapper import EWrapper
 from ibapi.connection import Connection as IBConnection
 from typing import ValuesView
                     
