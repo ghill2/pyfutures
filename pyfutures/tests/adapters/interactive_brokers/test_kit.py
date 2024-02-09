@@ -31,6 +31,11 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.functions import bar_aggregation_to_str
 import re
 
+from nautilus_trader.common.component import MessageBus
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import Logger
+from nautilus_trader.cache.cache import Cache
+
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
@@ -64,6 +69,7 @@ class Session:
         for chain in self.chains:
             contracts.append(chain.current_contract(timestamp))
         return contracts
+
 
 class IBTestProviderStubs:
     
@@ -203,7 +209,7 @@ class IBTestProviderStubs:
             contract = create_contract(
                     trading_class=row.trading_class,
                     symbol=row.symbol,
-                    venue=row.exchange,
+                    venue=row.exchange.replace(",", "."),
             )
             contract.currency=currency
             contracts.append(contract)
