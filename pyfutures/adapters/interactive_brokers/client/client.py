@@ -827,19 +827,26 @@ class InteractiveBrokersClient(Component, EWrapper):
         name: str,
         contract: IBContract,
         count: int,
-        end_time: pd.Timestamp = None,
+        start_time: pd.Timestamp | None = None,
+        end_time: pd.Timestamp | None = None,
         use_rth: bool = True,
     ) -> list[IBQuoteTick]:
         request = self._create_request(data=[], name=name)
 
+        if start_time is None:
+            start_time = ""
+        else:
+            start_time = start_time.strftime("%Y%m%d %H:%M:%S %Z")
+            
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
-
+        end_time = end_time.strftime("%Y%m%d %H:%M:%S %Z")
+        
         self._client.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
-            startDateTime="",
-            endDateTime=end_time.strftime("%Y%m%d %H:%M:%S %Z"),
+            startDateTime=start_time,
+            endDateTime=end_time,
             numberOfTicks=count,
             whatToShow="BID_ASK",
             useRth=use_rth,
