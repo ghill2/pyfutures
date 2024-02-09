@@ -28,7 +28,6 @@ from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersE
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.tests.adapters.order_setup import OrderSetup
 from pyfutures.adapters.interactive_brokers.client.socket import Socket
-from pyfutures.tests.adapters.interactive_brokers.test_kit import BytestringInteractiveBrokersClient
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -80,19 +79,18 @@ def logger(request, clock, instrument_id) -> Logger:
 
 @pytest.fixture(scope="session")
 def log(logger) -> Logger:
-    return Logger("pytest", logger)
+    return Logger("pytest")
 
 @pytest.fixture(scope="session")
-def msgbus(clock, logger):
+def msgbus(clock):
     return MessageBus(
         TestIdStubs.trader_id(),
         clock,
-        logger,
     )
 
 @pytest.fixture(scope="session")
-def cache(logger):
-    return TestComponentStubs.cache(logger)
+def cache():
+    return TestComponentStubs.cache()
 
 @pytest.fixture(scope="session")
 def socket(event_loop, logger) -> InteractiveBrokersClient:

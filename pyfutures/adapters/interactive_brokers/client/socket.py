@@ -3,7 +3,6 @@ import struct
 import sys
 import functools
 from nautilus_trader.common.component import Logger
-from nautilus_trader.common.component import LoggerAdapter
 
 from collections.abc import Coroutine
 

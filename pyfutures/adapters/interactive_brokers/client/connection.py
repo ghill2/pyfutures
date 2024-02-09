@@ -26,7 +26,7 @@ class Connection:
         subscriptions: ValuesView,
     ):
         
-        self._log = Logger(type(self).__name__, logger)
+        self._log = Logger(name=type(self).__name__)
         self._loop = loop
         self._handler = handler
         

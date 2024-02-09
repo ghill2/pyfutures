@@ -59,16 +59,15 @@ def logger(clock):
     return Logger(clock, level_stdout=LogLevel.DEBUG)
 
 @pytest.fixture()
-def msgbus(clock, logger):
+def msgbus(clock):
     return MessageBus(
         TestIdStubs.trader_id(),
         clock,
-        logger,
     )
 
 @pytest.fixture()
-def cache(logger):
-    cache = TestComponentStubs.cache(logger)
+def cache():
+    cache = TestComponentStubs.cache()
     return cache
 
 @pytest.fixture()

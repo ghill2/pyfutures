@@ -38,6 +38,7 @@ from nautilus_trader.common.component import Component
 from nautilus_trader.common.component import Logger
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.common.component import MessageBus
+from nautilus_trader.config import NautilusConfig
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
@@ -87,11 +88,11 @@ class InteractiveBrokersClient(Component, EWrapper):
     ):
         super().__init__(
             clock=clock,
-            logger=logger,
             component_id=ClientId(f"{IB_VENUE.value}-{client_id:03d}"),
             component_name=f"{type(self).__name__}-{client_id:03d}",
             msgbus=msgbus,
-            config={"name": f"{type(self).__name__}-{client_id:03d}", "client_id": client_id},
+            # config=NautilusConfig({"name": f"{type(self).__name__}-{client_id:03d}", "client_id": client_id},
+            # config=NautilusConfig(name=f"{type(self).__name__}-{client_id:03d}", client_id=client_id),
         )
 
         # Events
