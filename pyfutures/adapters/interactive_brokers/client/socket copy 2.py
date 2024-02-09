@@ -3,7 +3,6 @@ import struct
 import sys
 import functools
 from nautilus_trader.common.component import Logger
-from nautilus_trader.common.component import LoggerAdapter
 
 from collections.abc import Coroutine
 
@@ -26,7 +25,7 @@ class Socket(asyncio.Protocol):
         disconnect_handler: Coroutine,
     ):
         
-        self._log = LoggerAdapter(type(self).__name__, logger)
+        self._log = Logger(type(self).__name__, logger)
         self._loop = loop
         self._host = host
         self._port = port

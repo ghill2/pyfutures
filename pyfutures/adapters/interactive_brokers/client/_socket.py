@@ -124,7 +124,6 @@ class Socket(asyncio.Protocol):
 #         callback: Coroutine,
 #     ):
         
-#         self._log = LoggerAdapter(type(self).__name__, logger)
 #         self._loop = loop
 #         self._host = host
 #         self._port = port
