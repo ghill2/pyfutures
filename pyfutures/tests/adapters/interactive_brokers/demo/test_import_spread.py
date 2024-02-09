@@ -1,4 +1,5 @@
 import pytest
+import pandas as pd
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from ibapi.contract import Contract as IBContract
@@ -11,10 +12,26 @@ async def test_import_spread(client):
     so sample one tick every hour in the liquid session
     """
 
-    await client.connect()
     
     
     row = IBTestProviderStubs.universe_rows(filter=["ECO"])[0]
+    
+    # get historical schedule
+    
+    times = row.liquid_schedule.to_date_range(
+        start_date=pd.Timestamp("01-01-1993"),
+        end_date=pd.Timestamp("01-01-2023"),
+        frequency="1h"
+    )
+    for time in times:
+        print(time.dayofweek, time)
+    exit()
+    
+    # find liquid hours within historical schedule session
+    
+    # for each hour in the liquid hours, if the hour is in the session open, use it
+    
+    await client.connect()
     
     contract = await client.request_front_contract(row.contract)
     

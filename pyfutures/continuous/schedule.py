@@ -130,7 +130,19 @@ class MarketSchedule:
             self._data.equals(other._data),
             self._timezone == other._timezone,
         )
+    
+    def to_date_range(
+        self,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp,
+        frequency: str,
+    ) -> pd.DataFrame:
+        times = pd.date_range(start=start_date, end=end_date, freq=frequency, tz=self._timezone)
+        return [
+            time for time in times if self.is_open(time) + pd.Timedelta(frequency=frequency)
+        ]
         
+            
     def to_weekly_calendar_utc(self) -> pd.DataFrame:
         startofweek = pd.Timestamp("2023-11-06")
         df = self._data.copy()
