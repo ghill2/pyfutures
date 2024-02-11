@@ -96,15 +96,22 @@ class InteractiveBrokersHistoric:
     ):
         
         """
-        if start_time is None:
-            start_time=None, end_time=None
+        if end_time is passed only:
+            start_time=None, end_time=end_time
+            first_tick = x
+            break on first tick timestamp
         
-        if end_time is None:
-            start_time=None, end_time=None
+        if start_time is passed only:
+            start_time=start_time, end_time=None
+            last_tick = x
+            break on last tick timestamp
         
         if start_time is None and end_time is None:
-        
+            start_time=None, end_time=end_time
+            first_tick = x
+            break on first tick timestamp
         """
+        
         if start_time is not None:
             head_timestamp = await self._client.request_head_timestamp(
                 contract=contract,

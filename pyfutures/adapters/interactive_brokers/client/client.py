@@ -37,6 +37,7 @@ from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import Component
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.common.component import MessageBus
+from nautilus_trader.core.uuid import UUID4
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
@@ -822,6 +823,22 @@ class InteractiveBrokersClient(Component, EWrapper):
         )
         return quotes[-1]
 
+    async def request_first_quote_tick(
+        self,
+        contract: IBContract,
+        use_rth: bool = True,
+    ) -> IBQuoteTick:
+        pass
+        # TODO
+        
+    async def request_last_last_tick(
+        self,
+        contract: IBContract,
+        use_rth: bool = True,
+    ) -> IBQuoteTick:
+        pass
+        # TODO
+        
     async def request_quote_ticks(
         self,
         name: str,
@@ -842,8 +859,10 @@ class InteractiveBrokersClient(Component, EWrapper):
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
         """
+        
         # TODO assert start_time is tz-aware
         # TODO assert end_time is tz-aware
+        assert start_time is not None and end_time is not None
         
         request = self._create_request(data=[], name=name)
         
