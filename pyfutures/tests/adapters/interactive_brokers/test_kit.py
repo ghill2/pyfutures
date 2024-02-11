@@ -47,6 +47,7 @@ MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
 FX_RATES_FOLDER = Path("/Users/g1/Desktop/fx_rates")
+SPREAD_FOLDER = Path("/Users/g1/Desktop/spread")
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
 
 

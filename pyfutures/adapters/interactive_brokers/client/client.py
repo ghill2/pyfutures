@@ -853,8 +853,9 @@ class InteractiveBrokersClient(Component, EWrapper):
             start_time = start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
             
         if end_time is None:
-            end_time = pd.Timestamp.utcnow()
-        end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
+            end_time = ""
+        else:
+            end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
         
         self._client.reqHistoricalTicks(
             reqId=request.id,
@@ -866,6 +867,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             useRth=use_rth,
             ignoreSize=False,
             miscOptions=[],
+            # formatDate=1,
         )
 
         return await self._wait_for_request(request)

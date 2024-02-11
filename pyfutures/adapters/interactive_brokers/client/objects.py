@@ -11,7 +11,7 @@ import pandas as pd
 @dataclass
 class IBQuoteTick:
     name: str
-    time: int
+    time: pd.Timestamp
     bid_price: float
     ask_price: float
     bid_size: Decimal

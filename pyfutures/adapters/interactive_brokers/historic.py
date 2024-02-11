@@ -3,6 +3,8 @@ import asyncio
 import pandas as pd
 from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
+from nautilus_trader.core.datetime import unix_nanos_to_dt
+from nautilus_trader.core.uuid import UUID4
 
 from nautilus_trader.common.component import Logger
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
@@ -12,12 +14,12 @@ from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
-
+from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 
 class InteractiveBrokersHistoric:
-    def __init__(self, client: InteractiveBrokersClient, logger: Logger):
+    def __init__(self, client: InteractiveBrokersClient):
         self._client = client
-        self._log = Logger(type(self).__name__, logger)
+        self._log = Logger(type(self).__name__)
 
     async def download(
         self,
@@ -35,17 +37,6 @@ class InteractiveBrokersHistoric:
             contract=contract,
             what_to_show=what_to_show,
         )
-
-        print(head_timestamp)
-        if head_timestamp is None:
-            print(
-                f"No head timestamp for {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-            )
-            return None
-        else:
-            print(
-                f"Head timestamp found: {head_timestamp}  {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-            )
 
         # set an appopriate interval range depending on the desired data frequency
         if bar_size.frequency == Frequency.DAY:
@@ -96,7 +87,64 @@ class InteractiveBrokersHistoric:
             await asyncio.sleep(3)
 
         return self._parse_dataframe(list(reversed(total_bars)))
-
+    
+    async def request_quote_ticks(
+        self,
+        contract: IBContract,
+        start_time: pd.Timestamp | None = None,
+        end_time: pd.Timestamp | None = None,
+    ):
+        
+        """
+        if start_time is None:
+            start_time=None, end_time=None
+        
+        if end_time is None:
+            start_time=None, end_time=None
+        
+        if start_time is None and end_time is None:
+        
+        """
+        if start_time is not None:
+            head_timestamp = await self._client.request_head_timestamp(
+                contract=contract,
+                what_to_show=WhatToShow.BID_ASK,
+            )
+            assert start_time >= head_timestamp
+            
+            # quotes: list[IBQuoteTick] = await self._client.request_quote_ticks(
+            #     name=str(UUID4()),
+            #     contract=contract,
+            #     start_time=head_timestamp + pd.Timedelta(days=200),
+            #     # end_time=head_timestamp + pd.Timedelta(days=14),
+            #     count=1,
+            # )
+            # start_time = quotes[0].time
+        # assert start_time < end_time
+        
+        results = []
+        while True:
+            
+            quotes: list[IBQuoteTick] = await self._client.request_quote_ticks(
+                name=str(UUID4()),
+                contract=contract,
+                end_time=end_time,
+                count=1000,
+            )
+            end_time = quotes[0].time
+            
+            if end_time <= start_time:
+                break
+            
+            results.extend(quotes)
+            
+        return [
+            x for x in results if x.time >= start_time
+        ]
+        
+                
+            
+        
     @staticmethod
     def _parse_dataframe(bars: list[BarData]) -> pd.DataFrame:
         

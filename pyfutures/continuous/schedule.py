@@ -144,8 +144,35 @@ class MarketSchedule:
         return [
             time for time in times if self.is_open(time) or self.is_open(time + interval)
         ]
+    
+    def sessions(
+        self,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp | None = None,
+    ) -> pd.DataFrame:
+        """
+        returns sessions within a time range
+        """
+        if end_date is None:
+            end_date = pd.Timestamp.now()
+        days = pd.date_range(start=start_date, end=end_date, freq="1D")
         
+        days = days[days.dayofweek.isin(self._data.dayofweek.values)]
+        days = days.tz_localize(self._timezone)
+        
+        df = pd.DataFrame(columns=["start", "end"])
+        for day in days:
             
+            sessions = self._data[self._data.dayofweek == day.dayofweek]
+            
+            for session in sessions.itertuples():
+                df.loc[len(df)] = \
+                    (
+                        day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute),
+                        day + pd.Timedelta(hours=session.close.hour, minutes=session.close.minute),
+                    )
+        return df
+        
     def to_weekly_calendar_utc(self) -> pd.DataFrame:
         startofweek = pd.Timestamp("2023-11-06")
         df = self._data.copy()

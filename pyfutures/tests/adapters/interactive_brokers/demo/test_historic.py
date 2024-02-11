@@ -18,30 +18,6 @@ from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHi
 
 
 class TestInteractiveBrokersHistoric:
-    def setup(self):
-        clock = LiveClock()
-        logger = Logger(clock, level_stdout=LogLevel.INFO)
-
-        msgbus = MessageBus(
-            trader_id=TestIdStubs.trader_id(),
-            clock=clock,
-            logger=logger,
-        )
-        cache = TestComponentStubs.cache()
-
-        self.client = InteractiveBrokersClient(
-            loop=asyncio.get_event_loop(),
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            logger=logger,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-        )
-
-        self.historic = InteractiveBrokersHistoric(client=self.client, logger=logger)
-
     @pytest.mark.asyncio()
     async def test_hourly(self):
         await self.client.connect()
@@ -78,6 +54,23 @@ class TestInteractiveBrokersHistoric:
             # bar_size=BarSize._5_SECOND,
             what_to_show=WhatToShow.TRADES,
         )
-        print(df)
+        
         # assert len(bars) == 250
         # assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
+
+
+    @pytest.mark.asyncio()
+    async def test_request_quote_ticks(self, client):
+        await client.connect()
+        
+        historic = InteractiveBrokersHistoric(client=client)
+        
+        contract = IBContract()
+        contract.tradingClass = "DC"
+        contract.symbol = "DA"
+        contract.exchange = "CME"
+        contract.secType = "CONTFUT"
+        
+        await historic.request_quote_ticks(
+            contract=contract,
+        )
