@@ -10,7 +10,60 @@ from ibapi.contract import Contract as IBContract
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from unittest.mock import Mock
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 
+
+@pytest.mark.asyncio()
+async def test_request_last_quote_tick_universe(client):
+    
+    rows = IBTestProviderStubs.universe_rows()
+    
+    missing = []
+    await client.connect()
+    for row in rows:
+        contract = row.contract_cont
+        
+        try:
+            last = await client.request_last_quote_tick(
+                contract=contract,
+            )
+        except ClientException as e:
+            print(e)
+            print(row)
+            raise
+        
+        if last is None:
+            missing.append(row)
+            
+    for row in missing:
+        print(row.trading_class, row.exchange)
+        
+
+@pytest.mark.asyncio()
+async def test_request_start_quote_tick_universe(client):
+    
+    rows = IBTestProviderStubs.universe_rows()
+    
+    missing = []
+    await client.connect()
+    for row in rows:
+        contract = row.contract_cont
+        
+        try:
+            first = await client.request_first_quote_tick(
+                contract=contract,
+            )
+        except ClientException as e:
+            print(e)
+            print(row)
+            raise
+        
+        if first is None:
+            missing.append(row)
+            
+    for row in missing:
+        print(row.trading_class, row.exchange)
+        
 @pytest.mark.asyncio()
 async def test_request_price_magnifier(client):
     

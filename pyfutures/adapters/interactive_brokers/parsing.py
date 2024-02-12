@@ -8,6 +8,8 @@ import pytz
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order as IBOrder
+from ibapi.common import BarData
+from ibapi.common import HistoricalTickBidAsk
 
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.datetime import secs_to_nanos
@@ -19,6 +21,7 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.enums import OrderSide
+
 from nautilus_trader.model.enums import OrderStatus
 from nautilus_trader.model.enums import OrderType
 from nautilus_trader.model.enums import TimeInForce
@@ -41,6 +44,25 @@ from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 from pyfutures.continuous.contract_month import ContractMonth
 
 
+def parse_datetime(value: str) -> pd.Timestamp:
+    if isinstance(value, str):
+        assert (
+            len(value.split()) != 3
+        ), f"""
+            datetime value was {value}
+            """
+
+    if isinstance(value, int) or value.isdigit():
+        return unix_nanos_to_dt(secs_to_nanos(int(value)))
+    elif isinstance(value, str) and len(value) == 8:
+        # YYYYmmdd
+        # daily historical bars
+        return pd.to_datetime(value, format="%Y%m%d", utc=True)
+    elif isinstance(value, str) and len(value) == 17:
+        return pd.to_datetime(value, format="%Y%m%d-%H:%M:%S", utc=True)
+
+    raise RuntimeError("Unable to parse timestamp")
+
 def ib_quote_tick_to_nautilus_quote_tick(
     instrument: Instrument,
     tick: IBQuoteTick,
@@ -56,6 +78,40 @@ def ib_quote_tick_to_nautilus_quote_tick(
     )
 
 
+def bar_data_to_dict(bar: BarData) -> dict:
+    return {
+        "date": parse_datetime(bar.date),
+        "open": bar.open,
+        "high": bar.high,
+        "low": bar.low,
+        "close": bar.close,
+        "volume": bar.volume,
+        "wap": bar.wap,
+        "barCount": bar.barCount,
+    }
+
+
+def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
+    return {
+        "time": parse_datetime(obj.time),
+        "bid": obj.priceBid,
+        "ask": obj.priceAsk,
+        "bid_size": float(obj.sizeBid),
+        "ask_size": float(obj.sizeAsk),
+    }
+    
+def ib_quote_to_dict(bar: BarData) -> dict:
+    return {
+        "date": parse_datetime(bar.date),
+        "open": bar.open,
+        "high": bar.high,
+        "low": bar.low,
+        "close": bar.close,
+        "volume": bar.volume,
+        "wap": bar.wap,
+        "barCount": bar.barCount,
+    }
+        
 def ib_bar_to_nautilus_bar(
     bar_type: BarType,
     bar: IBBar,
@@ -91,24 +147,7 @@ order_side_to_order_action: dict[str, str] = {
 }
 
 
-def parse_datetime(value: str) -> pd.Timestamp:
-    if isinstance(value, str):
-        assert (
-            len(value.split()) != 3
-        ), f"""
-            datetime value was {value}
-            """
 
-    if isinstance(value, int) or value.isdigit():
-        return unix_nanos_to_dt(secs_to_nanos(int(value)))
-    elif isinstance(value, str) and len(value) == 8:
-        # YYYYmmdd
-        # daily historical bars
-        return pd.to_datetime(value, format="%Y%m%d", utc=True)
-    elif isinstance(value, str) and len(value) == 17:
-        return pd.to_datetime(value, format="%Y%m%d-%H:%M:%S", utc=True)
-
-    raise RuntimeError("Unable to parse timestamp")
 
 
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
@@ -143,22 +182,22 @@ def _format_instrument_id(
     return InstrumentId.from_str(f"{symbol}-{trading_class}={month}.{exchange}")
 
 def _desanitize_str(value: str):
-    return value.replace("_", ".")
+    return value.replace(",", ".")
     
 def create_contract(
     trading_class: str,
     symbol: str,
     venue: str,
-    sec_type: str | None = None,
+    sec_type: str,
 ) -> IBContract:
 
     contract = IBContract()
 
+    contract.tradingClass = _desanitize_str(trading_class)
     contract.symbol = _desanitize_str(symbol)
     contract.exchange = _desanitize_str(venue)
-    contract.tradingClass = _desanitize_str(trading_class)
-    contract.includeExpired = False
-    contract.secType = sec_type or "FUT"
+    contract.secType = sec_type
+    # contract.includeExpired = False
 
     return contract
 

@@ -1,4 +1,5 @@
 import pytest
+from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
 import random
 import time
 import pandas as pd
@@ -24,43 +25,46 @@ async def test_import_spread(client):
     
     await client.connect()
     
+    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    
     for row in rows:
     
-        contract = await client.request_front_contract(row.contract_cont)
-        
+        contract = row.contract_cont
         sessions: pd.DataFrame = row.liquid_schedule.sessions(start_date=start_date)
+        # sessions = sessions
+        print(sessions)
+        
+        df = pd.DataFrame()
         
         for session in sessions.itertuples():
             
-            
-            quotes = await client.request_quote_ticks(
-                name=str(UUID4()),
+            ndf = await historic.request_quote_ticks(
                 contract=contract,
                 start_time=session.start,
                 end_time=session.end,
-                count=1000,
+                as_dataframe=True,
             )
-            
-            if len(quotes) == 0:
+            print(session.start, session.end, len(ndf))
+            print(ndf)
+            exit()
+            if len(ndf) == 0:
                 continue
             
+            df = pd.concat([df, ndf])
+            print(df)
+            exit()
             
             
-            quote = quotes[0]
-            time.sleep(0.5)
-            
-        # average_spread = float(pd.Series(spreads).mean())
+        # print(f"Exporting {row.instrument_id}")
         
-        print(f"Exporting {row.instrument_id}")
-        
-        path = SPREAD_FOLDER / (row.uname + ".txt")
-        path.parent.mkdir(exist_ok=True, parents=True)
-        with open(path, 'w') as f:
-            f.write(str(average_spread))
+        # path = SPREAD_FOLDER / (row.uname + ".txt")
+        # path.parent.mkdir(exist_ok=True, parents=True)
+        # with open(path, 'w') as f:
+        #     f.write(str(average_spread))
             
-        path = SPREAD_FOLDER / (row.uname + ".parquet")
-        df = pd.DataFrame(spreads)
-        df.to_parquet(path, index=False)
+        # path = SPREAD_FOLDER / (row.uname + ".parquet")
+        # df = pd.DataFrame(spreads)
+        # df.to_parquet(path, index=False)
             
             
             

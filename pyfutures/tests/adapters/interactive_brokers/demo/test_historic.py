@@ -1,4 +1,5 @@
 import asyncio
+import pandas as pd
 
 import pytest
 from ibapi.contract import Contract as IBContract
@@ -15,6 +16,7 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
 class TestInteractiveBrokersHistoric:
@@ -60,8 +62,7 @@ class TestInteractiveBrokersHistoric:
 
 
     @pytest.mark.asyncio()
-    async def test_request_quote_ticks(self, client):
-        await client.connect()
+    async def test_request_quote_ticks_dc(self, client):
         
         historic = InteractiveBrokersHistoric(client=client)
         
@@ -71,6 +72,38 @@ class TestInteractiveBrokersHistoric:
         contract.exchange = "CME"
         contract.secType = "CONTFUT"
         
-        await historic.request_quote_ticks(
+        start_time = pd.Timestamp("2023-02-13 14:30:00+00:00")
+        end_time = pd.Timestamp("2023-02-13 22:00:00+00:00")
+        
+        await client.connect()
+        quotes = await historic.request_quote_ticks(
             contract=contract,
+            start_time=start_time,
+            end_time=end_time,
         )
+        assert all([parse_datetime(q.time) >= start_time and parse_datetime(q.time) < end_time for q in quotes])
+        assert parse_datetime(quotes[0].time) == pd.Timestamp("2023-02-13 14:34:11+00:00")
+        assert parse_datetime(quotes[-1].time) == pd.Timestamp("2023-02-13 21:44:26+00:00")
+        
+    @pytest.mark.asyncio()
+    async def test_request_quote_ticks_zn(self, client):
+        
+        contract = IBContract()
+        contract.tradingClass = "ZN"
+        contract.symbol = "ZN"
+        contract.exchange = "CBOT"
+        contract.secType = "CONTFUT"
+        start_time = pd.Timestamp("2020-04-18 08:30:00-05:00")
+        end_time = pd.Timestamp("2023-04-18 16:00:00-05:00")
+        historic = InteractiveBrokersHistoric(client=client)
+        
+        await client.connect()
+        quotes = await historic.request_quote_ticks(
+            contract=contract,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        print(df)
+        exit()
+        
+        

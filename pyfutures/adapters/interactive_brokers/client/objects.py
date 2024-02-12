@@ -66,7 +66,19 @@ class IBBar:
     wap: Decimal
     count: int
 
-
+    @staticmethod
+    def to_dict(obj: IBBar) -> dict:
+        {
+            "date": [parse_datetime(bar.date) for bar in bars],
+            "open": [bar.open for bar in bars],
+            "high": [bar.high for bar in bars],
+            "low": [bar.low for bar in bars],
+            "close": [bar.close for bar in bars],
+            "volume": [float(bar.volume) for bar in bars],
+            "wap": [float(bar.wap) for bar in bars],
+            "barCount": [bar.barCount for bar in bars],
+        }
+        
 @dataclass
 class IBPositionEvent:
     conId: int

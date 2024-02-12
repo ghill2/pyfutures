@@ -20,6 +20,7 @@ from ibapi.common import ListOfHistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalTickLast
 from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import OrderId
+from ibapi.common import HistoricalTickBidAsk
 from ibapi.common import TickAttribBidAsk
 from ibapi.common import TickerId
 from ibapi.contract import Contract as IBContract
@@ -814,40 +815,44 @@ class InteractiveBrokersClient(Component, EWrapper):
     async def request_last_quote_tick(
         self,
         contract: IBContract,
+        use_rth: bool = True,
     ) -> IBQuoteTick:
-        self._log.debug(f"Requesting last quote tick for {contract.symbol} {contract.conId}")
+        self._log.debug(f"Requesting last quote tick for {contract.symbol}")
         quotes = await self.request_quote_ticks(
-            name="last_quote",
             contract=contract,
             count=1,
+            end_time=pd.Timestamp.utcnow(),
+            use_rth=use_rth,
         )
-        return quotes[-1]
+        return None if len(quotes) == 0 else quotes[-1]
 
     async def request_first_quote_tick(
         self,
         contract: IBContract,
         use_rth: bool = True,
-    ) -> IBQuoteTick:
-        pass
-        # TODO
-        
-    async def request_last_last_tick(
-        self,
-        contract: IBContract,
-        use_rth: bool = True,
-    ) -> IBQuoteTick:
-        pass
-        # TODO
+    ) -> IBQuoteTick | None:
+        self._log.debug(f"Requesting last quote tick for {contract.symbol}")
+        head_timestamp = await self.request_head_timestamp(
+            contract=contract,
+            what_to_show=WhatToShow.BID_ASK,
+            use_rth=use_rth,
+        )
+        quotes = await self.request_quote_ticks(
+            contract=contract,
+            count=1,
+            start_time=head_timestamp,
+            use_rth=use_rth,
+        )
+        return None if len(quotes) == 0 else quotes[0]
         
     async def request_quote_ticks(
         self,
-        name: str,
         contract: IBContract,
-        count: int,
+        count: int = 1000,
         start_time: pd.Timestamp | None = None,
         end_time: pd.Timestamp | None = None,
         use_rth: bool = True,
-    ) -> list[IBQuoteTick]:
+    ) -> list[HistoricalTickBidAsk]:
         
         """
         End Date/Time: The date, time, or time-zone entered is invalid.
@@ -862,9 +867,9 @@ class InteractiveBrokersClient(Component, EWrapper):
         
         # TODO assert start_time is tz-aware
         # TODO assert end_time is tz-aware
-        assert start_time is not None and end_time is not None
+        # assert start_time is not None and end_time is not None
         
-        request = self._create_request(data=[], name=name)
+        request = self._create_request(data=[])
         
         if start_time is None:
             start_time = ""
@@ -872,9 +877,8 @@ class InteractiveBrokersClient(Component, EWrapper):
             start_time = start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
             
         if end_time is None:
-            end_time = ""
-        else:
-            end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
+            end_time = pd.Timestamp.utcnow()
+        end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
         
         self._client.reqHistoricalTicks(
             reqId=request.id,
@@ -897,21 +901,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-
-        request.data.extend(
-            [
-                IBQuoteTick(
-                    name=request.name,
-                    time=parse_datetime(tick.time),
-                    bid_price=tick.priceBid,
-                    ask_price=tick.priceAsk,
-                    bid_size=tick.sizeBid,
-                    ask_size=tick.sizeAsk,
-                )
-                for tick in ticks
-            ],
-        )
-
+        
+        request.data.extend(ticks)
         if done:
             request.set_result(request.data)
 
@@ -1375,3 +1366,17 @@ class InteractiveBrokersClient(Component, EWrapper):
         df.sort_values(by=['day', 'start'], inplace=True)
         
         request.set_result(df)
+
+# request.data.extend(
+        #     [
+        #         IBQuoteTick(
+        #             name=request.name,
+        #             time=parse_datetime(tick.time),
+        #             bid_price=tick.priceBid,
+        #             ask_price=tick.priceAsk,
+        #             bid_size=tick.sizeBid,
+        #             ask_size=tick.sizeAsk,
+        #         )
+        #         for tick in ticks
+        #     ],
+        # )

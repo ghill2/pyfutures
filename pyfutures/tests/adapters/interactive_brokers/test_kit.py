@@ -212,7 +212,7 @@ class IBTestProviderStubs:
             contract = create_contract(
                     trading_class=row.trading_class,
                     symbol=row.symbol,
-                    venue=row.exchange.replace(",", "."),
+                    venue=row.exchange,
                     sec_type="FUT",
             )
             contract.currency = currency_str
@@ -220,13 +220,13 @@ class IBTestProviderStubs:
             contract_cont = create_contract(
                     trading_class=row.trading_class,
                     symbol=row.symbol,
-                    venue=row.exchange.replace(",", "."),
+                    venue=row.exchange,
                     sec_type="CONTFUT",
             )
             contract_cont.currency = currency_str
             
             contracts.append(contract)
-            contracts_cont.append(contract)
+            contracts_cont.append(contract_cont)
             
             # parse liquid schedule
             # 08:30-13:20
