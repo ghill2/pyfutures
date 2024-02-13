@@ -102,6 +102,8 @@ class TestInteractiveBrokersHistoric:
             start_time=start_time,
             end_time=end_time,
         )
-        for quote in quotes:
-            print(parse_datetime(quote.time))
+            
+        assert len(quotes) == 6772
+        assert quotes[0] == pd.Timestamp("2024-01-18 17:50:00+00:00")
+        assert quotes[-1] == pd.Timestamp("2024-01-18 17:59:59+00:00")
         

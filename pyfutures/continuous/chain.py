@@ -10,7 +10,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 from nautilus_trader.common.actor import Actor
 
 @dataclass
@@ -75,7 +75,7 @@ class ContractChain(Actor):
             # TODO determine priority
         )
         
-    def on_multiple_price(self, price: MultiplePrice) -> None:
+    def on_multiple_price(self, price: MultipleBar) -> None:
         
         expiry_day = self.expiry_date.floor("D")
         roll_date = self.roll_date

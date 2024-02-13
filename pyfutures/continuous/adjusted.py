@@ -1,6 +1,6 @@
 import pandas as pd
 from nautilus_trader.model.data import DataType
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 from collections import deque
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
@@ -27,7 +27,7 @@ class AdjustedPrices(Actor):
         
     
     def on_start(self) -> None:
-        self.subscribe_data(DataType(MultiplePrice))  # route MultiplePrices to this Actor
+        self.subscribe_data(DataType(MultipleBar))  # route MultiplePrices to this Actor
         
     @property
     def prices(self) -> deque:
@@ -45,7 +45,7 @@ class AdjustedPrices(Actor):
     def __next__(self):
         return next(self._prices)
         
-    def on_data(self, price: MultiplePrice) -> float | None:
+    def on_data(self, price: MultipleBar) -> float | None:
         
         value = None
         has_rolled = (
@@ -71,7 +71,7 @@ class AdjustedPrices(Actor):
         
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame(
-            list(map(MultiplePrice.to_dict, self._multiple_prices))
+            list(map(MultipleBar.to_dict, self._multiple_prices))
         )
         df["adjusted"] = list(map(float, self._adjusted_prices))
         df["timestamp"] = list(map(unix_nanos_to_dt, df["ts_event"]))

@@ -8,7 +8,7 @@ from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.enums import BarAggregation
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 from pyfutures.data.writer import MultiplePriceParquetWriter
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import BarType
@@ -88,17 +88,17 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
         BarAggregation.DAY: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
             bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
-            cls=MultiplePrice,
+            cls=MultipleBar,
         ),
         BarAggregation.HOUR: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
             bar_type=BarType.from_str(f"{row.instrument_id}-1-HOUR-MID-EXTERNAL"),
-            cls=MultiplePrice,
+            cls=MultipleBar,
         ),
         BarAggregation.MINUTE: ParquetFile(
             parent=MULTIPLE_PRICES_FOLDER,
             bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
-            cls=MultiplePrice,
+            cls=MultipleBar,
         ),
     }
     

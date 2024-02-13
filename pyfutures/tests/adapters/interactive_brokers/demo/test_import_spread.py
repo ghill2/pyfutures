@@ -5,9 +5,6 @@ import time
 import pandas as pd
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from ibapi.contract import Contract as IBContract
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from nautilus_trader.core.uuid import UUID4
 from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
 
 @pytest.mark.asyncio()
@@ -31,8 +28,6 @@ async def test_import_spread(client):
     
         contract = row.contract_cont
         sessions: pd.DataFrame = row.liquid_schedule.sessions(start_date=start_date)
-        # sessions = sessions
-        print(sessions)
         
         df = pd.DataFrame()
         
@@ -45,29 +40,17 @@ async def test_import_spread(client):
                 as_dataframe=True,
             )
             print(session.start, session.end, len(ndf))
-            print(ndf)
-            exit()
+            
             if len(ndf) == 0:
                 continue
             
             df = pd.concat([df, ndf])
-            print(df)
-            exit()
             
-            
-        # print(f"Exporting {row.instrument_id}")
+        print(f"Exporting {row.instrument_id}")
         
-        # path = SPREAD_FOLDER / (row.uname + ".txt")
-        # path.parent.mkdir(exist_ok=True, parents=True)
-        # with open(path, 'w') as f:
-        #     f.write(str(average_spread))
-            
-        # path = SPREAD_FOLDER / (row.uname + ".parquet")
-        # df = pd.DataFrame(spreads)
-        # df.to_parquet(path, index=False)
-            
-            
-            
+        path = SPREAD_FOLDER / (row.uname + ".txt")
+        path.parent.mkdir(exist_ok=True, parents=True)
+        df.to_csv(path, index=False)
             
 # async def test_import_spread(client):
     

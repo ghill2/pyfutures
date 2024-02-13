@@ -5,7 +5,7 @@ from numpy.dtypes import Float64DType
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 
 from nautilus_trader.model.objects import QUANTITY_MAX
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 
 
 DEFAULT_VOLUME = float(QUANTITY_MAX)
@@ -89,7 +89,7 @@ class TableSchema:
 
     @classmethod
     def validate_continuous_prices(cls, df: pd.DataFrame) -> pd.DataFrame:
-        return cls._validate(df, MultiplePrice.schema())
+        return cls._validate(df, MultipleBar.schema())
 
     @classmethod
     def _validate(cls, table: pa.Table, expected: pa.Schema) -> pa.Table:

@@ -137,10 +137,6 @@ class InteractiveBrokersHistoric:
             for quote in quotes:
                 assert parse_datetime(quote.time) < end_time
 
-            for quote in quotes:
-                print(quote.time, parse_datetime(quote.time))
-                exit()
-            
             quotes = [
                 q for q in quotes if parse_datetime(q.time) >= start_time
             ]
@@ -157,7 +153,8 @@ class InteractiveBrokersHistoric:
                 await asyncio.sleep(self._delay)
                 
         for quote in results:
-            assert parse_datetime(quote.time) >= start_time and parse_datetime(quote.time) < start_time
+            assert parse_datetime(quote.time) >= start_time
+            
         timestamps = [
             parse_datetime(quote.time) for quote in quotes
         ]

@@ -5,7 +5,7 @@ from collections.abc import Callable
 import pandas as pd
 
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
@@ -74,17 +74,17 @@ class MultipleData(Actor):
         if current_timestamp != forward_timestamp:
             return
         
-        multiple_price: MultiplePrice = self._create_multiple_price()
+        multiple_price: MultipleBar = self._create_multiple_price()
         
         self._msgbus.publish(topic=self.topic, msg=multiple_price)
         
-    def _create_multiple_price(self) -> MultiplePrice:
+    def _create_multiple_price(self) -> MultipleBar:
         
         carry_bar = self.cache.bar(self.carry_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
         current_bar = self.cache.bar(self.current_bar_type)
         
-        return MultiplePrice(
+        return MultipleBar(
             bar_type=self.bar_type,
             current_price=Price(current_bar.close, current_bar.close.precision),
             current_bar_type=self.current_bar_type,

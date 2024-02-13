@@ -28,7 +28,7 @@ from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 
 
@@ -189,13 +189,13 @@ class ParquetFile:
             assert len(data) > 0
             return data
         
-        elif self.cls is MultiplePrice:
+        elif self.cls is MultipleBar:
             
             
             
             prices = []
             for batch in pq.ParquetFile(str(self)).iter_batches():
-                deserialized = ArrowSerializer.deserialize(data_cls=MultiplePrice, batch=batch)
+                deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
                 prices.extend(deserialized)
                 
             assert len(prices) > 0
@@ -222,7 +222,7 @@ class ParquetFile:
         elif value.lower() == "bar":
             return Bar
         elif value.lower() == "multipleprice":
-            return MultiplePrice
+            return MultipleBar
         else:
             raise RuntimeError(f"Incompatible type {value}")
 

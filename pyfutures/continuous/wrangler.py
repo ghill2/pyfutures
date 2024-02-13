@@ -14,7 +14,7 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.model.identifiers import ClientId
-from pyfutures.continuous.multiple_price import MultiplePrice
+from pyfutures.continuous.multiple_bar import MultipleBar
 
 
 class MultiplePriceWrangler:
@@ -90,7 +90,7 @@ class MultiplePriceWrangler:
                 handler=self.prices[data.bar_type].append,
             )
         
-    def process_bars(self, bars: list[Bar]) -> dict[BarType, list[MultiplePrice]]:
+    def process_bars(self, bars: list[Bar]) -> dict[BarType, list[MultipleBar]]:
         
         for bar in bars:
             
