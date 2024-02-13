@@ -360,19 +360,23 @@ class InteractiveBrokersClient(Component, EWrapper):
         use_rth: bool = True,
         timeout_seconds: int | None = None,
     ) -> list[BarData]:
+        
         request: ClientRequest = self._create_request(
             data=[],
             timeout_seconds=timeout_seconds,
         )
-
-        endDateTime = end_time.strftime(format="%Y%m%d-%H:%M:%S") if end_time is not None else ""
+        
+        if end_time is None:
+            end_time = ""
+        else:
+            end_time = end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S")
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
-
+        
         self._client.reqHistoricalData(
             reqId=request.id,
             contract=contract,
-            endDateTime=endDateTime,
+            endDateTime=end_time,
             durationStr=duration,
             barSizeSetting=str(bar_size),
             whatToShow=what_to_show.name,
@@ -390,19 +394,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         if request is None:
             return  # no request found for request_id
 
-        request.data.append(
-            IBBar(
-                name=None,
-                time=parse_datetime(bar.date),
-                open=bar.open,
-                high=bar.high,
-                low=bar.low,
-                close=bar.close,
-                volume=bar.volume,
-                wap=bar.wap,
-                count=bar.barCount,
-            ),
-        )
+        request.data.append(bar)
+        
 
     def historicalDataEnd(self, reqId: int, start: str, end: str):  # : Override the EWrapper
         request = self._requests.get(reqId)
@@ -1051,19 +1044,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         if subscription is None:
             return  # no subscription found for request_id
 
-        subscription.callback(
-            IBBar(
-                reqId=reqId,
-                time=parse_datetime(bar.time),
-                open=bar.open,
-                high=bar.high,
-                low=bar.low,
-                close=bar.close,
-                volume=bar.volume,
-                wap=bar.wap,
-                count=bar.barCount,
-            ),
-        )
+        subscription.callback(bar)
 
     def realtimeBar(
         self,
@@ -1084,20 +1065,18 @@ class InteractiveBrokersClient(Component, EWrapper):
         subscription = self._requests.get(reqId)
         if subscription is None:
             return  # no subscription found for request_id
-
-        subscription.callback(
-            IBBar(
-                name=subscription.name,
-                time=parse_datetime(time),  # unix_nanos_to_dt(secs_to_nanos(int()))
-                open=open_,
-                high=high,
-                low=low,
-                close=close,
-                volume=volume,
-                wap=wap,
-                count=count,
-            ),
-        )
+        
+        bar = BarData()
+        bar.date = time  # TODO: convert to string
+        bar.open = open_
+        bar.high = high
+        bar.low = low
+        bar.close = close
+        bar.volume = volume
+        bar.wap = wap
+        bar.barCount = count
+        
+        subscription.callback(bar)
 
     ################################################################################################
     # Realtime ticks

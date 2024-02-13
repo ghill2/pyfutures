@@ -7,6 +7,11 @@ import pandas as pd
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
+from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import Frequency
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.adapters.interactive_brokers.enums import Duration
+        
 
 @pytest.mark.asyncio()
 async def test_import_spread(client):
@@ -17,28 +22,66 @@ async def test_import_spread(client):
     And an illiquid one like Aluminium
     """
     
-    rows = IBTestProviderStubs.universe_rows()
+    rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
     historic = InteractiveBrokersHistoric(client=client, delay=1)
-    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=365)).floor("1D")
+    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=182)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+    
     await client.connect()
+    
     for row in rows:
         
         print(f"Processing {row}")
-        df = await historic.request_quote_ticks(
+        df = await historic.request_bars(
             contract=row.contract_cont,
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.BID_ASK,
             start_time=start_time,
             end_time=end_time,
             as_dataframe=True,
         )
-        
-        print(f"Exporting {row.instrument_id}")
+        print(df)
+        print(f"Exporting {row.uname}")
         
         path = SPREAD_FOLDER / (row.uname + ".parquet")
         path.parent.mkdir(exist_ok=True, parents=True)
-        # df.to_parquet(path, index=False)
+        df.to_parquet(path, index=False)
         del df
         gc.collect()
+
+# @pytest.mark.asyncio()
+# async def test_import_spread(client):
+    
+#     """
+#     Export tick history for every instrument of hte universe
+#     Make one of the markets a liquid one like ZN
+#     And an illiquid one like Aluminium
+#     """
+    
+#     rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
+#     historic = InteractiveBrokersHistoric(client=client, delay=1)
+#     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=365)).floor("1D")
+#     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+    
+#     await client.connect()
+    
+#     for row in rows:
+        
+#         print(f"Processing {row}")
+#         df = await historic.request_quote_ticks(
+#             contract=row.contract_cont,
+#             start_time=start_time,
+#             end_time=end_time,
+#             as_dataframe=True,
+#         )
+        
+#         print(f"Exporting {row.instrument_id}")
+        
+#         path = SPREAD_FOLDER / (row.uname + ".parquet")
+#         path.parent.mkdir(exist_ok=True, parents=True)
+#         # df.to_parquet(path, index=False)
+#         del df
+#         gc.collect()
 
 # df = pd.DataFrame()
 

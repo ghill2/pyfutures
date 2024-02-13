@@ -1,4 +1,5 @@
 from __future__ import annotations
+import pandas as pd
 
 from enum import Enum
 
@@ -47,7 +48,7 @@ class Frequency(Enum):
 class Duration:
     def __init__(self, step: int, freq: Frequency):
         if freq == Frequency.HOUR or freq == Frequency.MINUTE:
-            raise RuntimeError("IB does not support Hourly duration frequency.")
+            raise RuntimeError("IB does not support Hourly or MINUTE duration frequency.")
 
         self.step = step
         self.freq = freq
@@ -58,11 +59,7 @@ class Duration:
 
     def __str__(self) -> str:
         return self.value
-
-    # def to_timedelta(self) -> pd.Timedelta():
-    #     return pd.Timedelta()
-
-
+    
 class BarSize(Enum):
     _1_SECOND = (1, Frequency.SECOND)
     _5_SECOND = (5, Frequency.SECOND)

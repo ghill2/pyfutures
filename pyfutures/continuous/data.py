@@ -74,34 +74,16 @@ class MultipleData(Actor):
         if current_timestamp != forward_timestamp:
             return
         
-        multiple_price: MultipleBar = self._create_multiple_price()
-        
-        self._msgbus.publish(topic=self.topic, msg=multiple_price)
-        
-    def _create_multiple_price(self) -> MultipleBar:
-        
-        carry_bar = self.cache.bar(self.carry_bar_type)
-        forward_bar = self.cache.bar(self.forward_bar_type)
-        current_bar = self.cache.bar(self.current_bar_type)
-        
-        return MultipleBar(
+        multiple_bar = MultipleBar(
             bar_type=self.bar_type,
-            current_price=Price(current_bar.close, current_bar.close.precision),
-            current_bar_type=self.current_bar_type,
-            current_month=self.chain.current_month,
-            forward_price=Price(forward_bar.close, forward_bar.close.precision)
-            if forward_bar is not None
-            else None,
-            forward_bar_type=self.forward_bar_type,
-            forward_month=self.chain.forward_month,
-            carry_price=Price(carry_bar.close, carry_bar.close.precision)
-            if carry_bar is not None
-            else None,
-            carry_month=self.chain.carry_month,
-            carry_bar_type=self.carry_bar_type,
+            current_bar=current_bar,
+            forward_bar=forward_bar,
+            carry_bar=self.cache.bar(self.carry_bar_type),
             ts_event=current_bar.ts_event,
             ts_init=current_bar.ts_init,
         )
+        
+        self._msgbus.publish(topic=self.topic, msg=multiple_bar)
         
     def _manage_subscriptions(self) -> None:
         

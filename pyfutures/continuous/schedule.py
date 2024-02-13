@@ -187,7 +187,34 @@ class MarketSchedule:
         df.dayofweek = df.dayofweek.astype(int)
         return df
 
-
+    @staticmethod
+    def from_daily_str(
+        name: str,
+        timezone: pytz.timezone,
+        value: str,
+        # weekend_only: bool = False,
+    ) -> MarketSchedule:
+        """
+        08:45-11:02, 12:30-15:02
+        08:45-11:02, 12:30-15:02
+        """
+        for s in value.replace(" ", "").split(","):
+            start, end = tuple(s.split("-"))
+            start_hour, start_minutes = tuple(start.split(":"))
+            end_hour, end_minutes = tuple(end.split(":"))
+        data = pd.DataFrame(columns=["dayofweek", "open", "close"])
+        for dayofweek in range(5):
+            # create dataframe
+            data.loc[len(data)] = {
+                "dayofweek": dayofweek,
+                "open": datetime.time(int(start_hour), int(start_minutes)),
+                "close": datetime.time(int(end_hour), int(end_minutes)),
+            }
+        return MarketSchedule(
+            name=name,
+            data=data,
+            timezone=timezone,
+        )
 # class MarketCalendar:
 
 #     def __init__(

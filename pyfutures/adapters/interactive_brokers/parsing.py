@@ -100,7 +100,7 @@ def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
         "ask_size": float(obj.sizeAsk),
     }
     
-def ib_quote_to_dict(bar: BarData) -> dict:
+def bar_data_to_dict(bar: BarData) -> dict:
     return {
         "date": parse_datetime(bar.date),
         "open": bar.open,

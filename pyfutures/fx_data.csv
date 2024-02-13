@@ -5,11 +5,11 @@ GBPCHF ,1998,1971 (CQGFX-I),2001,2005,2009,2004,1987,,TraderMade,full coverage,f
 EURGBP ,1989,1971 (CQGFX-I),2001,2003,2009,2000,1989,,TraderMade,full coverage,missing 11 years EURUSD > USDGBP
 GBPUSD ,1987,1971 (CQGFX-I),1983,2005,2009,2004,1987,1972,TraderMade,full coverage,missing 1 year USDGBP
 GBPAUD,1995,1988 (CQGFX-I),2000,2006,2009,2004,1987,,TraderMade,full coverage,full coverage AUDUSD > USDGBP
-INRGBP ,2002,2010 (MCX),2009,N/A,2009,2004,2014,,yahoo,missing 2 years,missing all
-GBPKRW ,2006,N/A,2008,N/A,2009,2003,2014,,yahoo,full coverage,full coverage KRWUSD > USDGBP
+INRGBP ,2002,2010 (MCX),2009,N/A,2009,2003,2014,,yahoo,missing 1 years,missing all
+GBPKRW ,2006,N/A,2008,N/A,2009,2002,2014,,yahoo,full coverage,full coverage KRWUSD > USDGBP
 GBPCNH ,2014,N/A,2015,N/A,2021,N/A,2014,,TraderMade,full coverage,full coverage CNHUSD > USDGBP
-HKDGBP ,2006,N/A,2009,N/A,2009,2004,2014,,yahoo,full coverage,"full coverage HKD>USD, USD>GBP"
-GBPSGD ,1998,N/A,2008,N/A,2009,2004,2014,1988,yahoo,6 years,"full coverage SGD>USD, USD>GBP"
+HKDGBP ,2006,N/A,2009,N/A,2009,2003,2014,,yahoo,full coverage,"full coverage HKD>USD, USD>GBP"
+GBPSGD ,1998,N/A,2008,N/A,2009,2003,2014,1988,yahoo,missing 5 years,"full coverage SGD>USD, USD>GBP"
 ,,,,,,,,,,,
 CHFUSD,,1971 (CQGFX-I),2008,,,,,1992,,,
 CADUSD,,1971 (CQGFX-I),2008,,,,,1992,,,

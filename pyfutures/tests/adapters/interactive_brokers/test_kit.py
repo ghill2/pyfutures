@@ -9,7 +9,7 @@ import pandas as pd
 from pathlib import Path
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
-from pytz import timezone
+import pytz
 from pyfutures.adapters.interactive_brokers.parsing import create_contract
 
 from nautilus_trader.model.identifiers import InstrumentId
@@ -148,7 +148,8 @@ class IBTestProviderStubs:
         df["start"] = df.start.apply(ContractMonth)
         df["data_start_day"] = df.data_start_day.apply(ContractMonth)
         df["data_start_minute"] = df.data_start_minute.apply(ContractMonth)
-        df["timezone"] = df.timezone.apply(timezone)
+        df["timezone"] = df.timezone.apply(pytz.timezone)
+        
         
         df["settlement_time"] = df.settlement_time.apply(
                                     lambda x: pd.Timedelta(
@@ -163,6 +164,7 @@ class IBTestProviderStubs:
         contracts_cont = []
         instrument_ids = []
         liquid_schedules = []
+        market_schedules = []
         for row in df.itertuples():
             
             instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
@@ -229,28 +231,21 @@ class IBTestProviderStubs:
             contracts.append(contract)
             contracts_cont.append(contract_cont)
             
-            # parse liquid schedule
-            # 08:30-13:20
-            for value in row.liquid_hours_local.replace(" ", "").split(","):
-                start, end = tuple(value.split("-"))
-                start_hour, start_minutes = tuple(start.split(":"))
-                end_hour, end_minutes = tuple(end.split(":"))
-            data = pd.DataFrame(columns=["dayofweek", "open", "close"])
-            for dayofweek in range(5):
-                # create dataframe
-                data.loc[len(data)] = {
-                    "dayofweek": dayofweek,
-                    "open": time(int(start_hour), int(start_minutes)),
-                    "close": time(int(end_hour), int(end_minutes)),
-                }
-                    
             liquid_schedules.append(
-                MarketSchedule(
-                    name=str(instrument_id),
-                    data=data,
+                MarketSchedule.from_daily_str(
+                    name=f"{instrument_id}_liquid",
                     timezone=row.timezone,
-                ),
+                    value=row.liquid_hours_local,
+                )
             )
+            market_schedules.append(
+                MarketSchedule.from_daily_str(
+                    name=f"{instrument_id}_market",
+                    timezone=row.timezone,
+                    value=row.market_hours_local,
+                )
+            )
+                
         
         df["instrument_id"] = instrument_ids
         df["config"] = configs
@@ -258,6 +253,7 @@ class IBTestProviderStubs:
         df["contract"] = contracts
         df["contract_cont"] = contracts_cont
         df["liquid_schedule"] = liquid_schedules
+        df["market_schedule"] = liquid_schedules
         
         # parse settlement time
         remove = [

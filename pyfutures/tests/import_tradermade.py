@@ -5,50 +5,20 @@ import pandas as pd
 import time
 from pyfutures.tests.adapters.interactive_brokers.test_kit import TRADERMADE_FOLDER
 
+TRADERMADE_SYMBOLS = [
+    "GBPCAD",
+    "GBPJPY",
+    "GBPCHF",
+    "EURGBP",
+    "GBPUSD",
+    "GBPAUD",
+    "GBPCNH",
+]
+
 if __name__ == "__main__":
 
-    
-    """
-    close        date     high      low     open
-0    1.14645  2019-01-01  1.14692  1.14083  1.14657
-1    1.13444  2019-01-02  1.14971  1.13251  1.14645
-
-    1987-01-03 5 Saturd {'base_currency': 'GBP', 'close': 2.05268, 'high': 2.06573, 'low': 1.4827, 'open': 1.484, 'quote_currency': 'CAD'}
-    1987-01-04 6 Sunday {'base_currency': 'GBP', 'close': 2.05268, 'high': 2.06573, 'low': 1.4827, 'open': 1.484, 'quote_currency': 'CAD'}
-    
-    1987-01-10 5 Saturd {'base_currency': 'GBP', 'close': 2.02509, 'high': 2.02688, 'low': 1.4701, 'open': 1.4767, 'quote_currency': 'CAD'}
-    1987-01-11 6 Sunday {'base_currency': 'GBP', 'close': 2.02509, 'high': 2.02688, 'low': 1.4701, 'open': 1.4767, 'quote_currency': 'CAD'}
-    
-    1987-01-17 5 Saturd {'base_currency': 'GBP', 'close': 2.06751, 'high': 2.07309, 'low': 1.5015, 'open': 1.504, 'quote_currency': 'CAD'}
-    1987-01-18 6 Sunday {'base_currency': 'GBP', 'close': 2.06751, 'high': 2.07309, 'low': 1.5015, 'open': 1.504, 'quote_currency': 'CAD'}
-    """
-    
-    
     api_key = dotenv_values()["tradermade_key"]
     
-    start_years = {
-        "GBPCAD": 1987,
-        "GBPJPY": 1987,
-        "GBPCHF": 1987,
-        "EURGBP": 1989,
-        "GBPUSD": 1987,
-        "GBPAUD": 1987,
-        "GBPCNH": 2014,
-    }
-    
-    print(pd.Timestamp("1987-01-17", tz="UTC").dayofweek)
-    
-    """
-    0 = Monday
-    1 = Tuesday
-    2 = Weds
-    3 = Thurs
-    4 = Friday
-    5 = Saturday
-    6 = Sunday
-    """
-    
-    # create days
     days = pd.date_range(
         start=pd.Timestamp("1987-01-01", tz="UTC"),
         end=pd.Timestamp.utcnow() + pd.Timedelta(days=5),
@@ -59,17 +29,7 @@ if __name__ == "__main__":
     days = days[(days.dt.dayofweek != 5) & (days.dt.dayofweek != 6)]
     print(len(days))
     
-    # # get available tickers
-    # url = f"https://marketdata.tradermade.com/api/v1/historical_currencies_list?api_key={api_key}"
-    # resp = requests.get(url)
-    # tickers = resp.json()["available_currencies"]
-    # tickers = [
-    #     x for x in tickers if x.endswith("GBP") or x.startswith("GBP")
-    # ]
-    # ticker_str = ','.join(tickers)
-    # print(ticker_str)
-    ticker_str = "CADGBP,JPYGBP,CHFGBP,EURGBP,USDGBP,AUDGBP,CNHGBP"
-    # ticker_str = "CADGBP"
+    ticker_str = ",".join(TRADERMADE_SYMBOLS)
     
     # iterate
     grouped = days.groupby([days.dt.year, days.dt.month])
@@ -114,3 +74,24 @@ if __name__ == "__main__":
         path.parent.mkdir(exist_ok=True, parents=True)
         print(f"Writing {str(path)}...")
         df.to_csv(path, index=False)
+        
+        
+# start_years = {
+#     "GBPCAD": 1987,
+#     "GBPJPY": 1987,
+#     "GBPCHF": 1987,
+#     "EURGBP": 1989,
+#     "GBPUSD": 1987,
+#     "GBPAUD": 1987,
+#     "GBPCNH": 2014,
+# }
+
+# # get available tickers
+# url = f"https://marketdata.tradermade.com/api/v1/historical_currencies_list?api_key={api_key}"
+# resp = requests.get(url)
+# tickers = resp.json()["available_currencies"]
+# tickers = [
+#     x for x in tickers if x.endswith("GBP") or x.startswith("GBP")
+# ]
+# ticker_str = ','.join(tickers)
+# print(ticker_str)
