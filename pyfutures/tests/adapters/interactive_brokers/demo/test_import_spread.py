@@ -1,5 +1,6 @@
 import pytest
 from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+import gc
 import random
 import time
 import pandas as pd
@@ -11,46 +12,38 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
 async def test_import_spread(client):
     
     """
-    so sample one tick every hour in the liquid session
+    Export tick history for every instrument of hte universe
     Make one of the markets a liquid one like ZN
     And an illiquid one like Aluminium
     """
     
-    rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
-    
-    start_date = (pd.Timestamp.now() - pd.Timedelta(days=365)).floor("1D")
-    
+    rows = IBTestProviderStubs.universe_rows()
+    historic = InteractiveBrokersHistoric(client=client, delay=1)
+    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=365)).floor("1D")
+    end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     await client.connect()
-    
-    historic = InteractiveBrokersHistoric(client=client, delay=2)
-    
     for row in rows:
-    
-        contract = row.contract_cont
-        sessions: pd.DataFrame = row.liquid_schedule.sessions(start_date=start_date)
         
-        df = pd.DataFrame()
+        print(f"Processing {row}")
+        df = await historic.request_quote_ticks(
+            contract=row.contract_cont,
+            start_time=start_time,
+            end_time=end_time,
+            as_dataframe=True,
+        )
         
-        for session in sessions.itertuples():
-            
-            ndf = await historic.request_quote_ticks(
-                contract=contract,
-                start_time=session.start,
-                end_time=session.end,
-                as_dataframe=True,
-            )
-            print(session.start, session.end, len(ndf))
-            
-            if len(ndf) == 0:
-                continue
-            
-            df = pd.concat([df, ndf])
-            
         print(f"Exporting {row.instrument_id}")
         
-        path = SPREAD_FOLDER / (row.uname + ".txt")
+        path = SPREAD_FOLDER / (row.uname + ".parquet")
         path.parent.mkdir(exist_ok=True, parents=True)
-        df.to_csv(path, index=False)
+        # df.to_parquet(path, index=False)
+        del df
+        gc.collect()
+
+# df = pd.DataFrame()
+
+# for session in sessions.itertuples():
+# sessions: pd.DataFrame = row.liquid_schedule.sessions(start_date=start_date)
             
 # async def test_import_spread(client):
     

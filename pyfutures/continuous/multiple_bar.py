@@ -54,26 +54,32 @@ class MultipleBar(Data):
         return pa.schema(
             [
                 pa.field("bar_type", pa.dictionary(pa.int16(), pa.string())),
+                pa.field("current_bar_type", pa.dictionary(pa.int16(), pa.string())),
                 pa.field("current_open", pa.string()),
                 pa.field("current_high", pa.string()),
                 pa.field("current_low", pa.string()),
                 pa.field("current_close", pa.string()),
                 pa.field("current_volume", pa.string()),
-                pa.field("current_bar_type", pa.dictionary(pa.int16(), pa.string())),
+                pa.field("current_ts_event", pa.uint64()),
+                pa.field("current_ts_init", pa.uint64()),
+                pa.field("forward_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
                 pa.field("forward_open", pa.string(), nullable=True),
                 pa.field("forward_high", pa.string(), nullable=True),
                 pa.field("forward_low", pa.string(), nullable=True),
                 pa.field("forward_close", pa.string(), nullable=True),
                 pa.field("forward_volume", pa.string(), nullable=True),
-                pa.field("forward_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
+                pa.field("forward_ts_event", pa.uint64(), nullable=True),
+                pa.field("forward_ts_init", pa.uint64(), nullable=True),
+                pa.field("carry_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
                 pa.field("carry_open", pa.string(), nullable=True),
                 pa.field("carry_high", pa.string(), nullable=True),
                 pa.field("carry_low", pa.string(), nullable=True),
                 pa.field("carry_close", pa.string(), nullable=True),
                 pa.field("carry_volume", pa.string(), nullable=True),
-                pa.field("carry_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
-                pa.field("ts_event", pa.uint64()),
-                pa.field("ts_init", pa.uint64()),
+                pa.field("carry_ts_event", pa.uint64(), nullable=True),
+                pa.field("carry_ts_init", pa.uint64(), nullable=True),
+                pa.field("ts_event", pa.uint64(), nullable=True),
+                pa.field("ts_init", pa.uint64(), nullable=True),
             ],
         )
 
@@ -81,24 +87,30 @@ class MultipleBar(Data):
     def to_dict(obj: MultipleBar) -> dict:
         return {
             "bar_type": str(obj.bar_type),
+            "current_bar_type": str(obj.current_bar.bar_type),
             "current_open": str(obj.current_bar.open),
             "current_high": str(obj.current_bar.high),
             "current_low": str(obj.current_bar.low),
             "current_close": str(obj.current_bar.close),
             "current_volume": str(obj.current_bar.volume),
-            "current_bar_type": str(obj.current_bar_type),
+            "current_ts_event": obj.current_bar.ts_event,
+            "current_ts_init": obj.current_bar.ts_init,
+            "forward_bar_type": str(obj.forward_bar.bar_type) if obj.forward_bar is not None else None,
             "forward_open": str(obj.forward_bar.open) if obj.forward_bar is not None else None,
             "forward_high": str(obj.forward_bar.high) if obj.forward_bar is not None else None,
             "forward_low": str(obj.forward_bar.low) if obj.forward_bar is not None else None,
             "forward_close": str(obj.forward_bar.close) if obj.forward_bar is not None else None,
             "forward_volume": str(obj.forward_bar.volume) if obj.forward_bar is not None else None,
-            "forward_bar_type": str(obj.forward_bar_type) if obj.forward_bar is not None else None,
+            "forward_ts_event": obj.forward_bar.ts_event if obj.forward_bar is not None else None,
+            "forward_ts_init": obj.forward_bar.ts_init if obj.forward_bar is not None else None,
+            "carry_bar_type": str(obj.carry_bar.bar_type) if obj.carry_bar is not None else None,
             "carry_open": str(obj.carry_bar.open) if obj.carry_bar is not None else None,
             "carry_high": str(obj.carry_bar.high) if obj.carry_bar is not None else None,
             "carry_low": str(obj.carry_bar.low) if obj.carry_bar is not None else None,
             "carry_close": str(obj.carry_bar.close) if obj.carry_bar is not None else None,
             "carry_volume": str(obj.carry_bar.volume) if obj.carry_bar is not None else None,
-            "carry_bar_type": str(obj.carry_bar_type) if obj.carry_bar is not None else None,
+            "carry_ts_event": obj.carry_bar.ts_event if obj.carry_bar is not None else None,
+            "carry_ts_init": obj.carry_bar.ts_init if obj.carry_bar is not None else None,
             "ts_event": obj.ts_event,
             "ts_init": obj.ts_init,
         }
@@ -115,6 +127,8 @@ class MultipleBar(Data):
                 low=Price.from_str(values["current_low"]),
                 close=Price.from_str(values["current_close"]),
                 volume=Quantity.from_str(values["current_volume"]),
+                ts_event=values["current_ts_event"],
+                ts_init=values["current_ts_init"],
             ),
             forward_bar=Bar(
                 bar_type=BarType.from_str(values["forward_bar_type"]),
@@ -123,6 +137,8 @@ class MultipleBar(Data):
                 low=Price.from_str(values["forward_low"]),
                 close=Price.from_str(values["forward_close"]),
                 volume=Quantity.from_str(values["forward_volume"]),
+                ts_event=values["forward_ts_event"],
+                ts_init=values["forward_ts_init"],
             )
             if values.get("forward_bar_type") else None,
             carry_bar=Bar(
@@ -132,6 +148,8 @@ class MultipleBar(Data):
                 low=Price.from_str(values["carry_low"]),
                 close=Price.from_str(values["carry_close"]),
                 volume=Quantity.from_str(values["carry_volume"]),
+                ts_event=values["carry_ts_event"],
+                ts_init=values["carry_ts_init"],
             )
             if values.get("carry_bar_type") else None,
             ts_event=values["ts_event"],
@@ -148,33 +166,41 @@ class MultipleBar(Data):
             open=Price.from_str(state[2]),
             high=Price.from_str(state[3]),
             low=Price.from_str(state[4]),
-            close=Quantity.from_str(state[5]),
+            close=Price.from_str(state[5]),
+            volume=Quantity.from_str(state[6]),
+            ts_event=state[7],
+            ts_init=state[8],
         )
-        if state[6] is None:
+        if state[9] is None:
             self.forward_bar = None
         else:
             self.forward_bar = Bar(
-                bar_type=BarType.from_str(state[6]),
-                open=Price.from_str(state[7]),
-                high=Price.from_str(state[8]),
-                low=Price.from_str(state[9]),
-                volume=Price.from_str(state[10]),
-                close=Quantity.from_str(state[11]),
+                bar_type=BarType.from_str(state[9]),
+                open=Price.from_str(state[10]),
+                high=Price.from_str(state[11]),
+                low=Price.from_str(state[12]),
+                close=Price.from_str(state[13]),
+                volume=Quantity.from_str(state[14]),
+                ts_event=state[15],
+                ts_init=state[16],
             )
             
-        if state[12] is None:
+        if state[17] is None:
             self.carry_bar = None
         else:
             self.carry_bar = Bar(
-                bar_type=BarType.from_str(state[12]),
-                open=Price.from_str(state[13]),
-                high=Price.from_str(state[14]),
-                low=Price.from_str(state[15]),
-                close=Quantity.from_str(state[16]),
+                bar_type=BarType.from_str(state[17]),
+                open=Price.from_str(state[18]),
+                high=Price.from_str(state[19]),
+                low=Price.from_str(state[20]),
+                close=Price.from_str(state[21]),
+                volume=Quantity.from_str(state[22]),
+                ts_event=state[23],
+                ts_init=state[24],
             )
         
-        self._ts_event = state[17]
-        self._ts_init = state[18]
+        self._ts_event = state[25]
+        self._ts_init = state[26]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MultipleBar):

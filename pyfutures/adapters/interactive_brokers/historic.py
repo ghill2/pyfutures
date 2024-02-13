@@ -98,6 +98,54 @@ class InteractiveBrokersHistoric:
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
     ):
+        assert start_time is not None and end_time is not None
+        
+        
+        freq = pd.Timedelta(seconds=30)
+        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")
+        results = []
+        
+        for i in range(len(timestamps) - 2):
+            
+            
+            start_time = timestamps[i]
+            end_time = timestamps[i + 1]
+            self._log.debug(f"Requesting: {start_time} > {end_time}")
+            
+            quotes: list[HistoricalTickBidAsk] = await self._client.request_quote_ticks(
+                contract=contract,
+                start_time=start_time,
+                end_time=end_time,
+                count=1000,
+            )
+            
+            assert len(quotes) <= 1000
+            for quote in quotes:
+                print(start_time, end_time)
+                print(parse_datetime(quote.time))
+                assert parse_datetime(quote.time) <= end_time
+                assert parse_datetime(quote.time) >= start_time
+
+            if self._delay > 0:
+                await asyncio.sleep(self._delay)
+        
+        if as_dataframe:
+            return pd.DataFrame(
+                [
+                    historical_tick_bid_ask_to_dict(obj)
+                    for obj in results
+                ]
+            )
+            
+        return results
+    
+    async def request_quote_ticks2(
+        self,
+        contract: IBContract,
+        start_time: pd.Timestamp = None,
+        end_time: pd.Timestamp = None,
+        as_dataframe: bool = False,
+    ):
         
         """
         if end_time is passed only:

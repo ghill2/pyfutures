@@ -16,6 +16,9 @@ from pyfutures.adapters.interactive_brokers.client.objects import ClientExceptio
 @pytest.mark.asyncio()
 async def test_request_last_quote_tick_universe(client):
     
+    """
+    Find missing subscriptions in the universe
+    """
     rows = IBTestProviderStubs.universe_rows()
     
     missing = []
@@ -28,12 +31,12 @@ async def test_request_last_quote_tick_universe(client):
                 contract=contract,
             )
         except ClientException as e:
-            print(e)
-            print(row)
-            raise
-        
-        if last is None:
-            missing.append(row)
+            if e.code == 10187:
+                missing.append(row)
+            else:
+                print(e)
+                print(row)
+                raise
             
     for row in missing:
         print(row.trading_class, row.exchange)
