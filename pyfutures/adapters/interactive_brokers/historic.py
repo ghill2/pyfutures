@@ -2,6 +2,7 @@ import asyncio
 
 import pandas as pd
 from ibapi.common import BarData
+from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.core.uuid import UUID4
@@ -118,31 +119,49 @@ class InteractiveBrokersHistoric:
         assert start_time is not None and end_time is not None
         
         results = []
+        
+        i = 0
+        count = 1000
         while True:
             
             # split time range into interval, floor start and ceil end
             # for each interval, reduce end time until empty list
-            
-            quotes: list[IBQuoteTick] = await self._client.request_quote_ticks(
+            self._log.debug(f"Requesting: {end_time}")
+            quotes: list[HistoricalTickBidAsk] = await self._client.request_quote_ticks(
                 contract=contract,
+                # start_time=start_time,
                 end_time=end_time,
+                count=count,
             )
             
-            if len(quotes) == 0 and len(results) == 0:
-                break  # no quotes within range
+            for quote in quotes:
+                assert parse_datetime(quote.time) < end_time
+
+            for quote in quotes:
+                print(quote.time, parse_datetime(quote.time))
+                exit()
             
-            results.extend(quotes)
+            quotes = [
+                q for q in quotes if parse_datetime(q.time) >= start_time
+            ]
             
-            end_time = parse_datetime(results[0].time)
-            if end_time <= start_time:
+            results = quotes + results
+            
+            if len(quotes) < count:
                 break
             
+            end_time = parse_datetime(quotes[0].time)
+            self._log.debug(f"End time: {end_time}")
+
             if self._delay > 0:
-                asyncio.sleep(self._delay)
-            
-        results = [
-            x for x in results if parse_datetime(x.time) >= start_time
+                await asyncio.sleep(self._delay)
+                
+        for quote in results:
+            assert parse_datetime(quote.time) >= start_time and parse_datetime(quote.time) < start_time
+        timestamps = [
+            parse_datetime(quote.time) for quote in quotes
         ]
+        assert pd.Series(timestamps).is_monotonic_increasing
         
         if as_dataframe:
             return pd.DataFrame(

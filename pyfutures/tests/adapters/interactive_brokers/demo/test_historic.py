@@ -60,7 +60,6 @@ class TestInteractiveBrokersHistoric:
         # assert len(bars) == 250
         # assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
 
-
     @pytest.mark.asyncio()
     async def test_request_quote_ticks_dc(self, client):
         
@@ -93,9 +92,9 @@ class TestInteractiveBrokersHistoric:
         contract.symbol = "ZN"
         contract.exchange = "CBOT"
         contract.secType = "CONTFUT"
-        start_time = pd.Timestamp("2020-04-18 08:30:00-05:00")
-        end_time = pd.Timestamp("2023-04-18 16:00:00-05:00")
-        historic = InteractiveBrokersHistoric(client=client)
+        start_time = pd.Timestamp("2024-01-18 17:50:00-00:00")
+        end_time = pd.Timestamp("2024-01-18 18:00:00-00:00")
+        historic = InteractiveBrokersHistoric(client=client, delay=2)
         
         await client.connect()
         quotes = await historic.request_quote_ticks(
@@ -103,7 +102,6 @@ class TestInteractiveBrokersHistoric:
             start_time=start_time,
             end_time=end_time,
         )
-        print(df)
-        exit()
-        
+        for quote in quotes:
+            print(parse_datetime(quote.time))
         
