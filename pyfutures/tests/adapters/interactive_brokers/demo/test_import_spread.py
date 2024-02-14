@@ -22,7 +22,9 @@ async def test_import_spread(client):
     And an illiquid one like Aluminium
     """
     
-    rows = IBTestProviderStubs.universe_rows()
+    rows = IBTestProviderStubs.universe_rows(
+        # filter=["ECO"],
+    )
     historic = InteractiveBrokersHistoric(client=client, delay=2)
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
@@ -30,6 +32,11 @@ async def test_import_spread(client):
     await client.connect()
     
     for row in rows:
+        
+        path = SPREAD_FOLDER / (row.uname + ".parquet")
+        if path.exists():
+            print(f"Skipping {row}")
+            continue
         
         print(f"Processing {row}")
         df = await historic.request_bars2(
@@ -43,9 +50,10 @@ async def test_import_spread(client):
         print(df)
         print(f"Exporting {row.uname}")
         
-        path = SPREAD_FOLDER / (row.uname + ".parquet")
+        
         path.parent.mkdir(exist_ok=True, parents=True)
         df.to_parquet(path, index=False)
+        assert not df.empty
         del df
         gc.collect()
 

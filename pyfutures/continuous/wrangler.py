@@ -3,7 +3,7 @@ from pyfutures.continuous.data import MultipleData
 from nautilus_trader.portfolio.portfolio import Portfolio
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.clock import TestClock
+from nautilus_trader.common.component import TestClock
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
@@ -27,25 +27,18 @@ class MultiplePriceWrangler:
     ):
         
         clock = TestClock()
-        logger = Logger(
-            clock=TestClock(),
-            level_stdout=LogLevel.DEBUG,
-            bypass=not debug,
-        )
 
         msgbus = MessageBus(
             trader_id=TestIdStubs.trader_id(),
             clock=clock,
-            logger=logger,
         )
 
-        cache = Cache(logger=logger)
+        cache = Cache()
         
         portfolio = Portfolio(
             msgbus,
             cache,
             clock,
-            logger,
         )
         
         client = BacktestMarketDataClient(
@@ -53,14 +46,12 @@ class MultiplePriceWrangler:
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            logger=logger,
         )
         
         self.data_engine = DataEngine(
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            logger=logger,
             config=DataEngineConfig(debug=True),
         )
         
@@ -73,7 +64,6 @@ class MultiplePriceWrangler:
                 msgbus=msgbus,
                 cache=cache,
                 clock=clock,
-                logger=logger,
             )
             actor.start()
             

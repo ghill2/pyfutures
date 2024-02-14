@@ -20,6 +20,7 @@ from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
 import pytz
+from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.conversion import bar_to_bar
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
@@ -155,10 +156,12 @@ class ParquetFile:
                         "ask": df.close.values,
                         "bid_size": df.volume.values,
                         "ask_size": df.volume.values,
-                        "timestamp": df.index.values,
+                        "timestamp": df.index,
                     }
                 )
+                # df.timestamp = df.timestamp.tz_convert("UTC")
                 df.set_index("timestamp", inplace=True)
+                
                 
         elif list(df.columns) == ["bid", "ask", "bid_size", "ask_size", "ts_event", "ts_init"]:
             df = quotes_from_rust(df)
@@ -205,15 +208,18 @@ class ParquetFile:
     def num_rows(self) -> int:
         return pq.ParquetFile(str(self)).metadata.num_rows
 
-    def writer(self, instrument: Instrument) -> ParquetWriter:
+    def writer(
+        self,
+        instrument: Instrument,
+    ) -> ParquetWriter:
         if self.cls is Bar:
-            return BarParquetWriter(
-                path=self.path,
-                instrument=instrument,
-                bar_type=self.bar_type,
-            )
+            return BarParquetWriter(path=self.path, instrument=instrument, bar_type=self.bar_type)
         elif self.cls is QuoteTick:
             return QuoteTickParquetWriter(path=self.path, instrument=instrument)
+        elif self.cls is MultipleBar:
+            return MultipleBarParquetWriter(path=self.path, instrument=instrument)
+        else:
+            raise RuntimeError(f"Writer for cls {self.cls} not supported")
 
     @staticmethod
     def _str_to_cls(value: str) -> DataType:

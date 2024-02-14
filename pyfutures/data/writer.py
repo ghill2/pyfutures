@@ -181,7 +181,7 @@ class QuoteTickParquetWriter(ParquetWriter):
         self._write_table_with_metadata(table=table, metadata=metadata, append=append)
 
 
-class MultiplePriceParquetWriter(ParquetWriter):
+class MultipleBarParquetWriter(ParquetWriter):
     def __init__(
         self,
         path: Path | str,

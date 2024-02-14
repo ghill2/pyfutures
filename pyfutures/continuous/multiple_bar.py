@@ -15,7 +15,7 @@ class MultipleBar(Data):
         self,
         bar_type: BarType,
         current_bar: Bar,
-        forward_bar: Bar | None,
+        forward_bar: Bar,
         carry_bar: Bar | None,
         ts_event: int,
         ts_init: int,
@@ -39,15 +39,18 @@ class MultipleBar(Data):
     
     @property
     def current_month(self) -> ContractMonth:
-        pass  # TODO
+        return ContractMonth(self.current_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
     
     @property
     def forward_month(self) -> ContractMonth:
-        pass  # TODO
+        return ContractMonth(self.forward_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
     
     @property
-    def carry_month(self) -> ContractMonth:
-        pass  # TODO
+    def carry_month(self) -> ContractMonth | None:
+        if self.carry_bar is None:
+            return None
+        return ContractMonth(self.carry_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+        
     
     @staticmethod
     def schema() -> pa.Schema:
@@ -62,14 +65,14 @@ class MultipleBar(Data):
                 pa.field("current_volume", pa.string()),
                 pa.field("current_ts_event", pa.uint64()),
                 pa.field("current_ts_init", pa.uint64()),
-                pa.field("forward_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
-                pa.field("forward_open", pa.string(), nullable=True),
-                pa.field("forward_high", pa.string(), nullable=True),
-                pa.field("forward_low", pa.string(), nullable=True),
-                pa.field("forward_close", pa.string(), nullable=True),
-                pa.field("forward_volume", pa.string(), nullable=True),
-                pa.field("forward_ts_event", pa.uint64(), nullable=True),
-                pa.field("forward_ts_init", pa.uint64(), nullable=True),
+                pa.field("forward_bar_type", pa.dictionary(pa.int16(), pa.string())),
+                pa.field("forward_open", pa.string()),
+                pa.field("forward_high", pa.string()),
+                pa.field("forward_low", pa.string()),
+                pa.field("forward_close", pa.string()),
+                pa.field("forward_volume", pa.string()),
+                pa.field("forward_ts_event", pa.uint64()),
+                pa.field("forward_ts_init", pa.uint64()),
                 pa.field("carry_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
                 pa.field("carry_open", pa.string(), nullable=True),
                 pa.field("carry_high", pa.string(), nullable=True),
@@ -95,14 +98,14 @@ class MultipleBar(Data):
             "current_volume": str(obj.current_bar.volume),
             "current_ts_event": obj.current_bar.ts_event,
             "current_ts_init": obj.current_bar.ts_init,
-            "forward_bar_type": str(obj.forward_bar.bar_type) if obj.forward_bar is not None else None,
-            "forward_open": str(obj.forward_bar.open) if obj.forward_bar is not None else None,
-            "forward_high": str(obj.forward_bar.high) if obj.forward_bar is not None else None,
-            "forward_low": str(obj.forward_bar.low) if obj.forward_bar is not None else None,
-            "forward_close": str(obj.forward_bar.close) if obj.forward_bar is not None else None,
-            "forward_volume": str(obj.forward_bar.volume) if obj.forward_bar is not None else None,
-            "forward_ts_event": obj.forward_bar.ts_event if obj.forward_bar is not None else None,
-            "forward_ts_init": obj.forward_bar.ts_init if obj.forward_bar is not None else None,
+            "forward_bar_type": str(obj.forward_bar.bar_type),
+            "forward_open": str(obj.forward_bar.open),
+            "forward_high": str(obj.forward_bar.high),
+            "forward_low": str(obj.forward_bar.low),
+            "forward_close": str(obj.forward_bar.close),
+            "forward_volume": str(obj.forward_bar.volume),
+            "forward_ts_event": obj.forward_bar.ts_event,
+            "forward_ts_init": obj.forward_bar.ts_init,
             "carry_bar_type": str(obj.carry_bar.bar_type) if obj.carry_bar is not None else None,
             "carry_open": str(obj.carry_bar.open) if obj.carry_bar is not None else None,
             "carry_high": str(obj.carry_bar.high) if obj.carry_bar is not None else None,
@@ -139,8 +142,7 @@ class MultipleBar(Data):
                 volume=Quantity.from_str(values["forward_volume"]),
                 ts_event=values["forward_ts_event"],
                 ts_init=values["forward_ts_init"],
-            )
-            if values.get("forward_bar_type") else None,
+            ),
             carry_bar=Bar(
                 bar_type=BarType.from_str(values["carry_bar_type"]),
                 open=Price.from_str(values["carry_open"]),
@@ -157,50 +159,22 @@ class MultipleBar(Data):
         )
 
     def __getstate__(self) -> tuple:
-        return tuple(self.to_dict(self).values())
+        return (
+            str(self.bar_type),
+            self.current_bar,
+            self.forward_bar,
+            self.carry_bar,
+            self._ts_init,
+            self._ts_event,
+        )
 
     def __setstate__(self, state):
         self.bar_type = BarType.from_str(state[0])
-        self.current_bar = Bar(
-            bar_type=BarType.from_str(state[1]),
-            open=Price.from_str(state[2]),
-            high=Price.from_str(state[3]),
-            low=Price.from_str(state[4]),
-            close=Price.from_str(state[5]),
-            volume=Quantity.from_str(state[6]),
-            ts_event=state[7],
-            ts_init=state[8],
-        )
-        if state[9] is None:
-            self.forward_bar = None
-        else:
-            self.forward_bar = Bar(
-                bar_type=BarType.from_str(state[9]),
-                open=Price.from_str(state[10]),
-                high=Price.from_str(state[11]),
-                low=Price.from_str(state[12]),
-                close=Price.from_str(state[13]),
-                volume=Quantity.from_str(state[14]),
-                ts_event=state[15],
-                ts_init=state[16],
-            )
-            
-        if state[17] is None:
-            self.carry_bar = None
-        else:
-            self.carry_bar = Bar(
-                bar_type=BarType.from_str(state[17]),
-                open=Price.from_str(state[18]),
-                high=Price.from_str(state[19]),
-                low=Price.from_str(state[20]),
-                close=Price.from_str(state[21]),
-                volume=Quantity.from_str(state[22]),
-                ts_event=state[23],
-                ts_init=state[24],
-            )
-        
-        self._ts_event = state[25]
-        self._ts_init = state[26]
+        self.current_bar = state[1]
+        self.forward_bar = state[2]
+        self.carry_bar = state[3]
+        self._ts_event = state[4]
+        self._ts_init = state[5]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, MultipleBar):

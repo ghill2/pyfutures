@@ -165,6 +165,7 @@ class IBTestProviderStubs:
         instrument_ids = []
         liquid_schedules = []
         market_schedules = []
+        quote_homes = []
         for row in df.itertuples():
             
             instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
@@ -193,6 +194,7 @@ class IBTestProviderStubs:
             price_precision = len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1])
             
             currency_str = re.search(r"\((.*?)\)", row.quote_currency).group(1)
+            quote_homes.append(InstrumentId.from_str(f"{currency_str}GBP.SIM"))
             bases.append(
                 FuturesContract(
                     instrument_id=instrument_id,
@@ -254,6 +256,7 @@ class IBTestProviderStubs:
         df["contract_cont"] = contracts_cont
         df["liquid_schedule"] = liquid_schedules
         df["market_schedule"] = liquid_schedules
+        df["instrument_id_qh"] = quote_homes
         
         # parse settlement time
         remove = [
@@ -335,7 +338,9 @@ class IBTestProviderStubs:
         paths = list(parent.glob(glob))
         paths = list(sorted(paths))
         files = list(map(ParquetFile.from_path, paths))
-        assert len(files) > 0
+        if len(files) == 0:
+            raise RuntimeError(f"Missing files for {glob}")
+        
         return files
         
     @classmethod

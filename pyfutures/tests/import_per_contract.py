@@ -33,7 +33,6 @@ def process(path: Path, row: dict) -> None:
 
     df = PortaraData.read_dataframe(path)
     
-    
     file = ParquetFile(
         parent=PER_CONTRACT_FOLDER,
         bar_type=bar_type,
@@ -104,28 +103,35 @@ def process_as_ticks(file: ParquetFile, row: tuple) -> None:
     
     writer.write_dataframe(df)
     
-def func_gen():
+rows = IBTestProviderStubs.universe_rows(
+    # filter=["ECO"],
+)
+
+def func_gen_import_minute_and_hour():
     
-    rows = IBTestProviderStubs.universe_rows(
-        filter=["EBM"],
-    )
+    # import MINUTE and DAY
+    for row in rows:
+        files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+        files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+        paths = list(sorted(set(files_d1 + files_m1)))
+        for path in paths:
+            yield joblib.delayed(process)(path, row)
+
+def func_gen_minute_to_hour():
     
-    # for row in rows:
-    #     files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-    #     files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-    #     paths = list(sorted(set(files_d1 + files_m1)))
-    #     for path in paths:
-    #         yield joblib.delayed(process)(path, row)
-            
-    # for row in rows:
-    #     files = IBTestProviderStubs.bar_files(
-    #         trading_class=row.trading_class,
-    #         symbol=row.symbol,
-    #         aggregation=BarAggregation.MINUTE,
-    #     )
-    #     for file in files:
-    #         yield joblib.delayed(process_hour)(file, row)
-            
+    # convert MINUTE > HOUR
+    for row in rows:
+        files = IBTestProviderStubs.bar_files(
+            trading_class=row.trading_class,
+            symbol=row.symbol,
+            aggregation=BarAggregation.MINUTE,
+        )
+        for file in files:
+            yield joblib.delayed(process_hour)(file, row)
+
+def func_gen_minute_to_quote_tick():
+    
+    # convert all to QuoteTick
     for row in rows:
         files = IBTestProviderStubs.bar_files(
             trading_class=row.trading_class,
@@ -135,7 +141,9 @@ def func_gen():
             yield joblib.delayed(process_as_ticks)(file, row)
         
 if __name__ == "__main__":
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(func_gen())
+    joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_import_minute_and_hour())
+    joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_hour())
+    # joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_quote_tick())
             
             
 # @pytest.mark.asyncio()

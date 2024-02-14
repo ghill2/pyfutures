@@ -9,7 +9,7 @@ from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.enums import BarAggregation
 from pyfutures.continuous.multiple_bar import MultipleBar
-from pyfutures.data.writer import MultiplePriceParquetWriter
+from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.data import BarType
 import pandas as pd
@@ -153,7 +153,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
         aggregation = data.bar_type.spec.aggregation
         file = files[aggregation]
         path = str(file.path)
-        writer = MultiplePriceParquetWriter(path=path)
+        writer = MultipleBarParquetWriter(path=path)
         
         prices_ = prices[data.bar_type]
         
@@ -171,16 +171,16 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
         # write parquet
         writer.write_objects(data=prices_)
         
-        # write csv
-        path = file.path.with_suffix(".csv")
-        df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
-        df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
-        df.to_csv(path, index=False)
+        # # write csv
+        # path = file.path.with_suffix(".csv")
+        # df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
+        # df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
+        # df.to_csv(path, index=False)
     
 if __name__ == "__main__":
     
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["EBM"],
+        # filter=["ECO"],
         # skip=[
         #     "EBM",
         # ],

@@ -11,7 +11,7 @@ from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.common.providers import InstrumentProvider
 from pyfutures.continuous.config import NonPositiveInt
 
-from nautilus_trader.config.validation import PositiveInt
+from nautilus_trader.config import PositiveInt
 
 class TestContractProvider(InstrumentProvider):
     def __init__(
