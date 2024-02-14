@@ -22,8 +22,8 @@ async def test_import_spread(client):
     And an illiquid one like Aluminium
     """
     
-    rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
-    historic = InteractiveBrokersHistoric(client=client, delay=1)
+    rows = IBTestProviderStubs.universe_rows()
+    historic = InteractiveBrokersHistoric(client=client, delay=2)
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     

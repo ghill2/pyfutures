@@ -165,11 +165,20 @@ class InteractiveBrokersHistoric:
         limit: int = None,
     ):
         
+        
+            
         assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
         assert limit is None  # TODO
 
+        head_timestamp = await self._client.request_head_timestamp(
+            contract=contract,
+            what_to_show=what_to_show,
+        )
+        if start_time < head_timestamp:
+            start_time = head_timestamp
+        
         total_bars = deque()
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
@@ -365,11 +374,7 @@ class InteractiveBrokersHistoric:
 
 
         
-            # head_timestamp = await self._client.request_head_timestamp(
-            #     contract=contract,
-            #     what_to_show=WhatToShow.BID_ASK,
-            # )
-            # assert start_time >= head_timestamp
+            
             
             # quotes: list[IBQuoteTick] = await self._client.request_quote_ticks(
             #     name=str(UUID4()),
