@@ -60,6 +60,18 @@ class Duration:
     def __str__(self) -> str:
         return self.value
     
+    def to_timedelta(self) -> pd.Timedelta:
+        if self.freq == Frequency.SECOND:
+            return pd.Timedelta(seconds=self.step)
+        elif self.freq == Frequency.MINUTE:
+            return pd.Timedelta(minutes=self.step)
+        elif self.freq == Frequency.DAY:
+            return pd.Timedelta(days=self.step)
+        elif self.freq == Frequency.WEEK:
+            return pd.Timedelta(days=self.step * 7)
+        else:
+            raise RuntimeError(f"Timedelta parsing error: the Duration {self} is not a fixed length of time.")
+        
 class BarSize(Enum):
     _1_SECOND = (1, Frequency.SECOND)
     _5_SECOND = (5, Frequency.SECOND)
@@ -108,12 +120,14 @@ class BarSize(Enum):
 
         frequency = Frequency[bar_aggregation_to_str(aggregation)]
         return cls((step, frequency))
-
-    def to_duration(self) -> Duration:
-        # special handling for HOUR and MINUTE because no DurationStr exists for them
-        if self.frequency == Frequency.HOUR:
-            return Duration(3600, Frequency.SECOND)
-        elif self.frequency == Frequency.MINUTE:
-            return Duration(self.step * 60, Frequency.SECOND)
-        else:
-            return Duration(self.step, self.frequency)
+    
+    
+            
+    # def to_duration(self) -> Duration:
+    #     # special handling for HOUR and MINUTE because no DurationStr exists for them
+    #     if self.frequency == Frequency.HOUR:
+    #         return Duration(3600, Frequency.SECOND)
+    #     elif self.frequency == Frequency.MINUTE:
+    #         return Duration(self.step * 60, Frequency.SECOND)
+    #     else:
+    #         return Duration(self.step, self.frequency)

@@ -24,7 +24,7 @@ async def test_import_spread(client):
     
     rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
     historic = InteractiveBrokersHistoric(client=client, delay=1)
-    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=182)).floor("1D")
+    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     
     await client.connect()
@@ -32,7 +32,7 @@ async def test_import_spread(client):
     for row in rows:
         
         print(f"Processing {row}")
-        df = await historic.request_bars(
+        df = await historic.request_bars2(
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,

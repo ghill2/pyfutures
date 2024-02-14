@@ -6,7 +6,7 @@ from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.core.uuid import UUID4
-
+from collections import deque
 from nautilus_trader.common.component import Logger
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
@@ -47,37 +47,9 @@ class InteractiveBrokersHistoric:
         # TODO: get first bars date
         
         # assert bar_size in (BarSize._1_DAY, BarSize._1_HOUR, BarSize._1_MINUTE)
-
         
-        """
-        set an appopriate interval range depending on the desired data frequency
-        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
-        Duration    Allowed Bar Sizes
-        60 S	1 sec - 1 mins
-        120 S	1 sec - 2 mins
-        1800 S (30 mins)	1 sec - 30 mins
-        3600 S (1 hr)	5 secs - 1 hr
-        14400 S (4hr)	10 secs - 3 hrs
-        28800 S (8 hrs)	30 secs - 8 hrs
-        1 D	1 min - 1 day
-        2 D	2 mins - 1 day
-        1 W	3 mins - 1 week
-        1 M	30 mins - 1 month
-        1 Y	1 day - 1 month
-        """
-        if bar_size.frequency == Frequency.DAY:
-            duration = Duration(step=365, freq=Frequency.DAY)
-            freq = pd.Timedelta(days=365)
-        elif bar_size.frequency == Frequency.HOUR or bar_size.frequency == Frequency.MINUTE:
-            duration = Duration(step=1, freq=Frequency.DAY)
-            freq = pd.Timedelta(days=1)
-        elif bar_size.frequency == Frequency.MINUTE and bar_size.step == 1:
-            duration = Duration(step=57600, freq=Frequency.SECOND)  # 12 hours
-            freq = pd.Timedelta(hours=12)
-        elif bar_size.frequency == Frequency.SECOND and bar_size.step == 5:
-            # duration = Duration(step=14400, freq=Frequency.SECOND)  # 4 hours
-            duration = Duration(step=3600, freq=Frequency.SECOND)
-            freq = pd.Timedelta(hours=1)
+        duration = self._get_appropriate_duration(bar_size)
+        freq = duration.to_timedelta()
         
         total_bars = []
         
@@ -124,7 +96,7 @@ class InteractiveBrokersHistoric:
 
                 end_time_ceil -= freq
                 start_time_floor -= freq
-                print(f"No data for end_time {end_time}")
+                print(f"No data for end_time {end_time_ceil}")
 
                 continue
 
@@ -152,6 +124,100 @@ class InteractiveBrokersHistoric:
             
         return total_bars
     
+    @staticmethod
+    def _get_appropriate_duration(bar_size: BarSize) -> Duration:
+        """
+        Return an appopriate interval range depending on the desired data frequency
+        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
+        This method returns a duration that is respectful to the IB api recommendations, higher counts are favored.
+        Duration    Allowed Bar Sizes
+        60 S	1 sec - 1 mins
+        120 S	1 sec - 2 mins
+        1800 S (30 mins)	1 sec - 30 mins
+        3600 S (1 hr)	5 secs - 1 hr
+        14400 S (4hr)	10 secs - 3 hrs
+        28800 S (8 hrs)	30 secs - 8 hrs
+        1 D	1 min - 1 day
+        2 D	2 mins - 1 day
+        1 W	3 mins - 1 week
+        1 M	30 mins - 1 month
+        1 Y	1 day - 1 month
+        """
+        if bar_size == BarSize._1_DAY:
+            return Duration(step=365, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_HOUR or BarSize._1_MINUTE:
+            return Duration(step=1, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_MINUTE:
+            return Duration(step=57600, freq=Frequency.SECOND)  # 12 hours
+        elif bar_size == BarSize._5_SECOND:
+            return Duration(step=3600, freq=Frequency.SECOND)
+        else:
+            raise ValueError("TODO: Unsupported duration")
+    
+    async def request_bars2(
+        self,
+        contract: IBContract,
+        bar_size: BarSize,
+        what_to_show: WhatToShow,
+        start_time: pd.Timestamp = None,
+        end_time: pd.Timestamp = None,
+        as_dataframe: bool = False,
+        limit: int = None,
+    ):
+        
+        assert start_time is not None and end_time is not None  # TODO
+        # TODO: floor start_time and end_time to second
+        # TODO: check start_time is >= head_timestamp
+        assert limit is None  # TODO
+
+        total_bars = deque()
+        duration = self._get_appropriate_duration(bar_size)
+        interval = duration.to_timedelta()
+        
+        while end_time >= start_time:
+
+            self._log.debug(
+                f"--> ({contract.symbol}.{contract.exchange}) "
+                f"Downloading bars at end_time: {end_time}",
+            )
+            
+            bars = []
+            try:
+                bars: list[BarData] = await self._client.request_bars(
+                    contract=contract,
+                    bar_size=str(bar_size),
+                    what_to_show=what_to_show,
+                    duration=str(duration),
+                    end_time=end_time,
+                    timeout_seconds=100,
+                )
+            except ClientException as e:
+                # Historical Market Data Service error message:HMDS query returned no data
+                # this error message is returns when there's no data in the duration from end time
+                if e.code == 162:
+                    pass
+                else:
+                    raise
+            
+            total_bars.extendleft(bars)
+            
+            print(f"Downloaded {len(bars)} bars...")
+            if len(bars) > 0:
+                end_time = bars[0].timestamp
+            else:
+                print(f"No data for end_time {end_time}")
+                end_time -= (interval / 10)
+            
+            if self._delay > 0:
+                await asyncio.sleep(self._delay)
+                
+        if as_dataframe:
+            return pd.DataFrame(
+                [bar_data_to_dict(obj) for obj in total_bars]
+            )
+            
+        return total_bars
+
     async def request_quote_ticks(
         self,
         contract: IBContract,
@@ -279,70 +345,7 @@ class InteractiveBrokersHistoric:
             )
         return results
     
-    async def request_bars2(
-        self,
-        contract: IBContract,
-        bar_size: BarSize,
-        what_to_show: WhatToShow,
-    ):
-        """
-        Downloads all the data for a contract.
-        """
-        # assert bar_size in (BarSize._1_DAY, BarSize._1_HOUR, BarSize._1_MINUTE)
-
-        # get start timestamp
-        head_timestamp = await self._client.request_head_timestamp(
-            contract=contract,
-            what_to_show=what_to_show,
-        )
-
-        # set an appopriate interval range depending on the desired data frequency
-        if bar_size.frequency == Frequency.DAY:
-            duration = Duration(step=365, freq=Frequency.DAY)
-            freq = "365 D"
-        elif bar_size.frequency == Frequency.HOUR or bar_size.frequency == Frequency.MINUTE:
-            duration = Duration(step=1, freq=Frequency.DAY)
-            freq = "1 D"
-
-        total_bars = []
-        end_time = pd.Timestamp.utcnow().ceil(freq)
-
-        while end_time >= head_timestamp:
-            print(contract.symbol, contract.exchange, f"head_timestamp={head_timestamp}")
-
-            self._log.debug(
-                f"--> ({contract.symbol}{contract.exchange}) "
-                f"Downloading bars at interval: {end_time}",
-            )
-
-            try:
-                bars: list[BarData] = await self._client.request_bars(
-                    contract=contract,
-                    bar_size=str(bar_size),
-                    what_to_show=what_to_show,
-                    duration=str(duration),
-                    end_time=end_time,
-                    timeout_seconds=100,
-                )
-            except ClientException as e:
-                if e.code != 162:
-                    raise e
-
-                # Historical Market Data Service error message:HMDS query returned no data
-                await asyncio.sleep(2)
-
-                end_time -= pd.Timedelta(freq)
-                print(f"No data for end_time {end_time}")
-
-                continue
-
-            print(f"Downloaded {len(bars)} bars...")
-
-            total_bars.extend(bars)
-
-            end_time = parse_datetime(bars[0].date)
-
-            await asyncio.sleep(3)
+    
               
     # @staticmethod
     # def _parse_dataframe(bars: list[BarData]) -> pd.DataFrame:

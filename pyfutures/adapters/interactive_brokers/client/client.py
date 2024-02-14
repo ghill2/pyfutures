@@ -394,6 +394,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         if request is None:
             return  # no request found for request_id
 
+        bar.timestamp = parse_datetime(bar.date)
         request.data.append(bar)
         
 
@@ -895,6 +896,9 @@ class InteractiveBrokersClient(Component, EWrapper):
         if request is None:
             return  # no response found for request_id
         
+        for tick in ticks:
+            tick.timestamp = parse_datetime(tick.time)
+            
         request.data.extend(ticks)
         if done:
             request.set_result(request.data)
@@ -938,21 +942,12 @@ class InteractiveBrokersClient(Component, EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-
-        request.data.extend(
-            [
-                IBTradeTick(
-                    name=request.name,
-                    time=parse_datetime(tick.time),
-                    price=tick.price,
-                    size=tick.size,
-                    exchange=tick.exchange,
-                    conditions=tick.specialConditions,
-                )
-                for tick in ticks
-            ],
-        )
-
+        
+        for tick in ticks:
+            tick.timestamp = parse_datetime(tick.time)
+            
+        request.data.extend(ticks)
+        
         if done:
             request.set_result(request.data)
 
@@ -1043,7 +1038,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         subscription = self._requests.get(reqId)
         if subscription is None:
             return  # no subscription found for request_id
-
+        
+        bar.timestamp = parse_datetime(bar.time)
         subscription.callback(bar)
 
     def realtimeBar(
@@ -1067,7 +1063,8 @@ class InteractiveBrokersClient(Component, EWrapper):
             return  # no subscription found for request_id
         
         bar = BarData()
-        bar.date = time  # TODO: convert to string
+        bar.timestamp = parse_datetime(time)
+        bar.date = time
         bar.open = open_
         bar.high = high
         bar.low = low
