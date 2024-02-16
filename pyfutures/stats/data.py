@@ -1,30 +1,23 @@
-import pickle
 import asyncio
-from nautilus_trader.adapters.interactive_brokers.config import (
-    InteractiveBrokersGatewayConfig,
+import json
+import pickle
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
+import pytz
+from nautilus_trader.adapters.interactive_brokers.common import (
+    IBContract,
 )
 from nautilus_trader.adapters.interactive_brokers.historic.client import (
     HistoricInteractiveBrokersClient,
 )
-from nautilus_trader.adapters.interactive_brokers.common import IBContract
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
-from pathlib import Path
+from nautilus_trader.common.component import Logger
+from nautilus_trader.common.enums import LogColor
+
 from pyfutures.tests.adapters.interactive_brokers.test_kit import (
     IBTestProviderStubs as PyfuturesTestProviderStubs,
 )
-import pandas as pd
-from nautilus_trader.model.data import BarSpecification
-from datetime import datetime
-from datetime import timedelta
-import pytz
-import json
-
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.enums import LogColor
-from nautilus_trader.common.component import Logger
-
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 
 logger = Logger(name="data_stats")
 
@@ -81,7 +74,7 @@ class DataStats:
                 details = await self.hclient._client.get_contract_details(row.contract)
                 if details is None:
                     print(row.contract)
-                    raise ValueError(f"No contract found for instrument...")
+                    raise ValueError("No contract found for instrument...")
                 with open(outpath, "wb") as f:
                     pickle.dump(details, f)
                 universe_details.append(details[0])
@@ -89,7 +82,10 @@ class DataStats:
         # print(d.contract.currency)
         return universe_details
 
-    async def _fx_rates(self, currencies):
+    async def _fx_rates():
+        pass
+
+    async def _fx_rates_ib(self, currencies):
         # load fx rates from file
         # currencies = set(currencies)
         print(currencies)
@@ -109,17 +105,18 @@ class DataStats:
                 continue
             else:
                 fx_rates.setdefault(fx_rate_symbol, "")
-                fx_rates[fx_rate_symbol] = await self.get_fx_rate(currency)
+                fx_rates[fx_rate_symbol] = await self.get_fx_rate_ib(currency)
                 print("-----> Writing FX Rates for instruments...")
                 with open(fx_rates_json_file, "w") as f:
                     json.dump(fx_rates, f, indent=4)
         return fx_rates
 
-    async def get_fx_rate(self, currency):
+    async def get_fx_rate_ib(self, currency):
         """
         INRGBP or GBPINR -> this does not exist on IB Forex
         """
         print(f"-----> Getting fx rate {currency}.GBP...")
+        print("here is a different change")
         if currency == "GBP":
             return 1.0
         elif currency == "INR":
