@@ -11,7 +11,10 @@ from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.enums import Duration
-        
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import Bar
+from pyfutures.data.files import ParquetFile
+from pyfutures.data.writer import BarParquetWriter
 
 @pytest.mark.asyncio()
 async def test_import_spread(client):
@@ -25,7 +28,7 @@ async def test_import_spread(client):
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    historic = InteractiveBrokersHistoric(client=client, delay=3)
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     
@@ -43,19 +46,40 @@ async def test_import_spread(client):
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
-            start_time=start_time,
+            start_time=end_time,
             end_time=end_time,
             as_dataframe=True,
         )
-        print(df)
+        assert not df.empty
+        df = df.rename({"date":"timestamp"}, axis=1)
+        df = df[["timestamp", "open", "high", "low", "close", "volume"]]
+        df.volume = 1.0
+        
         print(f"Exporting {row.uname}")
         
-        
         path.parent.mkdir(exist_ok=True, parents=True)
-        df.to_parquet(path, index=False)
-        assert not df.empty
+        # df.to_parquet(path, index=False)
+        
+        file = ParquetFile(
+            parent=SPREAD_FOLDER,
+            bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
+            cls=Bar,
+        )
+        
+        writer = BarParquetWriter(
+            path=file.path,
+            bar_type=file.bar_type,
+            price_precision=row.price_precision,
+            size_precision=1,
+        )
+        
+        writer.write_dataframe(df)
+        
+        
         del df
         gc.collect()
+        
+        
 
 # @pytest.mark.asyncio()
 # async def test_import_spread(client):

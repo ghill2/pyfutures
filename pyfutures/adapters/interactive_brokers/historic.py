@@ -17,7 +17,6 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
-from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 
 class InteractiveBrokersHistoric:
     def __init__(self, client: InteractiveBrokersClient, delay: float = 0):
@@ -111,7 +110,7 @@ class InteractiveBrokersHistoric:
             
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
-        
+                
         total_bars = [
             b for b in total_bars
             if parse_datetime(b.date) >= start_time and parse_datetime(b.date) < end_time
@@ -167,16 +166,17 @@ class InteractiveBrokersHistoric:
         
         
             
-        assert start_time is not None and end_time is not None  # TODO
+        # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
         assert limit is None  # TODO
-
+        
+        
         head_timestamp = await self._client.request_head_timestamp(
             contract=contract,
             what_to_show=what_to_show,
         )
-        if start_time < head_timestamp:
+        if start_time is None or start_time < head_timestamp:
             start_time = head_timestamp
         
         total_bars = deque()
@@ -200,6 +200,7 @@ class InteractiveBrokersHistoric:
                     end_time=end_time,
                     timeout_seconds=100,
                 )
+                
             except ClientException as e:
                 # Historical Market Data Service error message:HMDS query returned no data
                 # this error message is returns when there's no data in the duration from end time
@@ -215,15 +216,17 @@ class InteractiveBrokersHistoric:
                 end_time = bars[0].timestamp
             else:
                 print(f"No data for end_time {end_time}")
-                end_time -= (interval / 10)
+                end_time -= (interval / 2)
             
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
                 
         if as_dataframe:
-            return pd.DataFrame(
+            df = pd.DataFrame(
                 [bar_data_to_dict(obj) for obj in total_bars]
             )
+            df.volume = df.volume.astype(float)
+            return df
             
         return total_bars
 

@@ -1,17 +1,11 @@
-import json
 import pathlib
-from datetime import time
-# from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
-# from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesContract
 from datetime import datetime
 from collections import namedtuple
 import pandas as pd
 from pathlib import Path
 from ibapi.contract import Contract as IBContract
-from ibapi.contract import ContractDetails as IBContractDetails
 import pytz
 from pyfutures.adapters.interactive_brokers.parsing import create_contract
-
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Venue
 from pyfutures import PACKAGE_ROOT
@@ -24,9 +18,9 @@ from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.model.objects import Currency
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.schedule import MarketSchedule
+from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.model.enums import AssetClass
 from pyfutures.continuous.cycle import RollCycle
-from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.functions import bar_aggregation_to_str
@@ -34,17 +28,13 @@ from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
 import re
 
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import Logger
-from nautilus_trader.cache.cache import Cache
-
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
 PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
-MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/catalog/data/customdata_multiple_bar")
+MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/catalog/data/custom_multiple_bar")
+CATALOG_FOLDER = Path("/Users/g1/Desktop/catalog/")
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
@@ -106,7 +96,7 @@ class IBTestProviderStubs:
             "price_precision": pd.Float64Dtype(),
             "data_start_minute": str,
             "data_start_day": str,
-            "start": str,
+            "start_month": str,
             "skip_months": str,
             "data_completes": str, # pd.BooleanDtype()
             "price_magnifier":	pd.Int64Dtype(),
@@ -178,7 +168,7 @@ class IBTestProviderStubs:
         assert df.price_magnifier.notna().all()
         assert df.quote_currency.notna().all()
         
-        df["start"] = df.start.apply(ContractMonth)
+        df["start_month"] = df.start.apply(ContractMonth)
         df["data_start_day"] = df.data_start_day.apply(ContractMonth)
         df["data_start_minute"] = df.data_start_minute.apply(ContractMonth)
         df["timezone"] = df.timezone.apply(pytz.timezone)
@@ -191,20 +181,34 @@ class IBTestProviderStubs:
                                     )
                                 )
         
-        
         df["quote_currency"] = df.quote_currency.apply(
-            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)),
+            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1))
         )
+        
+        df["instrument_id"] = df.apply(
+            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.SIM"),
+            axis=1,
+        )
+        
+        df["quote_home_instrument_id"] = df.quote_currency.apply(
+            lambda x: InstrumentId.from_str(f"{x}GBP.SIM")
+        )
+        
+        df["quote_home_instrument"] = df.quote_home_instrument_id.apply(
+            lambda x: TestInstrumentProvider.default_fx_ccy(symbol=x.symbol.value, venue=x.venue)
+        )
+        
+        
         
         df["contract"] = df.apply(
             lambda row: create_contract(
-                trading_class=row.trading_class,
-                symbol=row.symbol,
-                venue=row.exchange,
-                sec_type="FUT",
-                currency=row.quote_currency,
+                    trading_class=row.trading_class,
+                    symbol=row.symbol,
+                    venue=row.exchange,
+                    sec_type="FUT",
+                    currency=str(row.quote_currency),
             ),
-            axis=1
+            axis=1,
         )
         
         df["contract_cont"] = df.apply(
@@ -213,59 +217,7 @@ class IBTestProviderStubs:
                 symbol=row.symbol,
                 venue=row.exchange,
                 sec_type="CONTFUT",
-                currency=row.quote_currency,
-            ),
-            axis=1,
-        )
-        
-        df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.SIM"),
-            axis=1,
-        )
-        df["quote_home_instrument"] = df.quote_currency.apply(
-            lambda x: TestInstrumentProvider().default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")),
-        )
-        
-        df["missing_months"] = df.missing_months.apply(
-            lambda x: list(map(ContractMonth, x.replace(" ", "").split(","))) \
-            if not isinstance(x, float) \
-            else []
-        )
-        
-        df["price_precision"] = df.apply(
-            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
-            axis=1,
-        )
-        
-        df["config"] = df.apply(
-            lambda row: ContractChainConfig(
-                instrument_id=row.instrument_id,
-                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
-                priced_cycle=RollCycle(row.priced_cycle),
-                roll_offset=row.roll_offset,
-                approximate_expiry_offset=row.expiry_offset,
-                carry_offset=row.carry_offset,
-                skip_months=row.missing_months,
-                start_month=row.start,
-            ),
-            axis=1,
-        )
-        
-        df["base_instrument"] = df.apply(
-            lambda row: FuturesContract(
-                instrument_id=row.instrument_id,
-                raw_symbol=row.instrument_id.symbol,
-                asset_class=AssetClass.COMMODITY,
-                currency=row.quote_currency,
-                price_precision=row.price_precision,
-                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
-                multiplier=Quantity.from_str(str(row.multiplier)),
-                lot_size=Quantity.from_int(1),
-                underlying="",
-                activation_ns=0,
-                expiration_ns=0,
-                ts_event=0,
-                ts_init=0,
+                currency=str(row.quote_currency),
             ),
             axis=1,
         )
@@ -286,28 +238,51 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-            
-        fees = []
-        for row in df.itertuples():
-
-            parsed_fees = []
-            for fee_type, fee_value, fee_currency, is_percent in [
-                ("fixed", row.fee_fixed, row.fee_fixed_currency, row.fee_fixed_percent),
-                ("exchange", row.fee_exchange, row.fee_exchange_currency, False),
-                ("regulatory", row.fee_regulatory, row.fee_regulatory_currency, False),
-                ("clearing", row.fee_clearing, row.fee_clearing_currency, row.fee_clearing_percent)]:
-                fee_value = float(fee_value)
-                if is_percent:
-                    assert fee_currency == row.contract.currency, f"{row.contract.exchange}-{row.contract.symbol}: if fees are as a percentage, the fee currency should equal the quote currency"
-                    assert fee_value != 0, f"{row.contract.exchange}-{row.contract.symbol}: percent fee columns are 0, there is an error in the data"
-
-                parsed_fees.append(
-                    (fee_type, fee_value, fee_currency, is_percent)
-                )
-            fees.append(parsed_fees)
         
-        df["fees"] = fees
-
+        df["missing_months"] = df.missing_months.apply(
+            lambda x: list(map(ContractMonth,
+                x.replace(" ", "").split(",") if not isinstance(x, float) else []
+            ))
+        )
+        
+        df["config"] = df.apply(
+            lambda row: ContractChainConfig(
+                instrument_id=row.instrument_id,
+                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
+                priced_cycle=RollCycle(row.priced_cycle),
+                roll_offset=row.roll_offset,
+                approximate_expiry_offset=row.expiry_offset,
+                carry_offset=row.carry_offset,
+                skip_months=row.missing_months,
+                start_month=row.start_month,
+            ),
+            axis=1,
+        )
+        
+        df["price_precision"] = df.apply(
+            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
+            axis=1,
+        )
+            
+        df["base_instrument"] = df.apply(
+            lambda row: FuturesContract(
+                instrument_id=row.instrument_id,
+                raw_symbol=row.instrument_id.symbol,
+                asset_class=AssetClass.COMMODITY,
+                currency=row.quote_currency,
+                price_precision=row.price_precision,
+                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
+                multiplier=Quantity.from_str(str(row.multiplier)),
+                lot_size=Quantity.from_int(1),
+                underlying="",
+                activation_ns=0,
+                expiration_ns=0,
+                ts_event=0,
+                ts_init=0,
+            ),
+            axis=1,
+        )
+        
         # parse settlement time
         remove = [
             "comments", "open", "close", "ex_url", "ex_symbol",

@@ -3,7 +3,7 @@ from dotenv import dotenv_values
 import yfinance as yf
 import pandas as pd
 import time
-from pyfutures.tests.adapters.interactive_brokers.test_kit import FX_RATES_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG_FOLDER
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import QuoteTickParquetWriter
 from nautilus_trader.model.data import Bar
@@ -41,11 +41,10 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
     
     instrument_id = InstrumentId.from_str(f"{symbol}.SIM")
     bar_type = BarType.from_str(
-        f"{instrument_id}.SIM-1-DAY-MID-EXTERNAL",
+        f"{instrument_id}-1-DAY-MID-EXTERNAL",
     )
-    
     file = ParquetFile(
-        parent=FX_RATES_FOLDER,
+        parent=CATALOG_FOLDER / "data/quote_tick",
         bar_type=bar_type,
         cls=Bar,
     )
@@ -114,12 +113,12 @@ def import_yahoo():
         
         write_dataframe(
             symbol=ticker.replace('=X', ''),
-            df=df,
+            df=df.reset_index(drop=True),
         )
         time.sleep(5)
         
 if __name__ == "__main__":
-    # import_tradermade()
+    import_tradermade()
     import_yahoo()
     
     

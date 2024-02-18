@@ -99,6 +99,11 @@ class ContractChain(Actor):
             self._rolls.append(
                 (current_timestamp, to_month)
             )
+            
+    
+    def roll(self):
+        to_month = self.hold_cycle.next_month(self.current_month)
+        self._roll(to_month=to_month)
         
     def _roll(
         self,

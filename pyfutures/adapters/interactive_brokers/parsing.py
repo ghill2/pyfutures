@@ -78,16 +78,17 @@ def ib_quote_tick_to_nautilus_quote_tick(
     )
 
 
-def bar_data_to_dict(bar: BarData) -> dict:
+def bar_data_to_dict(obj: BarData) -> dict:
+    
     return {
-        "date": parse_datetime(bar.date),
-        "open": bar.open,
-        "high": bar.high,
-        "low": bar.low,
-        "close": bar.close,
-        "volume": bar.volume,
-        "wap": bar.wap,
-        "barCount": bar.barCount,
+        "timestamp": parse_datetime(obj.time),
+        "open": obj.open,
+        "high": obj.high,
+        "low": obj.low,
+        "close": obj.close,
+        "volume": obj.volume,
+        "wap": obj.wap,
+        "barCount": obj.barCount,
     }
 
 
@@ -96,8 +97,8 @@ def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
         "time": parse_datetime(obj.time),
         "bid": obj.priceBid,
         "ask": obj.priceAsk,
-        "bid_size": float(obj.sizeBid),
-        "ask_size": float(obj.sizeAsk),
+        "bid_size": obj.sizeBid,
+        "ask_size": obj.sizeAsk,
     }
     
 def bar_data_to_dict(bar: BarData) -> dict:
@@ -199,9 +200,10 @@ def create_contract(
     contract.exchange = _desanitize_str(venue)
     contract.secType = sec_type
     # contract.includeExpired = False
+    
     if currency is not None:
         contract.currency = str(currency)
-        
+
     return contract
 
 def row_to_contract(row) -> IBContract:
