@@ -108,6 +108,11 @@ class BarSize(Enum):
 
         return f"{self.step} {key}{'' if self.step == 1 else 's'}"
 
+    def to_duration(self) -> Duration:
+        return Duration(step=self.value[0], freq=self.value[1])
+
+
+
     @classmethod
     def from_bar_spec(cls, bar_spec: BarSpecification) -> BarSpecification:
         step = bar_spec.step
