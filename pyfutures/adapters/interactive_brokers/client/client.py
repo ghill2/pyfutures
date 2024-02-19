@@ -267,7 +267,7 @@ class InteractiveBrokersClient(Component, EWrapper):
     ################################################################################################
     # Market Data Type
     
-    async def request_market_data_type(self, value: int):
+    async def request_market_data_type(self, market_data_type: int):
         """
         	by default only real-time (1) market data is enabled sending
             1 (real-time) disables frozen, delayed and delayed-frozen market data sending
@@ -275,7 +275,27 @@ class InteractiveBrokersClient(Component, EWrapper):
             3 (delayed) enables delayed and disables delayed-frozen market data sending
             4 (delayed-frozen) enables delayed and delayed-frozen market data
         """
-        pass
+        request = self._create_request(data=[])
+        self._client.reqContractDetails(reqId=request.id, marketDataType=market_data_type)
+        return await self._wait_for_request(request)
+
+    def marketDataType(self, reqId:TickerId, marketDataType:int):
+        """TWS sends a marketDataType(type) callback to the API, where
+        type is set to Frozen or RealTime, to announce that market data has been
+        switched between frozen and real-time. This notification occurs only
+        when market data switches between real-time and frozen. The
+        marketDataType( ) callback accepts a reqId parameter and is sent per
+        every subscription because different contracts can generally trade on a
+        different schedule."""
+        request = self._requests.get(reqId)
+        if request is None:
+            return  # no request found for request_id
+
+        request.set_result(marketDataType)
+
+
+    ################################################################################################
+    # reqMktData
         
     async def request_market_data(
         self,
@@ -292,15 +312,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             mktDataOptions=[],
         )
         
-    def marketDataType(self, reqId:TickerId, marketDataType:int):
-        """TWS sends a marketDataType(type) callback to the API, where
-        type is set to Frozen or RealTime, to announce that market data has been
-        switched between frozen and real-time. This notification occurs only
-        when market data switches between real-time and frozen. The
-        marketDataType( ) callback accepts a reqId parameter and is sent per
-        every subscription because different contracts can generally trade on a
-        different schedule."""
-        pass
+
         
     ################################################################################################
     # Order Execution

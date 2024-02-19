@@ -26,8 +26,8 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
+
 class TestInteractiveBrokersClient:
-            
     @pytest.mark.asyncio()
     async def test_reset(self, client):
         await client.reset()
@@ -137,10 +137,6 @@ class TestInteractiveBrokersClient:
         assert str(timestamp) == "2022-03-29 08:00:00+00:00"
 
     @pytest.mark.asyncio()
-    async def test_request_historical_schedule(self):
-        pass
-
-    @pytest.mark.asyncio()
     async def test_request_quote_ticks(self, client):
         contract = Contract()
         contract.conId = 553444806
@@ -157,10 +153,9 @@ class TestInteractiveBrokersClient:
 
         assert len(quotes) == 54
         assert all(isinstance(quote, IBQuoteTick) for quote in quotes)
-        
+
     @pytest.mark.asyncio()
     async def test_request_quote_ticks_dc(self, client):
-        
         contract = IBContract()
         contract.tradingClass = "DC"
         contract.symbol = "DA"
@@ -178,15 +173,14 @@ class TestInteractiveBrokersClient:
 
         assert len(quotes) == 54
         assert all(isinstance(quote, IBQuoteTick) for quote in quotes)
-        
+
     @pytest.mark.asyncio()
     async def test_request_first_quote_tick(self, client):
         # TODO: not first timestamp for CONTFUT
         pass
-        
+
     @pytest.mark.asyncio()
     async def test_request_last_quote_tick(self, client):
-        
         contract = IBContract()
         contract.tradingClass = "DC"
         contract.symbol = "DA"
@@ -201,7 +195,7 @@ class TestInteractiveBrokersClient:
             2,
         )
         assert isinstance(last, HistoricalTickBidAsk)
-        
+
     @pytest.mark.skip(reason="trade ticks return 0 for this contract")
     @pytest.mark.asyncio()
     async def test_request_trade_ticks(self, client):
@@ -315,12 +309,11 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_request_accounts(self, client):
         await client.request_accounts()
-    
+
     @pytest.mark.asyncio()
     async def test_request_historical_schedule(self, client):
-        
         await client.connect()
-        
+
         contract = Contract()
         contract.symbol = "SCI"
         contract.localSymbol = "FEFF27"
@@ -329,16 +322,16 @@ class TestInteractiveBrokersClient:
         contract.includeExpired = False
         df = await client.request_historical_schedule(contract=contract)
         print(df.iloc[:49])
-    
+
     @pytest.mark.asyncio()
     async def test_request_timezones(self, client):
         pass
-        
+
     @pytest.mark.skip(reason="unused")
     @pytest.mark.asyncio()
     async def test_import_schedules(self, client):
         pass
-        
+
     @pytest.mark.skip(reason="unused")
     @pytest.mark.asyncio()
     async def test_subscribe_account_updates(self, client):
@@ -349,8 +342,7 @@ class TestInteractiveBrokersClient:
         await asyncio.sleep(5)
 
         assert callback.call_count > 0
-    
-    
+
     @pytest.mark.asyncio()
     async def test_request_portfolio(self, client):
         await client.request_portfolio()
@@ -358,3 +350,11 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_request_pnl(self, client):
         return
+
+    @pytest.mark.asyncio()
+    async def test_request_market_data_type_returns_expected(self, client):
+        expected_market_data_type = 4
+        market_data_type = await client.request_market_data_type(
+            market_data_type=expected_market_data_type
+        )
+        assert expected_market_data_type == market_data_type
