@@ -45,7 +45,7 @@ MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/multiple/data/genericdata_conti
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
-UNIVERSE_CSV_PATH = PACKAGE_ROOT / "universe.csv"
+UNIVERSE_XLSX_PATH = PACKAGE_ROOT / "universe.xlsx"
 FX_RATES_FOLDER = PACKAGE_ROOT / "fx_rates"
 TRADERMADE_FOLDER = PACKAGE_ROOT / "tradermade"
 SPREAD_FOLDER = Path("/Users/g1/Desktop/spread")
@@ -78,23 +78,34 @@ class IBTestProviderStubs:
     
     @staticmethod
     def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
-        file = UNIVERSE_CSV_PATH
+        file = UNIVERSE_XLSX_PATH
         assert file.exists()
 
         dtype = {
             "uname": str,
-            "tradingClass": str,
+            "trading_class": str,
             "symbol": str,
             "exchange": str,
             "ex_symbol": str,
             "data_symbol": str,
+            "quote_currency": str,
+            "fee_fixed": str,
+            "fee_fixed_currency": str,
+            "fee_fixed_percent": str, # pd.BooleanDtype(),
+            "fee_exchange": str,
+            "fee_exchange_currency": str,
+            "fee_regulatory": str,
+            "fee_regulatory_currency": str,
+            "fee_clearing": str,
+            "fee_clearing_currency": str,
+            "fee_clearing_percent": str, # pd.BooleanDtype()
             "timezone": str,
             "price_precision": pd.Float64Dtype(),
             "data_start_minute": str,
             "data_start_day": str,
             "start": str,
             "skip_months": str,
-            "data_completes": pd.BooleanDtype(),
+            "data_completes": str, # pd.BooleanDtype()
             "price_magnifier":	pd.Int64Dtype(),
             "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,
@@ -117,7 +128,26 @@ class IBTestProviderStubs:
             "close": str,
             "comments": str,
         }
-        df = pd.read_csv(file, dtype=dtype)
+        # converters override dtypes
+        df = pd.read_excel(file, dtype=dtype, engine="openpyxl")
+        def parse_bool(s):
+            if s in ["TRUE", "True"]:
+                return True
+            elif s == ["FALSE", "False"]:
+                return False
+            elif s == "nan":
+                return None
+        # openpyxl casting is broken for booleans
+        # https://github.com/pandas-dev/pandas/issues/45903
+        df["fee_fixed_percent"] = df["fee_fixed_percent"].apply(parse_bool)
+        df["fee_clearing_percent"] = df["fee_clearing_percent"].apply(parse_bool)
+        df["data_completes"] = df["data_completes"].apply(parse_bool)
+
+        # df["trading_class"] = df["trading_class"].apply(str)
+        
+        # print(df.dtypes)
+        # print(df.loc[28, "tradingClass"])
+        # exit()
         
         # temporary remove instruments that are failing to roll
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
@@ -166,6 +196,7 @@ class IBTestProviderStubs:
         liquid_schedules = []
         market_schedules = []
         quote_homes = []
+        fees = []
         for row in df.itertuples():
             
             instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
@@ -247,6 +278,23 @@ class IBTestProviderStubs:
                     value=row.market_hours_local,
                 )
             )
+
+            parsed_fees = []
+            for fee_type, fee_value, fee_currency, is_percent in [
+                ("fixed", row.fee_fixed, row.fee_fixed_currency, row.fee_fixed_percent),
+                ("exchange", row.fee_exchange, row.fee_exchange_currency, False),
+                ("regulatory", row.fee_regulatory, row.fee_regulatory_currency, False),
+                ("clearing", row.fee_clearing, row.fee_clearing_currency, row.fee_clearing_percent)]:
+                fee_value = float(fee_value)
+                if is_percent:
+                    assert fee_currency == contract.currency, f"{contract.exchange}-{contract.symbol}: if fees are as a percentage, the fee currency should equal the quote currency"
+                    assert fee_value != 0, f"{contract.exchange}-{contract.symbol}: percent fee columns are 0, there is an error in the data"
+
+                parsed_fees.append(
+                    (fee_type, fee_value, fee_currency, is_percent)
+                )
+            fees.append(parsed_fees)
+
                 
         
         df["instrument_id"] = instrument_ids
@@ -257,10 +305,11 @@ class IBTestProviderStubs:
         df["liquid_schedule"] = liquid_schedules
         df["market_schedule"] = liquid_schedules
         df["instrument_id_qh"] = quote_homes
-        
+        df["fees"] = fees
+
         # parse settlement time
         remove = [
-            "comments", "open", "close", "ex_url", "ib_url", "ex_symbol",
+            "comments", "open", "close", "ex_url", "ex_symbol",
             "description", "session", "hours_last_edited", "data_start", "data_end",
             "data_completes", "minute_transition", "price_magnifier", "min_tick", "multiplier",
             "missing_months", "hold_cycle", "priced_cycle", "roll_offset", "expiry_offset", "carry_offset",
