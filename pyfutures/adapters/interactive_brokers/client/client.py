@@ -291,7 +291,6 @@ class InteractiveBrokersClient(Component, EWrapper):
             mktDataOptions=[],
         )
         
-    ):
     def marketDataType(self, reqId:TickerId, marketDataType:int):
         """TWS sends a marketDataType(type) callback to the API, where
         type is set to Frozen or RealTime, to announce that market data has been
