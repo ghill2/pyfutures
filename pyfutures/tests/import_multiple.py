@@ -57,7 +57,7 @@ def load_bars(row: dict) -> list[Bar]:
     for file in files:
         df = file.read(timestamp_delta=(row.settlement_time, row.timezone))
         assert len(df) > 0
-        wrangler = BarDataWrangler(bar_type=file.bar_type, instrument=row.base)
+        wrangler = BarDataWrangler(bar_type=file.bar_type, instrument=row.base_instrument)
         bars.extend(wrangler.process(data=df))
     
     #########################################################
@@ -109,7 +109,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
     
     instrument_provider = TestContractProvider(
         approximate_expiry_offset=row.config.approximate_expiry_offset,
-        base=row.base,
+        base=row.base_instrument,
     )
     chain = ContractChain(
         bar_type=files[BarAggregation.DAY].bar_type,
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             
     )
 
-    results = joblib.Parallel(n_jobs=20, backend="loky")(
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
         joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows
     )
 
