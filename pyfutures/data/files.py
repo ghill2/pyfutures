@@ -227,7 +227,7 @@ class ParquetFile:
             return QuoteTick
         elif value.lower() == "bar":
             return Bar
-        elif value.lower() == "multipleprice":
+        elif value.lower() == "multiplebar":
             return MultipleBar
         else:
             raise RuntimeError(f"Incompatible type {value}")
