@@ -349,6 +349,19 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     ################################################################################################
     # Request bars
+    async def request_last_bar(self,
+        contract: IBContract,
+        bar_size: BarSize,
+        what_to_show: WhatToShow,
+        use_rth: bool = True,
+    ) -> BarData:
+        bars = await self.request_bars(
+                contract=contract,
+                bar_size=bar_size,
+                what_to_show=what_to_show,
+                duration=bar_size.to_duration(),
+        )
+        return bars[0]
 
     async def request_bars(
         self,
@@ -802,6 +815,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             return  # no response found for request_id
 
         request.set_result(pd.to_datetime(headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True))
+
 
     ################################################################################################
     # Request quote ticks

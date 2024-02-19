@@ -53,29 +53,6 @@ def instrument_id(request) -> InstrumentId:
     return InstrumentId.from_str(value)
 
 @pytest.fixture(scope="session")
-def event_loop():
-    # loop = asyncio.get_event_loop_policy().new_event_loop()
-    loop = asyncio.get_event_loop()
-    # asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-@pytest.fixture(scope="session")
-def clock() -> LiveClock:
-    return LiveClock()
-
-@pytest.fixture(scope="session")
-def msgbus(clock):
-    return MessageBus(
-        TestIdStubs.trader_id(),
-        clock,
-    )
-
-@pytest.fixture(scope="session")
-def cache():
-    return TestComponentStubs.cache()
-
-@pytest.fixture(scope="session")
 def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     config = InteractiveBrokersInstrumentProviderConfig(
@@ -166,21 +143,7 @@ def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger, instrumen
 
     return exec_engine
 
-@pytest.fixture(scope="session")
-def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
-    client = InteractiveBrokersClient(
-            loop=event_loop,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-    )
-    
-    init_logging(level_stdout=LogLevel.DEBUG)
-    
-    return client
+
 
 @pytest.fixture(scope="session")
 def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:

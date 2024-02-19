@@ -1,6 +1,9 @@
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
 import asyncio
 import json
+
+from pyfutures.adapters.interactive_brokers.enums import BarSize 
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pytower import PACKAGE_ROOT
 from pathlib import Path
 
@@ -12,10 +15,37 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 from unittest.mock import Mock
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
+@pytest.mark.asyncio()
+async def test_request_last_bar_universe(client):
+    rows = IBTestProviderStubs.universe_rows()
+    await client.connect()
+
+
+    missing = []
+    for row in rows:
+        contract = row.contract_cont
+        try:
+            await client.request_last_bar(
+                contract=contract,
+                bar_size=BarSize._1_DAY,
+                what_to_show=WhatToShow.MIDPOINT,
+            )
+        except ClientException as e:
+            print(e)
+            missing.append(row)
+
+    for row in missing:
+        print(row.trading_class, row.exchange)
+
+
 
 @pytest.mark.asyncio()
 async def test_request_last_quote_tick_universe(client):
-    
     """
     Find missing subscriptions in the universe
     """
