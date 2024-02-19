@@ -299,8 +299,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         marketDataType( ) callback accepts a reqId parameter and is sent per
         every subscription because different contracts can generally trade on a
         different schedule."""
-
-        self.logAnswer(current_fn_name(), vars())
+        pass
         
     ################################################################################################
     # Order Execution
