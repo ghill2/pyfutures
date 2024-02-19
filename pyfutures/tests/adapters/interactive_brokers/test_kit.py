@@ -190,15 +190,9 @@ class IBTestProviderStubs:
             axis=1,
         )
         
-        df["quote_home_instrument_id"] = df.quote_currency.apply(
-            lambda x: InstrumentId.from_str(f"{x}GBP.SIM")
+        df["quote_home_instrument"] = df.quote_currency.apply(
+            lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM"))
         )
-        
-        df["quote_home_instrument"] = df.quote_home_instrument_id.apply(
-            lambda x: TestInstrumentProvider.default_fx_ccy(symbol=x.symbol.value, venue=x.venue)
-        )
-        
-        
         
         df["contract"] = df.apply(
             lambda row: create_contract(
