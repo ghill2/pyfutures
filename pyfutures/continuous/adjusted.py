@@ -55,10 +55,10 @@ class AdjustedPrices(Actor):
         )
         
         if has_rolled:
-            value = float(price.current_price) - float(self._last.current_price)
+            value = float(price.current_bar.close) - float(self._last.current_bar.close)
             self.adjust(value)
             
-        self._prices.append(float(price.current_price))
+        self._prices.append(float(price.current_bar.close))
         self._last = price
         
         return value

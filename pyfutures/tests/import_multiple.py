@@ -105,6 +105,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
     if skip and any(file.path.exists() for file in files.values()):
         print(f"Skipping {row.trading_class}")
         return
+    print(f"Processing {row.trading_class}")
     
     instrument_provider = TestContractProvider(
         approximate_expiry_offset=row.config.approximate_expiry_offset,

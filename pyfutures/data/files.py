@@ -177,9 +177,11 @@ class ParquetFile:
     
     def read_objects(self, nrows: int | None = None) -> pd.DataFrame:
         
-        session = DataBackendSession()
+        
 
         if self.cls is Bar or self.cls is QuoteTick:
+            
+            session = DataBackendSession()
             
             nautilus_type = ParquetDataCatalog._nautilus_data_cls_to_data_type(self.cls)
             
@@ -194,14 +196,18 @@ class ParquetFile:
         
         elif self.cls is MultipleBar:
             
+            df = pd.read_parquet(self.path)
+            assert not df.empty
+            records = df.to_dict(orient="records")
+            return [MultipleBar.from_dict(d) for d in records]
             
             
             prices = []
-            for batch in pq.ParquetFile(str(self)).iter_batches():
+            for batch in pq.ParquetFile(self.path).iter_batches():
                 deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
                 prices.extend(deserialized)
                 
-            assert len(prices) > 0
+            
             return prices
                 
     @property
