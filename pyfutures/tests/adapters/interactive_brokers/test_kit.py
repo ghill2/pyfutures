@@ -13,6 +13,7 @@ import pytz
 from pyfutures.adapters.interactive_brokers.parsing import create_contract
 
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Venue
 from pyfutures import PACKAGE_ROOT
 from nautilus_trader.model.enums import BarAggregation
 from pyfutures.data.files import ParquetFile
@@ -29,6 +30,8 @@ from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.functions import bar_aggregation_to_str
+from nautilus_trader.test_kit.providers import TestInstrumentProvider
+
 import re
 
 from nautilus_trader.common.component import MessageBus
@@ -216,11 +219,11 @@ class IBTestProviderStubs:
         )
         
         df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
+            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.SIM"),
             axis=1,
         )
-        df["quote_home_instrument_id"] = df.quote_currency.apply(
-            lambda x: InstrumentId.from_str(f"{x}GBP.SIM"),
+        df["quote_home_instrument"] = df.quote_currency.apply(
+            lambda x: TestInstrumentProvider().default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")),
         )
         
         df["missing_months"] = df.missing_months.apply(
@@ -349,7 +352,7 @@ class IBTestProviderStubs:
         
         aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
         month = month or "*"
-        glob_str=f"{trading_class}_{symbol}={month}.IB-1-{aggregation}-MID*.parquet"
+        glob_str=f"{trading_class}_{symbol}={month}.SIM-1-{aggregation}-MID*.parquet"
         return cls._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
     
     @classmethod
@@ -360,7 +363,7 @@ class IBTestProviderStubs:
         aggregation: BarAggregation,
     ) -> ParquetFile:
         aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}_{symbol}.IB-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}_{symbol}.SIM-1-{aggregation}-MID*.parquet"
         files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
         return files
     
@@ -373,7 +376,7 @@ class IBTestProviderStubs:
     ) -> ParquetFile:
         
         aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}_{symbol}.IB-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}_{symbol}.SIM-1-{aggregation}-MID*.parquet"
         files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
         return files
     
@@ -389,107 +392,3 @@ class IBTestProviderStubs:
             raise RuntimeError(f"Missing files for {glob}")
         
         return files
-        
-    @classmethod
-    def universe_future_chains(cls) -> list[ContractChain]:
-        chains = []
-        universe = cls.universe_dataframe()
-        
-        # universe.open = universe.open.apply(lambda x: datetime.strptime(x, "%H:%M").time())
-        # universe.close = universe.close.apply(lambda x: datetime.strptime(x, "%H:%M").time())
-        
-        for row in universe.itertuples():
-            instrument_id = f"{row.tradingClass}-{row.symbol}.{row.exchange}"
-            chains.append(
-                FuturesChain(
-                    config=FuturesChainConfig(
-                        instrument_id=instrument_id,
-                        hold_cycle=row.hold_cycle,
-                        priced_cycle=row.priced_cycle,
-                        roll_offset=row.roll_offset,
-                        expiry_offset=row.expiry_offset,
-                        carry_offset=row.carry_offset,
-                    ),
-                ),
-            )
-        return chains
-    
-    # @classmethod
-    # def sessions(cls, names: int | None = None) -> list[Session]:
-    #     universe = cls.universe_dataframe()
-
-    #     sessions = []
-
-    #     grouped = list(universe.groupby("session"))
-    #     for session, df in grouped:
-    #         chains = []
-    #         for row in df.itertuples():
-    #             instrument_id = f"{row.tradingClass}-{row.symbol}.{row.exchange}"
-    #             chains.append(
-    #                 FuturesChain(
-    #                     config=FuturesChainConfig(
-    #                         instrument_id=instrument_id,
-    #                         hold_cycle=row.hold_cycle,
-    #                         priced_cycle=row.priced_cycle,
-    #                         roll_offset=row.roll_offset,
-    #                         expiry_offset=row.expiry_offset,
-    #                         carry_offset=row.carry_offset,
-    #                     ),
-    #                 ),
-    #             )
-
-    #         sessions.append(
-    #             Session(
-    #                 name=session,
-    #                 chains=chains,
-    #                 start_time=df.open.max(),
-    #                 end_time=df.close.min(),
-    #             ),
-    #         )
-
-    #     if names is not None:
-    #         sessions = [x for x in sessions if x.name in names]
-    #     return sessions
-
-    # @classmethod
-    # def universe_instrument_ids(cls) -> set[InstrumentId]:
-    #     instrument_ids = []
-    #     for chain in IBTestProviderStubs.universe_future_chains():
-    #         for instrument_id in chain.instrument_ids(
-    #             start=pd.Timestamp.utcnow(),
-    #             end=UNIVERSE_END,
-    #         ):
-    #             instrument_ids.append(instrument_id)
-    #     assert len(instrument_ids) == len(set(instrument_ids))
-    #     return set(instrument_ids)
-
-    # @staticmethod
-    # def universe_contract_details() -> list[IBContractDetails]:
-    #     """
-    #     Return the unexpired contract details for all FutureChains in the universe of
-    #     instruments.
-    #     """
-    #     folder = CONTRACT_DETAILS_PATH
-    #     assert folder.exists()
-    #     return [
-    #         dict_to_contract_details(json.loads(path.read_text()))
-    #         for path in sorted(folder.glob("*.json"))
-    #     ]
-        
-    # @staticmethod
-    # def price_precision(
-    #     min_tick: float,
-    #     price_magnifier: int,
-    # ) -> int:
-    #     min_tick = min_tick * price_magnifier
-    #     price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
-    #     return price_precision
-    
-    # @staticmethod
-    # def price_increment(
-    #     min_tick: float,
-    #     price_magnifier: int,
-    # ) -> Price:
-    #     min_tick = min_tick * price_magnifier
-    #     price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
-    #     return Price(min_tick, price_precision)
