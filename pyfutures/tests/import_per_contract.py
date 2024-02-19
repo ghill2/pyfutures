@@ -42,7 +42,7 @@ def process(path: Path, row: dict) -> None:
     writer = BarParquetWriter(
         path=file.path,
         bar_type=bar_type,
-        price_precision=row.base.price_precision,
+        price_precision=row.price_precision,
         size_precision=1,
     )
     
@@ -70,7 +70,7 @@ def process_hour(file: ParquetFile, row: tuple) -> None:
     writer = BarParquetWriter(
         path=file.path,
         bar_type=bar_type,
-        price_precision=row.base.price_precision,
+        price_precision=row.price_precision,
         size_precision=1,
     )
     
@@ -97,7 +97,7 @@ def process_as_ticks(file: ParquetFile, row: tuple) -> None:
     writer = QuoteTickParquetWriter(
         path=file.path,
         instrument_id=row.instrument_id,
-        price_precision=row.base.price_precision,
+        price_precision=row.price_precision,
         size_precision=1,
     )
     

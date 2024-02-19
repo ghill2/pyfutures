@@ -263,7 +263,46 @@ class InteractiveBrokersClient(Component, EWrapper):
         exception = ClientException(code=errorCode, message=errorString)
         
         request.set_result(exception)  # set_exception does not stop awaiting?
+    
+    ################################################################################################
+    # Market Data Type
+    
+    async def request_market_data_type(self, value: int):
+        """
+        	by default only real-time (1) market data is enabled sending
+            1 (real-time) disables frozen, delayed and delayed-frozen market data sending
+            2 (frozen) enables frozen market data sending
+            3 (delayed) enables delayed and disables delayed-frozen market data sending
+            4 (delayed-frozen) enables delayed and delayed-frozen market data
+        """
+        
+    async def request_market_data(
+        self,
+        ticker_id: int,
+        contract: IBContract,
+        generic_tick_list: list[int],
+    ):
+        await self._client.reqMktData(
+            tickerId=ticker_id,
+            contract=contract,
+            genericTickList=generic_tick_list,
+            snapshot=True,
+            regulatorySnaphsot=False,
+            mktDataOptions=[],
+        )
+        
+    ):
+    def marketDataType(self, reqId:TickerId, marketDataType:int):
+        """TWS sends a marketDataType(type) callback to the API, where
+        type is set to Frozen or RealTime, to announce that market data has been
+        switched between frozen and real-time. This notification occurs only
+        when market data switches between real-time and frozen. The
+        marketDataType( ) callback accepts a reqId parameter and is sent per
+        every subscription because different contracts can generally trade on a
+        different schedule."""
 
+        self.logAnswer(current_fn_name(), vars())
+        
     ################################################################################################
     # Order Execution
 
