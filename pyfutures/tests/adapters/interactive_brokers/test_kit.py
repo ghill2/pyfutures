@@ -187,97 +187,105 @@ class IBTestProviderStubs:
                                         minutes=int(x.split(":")[1]),
                                     )
                                 )
-                
-        configs = []
-        bases = []
-        contracts = []
-        contracts_cont = []
-        instrument_ids = []
-        liquid_schedules = []
-        market_schedules = []
-        quote_homes = []
+        
+        
+        df["quote_currency"] = df.quote_currency.apply(
+            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)),
+        )
+        
+        df["contract"] = df.apply(
+            lambda row: create_contract(
+                trading_class=row.trading_class,
+                symbol=row.symbol,
+                venue=row.exchange,
+                sec_type="FUT",
+                currency=row.quote_currency,
+            ),
+            axis=1
+        )
+        
+        df["contract_cont"] = df.apply(
+            lambda row: create_contract(
+                trading_class=row.trading_class,
+                symbol=row.symbol,
+                venue=row.exchange,
+                sec_type="CONTFUT",
+                currency=row.quote_currency,
+            ),
+            axis=1,
+        )
+        
+        df["instrument_id"] = df.apply(
+            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
+            axis=1,
+        )
+        df["quote_home_instrument_id"] = df.quote_currency.apply(
+            lambda x: InstrumentId.from_str(f"{x}GBP.SIM"),
+        )
+        
+        df["missing_months"] = df.missing_months.apply(
+            lambda x: list(map(ContractMonth, x.replace(" ", "").split(","))) \
+            if not isinstance(x, float) \
+            else []
+        )
+        
+        df["price_precision"] = df.apply(
+            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
+            axis=1,
+        )
+        
+        df["config"] = df.apply(
+            lambda row: ContractChainConfig(
+                instrument_id=row.instrument_id,
+                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
+                priced_cycle=RollCycle(row.priced_cycle),
+                roll_offset=row.roll_offset,
+                approximate_expiry_offset=row.expiry_offset,
+                carry_offset=row.carry_offset,
+                skip_months=row.missing_months,
+                start_month=row.start,
+            ),
+            axis=1,
+        )
+        
+        df["base_instrument"] = df.apply(
+            lambda row: FuturesContract(
+                instrument_id=row.instrument_id,
+                raw_symbol=row.instrument_id.symbol,
+                asset_class=AssetClass.COMMODITY,
+                currency=row.quote_currency,
+                price_precision=row.price_precision,
+                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
+                multiplier=Quantity.from_str(str(row.multiplier)),
+                lot_size=Quantity.from_int(1),
+                underlying="",
+                activation_ns=0,
+                expiration_ns=0,
+                ts_event=0,
+                ts_init=0,
+            ),
+            axis=1,
+        )
+        
+        df["liquid_schedule"] = df.apply(
+            lambda row: MarketSchedule.from_daily_str(
+                name=f"{row.instrument_id}_liquid",
+                timezone=row.timezone,
+                value=row.liquid_hours_local,
+            ),
+            axis=1,
+        )
+        df["market_schedule"] = df.apply(
+            lambda row: MarketSchedule.from_daily_str(
+                name=f"{row.instrument_id}_market",
+                timezone=row.timezone,
+                value=row.market_hours_local,
+            ),
+            axis=1,
+        )
+            
         fees = []
         for row in df.itertuples():
-            
-            instrument_id = InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB")
-            instrument_ids.append(instrument_id)
-            
-            # parse config
-            missing_months = row.missing_months.replace(" ", "").split(",") \
-                                if not isinstance(row.missing_months, float) \
-                                else []
-            missing_months = list(map(ContractMonth, missing_months))
-            
-            configs.append(
-                ContractChainConfig(
-                    instrument_id=instrument_id,
-                    hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=missing_months),
-                    priced_cycle=RollCycle(row.priced_cycle),
-                    roll_offset=row.roll_offset,
-                    approximate_expiry_offset=row.expiry_offset,
-                    carry_offset=row.carry_offset,
-                    skip_months=missing_months,
-                    start_month=row.start,
-                )
-            )
-            
-            # parse base contract
-            price_precision = len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1])
-            
-            currency_str = re.search(r"\((.*?)\)", row.quote_currency).group(1)
-            quote_homes.append(InstrumentId.from_str(f"{currency_str}GBP.SIM"))
-            bases.append(
-                FuturesContract(
-                    instrument_id=instrument_id,
-                    raw_symbol=instrument_id.symbol,
-                    asset_class=AssetClass.COMMODITY,
-                    currency=Currency.from_str(currency_str),
-                    price_precision=price_precision,
-                    price_increment=Price(row.min_tick * row.price_magnifier, price_precision),
-                    multiplier=Quantity.from_str(str(row.multiplier)),
-                    lot_size=Quantity.from_int(1),
-                    underlying="",
-                    activation_ns=0,
-                    expiration_ns=0,
-                    ts_event=0,
-                    ts_init=0,
-                )
-            )
-            
-            # parse contract
-            contract = create_contract(
-                    trading_class=row.trading_class,
-                    symbol=row.symbol,
-                    venue=row.exchange,
-                    sec_type="FUT",
-            )
-            contract.currency = currency_str
-            
-            contract_cont = create_contract(
-                    trading_class=row.trading_class,
-                    symbol=row.symbol,
-                    venue=row.exchange,
-                    sec_type="CONTFUT",
-            )
-            contract_cont.currency = currency_str
-            
-            contracts.append(contract)
-            contracts_cont.append(contract_cont)
-            
-            liquid_schedules.append(
-                MarketSchedule.from_daily_str(
-                    name=f"{instrument_id}_liquid",
-                    timezone=row.timezone,
-                    value=row.liquid_hours_local,
-                )
-            )
-            market_schedules.append(
-                MarketSchedule.from_daily_str(
-                    name=f"{instrument_id}_market",
-                    timezone=row.timezone,
-                    value=row.market_hours_local,
-                )
-            )
 
             parsed_fees = []
             for fee_type, fee_value, fee_currency, is_percent in [
@@ -287,24 +295,14 @@ class IBTestProviderStubs:
                 ("clearing", row.fee_clearing, row.fee_clearing_currency, row.fee_clearing_percent)]:
                 fee_value = float(fee_value)
                 if is_percent:
-                    assert fee_currency == contract.currency, f"{contract.exchange}-{contract.symbol}: if fees are as a percentage, the fee currency should equal the quote currency"
-                    assert fee_value != 0, f"{contract.exchange}-{contract.symbol}: percent fee columns are 0, there is an error in the data"
+                    assert fee_currency == row.contract.currency, f"{row.contract.exchange}-{row.contract.symbol}: if fees are as a percentage, the fee currency should equal the quote currency"
+                    assert fee_value != 0, f"{row.contract.exchange}-{row.contract.symbol}: percent fee columns are 0, there is an error in the data"
 
                 parsed_fees.append(
                     (fee_type, fee_value, fee_currency, is_percent)
                 )
             fees.append(parsed_fees)
-
-                
         
-        df["instrument_id"] = instrument_ids
-        df["config"] = configs
-        df["base"] = bases
-        df["contract"] = contracts
-        df["contract_cont"] = contracts_cont
-        df["liquid_schedule"] = liquid_schedules
-        df["market_schedule"] = liquid_schedules
-        df["instrument_id_qh"] = quote_homes
         df["fees"] = fees
 
         # parse settlement time

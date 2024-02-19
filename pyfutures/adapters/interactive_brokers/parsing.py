@@ -189,6 +189,7 @@ def create_contract(
     symbol: str,
     venue: str,
     sec_type: str,
+    currency: str | None = None
 ) -> IBContract:
 
     contract = IBContract()
@@ -198,7 +199,9 @@ def create_contract(
     contract.exchange = _desanitize_str(venue)
     contract.secType = sec_type
     # contract.includeExpired = False
-
+    if currency is not None:
+        contract.currency = str(currency)
+        
     return contract
 
 def row_to_contract(row) -> IBContract:
