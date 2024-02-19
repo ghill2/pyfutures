@@ -275,6 +275,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             3 (delayed) enables delayed and disables delayed-frozen market data sending
             4 (delayed-frozen) enables delayed and delayed-frozen market data
         """
+        pass
         
     async def request_market_data(
         self,
