@@ -33,9 +33,15 @@ from nautilus_trader.test_kit.stubs.events import TestEventStubs
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from pyfutures.adapters.interactive_brokers import IB_VENUE
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
+from pyfutures.adapters.interactive_brokers.client.client import (
+    InteractiveBrokersClient,
+)
+from pyfutures.adapters.interactive_brokers.config import (
+    InteractiveBrokersInstrumentProviderConfig,
+)
+from pyfutures.adapters.interactive_brokers.execution import (
+    InteractiveBrokersExecutionClient,
+)
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
 
 # fmt: off
@@ -43,46 +49,47 @@ from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersI
 
 from pyfutures import IB_ACCOUNT_ID
 
-@pytest.fixture()
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-@pytest.fixture()
-def clock():
-    return LiveClock()
-
-@pytest.fixture()
-def logger(clock):
-    return Logger(clock, level_stdout=LogLevel.DEBUG)
-
-@pytest.fixture()
-def msgbus(clock):
-    return MessageBus(
-        TestIdStubs.trader_id(),
-        clock,
-    )
-
-@pytest.fixture()
-def cache():
-    cache = TestComponentStubs.cache()
-    return cache
-
-@pytest.fixture()
-def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
-    client = InteractiveBrokersClient(
-            loop=event_loop,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            logger=logger,
-            host="127.0.0.1",
-            port=4002,
-            client_id=1,
-    )
-    return client
+# @pytest.fixture()
+# def event_loop():
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     asyncio.set_event_loop(loop)
+#     yield loop
+#     loop.close()
+#
+# @pytest.fixture()
+# def clock():
+#     return LiveClock()
+#
+# @pytest.fixture()
+# def logger(clock):
+#     return Logger(clock, level_stdout=LogLevel.DEBUG)
+#
+# @pytest.fixture()
+# def msgbus(clock):
+#     return MessageBus(
+#         TestIdStubs.trader_id(),
+#         clock,
+#     )
+#
+#
+# @pytest.fixture()
+# def cache():
+#     cache = TestComponentStubs.cache()
+#     return cache
+#
+# @pytest.fixture()
+# def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
+#     client = InteractiveBrokersClient(
+#             loop=event_loop,
+#             msgbus=msgbus,
+#             cache=cache,
+#             clock=clock,
+#             logger=logger,
+#             host="127.0.0.1",
+#             port=4002,
+#             client_id=1,
+#     )
+#     return client
 
 @pytest.fixture()
 def instrument_provider(event_loop, client, logger, cache) -> InteractiveBrokersInstrumentProvider:
