@@ -9,7 +9,6 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_instrument
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
-from pyfutures.adapters.interactive_brokers.parsing import contract_id_to_contract
 
 from pyfutures.continuous.chain import ContractChain
 # from pyfutures.continuous.chain import ContractId

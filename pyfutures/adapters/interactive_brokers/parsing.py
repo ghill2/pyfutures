@@ -147,10 +147,6 @@ order_side_to_order_action: dict[str, str] = {
     "SLD": "SELL",
 }
 
-
-
-
-
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
     return _format_instrument_id(
         symbol=details.contract.symbol,
@@ -206,46 +202,22 @@ def create_contract(
 
     return contract
 
-def row_to_contract(row) -> IBContract:
-    return create_contract(
-        trading_class=row.trading_class,
-        symbol=row.symbol,
-        venue=row.exchange,
-    )
-    
 def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     
-    symbol, trading_class = tuple(instrument_id.symbol.value.split("=")[0].split("-"))
-    
+    parts = instrument_id.value.split("=")
     contract: IBContract = create_contract(
-        symbol=symbol,
-        trading_class=trading_class,
+        trading_class=parts[0],
+        symbol=parts[1],
         venue=instrument_id.venue.value,
+        sec_type=parts[2],
     )
     
-    if "=" in instrument_id.symbol.value:
-        contract_month = ContractMonth(instrument_id.symbol.value.split("=")[1])
+    if len(parts) == 4:
+        contract_month = ContractMonth(parts[3])
         contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
         
     return contract
     
-def contract_id_to_contract(instrument_id: InstrumentId) -> IBContract:
-    
-    contract_month = instrument_id.symbol.value.split("=")[1]
-    symbol, trading_class = tuple(instrument_id.symbol.value.split("=")[0].split("-"))
-    exchange = instrument_id.venue.value
-
-    contract = IBContract()
-
-    contract.symbol = symbol.replace(",", ".")
-    contract.exchange = exchange.replace(",", ".")
-    contract.tradingClass = trading_class.replace(",", ".")
-    contract.lastTradeDateOrContractMonth = str(ContractMonth.from_str(contract_month).to_int())
-    contract.includeExpired = False
-    contract.secType = "FUT"
-
-    return contract
-
 def contract_details_to_instrument(
     details: IBContractDetails,
     overrides: dict | None = None,

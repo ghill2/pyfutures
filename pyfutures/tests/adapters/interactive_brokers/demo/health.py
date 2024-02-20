@@ -75,11 +75,9 @@ async def test_request_front_contract_universe(client):
     timezones = []
     
     for row in universe.itertuples():
-        
-        contract = row_to_contract(row)
-        
+                
         try:
-            details = await client.request_front_contract_details(contract)
+            details = await client.request_front_contract_details(row.contract)
             
             assert type(details) is ContractDetails
             timezones.append(details.timeZoneId)

@@ -19,10 +19,9 @@ async def test_import_historic_schedules(client):
         path = parent_out / f"{row.trading_class}.csv"
         if path.exists():
             continue
-        contract = row_to_contract(row)
         
         try:
-            contract = await client.request_front_contract(contract)
+            contract = await client.request_front_contract(row.contract)
             assert type(contract) is Contract
             sessions = await client.request_historical_schedule(contract=contract)
         except ClientException as exc:

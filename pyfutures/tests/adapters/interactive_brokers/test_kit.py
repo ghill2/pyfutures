@@ -186,7 +186,7 @@ class IBTestProviderStubs:
         )
         
         df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.SIM"),
+            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
             axis=1,
         )
         
