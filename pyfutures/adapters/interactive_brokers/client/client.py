@@ -26,6 +26,7 @@ from ibapi.common import TickerId
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.decoder import Decoder
+from pyfutures.adapters.interactive_brokers.enums import Frequency
 from ibapi.execution import Execution as IBExecution
 from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
@@ -408,18 +409,47 @@ class InteractiveBrokersClient(Component, EWrapper):
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
-                # duration=bar_size.to_duration(),
-                duration=Duration(1200 * 60, ),
+                duration=self._get_appropriate_duration(bar_size),
                 
         )
         return bars[0] if len(bars) > 0 else None
-
+    
+    @staticmethod
+    def _get_appropriate_duration(bar_size: BarSize) -> Duration:
+        """
+        Return an appopriate interval range depending on the desired data frequency
+        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
+        This method returns a duration that is respectful to the IB api recommendations, higher counts are favored.
+        Duration    Allowed Bar Sizes
+        60 S	1 sec - 1 mins
+        120 S	1 sec - 2 mins
+        1800 S (30 mins)	1 sec - 30 mins
+        3600 S (1 hr)	5 secs - 1 hr
+        14400 S (4hr)	10 secs - 3 hrs
+        28800 S (8 hrs)	30 secs - 8 hrs
+        1 D	1 min - 1 day
+        2 D	2 mins - 1 day
+        1 W	3 mins - 1 week
+        1 M	30 mins - 1 month
+        1 Y	1 day - 1 month
+        """
+        if bar_size == BarSize._1_DAY:
+            return Duration(step=365, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_HOUR or BarSize._1_MINUTE:
+            return Duration(step=1, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_MINUTE:
+            return Duration(step=57600, freq=Frequency.SECOND)  # 12 hours
+        elif bar_size == BarSize._5_SECOND:
+            return Duration(step=3600, freq=Frequency.SECOND)
+        else:
+            raise ValueError("TODO: Unsupported duration")
+        
     async def request_bars(
         self,
         contract: IBContract,
         bar_size: BarSize,
         what_to_show: WhatToShow,
-        duration: Duration,
+        duration: Duration = None,
         end_time: pd.Timestamp = None,
         use_rth: bool = True,
         timeout_seconds: int | None = None,
@@ -437,6 +467,9 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
         
+        if duration is None:
+            duration = self._get_appropriate_duration(bar_size)
+            
         self._client.reqHistoricalData(
             reqId=request.id,
             contract=contract,

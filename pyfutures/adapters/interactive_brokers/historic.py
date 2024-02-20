@@ -12,7 +12,7 @@ from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
-from pyfutures.adapters.interactive_brokers.enums import Frequency
+
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
@@ -123,35 +123,7 @@ class InteractiveBrokersHistoric:
             
         return total_bars
     
-    @staticmethod
-    def _get_appropriate_duration(bar_size: BarSize) -> Duration:
-        """
-        Return an appopriate interval range depending on the desired data frequency
-        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
-        This method returns a duration that is respectful to the IB api recommendations, higher counts are favored.
-        Duration    Allowed Bar Sizes
-        60 S	1 sec - 1 mins
-        120 S	1 sec - 2 mins
-        1800 S (30 mins)	1 sec - 30 mins
-        3600 S (1 hr)	5 secs - 1 hr
-        14400 S (4hr)	10 secs - 3 hrs
-        28800 S (8 hrs)	30 secs - 8 hrs
-        1 D	1 min - 1 day
-        2 D	2 mins - 1 day
-        1 W	3 mins - 1 week
-        1 M	30 mins - 1 month
-        1 Y	1 day - 1 month
-        """
-        if bar_size == BarSize._1_DAY:
-            return Duration(step=365, freq=Frequency.DAY)
-        elif bar_size == BarSize._1_HOUR or BarSize._1_MINUTE:
-            return Duration(step=1, freq=Frequency.DAY)
-        elif bar_size == BarSize._1_MINUTE:
-            return Duration(step=57600, freq=Frequency.SECOND)  # 12 hours
-        elif bar_size == BarSize._5_SECOND:
-            return Duration(step=3600, freq=Frequency.SECOND)
-        else:
-            raise ValueError("TODO: Unsupported duration")
+    
     
     async def request_bars2(
         self,
