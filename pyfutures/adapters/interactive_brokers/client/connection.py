@@ -41,6 +41,7 @@ class Connection:
         self._loop.run_until_complete(self._reset())
         
         self._is_connecting_lock = asyncio.Lock()
+        self.is_connected = False
         
     async def _listen(self) -> None:
         
@@ -166,8 +167,9 @@ class Connection:
         
         async with self._is_connecting_lock:
             await self._connect()
-            
+    
     async def _connect(self) -> None:
+        
         
         self._log.debug("Connecting...")
         
@@ -196,6 +198,7 @@ class Connection:
         self._log.debug("Performing handshake...")
         try:
             await self._perform_handshake()
+            self.is_connected = True
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
             await self._reset()

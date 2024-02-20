@@ -101,7 +101,11 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         self._client.open_order_events += self.open_order_callback
 
         # self._log._is_bypassed = True
-
+    
+    async def _connect(self):
+        if self._client.connection.is_connected:
+            await self._client.connect()
+            
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
         return self._instrument_provider

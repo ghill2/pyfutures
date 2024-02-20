@@ -58,7 +58,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         return self._instrument_provider  # type: ignore
 
     async def _connect(self):
-        if self._client.is_connected:
+        if self._client.connection.is_connected:
             await self._client.connect()
 
         # Load instruments based on config

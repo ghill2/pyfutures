@@ -11,6 +11,7 @@ from nautilus_trader.adapters.interactive_brokers.config import InteractiveBroke
 from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
 from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from nautilus_trader.config import LiveDataEngineConfig
+from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.config import LoggingConfig
 from nautilus_trader.config import RoutingConfig
 from nautilus_trader.config import TradingNodeConfig
@@ -52,6 +53,11 @@ def test_strategy_logging():
         },
         timeout_disconnection=1.0,  # Short timeout for testing
         timeout_post_stop=1.0,  # Short timeout for testing
+        exec_engine=LiveExecEngineConfig(
+            reconciliation=False,
+            inflight_check_interval_ms=0,
+            debug=True,
+        ),
     )
     node = TradingNode(config=config, loop=loop)
     strategy = BuyOnBarX(
