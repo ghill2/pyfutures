@@ -26,10 +26,6 @@ from nautilus_trader.common import Environment
 from pytower.tests.stubs.strategies import BuyOnBarX
 import asyncio
 
-
-
-
-
 def test_strategy_logging():
     # Arrange
     loop = asyncio.new_event_loop()
@@ -58,7 +54,12 @@ def test_strategy_logging():
         timeout_post_stop=1.0,  # Short timeout for testing
     )
     node = TradingNode(config=config, loop=loop)
-    strategy = BuyOnBarX(index=1, bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-BID-EXTERNAL"), order_side=OrderSide.BUY, quantity=1)
+    strategy = BuyOnBarX(
+        index=1,
+        bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-BID-EXTERNAL"),
+        order_side=OrderSide.BUY,
+        quantity=1,
+    )
     node.trader.add_strategy(strategy)
 
 

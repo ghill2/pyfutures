@@ -152,7 +152,7 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         exec_client = InteractiveBrokersExecutionClient(
             loop=loop,
             client=client,
-            account_id = AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
+            account_id=AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
             msgbus=msgbus,
             cache=cache,
             clock=clock,

@@ -72,10 +72,10 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         instrument_provider: InteractiveBrokersInstrumentProvider,
         ibg_client_id: int,
     ):
+        
         super().__init__(
             loop=loop,
-            # client_id=ClientId(f"{IB_VENUE.value}-{ibg_client_id:03d}"), # TODO: Fix account_id.get_id()
-            client_id=ClientId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
+            client_id=ClientId(IB_VENUE.value),
             venue=IB_VENUE,
             oms_type=OmsType.NETTING,
             instrument_provider=instrument_provider,
@@ -91,13 +91,13 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         )
 
         self._client: InteractiveBrokersClient = client
-        print(self.id.value, account_id.get_issuer())
+        
         self._set_account_id(account_id)
         # self._account_summary_loaded: asyncio.Event = asyncio.Event()
 
         self._client.order_status_events += self.order_status_callback
         self._client.error_events += self.error_callback
-        self._client.eecution_events += self.execution_callback
+        self._client.execution_events += self.execution_callback
         self._client.open_order_events += self.open_order_callback
 
         # self._log._is_bypassed = True
