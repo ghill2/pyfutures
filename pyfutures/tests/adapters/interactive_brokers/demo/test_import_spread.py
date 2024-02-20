@@ -28,8 +28,8 @@ async def test_import_spread(client):
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(client=client, delay=3)
-    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     
     await client.connect()
@@ -46,7 +46,6 @@ async def test_import_spread(client):
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
-            start_time=end_time,
             end_time=end_time,
             as_dataframe=True,
         )
