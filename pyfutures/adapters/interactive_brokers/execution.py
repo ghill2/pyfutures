@@ -103,6 +103,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         # self._log._is_bypassed = True
     
     async def _connect(self):
+        
         if self._client.connection.is_connected:
             await self._client.connect()
             

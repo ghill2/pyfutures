@@ -29,6 +29,10 @@ from nautilus_trader.model.objects import Price
 from pytower.tests.stubs.strategies import BuyOnBarX
 import asyncio
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
 def test_strategy_logging():
     # Arrange
     loop = asyncio.new_event_loop()
@@ -51,7 +55,7 @@ def test_strategy_logging():
                 "price_increment": Price(5, 0),
             },
         },
-        load_ids=[bar_type.instrument_id.value]
+        load_ids=[bar_type.instrument_id.value],
     )
 
     config = TradingNodeConfig(
@@ -82,10 +86,8 @@ def test_strategy_logging():
         order_side=OrderSide.BUY,
         quantity=1,
     )
+    
     # add instrument to the cache,
-
-
-
     node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
     node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
 

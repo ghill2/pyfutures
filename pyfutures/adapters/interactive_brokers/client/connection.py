@@ -41,7 +41,7 @@ class Connection:
         self._loop.run_until_complete(self._reset())
         
         self._is_connecting_lock = asyncio.Lock()
-        self.is_connected = False
+        
         
     async def _listen(self) -> None:
         
@@ -131,11 +131,13 @@ class Connection:
         self._hasReqId = False
         self._apiReady = False
         self._serverVersion = None
+        self.is_connected = False
         
-        # if self._connection_task is not None:
-        #     self._connection_task.cancel()
-        # self._connection_task = None
+        if self._connection_task is not None:
+            self._connection_task.cancel()
+        self._connection_task = None
         
+        self._log.debug("Destroying listen task...")
         if self._listen_task is not None:
             self._listen_task.cancel()
         self._listen_task = None
@@ -174,10 +176,6 @@ class Connection:
         
         await self._reset()
         
-        # close current listen task
-        if self._listen_task is not None:
-            self._listen_task.cancel()
-        
         # connect socket
         self._log.debug("Connecting socket...")
         try:
@@ -196,19 +194,25 @@ class Connection:
         # handshake
         self._log.debug("Performing handshake...")
         try:
-            await self._perform_handshake()
+            self._log.debug("Sending handshake message...")
+            await self._send_handshake()
+            self._log.debug("Waiting for handshake response")
+            await asyncio.wait_for(self._is_ready.wait(), 5)
+            self._log.info("API connection ready, server version 176")
             self.is_connected = True
+            
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
             await self._reset()
             return
         
     def sendMsg(self, msg: bytes) -> None:
-        
         if not self.is_connected:
             self._log.error("A message was sent when the Connection was disconnected.")
             return
+        self._sendMsg(msg)
         
+    def _sendMsg(self, msg: bytes) -> None:
         self._log.debug(f"--> {msg}")
         self._writer.write(msg)
         self._loop.create_task(self._writer.drain())
@@ -221,22 +225,13 @@ class Connection:
         self._log.debug("Handling disconnect.")
         
         # await self.connect()
-        
         # reconnect subscriptions
         # for sub in self._subscriptions:
         #     sub.cancel()
     
-    async def _perform_handshake(self) -> None:
-
+    async def _send_handshake(self) -> None:
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
-        
-        self.sendMsg(msg)
-        
-        self._log.debug("Waiting for handshake response")
-
-        await asyncio.wait_for(self._is_ready.wait(), 10)
-
-        self._log.info("API connection ready, server version 176")
+        self._sendMsg(msg)
 
     def _process_handshake(self, msg: bytes):
         
@@ -252,7 +247,7 @@ class Connection:
             self._serverVersion = version
             # send startApi message
             self._log.debug(f"Sending startApi message...")
-            self.sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
+            self._sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
         else:
             if not self._apiReady:
                 # snoop for nextValidId and managedAccounts response,
