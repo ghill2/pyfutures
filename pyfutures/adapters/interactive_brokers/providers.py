@@ -166,7 +166,11 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
             instrument_ids: list[InstrumentId],
             filters: dict | None = None,
         ) -> None:
-        for id in instrument_ids:
-            await self.load_contract(contract_id=id)
+        
+        if not self.client.connection.is_connected:
+            await self.client.connect()
+            
+        for instrument_id in instrument_ids:
+            await self.load_contract(contract_id=instrument_id)
 
 

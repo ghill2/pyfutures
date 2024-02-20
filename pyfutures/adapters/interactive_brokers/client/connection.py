@@ -170,7 +170,6 @@ class Connection:
     
     async def _connect(self) -> None:
         
-        
         self._log.debug("Connecting...")
         
         await self._reset()
@@ -206,8 +205,8 @@ class Connection:
         
     def sendMsg(self, msg: bytes) -> None:
         
-        if self._writer is None:
-            self._log.error(f"A message was sent when the Connection was disconnected.")
+        if not self.is_connected:
+            self._log.error("A message was sent when the Connection was disconnected.")
             return
         
         self._log.debug(f"--> {msg}")
