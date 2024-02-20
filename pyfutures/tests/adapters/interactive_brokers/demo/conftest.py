@@ -53,6 +53,22 @@ def instrument_id(request) -> InstrumentId:
     return InstrumentId.from_str(value)
 
 @pytest.fixture(scope="session")
+def instrument(event_loop, cache, instrument_provider, instrument_id) -> FuturesContract:
+
+    instrument = event_loop.run_until_complete(
+        instrument_provider.load_async(instrument_id),
+    )
+
+    if instrument is None:
+        for instrument in instrument_provider.list_all():
+            print(instrument)
+        raise RuntimeError(f"Instrument not found: {instrument_id}")
+
+    cache.add_instrument(instrument)
+
+    return instrument
+
+@pytest.fixture(scope="session")
 def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     config = InteractiveBrokersInstrumentProviderConfig(
@@ -74,21 +90,7 @@ def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     return instrument_provider
 
-@pytest.fixture(scope="session")
-def instrument(event_loop, cache, instrument_provider, instrument_id) -> FuturesContract:
 
-    instrument = event_loop.run_until_complete(
-        instrument_provider.load_async(instrument_id),
-    )
-
-    if instrument is None:
-        for instrument in instrument_provider.list_all():
-            print(instrument)
-        raise RuntimeError(f"Instrument not found: {instrument_id}")
-
-    cache.add_instrument(instrument)
-
-    return instrument
 
 
 @pytest.fixture(scope="session")
@@ -143,6 +145,41 @@ def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger, instrumen
 
     return exec_engine
 
+
+from nautilus_trader.config import InstrumentProviderConfig
+from nautilus_trader.config import LoggingConfig
+from nautilus_trader.config import TradingNodeConfig
+from nautilus_trader.live.node import TradingNode
+
+# @pytest.fixture(scope="session")
+# def trading_node() -> TradingNode:
+#     # Arrange
+#     loop = asyncio.new_event_loop()
+#     asyncio.set_event_loop(loop)
+#
+#     # monkeypatch.setenv("BINANCE_API_KEY", "SOME_API_KEY")
+#     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
+#
+#     config = TradingNodeConfig(
+#         logging=LoggingConfig(bypass_logging=True),
+#         environment=Environment.Live,
+#         data_clients={
+#             "BINANCE": BinanceDataClientConfig(
+#                 instrument_provider=InstrumentProviderConfig(load_all=False),
+#             ),
+#         },
+#         exec_clients={
+#             "BINANCE": BinanceExecClientConfig(
+#                 instrument_provider=InstrumentProviderConfig(load_all=False),
+#             ),
+#         },
+#         timeout_disconnection=1.0,  # Short timeout for testing
+#         timeout_post_stop=1.0,  # Short timeout for testing
+#     )
+#     node = TradingNode(config=config, loop=loop)
+#
+#     node.add_data_client_factory("INTERACTIVE_BROKERS", BinanceLiveDataClientFactory)
+#     node.add_exec_client_factory("BINANCE", BinanceLiveExecClientFactory)
 
 
 @pytest.fixture(scope="session")
