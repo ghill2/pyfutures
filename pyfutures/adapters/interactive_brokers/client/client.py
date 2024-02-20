@@ -412,7 +412,7 @@ class InteractiveBrokersClient(Component, EWrapper):
                 duration=self._get_appropriate_duration(bar_size),
                 
         )
-        return bars[0] if len(bars) > 0 else None
+        return bars[-1] if len(bars) > 0 else None
     
     @staticmethod
     def _get_appropriate_duration(bar_size: BarSize) -> Duration:

@@ -28,11 +28,12 @@ async def test_request_last_bar_universe(client):
     rows = IBTestProviderStubs.universe_rows()
     
     await client.connect()
-    client._client.reqMarketDataType(3)
+    client._client.reqMarketDataType(4)
     asyncio.sleep(2)
 
     missing = []
     for row in rows:
+        print(row.instrument_id)
         contract = row.contract_cont
         try:
             last_bar = await client.request_last_bar(
