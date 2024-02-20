@@ -55,6 +55,9 @@ from pyfutures.adapters.interactive_brokers.parsing import order_side_to_order_a
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
+from pyfutures import IB_ACCOUNT_ID
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
+
 
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
@@ -66,14 +69,13 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-        logger: Logger,
         instrument_provider: InteractiveBrokersInstrumentProvider,
         ibg_client_id: int,
     ):
         super().__init__(
             loop=loop,
             # client_id=ClientId(f"{IB_VENUE.value}-{ibg_client_id:03d}"), # TODO: Fix account_id.get_id()
-            client_id=ClientId(f"{IB_VENUE.value}"),
+            client_id=ClientId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
             venue=IB_VENUE,
             oms_type=OmsType.NETTING,
             instrument_provider=instrument_provider,
@@ -82,20 +84,20 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            logger=logger,
-            config={
-                "name": f"{type(self).__name__}-{ibg_client_id:03d}",
-                "client_id": ibg_client_id,
-            },
+            # config=InteractiveBrokersExecClientConfig(
+                # name=f"{type(self).__name__}-{ibg_client_id:03d}",
+                # ibg_client_id=1,
+            # ),
         )
 
         self._client: InteractiveBrokersClient = client
+        print(self.id.value, account_id.get_issuer())
         self._set_account_id(account_id)
         # self._account_summary_loaded: asyncio.Event = asyncio.Event()
 
         self._client.order_status_events += self.order_status_callback
         self._client.error_events += self.error_callback
-        self._client.execution_events += self.execution_callback
+        self._client.eecution_events += self.execution_callback
         self._client.open_order_events += self.open_order_callback
 
         # self._log._is_bypassed = True

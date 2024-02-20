@@ -3,8 +3,7 @@ import asyncio
 # fmt: off
 
 from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.component.clock import LiveClock
-from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import LiveClock
 from nautilus_trader.live.data_client import LiveMarketDataClient
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId
@@ -15,6 +14,7 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
+from nautilus_trader.common.config import NautilusConfig
 
 # fmt: on
 
@@ -31,7 +31,6 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-        logger: Logger,
         instrument_provider: InteractiveBrokersInstrumentProvider,
         ibg_client_id: int,
         config: InteractiveBrokersDataClientConfig,
@@ -44,11 +43,10 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            logger=logger,
-            config={
-                "name": f"{type(self).__name__}-{ibg_client_id:03d}",
-                "client_id": ibg_client_id,
-            },
+            # config=NautilusConfig(
+            #     name=f"{type(self).__name__}-{ibg_client_id:03d}",
+            #     client_id=ibg_client_id,
+            # ),
         )
         self._client = client
         self._handle_revised_bars = config.handle_revised_bars
