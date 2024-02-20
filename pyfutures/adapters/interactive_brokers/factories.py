@@ -33,25 +33,14 @@ from nautilus_trader.model.objects import Price
 CLIENT = None
 PROVIDER = None
 
-PROVIDER_CONFIG = InteractiveBrokersInstrumentProviderConfig(
-        chain_filters={
-            'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
-        },
-        parsing_overrides={
-            "MIX": {
-                "price_precision": 0,
-                "price_increment": Price(5, 0),
-            },
-        },
-    )
 
-def get_provider():
+
+def get_provider(config: InteractiveBrokersInstrumentProviderConfig):
     global PROVIDER
     if PROVIDER is None:
         PROVIDER = InteractiveBrokersInstrumentProvider(
         client=CLIENT,
-        config=PROVIDER_CONFIG
-
+        config=config,
     )
     return PROVIDER
 
@@ -111,7 +100,7 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
 
         """
         client = get_client(loop, msgbus, clock, cache)
-        provider = get_provider()
+        provider = get_provider(config=config.instrument_provider)
         data_client = InteractiveBrokersDataClient(
             loop=loop,
             client=client,
@@ -141,7 +130,7 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
     ) -> InteractiveBrokersExecutionClient:
 
         client = get_client(loop, msgbus, clock, cache)
-        provider = get_provider()
+        provider = get_provider(config=config.instrument_provider)
 
         # Set account ID
         # ib_account = config.account_id or os.environ.get("TWS_ACCOUNT")

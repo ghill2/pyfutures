@@ -57,7 +57,6 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         self,
         contract: IBContract,
     ) -> FuturesContract | None:
-        
         details_list = await self.client.request_contract_details(contract)
 
         if len(details_list) == 0:
@@ -162,3 +161,13 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         self.contract_details[instrument.id.value] = details
         self.contract_id_to_instrument_id[details.contract.conId] = instrument.id
         return instrument
+
+    async def load_ids_async(
+            self,
+            instrument_ids: list[InstrumentId],
+            filters: dict | None = None,
+        ) -> None:
+        for id in instrument_ids:
+            await self.load_contract(contract_id=id)
+
+

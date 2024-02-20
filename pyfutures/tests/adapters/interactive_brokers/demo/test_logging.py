@@ -23,6 +23,7 @@ from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.data import BarType
 from nautilus_trader.common import Environment
 from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.model.objects import Price
 
 #
 from pytower.tests.stubs.strategies import BuyOnBarX
@@ -38,18 +39,32 @@ def test_strategy_logging():
     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
     #
     row = IBTestProviderStubs.universe_rows()[0]
+    bar_type = BarType.from_str(f"{row.instrument_id}-1-DAY-BID-EXTERNAL")
+
+    provider_config = InteractiveBrokersInstrumentProviderConfig(
+        chain_filters={
+            'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+        },
+        parsing_overrides={
+            "MIX": {
+                "price_precision": 0,
+                "price_increment": Price(5, 0),
+            },
+        },
+        load_ids=[bar_type.instrument_id.value]
+    )
 
     config = TradingNodeConfig(
         # logging=LoggingConfig(bypass_logging=True),
         environment=Environment.LIVE,
         data_clients={
             "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(
-                instrument_provider=InteractiveBrokersInstrumentProviderConfig(),
+                instrument_provider=provider_config
             ),
         },
         exec_clients={
             "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(
-                instrument_provider=InteractiveBrokersInstrumentProviderConfig(),
+                instrument_provider=provider_config
             ),
         },
         timeout_disconnection=1.0,  # Short timeout for testing
@@ -63,12 +78,10 @@ def test_strategy_logging():
     node = TradingNode(config=config, loop=loop)
     strategy = BuyOnBarX(
         index=1,
-        bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-BID-EXTERNAL"),
+        bar_type=bar_type,
         order_side=OrderSide.BUY,
         quantity=1,
     )
-    node.trader.add_strategy(strategy)
-
     # add instrument to the cache,
 
 
@@ -82,6 +95,8 @@ def test_strategy_logging():
     exec_client_id = ClientId("IB")
     provider = node.trader._exec_engine._clients[exec_client_id]._instrument_provider
     provider.load_contract(row.contract_cont)
+
+    node.trader.add_strategy(strategy)
 
 
     node.portfolio.set_specific_venue(IB_VENUE)
