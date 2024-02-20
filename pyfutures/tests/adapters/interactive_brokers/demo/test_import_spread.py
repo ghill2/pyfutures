@@ -33,7 +33,7 @@ async def test_import_spread(client):
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
     
     await client.connect()
-    
+    client._client.reqMarketDataType(4)  # delayed market data requires no data subscriptions
     for row in rows:
         
         path = SPREAD_FOLDER / (row.uname + ".parquet")

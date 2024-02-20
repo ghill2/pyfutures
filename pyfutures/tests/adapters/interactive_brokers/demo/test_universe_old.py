@@ -28,7 +28,7 @@ async def test_request_last_bar_universe(client):
     rows = IBTestProviderStubs.universe_rows()
     
     await client.connect()
-    client._client.reqMarketDataType(4)
+    
     asyncio.sleep(2)
 
     missing = []

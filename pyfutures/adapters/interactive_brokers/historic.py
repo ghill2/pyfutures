@@ -155,7 +155,7 @@ class InteractiveBrokersHistoric:
             start_time = head_timestamp
         
         total_bars = deque()
-        duration = self._get_appropriate_duration(bar_size)
+        duration = self._client._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
         while end_time >= start_time:
 
@@ -170,7 +170,7 @@ class InteractiveBrokersHistoric:
                     contract=contract,
                     bar_size=str(bar_size),
                     what_to_show=what_to_show,
-                    duration=str(duration),
+                    duration=duration,
                     end_time=end_time,
                     timeout_seconds=100,
                 )
