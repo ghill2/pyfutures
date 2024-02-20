@@ -147,39 +147,28 @@ order_side_to_order_action: dict[str, str] = {
     "SLD": "SELL",
 }
 
-def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
-    return _format_instrument_id(
-        symbol=details.contract.symbol,
-        tradingClass=details.contract.tradingClass,
-        exchange=details.contract.exchange,
-        contractMonth=details.contractMonth,
-    )
-
-
-def contract_to_instrument_id(contract: IBContract) -> InstrumentId:
-    assert len(contract.lastTradeDateOrContractMonth) == 6
-
-    return _format_instrument_id(
-        symbol=contract.symbol,
-        tradingClass=contract.tradingClass,
-        exchange=contract.exchange,
-        contractMonth=contract.lastTradeDateOrContractMonth,
-    )
-
-def _format_instrument_id(
-    symbol: str,
-    tradingClass: str,
-    exchange: str,
-    contractMonth: str,
-) -> InstrumentId:
-    symbol = symbol.replace(".", ",")
-    trading_class = tradingClass.replace(".", ",")
-    exchange = exchange.replace(".", ",")
-    month = str(ContractMonth.from_int(int(contractMonth)))
-    return InstrumentId.from_str(f"{symbol}-{trading_class}={month}.{exchange}")
-
 def _desanitize_str(value: str):
     return value.replace(",", ".")
+
+def _sanitize_str(value: str):
+    return value.replace(".", ",")
+
+def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
+    assert len(contract.lastTradeDateOrContractMonth) == 6
+    contract = details.contract
+    symbol = _sanitize_str(symbol)
+    trading_class = _sanitize_str(contract.tradingClass)
+    exchange = _sanitize_str(exchange)
+    
+    if contract.secType == "FUT":
+        month = str(ContractMonth.from_int(int(details.contractMonth)))
+        return InstrumentId.from_str(
+            f"{symbol}={trading_class}={contract.secType}={month}.{exchange}"
+        )
+    else:
+        return InstrumentId.from_str(
+            f"{symbol}={trading_class}={contract.secType}.{exchange}"
+        )
     
 def create_contract(
     trading_class: str,
