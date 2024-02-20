@@ -162,11 +162,11 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         return instrument
 
     async def load_ids_async(
-            self,
-            instrument_ids: list[InstrumentId],
-            filters: dict | None = None,
-        ) -> None:
-        
+        self,
+        instrument_ids: list[InstrumentId],
+        filters: dict | None = None,
+    ) -> None:
+    
         if not self.client.connection.is_connected:
             await self.client.connect()
             
