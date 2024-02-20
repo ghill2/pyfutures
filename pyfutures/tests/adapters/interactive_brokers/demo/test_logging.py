@@ -7,9 +7,9 @@ from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersL
 from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
 from nautilus_trader.adapters.interactive_brokers.common import IBContract
 from nautilus_trader.adapters.interactive_brokers.config import IBMarketDataTypeEnum
-from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
-from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from nautilus_trader.config import LiveDataEngineConfig
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.config import LoggingConfig
@@ -22,6 +22,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.data import BarType
 from nautilus_trader.common import Environment
+from nautilus_trader.model.identifiers import ClientId
 
 #
 from pytower.tests.stubs.strategies import BuyOnBarX
@@ -43,12 +44,12 @@ def test_strategy_logging():
         environment=Environment.LIVE,
         data_clients={
             "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(
-                # instrument_provider=InstrumentProviderConfig(load_all=False),
+                instrument_provider=InteractiveBrokersInstrumentProviderConfig(),
             ),
         },
         exec_clients={
             "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(
-                # instrument_provider=InstrumentProviderConfig(load_all=False),
+                instrument_provider=InteractiveBrokersInstrumentProviderConfig(),
             ),
         },
         timeout_disconnection=1.0,  # Short timeout for testing
@@ -68,11 +69,20 @@ def test_strategy_logging():
     )
     node.trader.add_strategy(strategy)
 
+    # add instrument to the cache,
+
+
 
     node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
     node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
 
     node.build()
+
+    # provider = node._exec_engine._clients[0].instrument_provider()
+    exec_client_id = ClientId("IB")
+    provider = node.trader._exec_engine._clients[exec_client_id]._instrument_provider
+    provider.load_contract(row.contract_cont)
+
 
     node.portfolio.set_specific_venue(IB_VENUE)
 
