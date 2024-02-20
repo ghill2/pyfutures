@@ -58,13 +58,14 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         return self._instrument_provider  # type: ignore
 
     async def _connect(self):
+        
         if self._client.connection.is_connected:
             await self._client.connect()
 
         # Load instruments based on config
         await self.instrument_provider.initialize()
         for instrument in self._instrument_provider.list_all():
-            self._handle_data(instrument)
+            self._handle_data(instrument)  # add to cache
 
     async def _subscribe_bars(self, bar_type: BarType):
         instrument = self._cache.instrument(bar_type.instrument_id)
