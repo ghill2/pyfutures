@@ -22,9 +22,11 @@ init_logging(level_stdout=LogLevel.DEBUG)
 
 @pytest.mark.asyncio()
 async def test_request_last_bar_universe(client):
+    
     rows = IBTestProviderStubs.universe_rows()
+    
     await client.connect()
-
+    await client.request_market_data_type(4)
 
     missing = []
     for row in rows:
@@ -32,8 +34,8 @@ async def test_request_last_bar_universe(client):
         try:
             await client.request_last_bar(
                 contract=contract,
-                bar_size=BarSize._1_DAY,
-                what_to_show=WhatToShow.MIDPOINT,
+                bar_size=BarSize._1_MINUTE,
+                what_to_show=WhatToShow.BID_ASK,
             )
         except ClientException as e:
             print(e)
@@ -41,8 +43,6 @@ async def test_request_last_bar_universe(client):
 
     for row in missing:
         print(row.trading_class, row.exchange)
-
-
 
 @pytest.mark.asyncio()
 async def test_request_last_quote_tick_universe(client):

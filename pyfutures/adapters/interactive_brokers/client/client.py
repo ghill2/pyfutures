@@ -275,23 +275,22 @@ class InteractiveBrokersClient(Component, EWrapper):
             3 (delayed) enables delayed and disables delayed-frozen market data sending
             4 (delayed-frozen) enables delayed and delayed-frozen market data
         """
-        request = self._create_request(data=[])
-        self._client.reqContractDetails(reqId=request.id, marketDataType=market_data_type)
-        return await self._wait_for_request(request)
+        self._client.reqMarketDataType(marketDataType=market_data_type)
+        await asyncio.sleep(1)  # no reliable way to confirm type has been changed
+        
+    # def marketDataType(self, reqId:TickerId, marketDataType:int):
+    #     """TWS sends a marketDataType(type) callback to the API, where
+    #     type is set to Frozen or RealTime, to announce that market data has been
+    #     switched between frozen and real-time. This notification occurs only
+    #     when market data switches between real-time and frozen. The
+    #     marketDataType( ) callback accepts a reqId parameter and is sent per
+    #     every subscription because different contracts can generally trade on a
+    #     different schedule."""
+    #     request = self._requests.get(reqId)
+    #     if request is None:
+    #         return  # no request found for request_id
 
-    def marketDataType(self, reqId:TickerId, marketDataType:int):
-        """TWS sends a marketDataType(type) callback to the API, where
-        type is set to Frozen or RealTime, to announce that market data has been
-        switched between frozen and real-time. This notification occurs only
-        when market data switches between real-time and frozen. The
-        marketDataType( ) callback accepts a reqId parameter and is sent per
-        every subscription because different contracts can generally trade on a
-        different schedule."""
-        request = self._requests.get(reqId)
-        if request is None:
-            return  # no request found for request_id
-
-        request.set_result(marketDataType)
+    #     request.set_result(marketDataType)
 
 
     ################################################################################################
@@ -404,14 +403,14 @@ class InteractiveBrokersClient(Component, EWrapper):
         bar_size: BarSize,
         what_to_show: WhatToShow,
         use_rth: bool = True,
-    ) -> BarData:
+    ) -> BarData | None:
         bars = await self.request_bars(
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
                 duration=bar_size.to_duration(),
         )
-        return bars[0]
+        return bars[0] if len(bars) > 0 else None
 
     async def request_bars(
         self,

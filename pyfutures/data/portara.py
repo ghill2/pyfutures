@@ -121,6 +121,8 @@ class PortaraData:
         
         df = df[df.columns[:6]]
         
+        df.volume = 1_000_000.0
+        
         return df
     
 def _get_missing_rows(path: Path) -> str | None:
