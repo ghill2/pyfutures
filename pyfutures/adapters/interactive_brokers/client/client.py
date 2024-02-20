@@ -132,9 +132,8 @@ class InteractiveBrokersClient(Component, EWrapper):
         self._client.conn = self._conn
 
         self._request_id_seq = -10
-        
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-        # self._log._is_bypassed = True
+        
 
     @property
     def cache(self) -> Cache:
