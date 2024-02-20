@@ -170,6 +170,9 @@ class InteractiveBrokersHistoric:
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
         assert limit is None  # TODO
+
+        if end_time is None:
+            end_time = pd.Timestamp.utcnow()
         
         
         head_timestamp = await self._client.request_head_timestamp(
@@ -182,7 +185,6 @@ class InteractiveBrokersHistoric:
         total_bars = deque()
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
-        
         while end_time >= start_time:
 
             self._log.debug(
