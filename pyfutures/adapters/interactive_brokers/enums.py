@@ -109,7 +109,10 @@ class BarSize(Enum):
         return f"{self.step} {key}{'' if self.step == 1 else 's'}"
 
     def to_duration(self) -> Duration:
-        return Duration(step=self.value[0], freq=self.value[1])
+        if self.frequency == Frequency.MINUTE:
+            return Duration(step=self.step * 60, freq=Frequency.SECOND)
+        else:
+            return Duration(step=self.value[0], freq=self.frequency)
 
 
 

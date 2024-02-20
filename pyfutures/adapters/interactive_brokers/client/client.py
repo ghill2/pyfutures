@@ -408,7 +408,9 @@ class InteractiveBrokersClient(Component, EWrapper):
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
-                duration=bar_size.to_duration(),
+                # duration=bar_size.to_duration(),
+                duration=Duration(1200 * 60, ),
+                
         )
         return bars[0] if len(bars) > 0 else None
 
