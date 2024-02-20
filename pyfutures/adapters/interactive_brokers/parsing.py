@@ -154,11 +154,14 @@ def _sanitize_str(value: str):
     return value.replace(".", ",")
 
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
-    assert len(contract.lastTradeDateOrContractMonth) == 6
+    
     contract = details.contract
-    symbol = _sanitize_str(symbol)
+    
+    assert len(contract.lastTradeDateOrContractMonth) == 6
+    
+    symbol = _sanitize_str(contract.symbol)
     trading_class = _sanitize_str(contract.tradingClass)
-    exchange = _sanitize_str(exchange)
+    exchange = _sanitize_str(contract.exchange)
     
     if contract.secType == "FUT":
         month = str(ContractMonth.from_int(int(details.contractMonth)))
