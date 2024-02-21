@@ -70,7 +70,8 @@ def instrument(event_loop, cache, instrument_provider, instrument_id) -> Futures
 
 @pytest.fixture(scope="session")
 def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
-
+    
+    
     config = InteractiveBrokersInstrumentProviderConfig(
         chain_filters={
             'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
@@ -90,12 +91,9 @@ def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
 
     return instrument_provider
 
-
-
-
 @pytest.fixture(scope="session")
 def exec_client(event_loop, msgbus, cache, clock, client, instrument_provider) -> InteractiveBrokersExecutionClient:
-
+    
     return InteractiveBrokersExecutionClient(
             loop=event_loop,
             client=client,

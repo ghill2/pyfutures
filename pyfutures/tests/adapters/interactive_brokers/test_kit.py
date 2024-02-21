@@ -321,7 +321,7 @@ class IBTestProviderStubs:
         
         aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
         month = month or "*"
-        glob_str=f"{trading_class}_{symbol}={month}.SIM-1-{aggregation}-MID*.parquet"
+        glob_str=f"{trading_class}={symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return cls._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
     
     @classmethod
@@ -332,7 +332,7 @@ class IBTestProviderStubs:
         aggregation: BarAggregation,
     ) -> ParquetFile:
         aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}_{symbol}.SIM-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
         files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
         return files
     
@@ -345,7 +345,7 @@ class IBTestProviderStubs:
     ) -> ParquetFile:
         
         aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}_{symbol}.SIM-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
         files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
         return files
     
