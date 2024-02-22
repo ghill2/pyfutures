@@ -29,6 +29,8 @@ async def test_request_last_bar_universe(client):
     
     await client.connect()
     
+    await client.request_market_data_type(4)
+    
     asyncio.sleep(2)
 
     missing = []
