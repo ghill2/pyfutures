@@ -87,12 +87,7 @@ class BarSize(Enum):
     _1_HOUR = (1, Frequency.HOUR)
     _1_DAY = (1, Frequency.DAY)
 
-    _VALID_STEPS = {
-        BarAggregation.SECOND: (1, 5, 15, 30),
-        BarAggregation.MINUTE: (1, 2, 3, 5, 15, 30),
-        BarAggregation.HOUR: (1,),
-        BarAggregation.DAY: (1,),
-    }
+
 
     @property
     def step(self) -> int:
@@ -117,14 +112,19 @@ class BarSize(Enum):
 
     @classmethod
     def from_bar_spec(cls, bar_spec: BarSpecification) -> BarSpecification:
+        valid_steps = {
+                BarAggregation.SECOND: (1, 5, 15, 30),
+                BarAggregation.MINUTE: (1, 2, 3, 5, 15, 30),
+                BarAggregation.HOUR: (1,),
+                BarAggregation.DAY: (1,),
+        }
+
         step = bar_spec.step
         aggregation = bar_spec.aggregation
-
-        if step not in cls._VALID_STEPS[aggregation]:
+        if step not in valid_steps[aggregation]:
             raise ValueError(
                 f"InteractiveBrokers doesn't support subscription for {bar_spec!r}",
             )
-
         frequency = Frequency[bar_aggregation_to_str(aggregation)]
         return cls((step, frequency))
 

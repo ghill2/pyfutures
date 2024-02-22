@@ -128,11 +128,10 @@ def ib_bar_to_nautilus_bar(
         low=instrument.make_price(bar.low),
         close=instrument.make_price(bar.close),
         volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
-        ts_event=dt_to_unix_nanos(bar.time),
+        ts_event=dt_to_unix_nanos(bar.date),
         ts_init=ts_init,
         is_revision=is_revision,
     )
-
     return bar
 
 

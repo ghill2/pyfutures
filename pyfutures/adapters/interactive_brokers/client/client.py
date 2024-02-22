@@ -1044,13 +1044,13 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     def subscribe_bars(
         self,
-        name: str,
         contract: IBContract,
         what_to_show: WhatToShow,
         bar_size: BarSize,
         callback: Callable,
         use_rth: bool = True,
     ) -> ClientSubscription:
+
         request_id = self._next_req_id()
 
         if bar_size == BarSize._5_SECOND:
@@ -1094,7 +1094,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         subscription = ClientSubscription(
             id=request_id,
-            name=name,
             subscribe=subscribe,
             cancel=cancel,
             callback=callback,
@@ -1132,7 +1131,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     def realtimeBar(
         self,
-        reqId: str,
+        reqId: int,
         time: int,
         open_: float,
         high: float,
@@ -1145,8 +1144,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         self._log.debug(
             f"Received realtime bar {reqId}, {time}, {open_} {high} {low}, {close} {volume} {wap} {count}",
         )
-
-        subscription = self._requests.get(reqId)
+        subscription = self._subscriptions.get(reqId)
         if subscription is None:
             return  # no subscription found for request_id
 
@@ -1160,8 +1158,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         bar.volume = volume
         bar.wap = wap
         bar.barCount = count
-
-        subscription.callback(bar)
+        subscription.callback(bar=bar)
 
     ################################################################################################
     # Realtime ticks

@@ -136,7 +136,6 @@ class ClientRequest(asyncio.Future):
 
 @dataclass
 class ClientSubscription:
-    name: str
     id: int
     subscribe: Callable
     cancel: Callable

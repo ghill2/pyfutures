@@ -1,4 +1,8 @@
 import asyncio
+import functools
+
+
+from ibapi.common import BarData
 
 # fmt: off
 from nautilus_trader.cache.cache import Cache
@@ -7,17 +11,20 @@ from nautilus_trader.common.component import MessageBus
 from nautilus_trader.live.data_client import LiveMarketDataClient
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.model.instruments.base import Instrument
 
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract
+from pyfutures.adapters.interactive_brokers.parsing import ib_bar_to_nautilus_bar
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 
 
 # fmt: on
-
+#
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
@@ -65,33 +72,36 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         await self.instrument_provider.initialize()
         for instrument in self._instrument_provider.list_all():
             self._handle_data(instrument)  # add to cache
-    
-    async def _unsubscribe_bars(self, bar_type: BarType) -> None:
-        await self._client.unsubscribe_bars(
-            request_id=str(bar_type),
-            what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
-        )
-        
+
+    def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
+        nautilus_bar = ib_bar_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+        self._handle_data(nautilus_bar)
+
+
+
     async def _subscribe_bars(self, bar_type: BarType):
         instrument = self._cache.instrument(bar_type.instrument_id)
 
         if instrument is None:
             self._log.error(f"Cannot subscribe to {bar_type}, Instrument not found.")
             return
-        
+
+
         # parse bar_type.spec to bar_size
-        # callback = functools.partial(
-        #     self._bar_callback,
-        #     bar_type=bar_type,
-        # )
-        await self._client.subscribe_bars(
-            request_id=str(bar_type),
+        callback = functools.partial(
+            self._bar_callback,
+            bar_type=bar_type,
+            instrument=instrument
+        )
+        self._client.subscribe_bars(
             contract=dict_to_contract(instrument.info["contract"]),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
+            bar_size=BarSize.from_bar_spec(bar_type.spec),
+            callback=callback
         )
     
-    def _bar_callback(self, bar_type: BarType, bar: BarData) -> None:
-        # parse ibapi BarData object into nautilus bar (use BarType)
-        # self._handle_data(nautilus_bar)
+
+    async def _subscribe_quote_ticks(self, bar_type: BarType):
         pass
-        
+            
+
