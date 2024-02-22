@@ -156,8 +156,9 @@ def _sanitize_str(value: str):
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
     
     contract = details.contract
+    print(contract.lastTradeDateOrContractMonth)
     
-    assert len(contract.lastTradeDateOrContractMonth) == 6
+    assert len(contract.lastTradeDateOrContractMonth) == 8
     
     symbol = _sanitize_str(contract.symbol)
     trading_class = _sanitize_str(contract.tradingClass)
@@ -174,20 +175,22 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
         )
     
 def create_contract(
-    trading_class: str,
     symbol: str,
     venue: str,
     sec_type: str,
+    trading_class: str | None = None,
     currency: str | None = None
 ) -> IBContract:
 
     contract = IBContract()
 
-    contract.tradingClass = _desanitize_str(trading_class)
     contract.symbol = _desanitize_str(symbol)
     contract.exchange = _desanitize_str(venue)
     contract.secType = sec_type
     # contract.includeExpired = False
+    #
+    if trading_class is not None:
+        contract.tradingClass = _desanitize_str(trading_class)
     
     if currency is not None:
         contract.currency = str(currency)
@@ -196,21 +199,30 @@ def create_contract(
 
 def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     
-    parts = instrument_id.value.split("=")
-    contract: IBContract = create_contract(
-        trading_class=parts[0],
-        symbol=parts[1],
-        venue=instrument_id.venue.value,
-        sec_type=parts[2],
-    )
-    
-    if len(parts) == 4:
-        contract_month = ContractMonth(parts[3])
-        contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
+    parts = instrument_id.symbol.value.split("=")
+    venue = instrument_id.venue.value
+    if venue == "IDEALPRO":
+        contract: IBContract = create_contract(
+            symbol=parts[0].split(".")[0],
+            currency=parts[0].split(".")[1],
+            venue=venue,
+            sec_type=parts[1],
+        )
+    else:
+        contract: IBContract = create_contract(
+            trading_class=parts[0],
+            symbol=parts[1],
+            venue=venue,
+            sec_type=parts[2],
+        )
+
         
+        if len(parts) == 4:
+            contract_month = ContractMonth(parts[3])
+            contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
     return contract
-    
-def contract_details_to_instrument(
+        
+def contract_details_to_futures_instrument(
     details: IBContractDetails,
     overrides: dict | None = None,
 ) -> FuturesContract:

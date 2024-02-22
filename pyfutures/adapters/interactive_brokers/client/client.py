@@ -322,12 +322,13 @@ class InteractiveBrokersClient(Component, EWrapper):
     # Contract Details
 
     async def request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
-        self._log.debug(
-            f"Requesting contract details for:"
-            f" tradingClass={contract.symbol},"
-            f" symbol={contract.tradingClass},"
-            f" exchange={contract.exchange},"
-        )
+        # self._log.debug(
+        #     f"Requesting contract details for:"
+        #     f" tradingClass={contract.symbol},"
+        #     f" symbol={contract.tradingClass},"
+        #     f" exchange={contract.exchange},"
+        # )
+        self._log.debug(f"Requesting contract details for {contract=}")
 
         request = self._create_request(data=[])
 
