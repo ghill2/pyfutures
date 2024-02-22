@@ -44,7 +44,7 @@ def process_minute_and_day_bars(row: dict, path: Path) -> None:
     CATALOG.write_chunk(
         data=bars,
         data_cls=Bar,
-        basename_template=instrument.id.value + "-{i}",
+        basename_template=str(bar_type) + "-{i}",
     )
     print(f"Written {bar_type!r}....")
 
@@ -59,23 +59,23 @@ def process_instruments(row: dict, month: ContractMonth) -> None:
     print(f"Written {instrument.id!r}....")
     
 rows = IBTestProviderStubs.universe_rows(
-    filter=["ECO"],
+    filter=["ECO", "DC"],
 )
 
 
 def import_minute_and_hour_bars():
     for row in rows:
-        files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        paths = sorted(set(files_d1 + files_m1))
+        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+        # paths = sorted(set(files_d1))
         for path in paths:
             yield joblib.delayed(process_minute_and_day_bars)(row, path)
 
 def import_instruments():
     for row in rows:
-        files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        paths = sorted(set(files_d1 + files_m1))
+        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+        # paths = sorted(set(files_d1 + files_m1))
         
         months = {
             ContractMonth(path.stem[-5:])

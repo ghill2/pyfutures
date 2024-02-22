@@ -14,7 +14,7 @@ class PortaraData:
     def get_paths(
         data_symbol: str,
         aggregation: BarAggregation,
-    ):
+    ) -> list[Path]:
         if aggregation == BarAggregation.DAY:
             folder = PORTARA_DATA_FOLDER / "DAY" / data_symbol
             paths = list(folder.glob("*.txt")) + list(folder.glob("*.bd"))
