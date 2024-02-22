@@ -11,12 +11,15 @@ from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.functions import bar_aggregation_to_str
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import Venue
+from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
+from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapters.interactive_brokers.parsing import create_contract
@@ -26,8 +29,8 @@ from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.schedule import MarketSchedule
 from pyfutures.data.files import ParquetFile
-
-
+from dataclasses import dataclass
+from dataclasses import fields
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
@@ -35,6 +38,7 @@ PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/catalog/data/custom_multiple_bar")
 CATALOG_FOLDER = Path("/Users/g1/Desktop/catalog/")
+CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER, show_query_paths=True)
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
@@ -66,7 +70,81 @@ class Session:
             contracts.append(chain.current_contract(timestamp))
         return contracts
 
-
+@dataclass
+class UniverseRow:
+    uname: str
+    trading_class: str
+    symbol: str
+    exchange: str
+    data_symbol: str
+    sector: str
+    sub_sector: str
+    region: str
+    quote_currency: Currency
+    timezone: pytz.timezone
+    settlement_time: pd.Timedelta
+    market_schedule: MarketSchedule
+    liquid_schedule: MarketSchedule
+    start_month: ContractMonth
+    config: ContractChainConfig
+    quote_home_instrument: Instrument
+    base_instrument: FuturesContract
+    contract: IBContract
+    contract_cont: IBContract
+    fee_fixed: float
+    fee_fixed_currency: float
+    fee_fixed_percent: float
+    fee_exchange: float
+    fee_exchange_currency: float
+    fee_regulatory: float
+    fee_regulatory_currency: float
+    fee_clearing: float
+    fee_clearing_currency: float
+    fee_clearing_percent: float
+    
+    def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
+        instrument_id = InstrumentId(
+            symbol=Symbol(self.base_instrument.instrument_id.symbol.value + "=" + month.value),
+            venue=self.base_instrument.instrument_id.venue,
+        )
+        return FuturesContract(
+            instrument_id=instrument_id,
+            raw_symbol=self.base_instrument.instrument_id.symbol,
+            asset_class=self.base_instrument.asset_class,
+            currency=self.base_instrument.quote_currency,
+            price_precision=self.base_instrument.price_precision,
+            price_increment=self.base_instrument.price_increment,
+            multiplier=self.base_instrument.multiplier,
+            lot_size=self.base_instrument.lot_size,
+            underlying=self.base_instrument.underlying,
+            activation_ns=0,
+            expiration_ns=0,
+            ts_event=0,
+            ts_init=0,
+        )
+    
+    def bar_files(
+        self,
+        aggregation: BarAggregation | None = None,
+        month: str | None = None,
+    ) -> list[ParquetFile]:
+        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
+        month = month or "*"
+        glob_str = f"{self.trading_class}={self.symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
+        return self._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
+    
+    @staticmethod
+    def _get_files(
+        parent: Path,
+        glob: str,
+    ) -> ParquetFile:
+        paths = list(parent.glob(glob))
+        paths = sorted(paths)
+        files = list(map(ParquetFile.from_path, paths))
+        if len(files) == 0:
+            raise RuntimeError(f"Missing files for {glob}")
+        return files
+    
 class IBTestProviderStubs:
     @staticmethod
     def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
@@ -136,12 +214,6 @@ class IBTestProviderStubs:
         df["fee_fixed_percent"] = df["fee_fixed_percent"].apply(parse_bool)
         df["fee_clearing_percent"] = df["fee_clearing_percent"].apply(parse_bool)
         df["data_completes"] = df["data_completes"].apply(parse_bool)
-
-        # df["trading_class"] = df["trading_class"].apply(str)
-
-        # print(df.dtypes)
-        # print(df.loc[28, "tradingClass"])
-        # exit()
 
         # temporary remove instruments that are failing to roll
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
@@ -273,33 +345,10 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-
-        # parse settlement time
-        remove = [
-            "comments",
-            "open",
-            "close",
-            "ex_url",
-            "ex_symbol",
-            "description",
-            "session",
-            "hours_last_edited",
-            "data_start",
-            "data_end",
-            "data_completes",
-            "minute_transition",
-            "price_magnifier",
-            "min_tick",
-            "multiplier",
-            "missing_months",
-            "hold_cycle",
-            "priced_cycle",
-            "roll_offset",
-            "expiry_offset",
-            "carry_offset",
-        ]
-        df = df[[x for x in df.columns if x not in remove]]
-
+        
+        keep = [f.name for f in fields(UniverseRow)]
+        df = df[[x for x in df.columns if x in keep]]
+            
         return df
 
     @staticmethod
@@ -307,66 +356,44 @@ class IBTestProviderStubs:
         filter: list | None = None,
         skip: list | None = None,
     ) -> list[dict]:
-        universe = IBTestProviderStubs.universe_dataframe(
+        
+        df = IBTestProviderStubs.universe_dataframe(
             filter=filter,
             skip=skip,
         )
-
-        rows = universe.to_dict(orient="records")
+        rows = [
+            UniverseRow(**d)
+            for d in df.to_dict(orient="records")
+        ]
         assert len(rows) > 0
-
-        UniverseRow = namedtuple("Row", list(rows[0].keys()))
-        rows = [UniverseRow(**row) for row in rows]
+        
         return rows
 
-    # def mes_instrument(self) -> FuturesContract:
+    # @classmethod
+    # def multiple_files(
+    #     cls,
+    #     trading_class: str,
+    #     symbol: str,
+    #     aggregation: BarAggregation,
+    # ) -> ParquetFile:
+    #     aggregation = bar_aggregation_to_str(aggregation)
+    #     glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
+    #     files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
+    #     return files
 
-    @classmethod
-    def bar_files(
-        cls,
-        trading_class: str,
-        symbol: str,
-        aggregation: BarAggregation | None = None,
-        month: str | None = None,
-    ) -> list[ParquetFile]:
-        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
-        month = month or "*"
-        glob_str = f"{trading_class}={symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
-        return cls._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
+    # @classmethod
+    # def adjusted_files(
+    #     cls,
+    #     trading_class: str,
+    #     symbol: str,
+    #     aggregation: BarAggregation,
+    # ) -> ParquetFile:
+    #     aggregation = bar_aggregation_to_str(aggregation)
+    #     glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
+    #     files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
+    #     return files
 
-    @classmethod
-    def multiple_files(
-        cls,
-        trading_class: str,
-        symbol: str,
-        aggregation: BarAggregation,
-    ) -> ParquetFile:
-        aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
-        files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
-        return files
+    
 
-    @classmethod
-    def adjusted_files(
-        cls,
-        trading_class: str,
-        symbol: str,
-        aggregation: BarAggregation,
-    ) -> ParquetFile:
-        aggregation = bar_aggregation_to_str(aggregation)
-        glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
-        files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
-        return files
 
-    @staticmethod
-    def _get_files(
-        parent: Path,
-        glob: str,
-    ) -> ParquetFile:
-        paths = list(parent.glob(glob))
-        paths = sorted(paths)
-        files = list(map(ParquetFile.from_path, paths))
-        if len(files) == 0:
-            raise RuntimeError(f"Missing files for {glob}")
-
-        return files
+    

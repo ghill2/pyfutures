@@ -65,22 +65,33 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         await self.instrument_provider.initialize()
         for instrument in self._instrument_provider.list_all():
             self._handle_data(instrument)  # add to cache
-
+    
+    async def _unsubscribe_bars(self, bar_type: BarType) -> None:
+        await self._client.unsubscribe_bars(
+            request_id=str(bar_type),
+            what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
+        )
+        
     async def _subscribe_bars(self, bar_type: BarType):
         instrument = self._cache.instrument(bar_type.instrument_id)
 
         if instrument is None:
             self._log.error(f"Cannot subscribe to {bar_type}, Instrument not found.")
             return
-
+        
+        # parse bar_type.spec to bar_size
+        # callback = functools.partial(
+        #     self._bar_callback,
+        #     bar_type=bar_type,
+        # )
         await self._client.subscribe_bars(
             request_id=str(bar_type),
             contract=dict_to_contract(instrument.info["contract"]),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
         )
-
-    async def _unsubscribe_bars(self, bar_type: BarType) -> None:
-        await self._client.unsubscribe_bars(
-            request_id=str(bar_type),
-            what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
-        )
+    
+    def _bar_callback(self, bar_type: BarType, bar: BarData) -> None:
+        # parse ibapi BarData object into nautilus bar (use BarType)
+        # self._handle_data(nautilus_bar)
+        pass
+        

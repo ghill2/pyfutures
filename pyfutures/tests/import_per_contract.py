@@ -14,27 +14,37 @@ from pyfutures.data.portara import PortaraData
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+BASENAME_TEMPLATE = lambda x: x.instrument_id.value + "-{i}"
 
-def process(path: Path, row: dict) -> None:
+def process_minute_and_day(path: Path, row: dict) -> None:
+    
     contract_month = ContractMonth(path.stem[-5:])
     aggregation = path.parent.parent.stem
-    instrument_id = InstrumentId(
-        symbol=Symbol(row.instrument_id.symbol.value + "=" + contract_month.value),
-        venue=row.instrument_id.venue,
-    )
 
     bar_type = BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
 
     df = PortaraData.read_dataframe(path)
-
+    
+    wrangler = BarDataWrangler(
+        instrument=row.base_instrument,
+        
+    )
+    CATALOG.write_chunk(
+        data=bars,
+        data_cls=Bar,
+        basename_template=file.instrument_id.value + "-{i}",
+    )
+    
     file = ParquetFile(
         parent=PER_CONTRACT_FOLDER,
         bar_type=bar_type,
         cls=Bar,
     )
-
+    
+    
     writer = BarParquetWriter(
         path=file.path,
         bar_type=bar_type,
@@ -102,21 +112,21 @@ def process_as_ticks(file: ParquetFile, row: tuple) -> None:
 
 
 rows = IBTestProviderStubs.universe_rows(
-    # filter=["ECO"],
+    filter=["ECO"],
 )
 
 
-def func_gen_import_minute_and_hour():
+def import_minute_and_hour():
     # import MINUTE and DAY
     for row in rows:
         files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
         paths = sorted(set(files_d1 + files_m1))
         for path in paths:
-            yield joblib.delayed(process)(path, row)
+            yield joblib.delayed(process_minute_and_day)(path, row)
 
 
-def func_gen_minute_to_hour():
+def minute_to_hour():
     # convert MINUTE > HOUR
     for row in rows:
         files = IBTestProviderStubs.bar_files(
@@ -128,7 +138,7 @@ def func_gen_minute_to_hour():
             yield joblib.delayed(process_hour)(file, row)
 
 
-def func_gen_minute_to_quote_tick():
+def bars_to_quote_tick():
     # convert all to QuoteTick
     for row in rows:
         files = IBTestProviderStubs.bar_files(
@@ -140,8 +150,8 @@ def func_gen_minute_to_quote_tick():
 
 
 if __name__ == "__main__":
-    joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_import_minute_and_hour())
-    joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_hour())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_minute_and_hour())
+    # joblib.Parallel(n_jobs=-1, backend="loky")(minute_to_hour())
     # joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_quote_tick())
 
 
