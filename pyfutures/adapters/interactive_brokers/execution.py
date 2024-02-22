@@ -263,8 +263,11 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             self._log.error(f"No instrument found for {order.instrument_id}")
             return
 
-        ib_order: IBOrder = nautilus_order_to_ib_order(command.order, instrument=instrument)
-        ib_order.orderId = await self._client.request_next_order_id()
+        ib_order: IBOrder = nautilus_order_to_ib_order(
+            order=command.order,
+            instrument=instrument,
+            order_id=await self._client.request_next_order_id(),
+        )
         
         self._log.info(f"Submitting order {ib_order}...")
 

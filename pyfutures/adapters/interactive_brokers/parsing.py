@@ -427,9 +427,11 @@ def order_event_to_order_status_report(
 def nautilus_order_to_ib_order(
     order: Order,
     instrument: Instrument,
+    order_id: int,
 ) -> IBOrder:
     ib_order = IBOrder()
-
+    
+    ib_order.orderId = order_id
     ib_order.orderRef = order.client_order_id.value
     ib_order.orderType = map_order_type[order.order_type]
     ib_order.totalQuantity = order.quantity.as_decimal()
