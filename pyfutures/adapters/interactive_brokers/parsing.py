@@ -166,8 +166,8 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
         assert len(contract.lastTradeDateOrContractMonth) == 8
         month = str(ContractMonth.from_int(int(details.contractMonth)))
         return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}={month}.{exchange}")
-    else:
-        return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}.{exchange}")
+    elif contract.secType == "CASH":
+        return InstrumentId.from_str(f"{symbol}.{contract.currency}={contract.secType}.{exchange}")
 
 
 def create_contract(symbol: str, venue: str, sec_type: str, trading_class: str | None = None, currency: str | None = None) -> IBContract:
