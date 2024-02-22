@@ -264,7 +264,8 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             return
 
         ib_order: IBOrder = nautilus_order_to_ib_order(command.order, instrument=instrument)
-
+        ib_order.orderId = await self._client.request_next_order_id()
+        
         self._log.info(f"Submitting order {ib_order}...")
 
         self.generate_order_submitted(

@@ -34,7 +34,6 @@ def test_strategy_logging():
 
     # monkeypatch.setenv("BINANCE_API_KEY", "SOME_API_KEY")
     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
-    #
     # row = IBTestProviderStubs.universe_rows()[0]
     bar_type = BarType.from_str("EUR.GBP=CASH.IDEALPRO-5-SECOND-BID-EXTERNAL")
 

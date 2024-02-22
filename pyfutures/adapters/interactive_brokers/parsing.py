@@ -424,10 +424,13 @@ def order_event_to_order_status_report(
     return order_status
 
 
-def nautilus_order_to_ib_order(order: Order, instrument: Instrument) -> IBOrder:
+def nautilus_order_to_ib_order(
+    order: Order,
+    instrument: Instrument,
+) -> IBOrder:
     ib_order = IBOrder()
 
-    ib_order.orderId = int(order.client_order_id.value)
+    ib_order.orderRef = order.client_order_id.value
     ib_order.orderType = map_order_type[order.order_type]
     ib_order.totalQuantity = order.quantity.as_decimal()
     ib_order.action = map_order_action[order.side]

@@ -270,21 +270,6 @@ class InteractiveBrokersClient(Component, EWrapper):
         self._client.reqMarketDataType(marketDataType=market_data_type)
         await asyncio.sleep(1)  # no reliable way to confirm type has been changed
 
-    # def marketDataType(self, reqId:TickerId, marketDataType:int):
-    #     """TWS sends a marketDataType(type) callback to the API, where
-    #     type is set to Frozen or RealTime, to announce that market data has been
-    #     switched between frozen and real-time. This notification occurs only
-    #     when market data switches between real-time and frozen. The
-    #     marketDataType( ) callback accepts a reqId parameter and is sent per
-    #     every subscription because different contracts can generally trade on a
-    #     different schedule."""
-    #     request = self._requests.get(reqId)
-    #     if request is None:
-    #         return  # no request found for request_id
-
-    #     request.set_result(marketDataType)
-
-
     ################################################################################################
     # reqMktData
 
@@ -1441,3 +1426,17 @@ class InteractiveBrokersClient(Component, EWrapper):
         #         for tick in ticks
         #     ],
         # )
+
+    # def marketDataType(self, reqId:TickerId, marketDataType:int):
+    #     """TWS sends a marketDataType(type) callback to the API, where
+    #     type is set to Frozen or RealTime, to announce that market data has been
+    #     switched between frozen and real-time. This notification occurs only
+    #     when market data switches between real-time and frozen. The
+    #     marketDataType( ) callback accepts a reqId parameter and is sent per
+    #     every subscription because different contracts can generally trade on a
+    #     different schedule."""
+    #     request = self._requests.get(reqId)
+    #     if request is None:
+    #         return  # no request found for request_id
+
+    #     request.set_result(marketDataType)
