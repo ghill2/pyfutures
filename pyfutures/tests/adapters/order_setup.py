@@ -87,30 +87,18 @@ class OrderSetup:
         if price is None:
             if active:
                 # determine active limit order price
-                last_quote = await self.exec_client.request_last_quote_tick(
-                    instrument.id
-                )
+                last_quote = await self.exec_client.request_last_quote_tick(instrument.id)
                 if order_side is OrderSide.BUY:
-                    price: Decimal = last_quote.ask_price - (
-                        instrument.price_increment * 1000
-                    )
+                    price: Decimal = last_quote.ask_price - (instrument.price_increment * 1000)
                 elif order_side is OrderSide.SELL:
-                    price: Decimal = last_quote.bid_price + (
-                        instrument.price_increment * 1000
-                    )
+                    price: Decimal = last_quote.bid_price + (instrument.price_increment * 1000)
             else:
                 # determine immediate fill limit order price
-                last_quote = await self.exec_client.request_last_quote_tick(
-                    instrument.id
-                )
+                last_quote = await self.exec_client.request_last_quote_tick(instrument.id)
                 if order_side == OrderSide.BUY:
-                    price: Decimal = last_quote.ask_price + (
-                        instrument.price_increment * 50
-                    )
+                    price: Decimal = last_quote.ask_price + (instrument.price_increment * 50)
                 elif order_side == OrderSide.SELL:
-                    price: Decimal = last_quote.bid_price - (
-                        instrument.price_increment * 50
-                    )
+                    price: Decimal = last_quote.bid_price - (instrument.price_increment * 50)
 
             if price <= 0:
                 price = instrument.price_increment
@@ -121,9 +109,7 @@ class OrderSetup:
             instrument_id=instrument_id,
             order_side=order_side,
             quantity=quantity,
-            client_order_id=ClientOrderId(
-                str(self.client._next_req_id())
-            ),
+            client_order_id=ClientOrderId(str(self.client._next_req_id())),
             trader_id=self.trader_id,
             strategy_id=self.strategy_id,
             price=price,
@@ -149,11 +135,7 @@ class OrderSetup:
         await self._close_all_positions()
 
     async def close_positions_for_instrument(self, instrument_id: InstrumentId) -> None:
-        reports = [
-            report
-            for report in await self.exec_client.generate_position_status_reports()
-            if report.instrument_id == instrument_id
-        ]
+        reports = [report for report in await self.exec_client.generate_position_status_reports() if report.instrument_id == instrument_id]
         for report in reports:
             await self._close_position(report)
 

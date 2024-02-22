@@ -13,10 +13,12 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.enums import AssetClass
 
+
 class UniverseInstrumentProvider(InstrumentProvider):
     """
     Provides instruments to the backtest engine
     """
+
     def __init__(self):
         super().__init__(
             logger=Logger(
@@ -25,11 +27,10 @@ class UniverseInstrumentProvider(InstrumentProvider):
                 # bypass=True,
             ),
         )
-        
+
         universe = IBTestProviderStubs.universe_dataframe()
-    
+
         for row in universe.itertuples():
-            
             self.add(
                 Instrument(
                     instrument_id=InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
@@ -62,11 +63,11 @@ class UniverseInstrumentProvider(InstrumentProvider):
                     min_notional=None,
                     max_price=None,
                     min_price=None,
-                    tick_scheme_name = None,
-                    info = None,
+                    tick_scheme_name=None,
+                    info=None,
                 )
             )
-            
+
 
 if __name__ == "__main__":
     UniverseInstrumentProvider()

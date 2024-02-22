@@ -6,38 +6,35 @@ import numpy as np
 
 PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
 
+
 class PortaraData:
-    
     @staticmethod
     def get_paths(
         data_symbol: str,
         aggregation: BarAggregation,
     ):
-        
         if aggregation == BarAggregation.DAY:
-            folder = (PORTARA_DATA_FOLDER / "DAY" / data_symbol)
+            folder = PORTARA_DATA_FOLDER / "DAY" / data_symbol
             paths = list(folder.glob("*.txt")) + list(folder.glob("*.bd"))
         elif aggregation == BarAggregation.MINUTE:
-            folder = (PORTARA_DATA_FOLDER / "MINUTE" / data_symbol)
+            folder = PORTARA_DATA_FOLDER / "MINUTE" / data_symbol
             paths = list(folder.glob("*.txt")) + list(folder.glob("*.b01"))
-        
+
         assert len(paths) > 0
         return list(sorted(paths))
-    
+
     @staticmethod
     def read_dataframe(path: Path) -> pd.DataFrame:
-        
         path = Path(path)
-        
+
         try:
-            with open(path, 'r', encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 column_count = len(f.readline().split(","))
         except UnicodeDecodeError as e:  # corrupted file
             print(path)
             raise e
-            
-        
-        if path.suffix == ".bd" and column_count == 8: # daily .bd file
+
+        if path.suffix == ".bd" and column_count == 8:  # daily .bd file
             dtype = {
                 "symbol": str,
                 "day": int,
@@ -88,43 +85,41 @@ class PortaraData:
             }
         else:
             raise RuntimeError(str(path))
-        
+
         with open(path, "r", encoding="utf-8") as f:
             body = f.read()
-            
+
         missing = _get_missing_rows(path)
         if missing is not None:
-            missing = "\n".join(
-                list(map(lambda x: x.strip(), missing.strip().splitlines()))
-            )
+            missing = "\n".join(list(map(lambda x: x.strip(), missing.strip().splitlines())))
             body = body + missing
-        
+
         df = pd.read_csv(StringIO(body), names=list(dtype.keys()), dtype=dtype)
-        
+
         if "symbol" in df.columns:
             df.drop(["symbol"], axis=1, inplace=True)
-            
+
         if "time" in df.columns:
             timestamps = pd.to_datetime(
-                    (df["day"] * 10000 + df["time"]).astype(str),
-                    format="%Y%m%d%H%M",
-                    utc=True,
-                )
-            df.insert(0, 'timestamp', timestamps)
+                (df["day"] * 10000 + df["time"]).astype(str),
+                format="%Y%m%d%H%M",
+                utc=True,
+            )
+            df.insert(0, "timestamp", timestamps)
             df.drop(["time"], axis=1, inplace=True)
         else:
             timestamps = pd.to_datetime(df["day"], format="%Y%m%d", utc=True)
-            df.insert(0, 'timestamp', timestamps)
-            
+            df.insert(0, "timestamp", timestamps)
 
         df.drop(["day", "tick_count"], axis=1, inplace=True)
-        
+
         df = df[df.columns[:6]]
-        
+
         df.volume = 1_000_000.0
-        
+
         return df
-    
+
+
 def _get_missing_rows(path: Path) -> str | None:
     if path.parent.parent.stem == "DAY" and path.stem == "ZIN2008F":  # NIFTY
         return """
@@ -163,7 +158,7 @@ def _get_missing_rows(path: Path) -> str | None:
         ESU2018Z,20181220,287.3,287.3,287.3,287.3,20,20
         ESU2018Z,20181221,284.7,284.7,284.7,284.7,20,20
         """
-        
+
     elif path.parent.parent.stem == "DAY" and path.stem == "ESU2019H":  # FESU
         return """
         ESU2019H,20181214,287.5,287.5,287.5,287.5,20,20
@@ -175,6 +170,3 @@ def _get_missing_rows(path: Path) -> str | None:
         ESU2019H,20181227,275.2,275.2,275.2,275.2,20,20
         """
     return None
-        
-        
-    

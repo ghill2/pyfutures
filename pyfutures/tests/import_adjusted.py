@@ -15,26 +15,25 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import ADJUSTED_PRICE
 
 OUT_FOLDER = ADJUSTED_PRICES_FOLDER
 
+
 def process(
     paths: list[Path],
     row: namedtuple,
 ) -> None:
-    
-    
     # create adusted prices
     paths = list(sorted(paths))
-    
+
     files = {
         BarAggregation.DAY: ParquetFile.from_path(paths[0]),
         BarAggregation.HOUR: ParquetFile.from_path(paths[1]),
         BarAggregation.MINUTE: ParquetFile.from_path(paths[2]),
     }
-    
+
     multiple_prices = []
     for file in files.values():
         multiple_prices.extend(file.read_objects())
     multiple_prices = list(sorted(multiple_prices, key=lambda x: x.ts_init))
-    
+
     adjusted = {
         BarAggregation.DAY: AdjustedPrices(
             bar_type=files[BarAggregation.DAY].bar_type,
@@ -52,7 +51,7 @@ def process(
             manual=True,
         ),
     }
-    
+
     # multiple prices -> adjusted prices
     for price in multiple_prices:
         if price.bar_type.spec.aggregation == BarAggregation.DAY:
@@ -66,12 +65,11 @@ def process(
             adjusted[BarAggregation.MINUTE].handle_price(price)
         else:
             raise RuntimeError()
-            
-    
+
     # write
     path = OUT_FOLDER / f"{row.trading_class}_adjusted.parquet"
     print(f"Writing {path}...")
-    
+
     # write single series
     for aggregation in (BarAggregation.DAY, BarAggregation.HOUR, BarAggregation.MINUTE):
         path = ADJUSTED_PRICES_FOLDER / files[aggregation].path.name
@@ -81,7 +79,7 @@ def process(
         df = df[["timestamp", "adjusted"]]
         df.rename({"adjusted": "price"}, axis=0, inplace=True)
         df.to_parquet(path, index=False)
-    
+
     # # write merged dataframe
     # df = pd.concat(
     #     [
@@ -91,20 +89,20 @@ def process(
     #     ],
     # )
     # df.sort_values("timestamp", inplace=True)
-    
+
     # path.parent.mkdir(parents=True, exist_ok=True)
     # df.to_parquet(path, index=False)
-    
+
     # path = path.with_suffix(".csv")
     # print(f"Writing {path}...")
     # df.to_csv(path, index=False)
 
+
 if __name__ == "__main__":
-    
     rows = IBTestProviderStubs.universe_rows(
         # filter=["CL"],
     )
-    
+
     results = joblib.Parallel(n_jobs=-1, backend="loky")(
         joblib.delayed(process)(
             paths=list(MULTIPLE_PRICES_FOLDER.glob(f"{row.instrument_id}*.parquet")),
@@ -112,4 +110,3 @@ if __name__ == "__main__":
         )
         for row in rows
     )
-    

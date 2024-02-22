@@ -11,7 +11,7 @@ from pyfutures import PACKAGE_ROOT
 from pyfutures.schedule.schedule import MarketSchedule
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.schedule.factory import MarketScheduleFactory
-        
+
 DAY_NAME_TO_INT = {"Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6}
 # https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568
 # DST offset - confirmation that when pytz localizes a time, the UTC offset also includes the DST offset.
@@ -184,7 +184,6 @@ class MarketScheduleFactory:
 
     @staticmethod
     def find_incorrect_universe_hours():
-        
         # factory = MarketScheduleFactory().from_symbol()
 
         factory = MarketScheduleFactory()
@@ -206,9 +205,7 @@ class MarketScheduleFactory:
 
             # print(expected)
 
-            matched = (
-                (expected.open.values == open_time) & (expected.close.values == close_time)
-            ).any()
+            matched = ((expected.open.values == open_time) & (expected.close.values == close_time)).any()
 
             if not matched:
                 print(expected)
@@ -218,7 +215,6 @@ class MarketScheduleFactory:
     @staticmethod
     def find_weekly_hours_not_the_same():
         # find hours that are not the same each weeky
-        
 
         factory = MarketScheduleFactory()
 

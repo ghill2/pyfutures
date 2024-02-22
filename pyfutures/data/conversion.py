@@ -88,9 +88,6 @@ def bar_to_bar(
 
     freq = BarSpecification(step, aggregation, PriceType.ASK).timedelta
     return bars.resample(freq, closed="left", label="left").apply(ohlc_dict).dropna()
-    
-
-
 
 
 def bar_to_tick(bid_data: pd.DataFrame, ask_data: pd.DataFrame) -> pd.DataFrame:

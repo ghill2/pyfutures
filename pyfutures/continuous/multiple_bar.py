@@ -10,6 +10,7 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 
+
 class MultipleBar(Data):
     def __init__(
         self,
@@ -20,7 +21,6 @@ class MultipleBar(Data):
         ts_event: int,
         ts_init: int,
     ):
-
         self.bar_type = bar_type
         self.instrument_id = bar_type.instrument_id
         self.current_bar = current_bar
@@ -36,22 +36,21 @@ class MultipleBar(Data):
     @property
     def ts_init(self) -> int:
         return self._ts_init
-    
+
     @property
     def current_month(self) -> ContractMonth:
         return ContractMonth(self.current_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
-    
+
     @property
     def forward_month(self) -> ContractMonth:
         return ContractMonth(self.forward_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
-    
+
     @property
     def carry_month(self) -> ContractMonth | None:
         if self.carry_bar is None:
             return None
         return ContractMonth(self.carry_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
-        
-    
+
     @staticmethod
     def schema() -> pa.Schema:
         return pa.schema(
@@ -153,7 +152,8 @@ class MultipleBar(Data):
                 ts_event=values["carry_ts_event"],
                 ts_init=values["carry_ts_init"],
             )
-            if values.get("carry_bar_type") else None,
+            if values.get("carry_bar_type")
+            else None,
             ts_event=values["ts_event"],
             ts_init=values["ts_init"],
         )

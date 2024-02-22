@@ -28,7 +28,6 @@ from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_cont
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
-
 class TestIBClientSubscribe:
     @pytest.mark.skip(reason="flakey if market not open")
     @pytest.mark.asyncio()
@@ -52,7 +51,6 @@ class TestIBClientSubscribe:
         await asyncio.wait_for(wait_for_quote_tick(), 2)
 
         assert callback_mock.call_count > 0
-
 
     @pytest.mark.skip(reason="flakey if market not open")
     @pytest.mark.asyncio()

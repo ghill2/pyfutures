@@ -48,9 +48,7 @@ class ExecutionFilledRunner:
         self._run(instrument_ids)
 
     def _run(self, instrument_ids: list[InstrumentId]) -> None:
-        joblib.Parallel(n_jobs=-1, backend="loky", verbose=100)(
-            joblib.delayed(_run_test)(instrument_id) for instrument_id in instrument_ids
-        )
+        joblib.Parallel(n_jobs=-1, backend="loky", verbose=100)(joblib.delayed(_run_test)(instrument_id) for instrument_id in instrument_ids)
 
 
 def _run_test(instrument_id: InstrumentId):
@@ -59,7 +57,7 @@ def _run_test(instrument_id: InstrumentId):
 
     log_path = Path(__file__).parent / (r"logs/" + instrument_id.value + ".log")
     log_path_pytest = Path(__file__).parent / (r"logs/" + instrument_id.value + "_test.html")
-    
+
     retcode = pytest.main(
         [
             "--timeout=28800",  # 8 hours
@@ -101,4 +99,3 @@ if __name__ == "__main__":
     runner = ExecutionFilledRunner()
 
     runner.run_all()
-   

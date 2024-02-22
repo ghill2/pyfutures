@@ -30,15 +30,15 @@ PRICE_PRECISIONS = {
     "GBPSGD": 5,  # yahoo 2003
 }
 
+
 def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
-    
     price_precision = PRICE_PRECISIONS[symbol]
-    
+
     if str(symbol).startswith("GBP"):
         df.bid_price = 1 / df.bid_price
         df.ask_price = 1 / df.ask_price
         symbol = f"{symbol[3:6]}{symbol[:3]}"
-    
+
     instrument_id = InstrumentId.from_str(f"{symbol}.SIM")
     bar_type = BarType.from_str(
         f"{instrument_id}-1-DAY-MID-EXTERNAL",
@@ -58,25 +58,24 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
     print(f"Writing {str(file.path)}...")
     writer.write_dataframe(df)
 
+
 def import_tradermade() -> None:
-    
     folder = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/tradermade/old")
-    
+
     paths = folder.glob("*.csv")
-    
+
     total = pd.DataFrame()
     for path in paths:
         df = pd.read_csv(path)
         total = pd.concat([total, df])
-    
+
     for symbol in TRADERMADE_SYMBOLS:
-        
         mask = (total.base_currency == symbol[:3]) & (total.quote_currency == symbol[3:6])
         df = total[mask].reset_index(drop=True)
         df.timestamp = pd.to_datetime(df.timestamp.values, utc=True)
         df.sort_values(by="timestamp", inplace=True)
         assert not df.empty
-        
+
         df = pd.DataFrame(
             {
                 "timestamp": pd.to_datetime(df.timestamp.values, utc=True),
@@ -87,7 +86,8 @@ def import_tradermade() -> None:
             }
         )
         write_dataframe(symbol=symbol, df=df)
-        
+
+
 def import_yahoo():
     tickers = [
         "INRGBP=X",
@@ -96,7 +96,6 @@ def import_yahoo():
         "GBPSGD=X",
     ]
     for ticker in tickers:
-        
         msft = yf.Ticker(ticker)
         df = msft.history(period="max", interval="1d")
         df = pd.DataFrame(
@@ -110,31 +109,28 @@ def import_yahoo():
         )
         print(ticker)
         print(df)
-        
+
         write_dataframe(
-            symbol=ticker.replace('=X', ''),
+            symbol=ticker.replace("=X", ""),
             df=df.reset_index(drop=True),
         )
         time.sleep(5)
-        
+
+
 if __name__ == "__main__":
     import_tradermade()
     import_yahoo()
-    
-    
-    
-    
-    
+
     # df = df \
-        #     .reset_index() \
-        #     .rename(
-        #         {
-        #             "Open":"open",
-        #             "High":"high",
-        #             "Low":"low",
-        #             "Close":"close",
-        #             "Volume":"volume",
-        #             "Date":"timestamp",
-        #         },
-        #     axis=1) \
-        #     [["timestamp", ]]
+    #     .reset_index() \
+    #     .rename(
+    #         {
+    #             "Open":"open",
+    #             "High":"high",
+    #             "Low":"low",
+    #             "Close":"close",
+    #             "Volume":"volume",
+    #             "Date":"timestamp",
+    #         },
+    #     axis=1) \
+    #     [["timestamp", ]]

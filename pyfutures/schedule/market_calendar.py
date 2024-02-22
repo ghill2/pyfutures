@@ -58,8 +58,7 @@ class MarketCalendar:
                 ndf = pd.DataFrame(
                     {
                         "open": days + pd.Timedelta(hours=open_time.hour, minutes=open_time.minute),
-                        "close": days
-                        + pd.Timedelta(hours=close_time.hour, minutes=close_time.minute),
+                        "close": days + pd.Timedelta(hours=close_time.hour, minutes=close_time.minute),
                     },
                 )
 

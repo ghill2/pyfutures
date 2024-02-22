@@ -12,7 +12,6 @@ from nautilus_trader.cache.cache import Cache
 from nautilus_trader.model.identifiers import TraderId
 
 
-
 # RUN THESE TESTS WITH:
 # -n auto -> use pytest-xdist and auto decide amount of tests to run based on the amount of CPU cores
 # test_universe_scheduled.py --capture=sys --tui -n auto
@@ -22,8 +21,8 @@ from nautilus_trader.model.identifiers import TraderId
 @pytest.mark.asyncio()
 async def test_scheduled(shared_queue, row):
     """
-        - a client_id is popped from the queue to use for the duration of the test
-        - when the test finishes, the client_id is returned into the pool
+    - a client_id is popped from the queue to use for the duration of the test
+    - when the test finishes, the client_id is returned into the pool
     """
     init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -36,9 +35,9 @@ async def test_scheduled(shared_queue, row):
     client = InteractiveBrokersClient(
         loop=asyncio.get_event_loop(),
         msgbus=MessageBus(
-        TraderId("TESTER-000"),
-        clock,
-    ),
+            TraderId("TESTER-000"),
+            clock,
+        ),
         cache=Cache(database=None),
         clock=clock,
         host="127.0.0.1",

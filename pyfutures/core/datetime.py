@@ -17,8 +17,7 @@ def timedelta_to_nanos(td):
     The maximum resolution of a Python `timedelta` is 1 microsecond (μs).
     """
     return (
-        td.days * NANOSECONDS_IN_DAY
-        + td.seconds * NANOSECONDS_IN_SECOND
+        td.days * NANOSECONDS_IN_DAY + td.seconds * NANOSECONDS_IN_SECOND
         # + td.microsecond * NANOSECONDS_IN_MICROSECOND
     )
 
@@ -30,7 +29,6 @@ import pandas as pd
 def dt_to_unix_nanos_vectorized(datetimes: pd.Series):
     UNIX_EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
     return (datetimes - UNIX_EPOCH).view("int64").astype("uint64")
-            
 
 
 def unix_nanos_to_dt_vectorized(values: pd.Series):

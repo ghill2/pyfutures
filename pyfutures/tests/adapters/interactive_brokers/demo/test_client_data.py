@@ -27,8 +27,6 @@ from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_cont
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
-
-
 class TestInteractiveBrokersClientData:
     @pytest.mark.asyncio()
     async def test_request_head_timestamp_single(self, client):

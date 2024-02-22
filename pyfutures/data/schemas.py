@@ -67,9 +67,7 @@ class DataFrameSchema:
         # input_dtypes = {key: dtype for key, dtype in df.dtypes.to_dict().items()}
 
         for key, dtypes in expected.items():
-            assert any(
-                df[key].dtype == dtype for dtype in dtypes
-            ), f"""
+            assert any(df[key].dtype == dtype for dtype in dtypes), f"""
                 Dataframe validation failed:
                 input: {df.dtypes.to_dict()}
                 expected: {expected}

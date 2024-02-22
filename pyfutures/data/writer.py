@@ -28,6 +28,7 @@ from nautilus_trader.serialization.arrow.serializer import make_dict_deserialize
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
 
+
 class ParquetWriter:
     def __init__(
         self,
@@ -79,18 +80,11 @@ class BarParquetWriter(ParquetWriter):
         self._bar_type = bar_type
         self._price_precision = price_precision
         self._size_precision = size_precision
-    
-    
-        
+
     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
         df = DataFrameSchema.validate_bars(df)
 
-        timestamps = (
-            pd.to_datetime(df["timestamp"], utc=True, format="mixed")
-            .dt.tz_localize(None)
-            .view("int64")
-            .astype("uint64")
-        )
+        timestamps = pd.to_datetime(df["timestamp"], utc=True, format="mixed").dt.tz_localize(None).view("int64").astype("uint64")
         open = (df["open"] * 1e9).astype("int64")
         high = (df["high"] * 1e9).astype("int64")
         low = (df["low"] * 1e9).astype("int64")
@@ -145,12 +139,7 @@ class QuoteTickParquetWriter(ParquetWriter):
     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
         df = DataFrameSchema.validate_quotes(df)
 
-        timestamps = (
-            pd.to_datetime(df["timestamp"], utc=True, format="mixed")
-            .dt.tz_localize(None)
-            .view("int64")
-            .astype("uint64")
-        )
+        timestamps = pd.to_datetime(df["timestamp"], utc=True, format="mixed").dt.tz_localize(None).view("int64").astype("uint64")
 
         bid_price = (df["bid_price"] * 1e9).astype("int64")
         ask_price = (df["ask_price"] * 1e9).astype("int64")
@@ -191,7 +180,7 @@ class MultipleBarParquetWriter(ParquetWriter):
     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
         prices = [MultipleBar.from_dict(d) for d in df.to_dict(orient="records")]
         self.write_objects(prices)
-        
+
     def write_objects(self, data: list[MultipleBar], append: bool = False) -> None:
         register_arrow(
             data_cls=MultipleBar,
@@ -201,7 +190,7 @@ class MultipleBarParquetWriter(ParquetWriter):
         )
         batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
         self.write_table(pa.Table.from_batches([batch]), append=append)
-    
+
     @staticmethod
     def to_table(data: list[MultipleBar]) -> pa.Table:
         register_arrow(
@@ -212,7 +201,7 @@ class MultipleBarParquetWriter(ParquetWriter):
         )
         batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
         return batch
-        
+
     def write_table(self, table: pa.Table, append: bool = False):
         assert table.schema.remove_metadata().equals(MultipleBar.schema())
         self._write_table_with_metadata(table=table, metadata={}, append=append)

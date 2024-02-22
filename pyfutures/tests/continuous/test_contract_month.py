@@ -4,9 +4,9 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 import pickle
 
+
 class TestContractMonth:
     def test_contract_month_init(self):
-        
         # Arrange
         month = ContractMonth("2021Z")
 
@@ -17,7 +17,6 @@ class TestContractMonth:
         assert month.letter_month == "Z"
 
     def test_contract_month_timestamp_utc(self):
-        
         # Arrange
         month = ContractMonth("2021Z")
 
@@ -25,7 +24,6 @@ class TestContractMonth:
         assert month.timestamp_utc == pd.Timestamp("2021-12-01", tz="UTC")
 
     def test_contract_month_from_month_year(self):
-        
         # Arrange
         month = ContractMonth.from_month_year(2021, 12)
 
@@ -36,7 +34,6 @@ class TestContractMonth:
         assert month.letter_month == "Z"
 
     def test_contract_month_to_int(self):
-        
         # Arrange
         month = ContractMonth("2021Z")
 
@@ -44,7 +41,6 @@ class TestContractMonth:
         assert month.to_int() == 202112
 
     def test_contract_month_from_int(self):
-        
         # Arrange
         month = ContractMonth.from_int(202112)
 
@@ -55,7 +51,6 @@ class TestContractMonth:
         assert month.letter_month == "Z"
 
     def test_contract_month_equality(self):
-        
         # Arrange
         month = ContractMonth("2021Z")
 
@@ -63,7 +58,6 @@ class TestContractMonth:
         assert month == month
 
     def test_contract_month_hash_str_and_repr(self):
-        
         # Arrange
         month = ContractMonth("2021Z")
 
@@ -73,29 +67,24 @@ class TestContractMonth:
         assert str(month) == "2021Z"
 
     def test_contract_month_gt(self):
-        
         # Arrange, Act, Assert
         assert ContractMonth("2021Z") > ContractMonth("2021X")
-        
+
     def test_contract_month_ge(self):
-        
         # Arrange, Act, Assert
         assert ContractMonth("2021X") >= ContractMonth("2021X")
         assert ContractMonth("2021Z") >= ContractMonth("2021X")
-        
+
     def test_contract_month_lt(self):
-        
         # Arrange, Act, Assert
         assert ContractMonth("2021X") < ContractMonth("2021Z")
-        
+
     def test_contract_month_le(self):
-        
         # Arrange, Act, Assert
         assert ContractMonth("2021X") <= ContractMonth("2021X")
         assert ContractMonth("2021X") <= ContractMonth("2021Z")
-        
+
     def test_contract_month_pickle(self):
-        
         month = ContractMonth("2021X")
         pickled = pickle.dumps(month)
         unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)

@@ -9,9 +9,7 @@ from pyfutures.data.files import ParquetFile
 
 
 class TestParquetFile:
-
     def test_from_path(self):
-        
         filename = "/parent/ES.CME-1-DAY-BID-EXTERNAL-BAR-2019.parquet"
         file = ParquetFile.from_path(filename)
 
@@ -21,7 +19,6 @@ class TestParquetFile:
         assert file.year == 2019
 
     def test_path(self):
-        
         filename = "/parent/ES.CME-1-DAY-BID-EXTERNAL-BAR-2019.parquet"
         assert ParquetFile.from_path(filename).path == Path(filename)
 
@@ -34,11 +31,11 @@ class TestParquetFile:
         assert file.path == Path(filename)
 
     def test_read(self):
-        
         path = Path(PACKAGE_ROOT / "tests/data/test_files/MES_MES=2021Z.IB-1-DAY-MID-EXTERNAL-BAR-0.parquet")
         file = ParquetFile.from_path(path)
         df = file.read(bar_to_quote=True)
-    
+
+
 # class TestContractParquetFile:
 #     def setup(self):
 #         self.filename = "/parent/CME-MES-2023Z.IB-1-DAY-BID-EXTERNAL-BAR.parquet"

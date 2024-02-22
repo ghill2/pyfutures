@@ -16,31 +16,30 @@ from nautilus_trader.model.data import Bar
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import BarParquetWriter
 
+
 @pytest.mark.asyncio()
 async def test_import_spread(client):
-    
     """
     Export tick history for every instrument of hte universe
     Make one of the markets a liquid one like ZN
     And an illiquid one like Aluminium
     """
-    
+
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
     historic = InteractiveBrokersHistoric(client=client, delay=2)
     # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
-    
+
     await client.connect()
     await client.request_market_data_type(4)
     for row in rows:
-        
         path = SPREAD_FOLDER / (row.uname + ".parquet")
         if path.exists():
             print(f"Skipping {row}")
             continue
-        
+
         print(f"Processing {row}")
         df = await historic.request_bars2(
             contract=row.contract_cont,
@@ -50,54 +49,52 @@ async def test_import_spread(client):
             as_dataframe=True,
         )
         assert not df.empty
-        df = df.rename({"date":"timestamp"}, axis=1)
+        df = df.rename({"date": "timestamp"}, axis=1)
         df = df[["timestamp", "open", "high", "low", "close", "volume"]]
         df.volume = 1.0
-        
+
         print(f"Exporting {row.uname}")
-        
+
         path.parent.mkdir(exist_ok=True, parents=True)
         # df.to_parquet(path, index=False)
-        
+
         file = ParquetFile(
             parent=SPREAD_FOLDER,
             bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
             cls=Bar,
         )
-        
+
         writer = BarParquetWriter(
             path=file.path,
             bar_type=file.bar_type,
             price_precision=row.price_precision,
             size_precision=1,
         )
-        
+
         writer.write_dataframe(df)
-        
-        
+
         del df
         gc.collect()
-        
-        
+
 
 # @pytest.mark.asyncio()
 # async def test_import_spread(client):
-    
+
 #     """
 #     Export tick history for every instrument of hte universe
 #     Make one of the markets a liquid one like ZN
 #     And an illiquid one like Aluminium
 #     """
-    
+
 #     rows = IBTestProviderStubs.universe_rows(filter=["ZN"])
 #     historic = InteractiveBrokersHistoric(client=client, delay=1)
 #     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=365)).floor("1D")
 #     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
-    
+
 #     await client.connect()
-    
+
 #     for row in rows:
-        
+
 #         print(f"Processing {row}")
 #         df = await historic.request_quote_ticks(
 #             contract=row.contract_cont,
@@ -105,9 +102,9 @@ async def test_import_spread(client):
 #             end_time=end_time,
 #             as_dataframe=True,
 #         )
-        
+
 #         print(f"Exporting {row.instrument_id}")
-        
+
 #         path = SPREAD_FOLDER / (row.uname + ".parquet")
 #         path.parent.mkdir(exist_ok=True, parents=True)
 #         # df.to_parquet(path, index=False)
@@ -118,37 +115,37 @@ async def test_import_spread(client):
 
 # for session in sessions.itertuples():
 # sessions: pd.DataFrame = row.liquid_schedule.sessions(start_date=start_date)
-            
+
 # async def test_import_spread(client):
-    
+
 #     """
 #     so sample one tick every hour in the liquid session
 #     """
-    
+
 #     rows = IBTestProviderStubs.universe_rows()
-    
+
 #     await client.connect()
-    
+
 #     for row in rows:
-    
+
 #         contract = await client.request_front_contract(row.contract_cont)
-        
+
 #         times = row.liquid_schedule.to_date_range(
 #             start_date=pd.Timestamp.utcnow() - pd.Timedelta(days=365),
 #             interval=pd.Timedelta(hours=1),
 #         )
 #         times = times[::-1]
-        
+
 #         seconds_in_hour = 3600
 #         milliseconds_in_hour = 3_600_000
-        
+
 #         spreads = []
 #         for i, ts in enumerate(times):
-            
+
 #             random_second = random.randint(0, seconds_in_hour - 2)
 #             start_time = ts + pd.Timedelta(seconds=random_second)
 #             end_time = ts + pd.Timedelta(hours=1)
-            
+
 #             quotes = await client.request_quote_ticks(
 #                 name=str(UUID4()),
 #                 contract=contract,
@@ -158,32 +155,23 @@ async def test_import_spread(client):
 #             )
 #             if len(quotes) == 0:
 #                 continue
-            
+
 #             quote = quotes[0]
-            
+
 #             spread = quote.ask_price - quote.bid_price
 #             spreads.append(spread)
 #             print(f"{i}/{len(times)} {row.instrument_id} {start_time} {spread}")
 #             time.sleep(0.5)  # 2000 requests, 0.2sec, 6.6 minutes
-            
+
 #         average_spread = float(pd.Series(spreads).mean())
-        
+
 #         print(f"Exporting {row.instrument_id}")
-        
+
 #         path = SPREAD_FOLDER / (row.uname + ".txt")
 #         path.parent.mkdir(exist_ok=True, parents=True)
 #         with open(path, 'w') as f:
 #             f.write(str(average_spread))
-            
+
 #         path = SPREAD_FOLDER / (row.uname + ".parquet")
 #         df = pd.DataFrame(spreads)
 #         df.to_parquet(path, index=False)
-        
-    
-    
-    
-    
-    
-        
-    
-    

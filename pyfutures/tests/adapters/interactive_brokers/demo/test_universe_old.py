@@ -24,9 +24,8 @@ init_logging(level_stdout=LogLevel.WARNING)
 
 @pytest.mark.asyncio()
 async def test_request_last_bar_universe(client):
-    
     rows = IBTestProviderStubs.universe_rows()
-    
+
     await client.connect()
     
     await client.request_market_data_type(4)

@@ -68,7 +68,6 @@ class Session:
 
 
 class IBTestProviderStubs:
-    
     @staticmethod
     def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
         file = UNIVERSE_XLSX_PATH
@@ -84,22 +83,22 @@ class IBTestProviderStubs:
             "quote_currency": str,
             "fee_fixed": str,
             "fee_fixed_currency": str,
-            "fee_fixed_percent": str, # pd.BooleanDtype(),
+            "fee_fixed_percent": str,  # pd.BooleanDtype(),
             "fee_exchange": str,
             "fee_exchange_currency": str,
             "fee_regulatory": str,
             "fee_regulatory_currency": str,
             "fee_clearing": str,
             "fee_clearing_currency": str,
-            "fee_clearing_percent": str, # pd.BooleanDtype()
+            "fee_clearing_percent": str,  # pd.BooleanDtype()
             "timezone": str,
             "price_precision": pd.Float64Dtype(),
             "data_start_minute": str,
             "data_start_day": str,
             "start_month": str,
             "skip_months": str,
-            "data_completes": str, # pd.BooleanDtype()
-            "price_magnifier":	pd.Int64Dtype(),
+            "data_completes": str,  # pd.BooleanDtype()
+            "price_magnifier": pd.Int64Dtype(),
             "min_tick": pd.Float64Dtype(),
             "priced_cycle": str,
             "expiry_offset": pd.Int64Dtype(),
@@ -123,6 +122,7 @@ class IBTestProviderStubs:
         }
         # converters override dtypes
         df = pd.read_excel(file, dtype=dtype, engine="openpyxl")
+
         def parse_bool(s):
             if s in ["TRUE", "True"]:
                 return True
@@ -130,6 +130,7 @@ class IBTestProviderStubs:
                 return False
             elif s == "nan":
                 return None
+
         # openpyxl casting is broken for booleans
         # https://github.com/pandas-dev/pandas/issues/45903
         df["fee_fixed_percent"] = df["fee_fixed_percent"].apply(parse_bool)
@@ -137,11 +138,11 @@ class IBTestProviderStubs:
         df["data_completes"] = df["data_completes"].apply(parse_bool)
 
         # df["trading_class"] = df["trading_class"].apply(str)
-        
+
         # print(df.dtypes)
         # print(df.loc[28, "tradingClass"])
         # exit()
-        
+
         # temporary remove instruments that are failing to roll
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
         ignored = [
@@ -149,17 +150,16 @@ class IBTestProviderStubs:
             "YIW",
         ]
         df = df[~df.trading_class.isin(ignored)]
-        
+
         if filter is not None:
             df = df[df.trading_class.isin(filter)]
-            
+
         if skip is not None:
             df = df[~df.trading_class.isin(skip)]
-        
-        
+
         # skip rows with no data symbol
         df = df[df.data_symbol.notna()]
-        
+
         # check for missing values
         assert df.exchange.notna().all()
         assert df.symbol.notna().all()
@@ -167,44 +167,39 @@ class IBTestProviderStubs:
         assert df.min_tick.notna().all()
         assert df.price_magnifier.notna().all()
         assert df.quote_currency.notna().all()
-        
+
         df["start_month"] = df.start.apply(ContractMonth)
         df["data_start_day"] = df.data_start_day.apply(ContractMonth)
         df["data_start_minute"] = df.data_start_minute.apply(ContractMonth)
         df["timezone"] = df.timezone.apply(pytz.timezone)
-        
-        
+
         df["settlement_time"] = df.settlement_time.apply(
-                                    lambda x: pd.Timedelta(
-                                        hours=int(x.split(":")[0]),
-                                        minutes=int(x.split(":")[1]),
-                                    )
-                                )
-        
-        df["quote_currency"] = df.quote_currency.apply(
-            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1))
+            lambda x: pd.Timedelta(
+                hours=int(x.split(":")[0]),
+                minutes=int(x.split(":")[1]),
+            )
         )
-        
+
+        df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)))
+
         df["instrument_id"] = df.apply(
             lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
             axis=1,
         )
-        
-        df["quote_home_instrument"] = df.quote_currency.apply(
-            lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM"))
-        )
-        
+
+        df["quote_home_instrument"] = df.quote_currency.apply(lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")))
+
         df["contract"] = df.apply(
             lambda row: create_contract(
-                    trading_class=row.trading_class,
-                    symbol=row.symbol,
-                    venue=row.exchange,
-                    sec_type="FUT",
-                    currency=str(row.quote_currency),
+                trading_class=row.trading_class,
+                symbol=row.symbol,
+                venue=row.exchange,
+                sec_type="FUT",
+                currency=str(row.quote_currency),
             ),
             axis=1,
         )
-        
+
         df["contract_cont"] = df.apply(
             lambda row: create_contract(
                 trading_class=row.trading_class,
@@ -215,7 +210,7 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         df["liquid_schedule"] = df.apply(
             lambda row: MarketSchedule.from_daily_str(
                 name=f"{row.instrument_id}_liquid",
@@ -232,13 +227,11 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         df["missing_months"] = df.missing_months.apply(
-            lambda x: list(map(ContractMonth,
-                x.replace(" ", "").split(",") if not isinstance(x, float) else []
-            ))
+            lambda x: list(map(ContractMonth, x.replace(" ", "").split(",") if not isinstance(x, float) else []))
         )
-        
+
         df["config"] = df.apply(
             lambda row: ContractChainConfig(
                 instrument_id=row.instrument_id,
@@ -252,12 +245,12 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         df["price_precision"] = df.apply(
             lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
             axis=1,
         )
-            
+
         df["base_instrument"] = df.apply(
             lambda row: FuturesContract(
                 instrument_id=row.instrument_id,
@@ -276,18 +269,35 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         # parse settlement time
         remove = [
-            "comments", "open", "close", "ex_url", "ex_symbol",
-            "description", "session", "hours_last_edited", "data_start", "data_end",
-            "data_completes", "minute_transition", "price_magnifier", "min_tick", "multiplier",
-            "missing_months", "hold_cycle", "priced_cycle", "roll_offset", "expiry_offset", "carry_offset",
+            "comments",
+            "open",
+            "close",
+            "ex_url",
+            "ex_symbol",
+            "description",
+            "session",
+            "hours_last_edited",
+            "data_start",
+            "data_end",
+            "data_completes",
+            "minute_transition",
+            "price_magnifier",
+            "min_tick",
+            "multiplier",
+            "missing_months",
+            "hold_cycle",
+            "priced_cycle",
+            "roll_offset",
+            "expiry_offset",
+            "carry_offset",
         ]
         df = df[[x for x in df.columns if x not in remove]]
-        
+
         return df
-    
+
     @staticmethod
     def universe_rows(
         filter: list | None = None,
@@ -297,19 +307,16 @@ class IBTestProviderStubs:
             filter=filter,
             skip=skip,
         )
-        
+
         rows = universe.to_dict(orient="records")
         assert len(rows) > 0
-        
+
         UniverseRow = namedtuple("Row", list(rows[0].keys()))
-        rows = [
-            UniverseRow(**row) for row in rows
-        ]
+        rows = [UniverseRow(**row) for row in rows]
         return rows
-    
+
     # def mes_instrument(self) -> FuturesContract:
-        
-        
+
     @classmethod
     def bar_files(
         cls,
@@ -318,12 +325,11 @@ class IBTestProviderStubs:
         aggregation: BarAggregation | None = None,
         month: str | None = None,
     ) -> list[ParquetFile]:
-        
         aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
         month = month or "*"
-        glob_str=f"{trading_class}={symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
+        glob_str = f"{trading_class}={symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return cls._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
-    
+
     @classmethod
     def multiple_files(
         cls,
@@ -335,7 +341,7 @@ class IBTestProviderStubs:
         glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
         files = cls._get_files(parent=MULTIPLE_PRICES_FOLDER, glob=glob_str)
         return files
-    
+
     @classmethod
     def adjusted_files(
         cls,
@@ -343,12 +349,11 @@ class IBTestProviderStubs:
         symbol: str,
         aggregation: BarAggregation,
     ) -> ParquetFile:
-        
         aggregation = bar_aggregation_to_str(aggregation)
         glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
         files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
         return files
-    
+
     @staticmethod
     def _get_files(
         parent: Path,
@@ -359,5 +364,5 @@ class IBTestProviderStubs:
         files = list(map(ParquetFile.from_path, paths))
         if len(files) == 0:
             raise RuntimeError(f"Missing files for {glob}")
-        
+
         return files

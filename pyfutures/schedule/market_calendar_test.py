@@ -5,6 +5,7 @@ import pytz
 
 from pyfutures.schedule.market_calendar import MarketCalendar
 
+
 class TestMarketCalendar:
     def setup(self):
         self.data = pd.DataFrame(

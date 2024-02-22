@@ -9,6 +9,7 @@ import datetime
 # An integer constrained to values < 0
 NegativeInt = Annotated[int, Meta(lt=0)]
 
+
 class MarketSchedule:
     def __init__(
         self,
@@ -35,11 +36,7 @@ class MarketSchedule:
 
         now_time = now.time()
 
-        mask = (
-            (now_time >= self._data.open)
-            & (now_time < self._data.close)
-            & (now.dayofweek == self._data.dayofweek)
-        )
+        mask = (now_time >= self._data.open) & (now_time < self._data.close) & (now.dayofweek == self._data.dayofweek)
 
         return mask.any()
 
@@ -73,11 +70,10 @@ class MarketSchedule:
         open_day = now.floor("D") + pd.Timedelta(days=day_diff)
         open_timestamp = open_day.replace(hour=open_time.hour, minute=open_time.minute)
         return open_timestamp.tz_convert(pytz.UTC)
-    
+
     def previous_trading_day(self, date: datetime.date, offset: NegativeInt) -> datetime.date:
-        
         count = abs(offset)
-        
+
         matched = 0
         while True:
             date -= datetime.timedelta(days=1)
@@ -86,18 +82,13 @@ class MarketSchedule:
             if count == matched:
                 break
         return date
-                
-            
+
     def time_until_close(self, now: pd.Timestamp) -> pd.Timedelta | None:
         now = now.tz_convert(self._timezone)
 
         now_time = now.time()
 
-        mask = (
-            (now_time >= self._data.open)
-            & (now_time < self._data.close)
-            & (now.dayofweek == self._data.dayofweek)
-        )
+        mask = (now_time >= self._data.open) & (now_time < self._data.close) & (now.dayofweek == self._data.dayofweek)
 
         masked = self._data[mask]
 
@@ -115,22 +106,22 @@ class MarketSchedule:
 
     def __str__(self):
         return f"{type(self).__name__}({self._name})"
-    
+
     def __getstate__(self):
         return (self._name, self._data, self._timezone)
-        
+
     def __setstate__(self, state):
         self._name = state[0]
         self._data = state[1]
         self._timezone = state[2]
-    
+
     def __eq__(self, other: MarketSchedule) -> bool:
         return (
             self._name == other._name,
             self._data.equals(other._data),
             self._timezone == other._timezone,
         )
-    
+
     def to_date_range(
         self,
         start_date: pd.Timestamp,
@@ -141,10 +132,8 @@ class MarketSchedule:
             end_date = pd.Timestamp.utcnow()
         times = pd.date_range(start=start_date, end=end_date, freq=interval)
         times = times.tz_convert(self._timezone)
-        return [
-            time for time in times if self.is_open(time) or self.is_open(time + interval)
-        ]
-    
+        return [time for time in times if self.is_open(time) or self.is_open(time + interval)]
+
     def sessions(
         self,
         start_date: pd.Timestamp,
@@ -156,23 +145,21 @@ class MarketSchedule:
         if end_date is None:
             end_date = pd.Timestamp.now()
         days = pd.date_range(start=start_date, end=end_date, freq="1D")
-        
+
         days = days[days.dayofweek.isin(self._data.dayofweek.values)]
         days = days.tz_localize(self._timezone)
-        
+
         df = pd.DataFrame(columns=["start", "end"])
         for day in days:
-            
             sessions = self._data[self._data.dayofweek == day.dayofweek]
-            
+
             for session in sessions.itertuples():
-                df.loc[len(df)] = \
-                    (
-                        day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute),
-                        day + pd.Timedelta(hours=session.close.hour, minutes=session.close.minute),
-                    )
+                df.loc[len(df)] = (
+                    day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute),
+                    day + pd.Timedelta(hours=session.close.hour, minutes=session.close.minute),
+                )
         return df
-        
+
     def to_weekly_calendar_utc(self) -> pd.DataFrame:
         startofweek = pd.Timestamp("2023-11-06")
         df = self._data.copy()
@@ -215,6 +202,8 @@ class MarketSchedule:
             data=data,
             timezone=timezone,
         )
+
+
 # class MarketCalendar:
 
 #     def __init__(

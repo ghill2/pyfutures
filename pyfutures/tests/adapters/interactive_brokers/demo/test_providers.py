@@ -16,9 +16,9 @@ from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+
 @pytest.mark.asyncio()
 async def test_load_with_instrument_id(instrument_provider):
-    
     # Arrange
     instrument_id = InstrumentId.from_str("ZC-ZC=H24.CBOT")
 
@@ -26,9 +26,9 @@ async def test_load_with_instrument_id(instrument_provider):
     instrument = await instrument_provider.load_contract(instrument_id)
     assert instrument is not None
 
+
 @pytest.mark.asyncio()
 async def test_load_with_safe_instrument_id(instrument_provider):
-    
     # Arrange
     instrument_id = InstrumentId.from_str("MNTPX-TPXM=H24.OSE|JPN")
 
@@ -36,9 +36,9 @@ async def test_load_with_safe_instrument_id(instrument_provider):
     instrument = await instrument_provider.load_contract(instrument_id)
     assert instrument is not None
 
+
 @pytest.mark.asyncio()
 async def test_load_uses_chain_filter(instrument_provider):
-    
     # Arrange
     instrument_provider._chain_filters = {
         "FMEU": lambda x: not x.contract.localSymbol.endswith("D"),
@@ -51,9 +51,9 @@ async def test_load_uses_chain_filter(instrument_provider):
     # Assert
     assert details is not None
 
+
 @pytest.mark.asyncio()
 async def test_load_parsing_overrides_sets_expected(instrument_provider):
-    
     # Arrange
     instrument_provider._parsing_overrides = {
         "MIX": {
@@ -62,13 +62,14 @@ async def test_load_parsing_overrides_sets_expected(instrument_provider):
         },
     }
     instrument_id = InstrumentId.from_str("IBEX-MIX=F24.MEFFRV")
-    
+
     # Act
     instrument = await instrument_provider.load_contract(instrument_id)
-    
+
     # Assert
     assert instrument.price_precision == 0
     assert instrument.price_increment == 5
+
 
 @pytest.mark.asyncio()
 async def test_request_future_chain_details_returns_expected(instrument_provider):
@@ -81,7 +82,7 @@ async def test_request_future_chain_details_returns_expected(instrument_provider
         carry_offset=1,
     )
     chain = FuturesChain(config=config)
-    
+
     details_list = await instrument_provider.request_future_chain_details(chain)
     for details in details_list:
         assert ContractMonth.from_int(details.contractMonth) in chain.hold_cycle
@@ -92,7 +93,7 @@ async def test_find_with_contract_id_requests_instrument(instrument_provider):
     await instrument_provider.client.connect()
 
     contract = await instrument_provider.find_with_contract_id(564400671)
-    
+
     assert contract.id == InstrumentId.from_str("D-RC=F24.ICEEUSOFT")
 
 
@@ -310,4 +311,3 @@ async def test_universe_price_magnifiers():
 #                 # details.stockType,
 #             ]))
 #     )
-

@@ -26,10 +26,11 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
+
 class TestParquetWriter:
     def setup(self):
         self.instrument = TestInstrumentProvider.btcusdt_binance()
-    
+
     def test_write_continuous_price_objects_writes_expected(self, tmpdir):
         # Arrange
         expected = [
@@ -54,7 +55,7 @@ class TestParquetWriter:
                 carry_month=ContractMonth("2021Z"),
                 ts_event=0,
                 ts_init=0,
-            )
+            ),
         ]
         # quotes = [TestDataStubs.quote_tick(instrument=self.instrument)]
 
@@ -66,7 +67,7 @@ class TestParquetWriter:
         writer.write_objects(expected)
 
         assert path.exists()
-        
+
         batch = next(pq.ParquetFile(path).iter_batches(batch_size=2))
         deserialized = ArrowSerializer.deserialize(data_cls=ContinuousPrice, batch=batch)
         assert deserialized == expected

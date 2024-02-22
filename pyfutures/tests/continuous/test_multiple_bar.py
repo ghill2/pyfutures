@@ -12,8 +12,8 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import Bar
 
+
 class TestMultipleBar:
-    
     def setup_method(self):
         self.price1 = MultipleBar(
             bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
@@ -50,7 +50,7 @@ class TestMultipleBar:
             ts_event=0,
             ts_init=0,
         )
-        
+
         self.price2 = MultipleBar(
             bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
             current_bar=Bar(
@@ -77,15 +77,13 @@ class TestMultipleBar:
             ts_event=0,
             ts_init=0,
         )
-        
+
     def test_continuous_price_equality(self):
-        
         # Arrange, Act, Assert
         assert self.price1 == self.price1
         assert self.price2 == self.price2
 
     def test_continuous_price_str_and_repr(self):
-        
         # Arrange, Act, Assert
         assert (
             str(self.price1)
@@ -97,15 +95,41 @@ class TestMultipleBar:
         )
 
     def test_to_dict(self):
-        
         # Act
         values = MultipleBar.to_dict(self.price1)
 
         # Assert
-        assert values == {'bar_type': 'MES.SIM-1-DAY-MID-EXTERNAL', 'current_bar_type': 'MES=2021X.SIM-1-DAY-MID-EXTERNAL', 'current_open': '1.1', 'current_high': '1.3', 'current_low': '1.0', 'current_close': '1.2', 'current_volume': '1', 'current_ts_event': 0, 'current_ts_init': 0, 'forward_bar_type': 'MES=2021Z.SIM-1-DAY-MID-EXTERNAL', 'forward_open': '2.1', 'forward_high': '2.3', 'forward_low': '2.0', 'forward_close': '2.2', 'forward_volume': '2', 'forward_ts_event': 0, 'forward_ts_init': 0, 'carry_bar_type': 'MES=2021Z.SIM-1-DAY-MID-EXTERNAL', 'carry_open': '3.1', 'carry_high': '3.3', 'carry_low': '3.0', 'carry_close': '3.2', 'carry_volume': '3', 'carry_ts_event': 0, 'carry_ts_init': 0, 'ts_event': 0, 'ts_init': 0}  # noqa
+        assert values == {
+            "bar_type": "MES.SIM-1-DAY-MID-EXTERNAL",
+            "current_bar_type": "MES=2021X.SIM-1-DAY-MID-EXTERNAL",
+            "current_open": "1.1",
+            "current_high": "1.3",
+            "current_low": "1.0",
+            "current_close": "1.2",
+            "current_volume": "1",
+            "current_ts_event": 0,
+            "current_ts_init": 0,
+            "forward_bar_type": "MES=2021Z.SIM-1-DAY-MID-EXTERNAL",
+            "forward_open": "2.1",
+            "forward_high": "2.3",
+            "forward_low": "2.0",
+            "forward_close": "2.2",
+            "forward_volume": "2",
+            "forward_ts_event": 0,
+            "forward_ts_init": 0,
+            "carry_bar_type": "MES=2021Z.SIM-1-DAY-MID-EXTERNAL",
+            "carry_open": "3.1",
+            "carry_high": "3.3",
+            "carry_low": "3.0",
+            "carry_close": "3.2",
+            "carry_volume": "3",
+            "carry_ts_event": 0,
+            "carry_ts_init": 0,
+            "ts_event": 0,
+            "ts_init": 0,
+        }  # noqa
 
     def test_from_dict_returns_expected_price(self):
-
         # Arrange, Act
         result = MultipleBar.from_dict(MultipleBar.to_dict(self.price1))
 
@@ -113,7 +137,6 @@ class TestMultipleBar:
         assert result == self.price1
 
     def test_pickle_bar(self):
-
         # Arrange, Act
         pickled = pickle.dumps(self.price1)
         unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)
@@ -122,7 +145,6 @@ class TestMultipleBar:
         assert unpickled == self.price1
 
     def test_continuous_price_serialize_roundtrip(self):
-        
         # Arrange
         register_arrow(
             data_cls=MultipleBar,

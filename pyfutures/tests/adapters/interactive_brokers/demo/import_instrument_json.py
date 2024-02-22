@@ -6,6 +6,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from bs4 import Tag
 
+
 def get_all_text_recursive(element):
     """
     Returns all text recursively within the given element.
@@ -45,7 +46,6 @@ class ImportInstrumentJson:
                     json.dump(data, f, indent=4)
 
     def parse_data(self, html_data):
-        
         soup = BeautifulSoup(html_data, "html.parser")
         tables = soup.select("#contractSpecs > table")  # only get first child tables
 
@@ -53,7 +53,7 @@ class ImportInstrumentJson:
         if len(tables) > 1:
             for table in tables:
                 print(table)
-                
+
                 self._scrape_table(data, table)
         else:
             print(f"Invalid Scraper HTML {html_data}")

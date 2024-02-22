@@ -26,7 +26,6 @@ async def _wait_for_order_status(order: Order, expected: OrderStatus):
 
 
 class TestInteractiveBrokersExecutionFilled:
-    
     @pytest.mark.asyncio()
     async def test_limit_order_filled(
         self,
@@ -72,8 +71,8 @@ async def test_load_instrument_id(instrument_provider):
     instrument = await instrument_provider.load_async(InstrumentId.from_str("MIX.MEFFRV"))
     print(instrument)
 
+
 class TestInteractiveBrokersExecutionCancelAccept:
-    
     @pytest.mark.asyncio()
     async def test_limit_order_accepted(
         self,
@@ -225,7 +224,7 @@ class TestInteractiveBrokersExecutionSessions:
             float(limit_order.price + instrument.price_increment),
             instrument.price_precision,
         )
-        
+
         modify_order = ModifyOrder(
             trader_id=limit_order.trader_id,
             strategy_id=limit_order.strategy_id,

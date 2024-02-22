@@ -30,14 +30,13 @@ RESPONSES_FOLDER = Path(__file__).parent / "responses"
 
 
 class TestInteractiveBrokersClient:
-    
     @pytest.mark.asyncio()
     async def test_connect(self, client):
         while True:
             await asyncio.sleep(0)
             # if client.is_connected:
             #     return True
-            
+
     @pytest.mark.asyncio()
     async def test_request_contract_details_returns_expected(self, client):
         messages = [

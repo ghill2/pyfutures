@@ -48,9 +48,7 @@ TRADERMADE_KEY = dotenv_values()["tradermade_key"]
 
 
 class Stats:
-    def __init__(
-        self, client: InteractiveBrokersClient, parent_out: str = None
-    ) -> None:
+    def __init__(self, client: InteractiveBrokersClient, parent_out: str = None) -> None:
         """ """
         client._request_timeout_seconds = 60
         if parent_out is None:
@@ -69,11 +67,7 @@ class Stats:
         or get from IB api if the pickle file does not exist
         """
 
-        outpath = Path(
-            self.parent_out
-            / "details"
-            / f"{contract.exchange}-{contract.symbol}.pickle"
-        )
+        outpath = Path(self.parent_out / "details" / f"{contract.exchange}-{contract.symbol}.pickle")
         outpath.parent.mkdir(parents=True, exist_ok=True)
         if outpath.exists():
             print("-----> Getting Contract Details from file...")
@@ -115,28 +109,28 @@ class Stats:
             json.dump(data, f, indent=4)
 
         return data
-    
+
     async def _close_price_ib_api(self, contract):
         """
-            get contract last closing prices using IB API
-            used as a fallback if the exchange info page does not contain a closing price for the instrument
-            some exchange info pages contain n/a for the closing price, eg NSE|NIFTY50
+        get contract last closing prices using IB API
+        used as a fallback if the exchange info page does not contain a closing price for the instrument
+        some exchange info pages contain n/a for the closing price, eg NSE|NIFTY50
         """
         now = pd.Timestamp.utcnow()
         bars = await self.historic.request_bars2(
-                contract=contract,
-                bar_size=BarSize._1_DAY,
-                what_to_show=WhatToShow.MIDPOINT,
-                start_time=now - pd.Timedelta(days=10),
-                end_time=now,
-            )
+            contract=contract,
+            bar_size=BarSize._1_DAY,
+            what_to_show=WhatToShow.MIDPOINT,
+            start_time=now - pd.Timedelta(days=10),
+            end_time=now,
+        )
         assert len(bars) > 0
         return bars[-1].close
 
     def _close_price_product_page(self, exchange, symbol, url):
         """
-            downloads closing price from exchange page
-            saves the html file to disk to reduce CAPTCHA amount on reruns (proxy not yet implemented)
+        downloads closing price from exchange page
+        saves the html file to disk to reduce CAPTCHA amount on reruns (proxy not yet implemented)
 
         """
         outpath = self.parent_out / "exchange_info" / f"{exchange}-{symbol}.html"
@@ -149,26 +143,23 @@ class Stats:
             response = requests.get(url)
             # Raise an exception for non-200 status codes
             response.raise_for_status()
-            with open(outpath, 'wb') as f:
+            with open(outpath, "wb") as f:
                 f.write(response.content)
             html = response.content
             print(f"Downloaded and saved HTML content from {url} to {outpath}")
         else:
             print("-----> Getting Contract Price from File...")
         soup = BeautifulSoup(html, "html.parser")
-        close_price = soup.find(string="Closing Price").find_next('td').text
+        close_price = soup.find(string="Closing Price").find_next("td").text
         print("product page close price: ", close_price)
         # try:
         if close_price == "n/a":
             return None
         close_price = float(close_price)
         # except Exception as e:
-            # print(e)
-            # return None
+        # print(e)
+        # return None
         return close_price
-
-
-
 
     def _contract_prices(self, rows, details):
         # filter rows to only the rows that contain percent fees
@@ -206,8 +197,6 @@ class Stats:
             json.dump(prices, f, indent=4)
         return prices
 
-
-
     def _calculate_fees_for_row(prices, fx_rates, fees):
         """
         calculates fees for the row and returns the modified fees
@@ -221,9 +210,7 @@ class Stats:
                 fee_value = prices[key] * fee_value
 
             if r.contract.currency != fee_currency:
-                quote_contract_xrate = (
-                    fx_rates[f"{fee_currency}{row.contract.currency}"],
-                )
+                quote_contract_xrate = (fx_rates[f"{fee_currency}{row.contract.currency}"],)
                 fee_value = quote_contract_xrate * fee_value
                 fee_type = row.contract.currency
 
@@ -253,9 +240,7 @@ class Stats:
         with open(outpath, "w") as f:
             json.dump([r.fees for r in rows], f, indent=4)
 
-        fees_xrate = [
-            self._calculate_fees_for_row(prices, fx_rates, r.fees) for r in rows
-        ]
+        fees_xrate = [self._calculate_fees_for_row(prices, fx_rates, r.fees) for r in rows]
         outpath = Path(self.parent_out / "fees_calculated.py")
         with open(outpath, "w") as f:
             json.dump(fees_xrate, f, indent=4)
@@ -263,31 +248,19 @@ class Stats:
         return fees_xrate
 
     def test_last_close(self):
-        
         asyncio.get_event_loop().run_until_complete(self.client.connect())
         rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
-        details = [
-            asyncio.get_event_loop().run_until_complete(
-                self._details(contract=r.contract)
-            )
-            for r in rows
-        ]
+        details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
         for d in details:
             try:
                 asyncio.get_event_loop().run_until_complete(self._close_price_ib_api(d.contract))
             except:
                 pass
 
-
     def calc(self):
         results = {}
         rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
-        details = [
-            asyncio.get_event_loop().run_until_complete(
-                self._details(contract=r.contract)
-            )
-            for r in rows
-        ]
+        details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
 
         fx_rates = self._fx_rates(rows)
         prices = self._contract_prices(rows, details)
@@ -312,8 +285,7 @@ class Stats:
             # volume_risk = (average_daily_volume * annual_contract_risk) / 1000000
             # cost_sr_units = (((average_spread * multiplier) + (commission * 2)) / contract_notional_value) / (std_percent_price_returns_annual / 100)
 
- 
-     # async def setup_client(self):
+    # async def setup_client(self):
     #     if hasattr(self, "hclient"):
     #         return
     #     self.hclient = HistoricInteractiveBrokersClient(

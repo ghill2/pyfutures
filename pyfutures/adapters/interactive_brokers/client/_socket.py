@@ -12,6 +12,7 @@ from typing import ValuesView
 from typing import Coroutine
 from eventkit import Event
 
+
 class Socket(asyncio.Protocol):
     """
     Event-driven socket connection.
@@ -33,17 +34,16 @@ class Socket(asyncio.Protocol):
         client_id: int,
         callback: Coroutine,
     ):
-        
         self._log = Logger(type(self).__name__, logger)
         self._loop = loop
         self._host = host
         self._port = port
         self._client_id = client_id
         self._callback = callback
-        
+
         self.is_ready = asyncio.Event()
         self.reset()
-        self.disconnected = Event('disconnected')
+        self.disconnected = Event("disconnected")
         self._buf = b""
 
     def reset(self):
@@ -58,14 +58,13 @@ class Socket(asyncio.Protocol):
                 self.transport.write_eof()
                 self.transport.close()
             await self.disconnected
-            
+
         self.reset()
-        
-        self.transport, _ = await self._loop.create_connection(
-            lambda: self, self._host, self._port)
-        
+
+        self.transport, _ = await self._loop.create_connection(lambda: self, self._host, self._port)
+
         self._log.debug(f"Socket connected")
-        
+
     def isConnected(self):
         return self.transport is not None
 
@@ -77,29 +76,24 @@ class Socket(asyncio.Protocol):
 
     def connection_lost(self, exc):
         self.transport = None
-        msg = str(exc) if exc else ''
+        msg = str(exc) if exc else ""
         self.disconnected.emit(msg)
         self._log.error(f"Connection lost {msg}")
 
     def data_received(self, data):
-                    
         self._buf += data
-        
+
         while len(buf) > 0:
-            
             (size, msg, buf) = comm.read_msg(buf)
 
             if not msg:
                 self._log.debug("more incoming packet(s) are needed ")
                 break
-                
+
             self._log.debug(f"<-- {msg!r}")
             self._loop.run_until_complete(self._callback(msg))
             self._loop.run_until_complete(asyncio.sleep(0))
-            
-            
-            
-                    
+
             # # wait for time and version response
             # msg = msg.decode(errors="backslashreplace")
             # fields = msg.split("\0")
@@ -108,12 +102,11 @@ class Socket(asyncio.Protocol):
             #     version = fields[0]
             #     assert int(version) == 176
             #     self.is_ready.set()
-            #     continue    
-            
+            #     continue
 
 
 # class Socket(asyncio.Protocol):
-    
+
 #     def __init__(
 #         self,
 #         loop: asyncio.AbstractEventLoop,
@@ -123,40 +116,40 @@ class Socket(asyncio.Protocol):
 #         client_id: int,
 #         callback: Coroutine,
 #     ):
-        
+
 #         self._loop = loop
 #         self._host = host
 #         self._port = port
 #         self._client_id = client_id
 #         self._callback = callback
-        
+
 #         self._listen_task = None
 #         self._reader = None
 #         self._writer = None
 #         self._is_ready = asyncio.Event()
-        
+
 #     async def connect(self):
-        
+
 #         await self._reset()
-        
+
 #         # self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
-        
+
 #         # self._listen_task = self._loop.create_task(self._listen())
-        
+
 #         self._log.info("Connected")
-        
+
 #         await asyncio.wait_for(self._is_ready.wait(), 5)
-    
+
 #     def sendMsg(self, msg: bytes) -> None:
-        
+
 #         self._log.debug(f"--> {msg}")
 #         self._writer.write(msg)
 #         self._loop.create_task(self._writer.drain())
-        
+
 #     async def _reset(self):
-        
+
 #         self._log.debug("Resetting...")
-        
+
 #         if self._listen_task is not None:
 #             self._listen_task.cancel()
 
@@ -164,36 +157,36 @@ class Socket(asyncio.Protocol):
 #             self._writer.write_eof()
 #             self._writer.close()
 #             await self._writer.wait_closed()
-        
+
 #         self._listen_task = None
 #         self._reader = None
 #         self._writer = None
-        
+
 #         self._log.debug("Reset complete")
-    
+
 #     def data_received(self, data):
-        
+
 #     async def _listen(self) -> None:
-        
+
 #         assert self._reader is not None
 #         assert self._listen_task is not None
-        
+
 #         buf = b""
 
 #         self._log.info("Listen loop started")
-            
+
 #         while True:
-            
+
 #             data = await self._reader.read(4096)
 #             buf += data
-            
+
 #             while len(buf) > 0:
-                
+
 #                 (size, msg, buf) = comm.read_msg(buf)
-        
+
 #                 if msg:
 #                     self._log.debug(f"<-- {msg!r}")
-                    
+
 #                     if self._is_ready.is_set():
 #                         await self._callback(msg)
 #                     else:
@@ -205,15 +198,11 @@ class Socket(asyncio.Protocol):
 #                             version = fields[0]
 #                             assert int(version) == 176
 #                             self._is_ready.set()
-                            
+
 #                     await asyncio.sleep(0)
-                    
+
 #                 else:
 #                     self._log.debug("more incoming packet(s) are needed ")
 #                     break
-                
+
 #             await asyncio.sleep(0)
-                    
-        
-            
-    

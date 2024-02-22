@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_get_contract_details_with_warning_after(ib_client):
     """

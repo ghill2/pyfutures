@@ -17,16 +17,16 @@ from pyfutures.continuous.config import NonPositiveInt
 from nautilus_trader.config.validation import PositiveInt
 from datetime import datetime
 
+
 class ContractClient(BacktestDataClient):
     def __init__(
         self,
         approximate_expiry_offset: int,
         base: FuturesContract,
     ):
-        
         self._approximate_expiry_offset = approximate_expiry_offset
         self._base = base
-    
+
     def request_instrument(
         self,
         instrument_id: InstrumentId,
@@ -34,11 +34,9 @@ class ContractClient(BacktestDataClient):
         start: datetime = None,
         end: datetime = None,
     ):
-        
         month = ContractMonth(instrument_id.symbol.value.split("=")[1])
-        approximate_expiry_date = month.timestamp_utc \
-            + pd.Timedelta(days=self._approximate_expiry_offset)
-        
+        approximate_expiry_date = month.timestamp_utc + pd.Timedelta(days=self._approximate_expiry_offset)
+
         instrument_id = self._fmt_instrument_id(self._base.id, month)
         contract = FuturesContract(
             instrument_id=instrument_id,
@@ -56,10 +54,10 @@ class ContractClient(BacktestDataClient):
             ts_init=0,
             info={
                 "month": month,
-            }
+            },
         )
         self._handle_instrument(contract, correlation_id)
-        
+
     @staticmethod
     def _fmt_instrument_id(instrument_id: InstrumentId, month: ContractMonth) -> InstrumentId:
         """

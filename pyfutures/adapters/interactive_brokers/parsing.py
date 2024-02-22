@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pandas as pd
 import pytz
+
 # from ibapi.common import UNSET_DECIMAL
 # from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
@@ -46,9 +47,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 def parse_datetime(value: str) -> pd.Timestamp:
     if isinstance(value, str):
-        assert (
-            len(value.split()) != 3
-        ), f"""
+        assert len(value.split()) != 3, f"""
             datetime value was {value}
             """
 
@@ -62,6 +61,7 @@ def parse_datetime(value: str) -> pd.Timestamp:
         return pd.to_datetime(value, format="%Y%m%d-%H:%M:%S", utc=True)
 
     raise RuntimeError("Unable to parse timestamp")
+
 
 def ib_quote_tick_to_nautilus_quote_tick(
     instrument: Instrument,
@@ -79,7 +79,6 @@ def ib_quote_tick_to_nautilus_quote_tick(
 
 
 def bar_data_to_dict(obj: BarData) -> dict:
-    
     return {
         "timestamp": parse_datetime(obj.time),
         "open": obj.open,
@@ -100,7 +99,8 @@ def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
         "bid_size": obj.sizeBid,
         "ask_size": obj.sizeAsk,
     }
-    
+
+
 def bar_data_to_dict(bar: BarData) -> dict:
     return {
         "date": parse_datetime(bar.date),
@@ -112,17 +112,15 @@ def bar_data_to_dict(bar: BarData) -> dict:
         "wap": bar.wap,
         "barCount": bar.barCount,
     }
-        
+
+
 def ib_bar_to_nautilus_bar(
     bar_type: BarType,
     bar: IBBar,
     instrument: Instrument,
     is_revision: bool = False,
 ) -> Bar:
-    ts_init = (
-        pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value
-        + pd.Timedelta(bar_type.spec.timedelta).value
-    )
+    ts_init = pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value + pd.Timedelta(bar_type.spec.timedelta).value
     bar = Bar(
         bar_type=bar_type,
         open=instrument.make_price(bar.open),
@@ -147,41 +145,33 @@ order_side_to_order_action: dict[str, str] = {
     "SLD": "SELL",
 }
 
+
 def _desanitize_str(value: str):
     return value.replace(",", ".")
+
 
 def _sanitize_str(value: str):
     return value.replace(".", ",")
 
+
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
-    
     contract = details.contract
     print(contract.lastTradeDateOrContractMonth)
-    
+
     assert len(contract.lastTradeDateOrContractMonth) == 8
-    
+
     symbol = _sanitize_str(contract.symbol)
     trading_class = _sanitize_str(contract.tradingClass)
     exchange = _sanitize_str(contract.exchange)
-    
+
     if contract.secType == "FUT":
         month = str(ContractMonth.from_int(int(details.contractMonth)))
-        return InstrumentId.from_str(
-            f"{symbol}={trading_class}={contract.secType}={month}.{exchange}"
-        )
+        return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}={month}.{exchange}")
     else:
-        return InstrumentId.from_str(
-            f"{symbol}={trading_class}={contract.secType}.{exchange}"
-        )
-    
-def create_contract(
-    symbol: str,
-    venue: str,
-    sec_type: str,
-    trading_class: str | None = None,
-    currency: str | None = None
-) -> IBContract:
+        return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}.{exchange}")
 
+
+def create_contract(symbol: str, venue: str, sec_type: str, trading_class: str | None = None, currency: str | None = None) -> IBContract:
     contract = IBContract()
 
     contract.symbol = _desanitize_str(symbol)
@@ -191,14 +181,14 @@ def create_contract(
     #
     if trading_class is not None:
         contract.tradingClass = _desanitize_str(trading_class)
-    
+
     if currency is not None:
         contract.currency = str(currency)
 
     return contract
 
+
 def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
-    
     parts = instrument_id.symbol.value.split("=")
     venue = instrument_id.venue.value
     if venue == "IDEALPRO":
@@ -216,12 +206,12 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
             sec_type=parts[2],
         )
 
-        
         if len(parts) == 4:
             contract_month = ContractMonth(parts[3])
             contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
     return contract
-        
+
+
 def contract_details_to_futures_instrument(
     details: IBContractDetails,
     overrides: dict | None = None,
@@ -240,8 +230,7 @@ def contract_details_to_futures_instrument(
         currency=Currency.from_str(details.contract.currency),
         price_precision=overrides.get("price_precision") or price_precision,
         price_increment=overrides.get("price_increment") or price_increment,
-        multiplier=overrides.get("multiplier")
-        or Quantity.from_str(str(details.contract.multiplier)),
+        multiplier=overrides.get("multiplier") or Quantity.from_str(str(details.contract.multiplier)),
         lot_size=overrides.get("lot_size") or Quantity.from_int(1),
         underlying=details.underSymbol,
         activation_ns=0,
@@ -420,4 +409,3 @@ def nautilus_order_to_ib_order(order: Order, instrument: Instrument) -> IBOrder:
     ib_order.contract = contract
 
     return ib_order
-

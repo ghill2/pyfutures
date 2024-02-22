@@ -80,9 +80,7 @@ class TestExecutionErrors:
 
         assert cached_order.status == OrderStatus.ACCEPTED  # no change
 
-    @pytest.mark.skip(
-        reason="can't seem to create this case, ib accepts any price above 0"
-    )
+    @pytest.mark.skip(reason="can't seem to create this case, ib accepts any price above 0")
     @pytest.mark.asyncio()
     async def test_limit_order_canceled_invalid_price(
         self,

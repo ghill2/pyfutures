@@ -169,5 +169,3 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     
         for instrument_id in instrument_ids:
             await self.load_contract(contract_id=instrument_id)
-
-

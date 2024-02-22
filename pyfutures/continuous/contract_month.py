@@ -19,6 +19,7 @@ X = November, 11
 Z = December, 12
 """
 
+
 class ContractMonth:
     def __init__(
         self,
@@ -34,24 +35,24 @@ class ContractMonth:
         self.month = letter_month_to_int(value[4])
         self.value = value
         self.timestamp_utc = pd.Timestamp(year=self.year, month=self.month, day=1, tz="UTC")
-    
+
     @classmethod
     def from_year_letter_month(cls, year: int, letter_month: str) -> ContractMonth:
         assert isinstance(year, int)
         assert isinstance(letter_month, str)
         return cls(f"{year}{letter_month}")
-    
+
     @classmethod
     def from_month_year(cls, year: int, month: int) -> ContractMonth:
         assert isinstance(month, int)
         assert month >= 1 and month <= 12
         return cls(f"{year}{int_to_letter_month(month)}")
-    
+
     @classmethod
     def now(cls):
         now = pd.Timestamp.utcnow()
         return cls.from_month_year(year=now.year, month=now.month)
-    
+
     @classmethod
     def from_int(cls, value: int) -> ContractMonth:
         return cls.from_month_year(
@@ -72,22 +73,22 @@ class ContractMonth:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.value})"
-    
+
     def __gt__(self, other) -> bool:
         return self.timestamp_utc > other.timestamp_utc
-    
+
     def __lt__(self, other) -> bool:
         return self.timestamp_utc < other.timestamp_utc
-    
+
     def __ge__(self, other) -> bool:
         return self.timestamp_utc >= other.timestamp_utc
-    
+
     def __le__(self, other) -> bool:
         return self.timestamp_utc <= other.timestamp_utc
 
     def __str__(self) -> str:
         return self.value
-    
+
     def __getstate__(self):
         return (
             self.year,
@@ -104,9 +105,11 @@ class ContractMonth:
         self.value = state[3]
         self.timestamp_utc = state[4]
 
+
 def letter_month_to_int(letter_month: str) -> int:
     assert letter_month in MONTH_LIST
     return MONTH_LIST.index(letter_month) + 1
+
 
 def int_to_letter_month(value: int) -> str:
     assert value > 0 and value < 13

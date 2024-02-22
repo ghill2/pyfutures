@@ -36,6 +36,7 @@ from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from pyfutures.continuous.contract_month import ContractMonth
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 
+
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
     df.open = (df["open"] / 1e9).astype("float64")
@@ -49,6 +50,7 @@ def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.set_index("timestamp", inplace=True)
     return df
 
+
 def quotes_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
     df.bid = (df["bid"] / 1e9).astype("float64")
@@ -60,6 +62,7 @@ def quotes_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df = df[["bid", "ask", "bid_size", "ask_size", "timestamp"]]
     df.set_index("timestamp", inplace=True)
     return df
+
 
 class ParquetFile:
     EXTENSION = ".parquet"
@@ -75,11 +78,11 @@ class ParquetFile:
         self.bar_type = bar_type
         self.cls = cls
         self.year = int(year)
-    
+
     @property
     def contract_month(self) -> ContractMonth:
         return ContractMonth(self.bar_type.symbol.value.split("=")[1])
-    
+
     @property
     def instrument_id(self) -> InstrumentId:
         return self.bar_type.instrument_id
@@ -132,14 +135,13 @@ class ParquetFile:
         nrows: int | None = None,
         bar_to_quote: bool = False,
     ) -> pd.DataFrame:
-        
         if nrows is None:
             nrows = pq.ParquetFile(self.path).metadata.num_rows
         assert isinstance(nrows, int)
-        
+
         for batch in pq.ParquetFile(str(self)).iter_batches(batch_size=nrows):
             df = batch.to_pandas()
-            
+
         if list(df.columns) == ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]:
             df = bars_from_rust(df)
             if to_aggregation is not None:
@@ -161,55 +163,47 @@ class ParquetFile:
                 )
                 # df.timestamp = df.timestamp.tz_convert("UTC")
                 df.set_index("timestamp", inplace=True)
-                
-                
+
         elif list(df.columns) == ["bid", "ask", "bid_size", "ask_size", "ts_event", "ts_init"]:
             df = quotes_from_rust(df)
             # TODO: add quote sampleing
-        
+
         if timestamp_delta is not None:
             delta, timezone = timestamp_delta
-            df.index = (df.index.tz_localize(None) + delta + pd.Timedelta(seconds=30))
+            df.index = df.index.tz_localize(None) + delta + pd.Timedelta(seconds=30)
             df.index = df.index.tz_localize(timezone)
             df.index = df.index.tz_convert("UTC")
-            
-        return df
-    
-    def read_objects(self, nrows: int | None = None) -> pd.DataFrame:
-        
-        
 
+        return df
+
+    def read_objects(self, nrows: int | None = None) -> pd.DataFrame:
         if self.cls is Bar or self.cls is QuoteTick:
-            
             session = DataBackendSession()
-            
+
             nautilus_type = ParquetDataCatalog._nautilus_data_cls_to_data_type(self.cls)
-            
+
             session.add_file(nautilus_type, "data", str(self.path))
             data = []
-            
+
             for chunk in session.to_query_result():
                 data.extend(capsule_to_list(chunk))
-            
+
             assert len(data) > 0
             return data
-        
+
         elif self.cls is MultipleBar:
-            
             df = pd.read_parquet(self.path)
             assert not df.empty
             records = df.to_dict(orient="records")
             return [MultipleBar.from_dict(d) for d in records]
-            
-            
+
             prices = []
             for batch in pq.ParquetFile(self.path).iter_batches():
                 deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
                 prices.extend(deserialized)
-                
-            
+
             return prices
-                
+
     @property
     def num_rows(self) -> int:
         return pq.ParquetFile(str(self)).metadata.num_rows

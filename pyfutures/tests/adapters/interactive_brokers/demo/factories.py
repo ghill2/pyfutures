@@ -12,20 +12,11 @@ from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersL
 DATA_ENGINE = None
 EXEC_ENGINE = None
 
+
 class InteractiveBrokersDataEngineFactory:
-    def create(
-        msgbus, 
-        cache, 
-        clock, 
-        client_config: InteractiveBrokersDataClientConfig
-    ) -> LiveDataEngine:
+    def create(msgbus, cache, clock, client_config: InteractiveBrokersDataClientConfig) -> LiveDataEngine:
         data_client = InteractiveBrokersLiveDataClientFactory.create(
-            loop=asyncio.get_event_loop(),
-            name='TESTER',
-            config=client_config,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock
+            loop=asyncio.get_event_loop(), name="TESTER", config=client_config, msgbus=msgbus, cache=cache, clock=clock
         )
         data_engine = LiveDataEngine(
             loop=asyncio.get_event_loop(),
@@ -42,14 +33,6 @@ class InteractiveBrokersDataEngineFactory:
         return data_engine, data_client
 
 
-
-
-
-
-
-
-
-
 def create_exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) -> LiveExecutionEngine:
     """creates an exec engine"""
 
@@ -64,7 +47,6 @@ def create_exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) ->
             inflight_check_interval_ms=0,
             debug=True,
         ),
-
     )
     # exec_client._set_account_id(exec_client.account_id)
     exec_engine.register_client(exec_client)
@@ -86,5 +68,3 @@ def create_exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) ->
     portfolio.update_account(TestEventStubs.margin_account_state())
 
     return exec_engine
-
-

@@ -31,13 +31,14 @@ import asyncio
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+
 init_logging(level_stdout=LogLevel.DEBUG)
+
 
 def test_strategy_logging():
     # Arrange
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-
 
     # monkeypatch.setenv("BINANCE_API_KEY", "SOME_API_KEY")
     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
@@ -45,10 +46,9 @@ def test_strategy_logging():
     # row = IBTestProviderStubs.universe_rows()[0]
     bar_type = BarType.from_str("EUR/USD.IDEALPRO-1-DAY-BID-EXTERNAL")
 
-
     provider_config = InteractiveBrokersInstrumentProviderConfig(
         chain_filters={
-            'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+            "FMEU": lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
         },
         parsing_overrides={
             "MIX": {
@@ -63,14 +63,10 @@ def test_strategy_logging():
         # logging=LoggingConfig(bypass_logging=True),
         environment=Environment.LIVE,
         data_clients={
-            "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(
-                instrument_provider=provider_config
-            ),
+            "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(instrument_provider=provider_config),
         },
         exec_clients={
-            "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(
-                instrument_provider=provider_config
-            ),
+            "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(instrument_provider=provider_config),
         },
         timeout_disconnection=1.0,  # Short timeout for testing
         timeout_post_stop=1.0,  # Short timeout for testing
@@ -83,7 +79,6 @@ def test_strategy_logging():
     node = TradingNode(config=config, loop=loop)
     print("TRADING NODE")
 
-    
     # add instrument to the cache,
     node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
     node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
@@ -99,14 +94,12 @@ def test_strategy_logging():
         quantity=1,
     )
 
-
     # provider = node._exec_engine._clients[0].instrument_provider()
     # exec_client_id = ClientId("IB")
 
     node.trader.add_strategy(strategy)
 
     node.portfolio.set_specific_venue(IB_VENUE)
-
 
     # Act
     node.run()

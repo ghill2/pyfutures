@@ -82,15 +82,15 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         global DATA_CLIENT
         if DATA_CLIENT is None:
             DATA_CLIENT = InteractiveBrokersDataClient(
-            loop=loop,
-            client=client,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            instrument_provider=provider,
-            ibg_client_id=1,
-            config=config,
-        )
+                loop=loop,
+                client=client,
+                msgbus=msgbus,
+                cache=cache,
+                clock=clock,
+                instrument_provider=provider,
+                ibg_client_id=1,
+                config=config,
+            )
         return DATA_CLIENT
 
 
@@ -108,20 +108,19 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersExecutionClient:
-
         client = get_client(loop, msgbus, clock, cache)
         provider = get_provider(config=config.instrument_provider)
 
         global EXEC_CLIENT
         if EXEC_CLIENT is None:
             EXEC_CLIENT = InteractiveBrokersExecutionClient(
-            loop=loop,
-            client=client,
-            account_id=AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            instrument_provider=provider,
-            ibg_client_id=1
-        )
+                loop=loop,
+                client=client,
+                account_id=AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
+                msgbus=msgbus,
+                cache=cache,
+                clock=clock,
+                instrument_provider=provider,
+                ibg_client_id=1,
+            )
         return EXEC_CLIENT

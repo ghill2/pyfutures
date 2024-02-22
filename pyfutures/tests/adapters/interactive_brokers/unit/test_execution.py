@@ -707,4 +707,3 @@ class TestInteractiveBrokersExecution:
 #         instrument_provider=self.instrument_provider,
 #         ibg_client_id=1,
 #     )
-

@@ -15,8 +15,8 @@ import types
 from ibapi.contract import Contract
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 # class MetaLogger(type):
@@ -43,31 +43,34 @@ init_logging(level_stdout=LogLevel.DEBUG)
 
 
 from functools import wraps
+
+
 def wrapper(method):
     # @wraps(method)
     print("wrapper applied")
+
     def wrapped(*args, **kwargs):
         print("log to file")
         method(*args, **kwargs)
+
     return wrapped
 
 
 class DecorateMethods(type):
-    """ Decorate all methods of the superclass with the decorator provided """
+    """Decorate all methods of the superclass with the decorator provided"""
+
     def __new__(cls, name, bases, attrs, **kwargs):
         try:
-            decorator = kwargs['decorator']
+            decorator = kwargs["decorator"]
         except KeyError:
             raise ValueError('Please provide the "decorator" argument')
 
-        exclude = kwargs.get('exclude', [])
+        exclude = kwargs.get("exclude", [])
 
         # Iterate through attrs to access instance methods
         for attr_name, attr_value in attrs.items():
             print(attr_name)
-            if isinstance(attr_value, types.FunctionType) and \
-                attr_name not in exclude and \
-                not attr_name.startswith('__'):
+            if isinstance(attr_value, types.FunctionType) and attr_name not in exclude and not attr_name.startswith("__"):
                 attrs[attr_name] = decorator(attr_value)
 
         return super(DecorateMethods, cls).__new__(cls, name, bases, attrs)
@@ -76,10 +79,10 @@ class DecorateMethods(type):
 def wrap_methods(client):
     print(client.__dict__)
     for k, v in client.__dict__.items():
-        if isinstance(k, types.FunctionType) and \
-                not k.startswith("__"):
+        if isinstance(k, types.FunctionType) and not k.startswith("__"):
             client[k] = wrapper(client[k])
     return client
+
 
 # def log_to_file(func):
 #     @functools.wraps(func)  # Preserve metadata
@@ -116,18 +119,17 @@ def wrap_methods(client):
 #         )
 
 
-
-
 async def main():
     contract = Contract()
-    contract.secType="FUT"
-    contract.exchange="SNFE"
-    contract.symbol="XT"
-    contract.tradingClass="XT"
-    contract.currency="AUD"
+    contract.secType = "FUT"
+    contract.exchange = "SNFE"
+    contract.symbol = "XT"
+    contract.tradingClass = "XT"
+    contract.currency = "AUD"
 
     await client.connect()
     await client.request_contract_details(contract=contract)
+
 
 client = InteractiveBrokersClient(
     loop=asyncio.get_event_loop(),

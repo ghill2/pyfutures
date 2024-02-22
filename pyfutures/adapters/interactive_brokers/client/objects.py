@@ -78,7 +78,8 @@ class IBBar:
             "wap": [float(bar.wap) for bar in bars],
             "barCount": [bar.barCount for bar in bars],
         }
-        
+
+
 @dataclass
 class IBPositionEvent:
     conId: int
@@ -147,4 +148,3 @@ class ClientException(Exception):
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = f"Error {code}: {message}"
-

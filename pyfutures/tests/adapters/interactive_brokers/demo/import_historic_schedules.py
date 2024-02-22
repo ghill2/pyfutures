@@ -7,19 +7,18 @@ from pyfutures.adapters.interactive_brokers.client.objects import ClientExceptio
 import pytest
 from pathlib import Path
 
+
 @pytest.mark.asyncio()
 async def test_import_historic_schedules(client):
-    
     await client.connect()
-    
+
     universe = IBTestProviderStubs.universe_dataframe()
     parent_out = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules")
     for row in universe.itertuples():
-        
         path = parent_out / f"{row.trading_class}.csv"
         if path.exists():
             continue
-        
+
         try:
             contract = await client.request_front_contract(row.contract)
             assert type(contract) is Contract
@@ -29,13 +28,10 @@ async def test_import_historic_schedules(client):
                 print(f"{row.trading_class}")
             else:
                 raise exc
-        
+
         print(f"{row.trading_class}: {len(sessions)} sessions")
-        
+
         sessions.to_csv(path, index=False)
-        
+
         path = parent_out / f"{row.trading_class}.parquet"
         sessions.to_parquet(path, index=False)
-        
-        
-    

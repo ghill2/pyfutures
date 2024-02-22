@@ -23,10 +23,9 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
 
+
 class TestSocket:
-    
     @pytest.mark.asyncio()
     async def test_perform(self, handshake):
         await handshake.perform()
         pass
-    

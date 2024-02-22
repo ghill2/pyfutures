@@ -9,6 +9,7 @@ from ibapi.contract import Contract
 
 from datetime import datetime, timezone, timedelta
 
+
 def future_for_timestamp(timestamp):
     """
     Creates a future that resolves to True when the current time reaches the given timestamp.
@@ -26,6 +27,7 @@ def future_for_timestamp(timestamp):
         return datetime.now(timezone.utc) >= target_time
 
     from concurrent.futures import Future
+
     future = Future()
     future.set_result(is_future_reached())
     return future
@@ -33,10 +35,11 @@ def future_for_timestamp(timestamp):
 
 async def dummy_timestamps():
     """
-        generate a list of timestamps in the future
-        used for manual testing
+    generate a list of timestamps in the future
+    used for manual testing
     """
     now = pd.Timestamp.now()
+
 
 # @pytest.fixture()
 # def rows():
@@ -51,11 +54,11 @@ def shared_queue():
     # Optionally clear the queue after all tests (if needed):
     del queue[:]
 
+
 async def test_function():
     """This function replaces a client test function that runs a test on a single instrument"""
     print("test with id {} is running")
     asyncio.sleep(1)
-
 
 
 # @pytest.fixture(scope="session")
@@ -70,6 +73,3 @@ def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
         client_id=1,
     )
     return client
-
-
-

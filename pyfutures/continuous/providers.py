@@ -13,6 +13,7 @@ from pyfutures.continuous.config import NonPositiveInt
 
 from nautilus_trader.config import PositiveInt
 
+
 class TestContractProvider(InstrumentProvider):
     def __init__(
         self,
@@ -23,26 +24,20 @@ class TestContractProvider(InstrumentProvider):
         self._approximate_expiry_offset = approximate_expiry_offset
         self._base = base
         self._contracts: dict[str, FuturesContract] = {}
-    
+
     async def load_async(
         self,
         instrument_id: InstrumentId,
         filters: dict | None = None,
     ) -> None:
-        
         parts = instrument_id.symbol.value.split("=")
         month = ContractMonth(parts[1])
-        instrument_id = InstrumentId.from_str(
-            f"{parts[0]}.{instrument_id.venue}"
-        )
+        instrument_id = InstrumentId.from_str(f"{parts[0]}.{instrument_id.venue}")
         return self.load_contract(instrument_id, month)
-        
-            
+
     def load_contract(self, instrument_id: InstrumentId, month: ContractMonth) -> None:
-        
-        approximate_expiry_date = month.timestamp_utc \
-            + pd.Timedelta(days=self._approximate_expiry_offset)
-        
+        approximate_expiry_date = month.timestamp_utc + pd.Timedelta(days=self._approximate_expiry_offset)
+
         instrument_id = self._fmt_instrument_id(self._base.id, month)
         futures_contract = FuturesContract(
             instrument_id=instrument_id,
@@ -60,16 +55,16 @@ class TestContractProvider(InstrumentProvider):
             ts_init=0,
             info={
                 "month": month,
-            }
+            },
         )
-        
+
         self.add(futures_contract)
         return futures_contract
-        
+
     def get_contract(self, instrument_id: InstrumentId, month: ContractMonth) -> None:
         instrument_id = self._fmt_instrument_id(self._base.id, month)
         return self.find(instrument_id)
-    
+
     @staticmethod
     def _fmt_instrument_id(instrument_id: InstrumentId, month: ContractMonth) -> InstrumentId:
         """

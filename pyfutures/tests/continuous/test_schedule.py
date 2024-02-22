@@ -6,6 +6,7 @@ import pickle
 from pyfutures.continuous.schedule import MarketSchedule
 import datetime
 
+
 class TestMarketSchedule:
     def setup(self):
         self.data = pd.DataFrame(
@@ -29,27 +30,26 @@ class TestMarketSchedule:
 
         # Saturday
         self.data.loc[len(self.data)] = {"dayofweek": 5, "open": time(17, 0), "close": time(23, 59)}
-    
+
     def test_schedule_previous_trading_day(self):
-        
         calendar = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
-        
+
         now_day = datetime.date(2024, 1, 27)  # Saturday
         expected = datetime.date(2024, 1, 25)  # Thursday
         assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
-        
+
         now_day = datetime.date(2024, 1, 23)  # Tuesday
         expected = datetime.date(2024, 1, 20)  # Saturday
         assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
-        
+
         now_day = datetime.date(2024, 1, 25)  # Thursday
         expected = datetime.date(2024, 1, 24)  # Wedsnesday
         assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
-        
+
         now_day = datetime.date(2024, 1, 26)  # Friday
         expected = datetime.date(2024, 1, 25)  # Thursday
         assert calendar.previous_trading_day(date=now_day, offset=-1) == expected
-        
+
     def test_is_open_utc(self):
         calendar = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
 
@@ -165,24 +165,22 @@ class TestMarketSchedule:
         assert calendar.time_until_close(
             pd.Timestamp("1980-01-02 08:30:00", tz="UTC"),
         ) == pd.Timedelta("0 days 07:30:00")
-    
+
     def test_equality(self):
         schedule = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
         assert schedule == schedule
-        
+
     def test_schedule_pickle(self):
-        
         # Arrange
         schedule = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
-        
+
         # Act
         pickled = pickle.dumps(schedule)
         unpickled = pickle.loads(pickled)  # noqa S301 (pickle is safe here)
-        
+
         # Assert
         assert unpickled == schedule
-        
-    
+
     # def test_ib_pandas_tz(self):
     #     for tz in [
     #         "CST (Central Standard Time)",
