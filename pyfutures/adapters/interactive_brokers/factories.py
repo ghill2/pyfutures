@@ -23,15 +23,15 @@ from nautilus_trader.live.factories import LiveDataClientFactory
 from nautilus_trader.live.factories import LiveExecClientFactory
 from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.common.component import MessageBus
-from nautilus_trader.common.component import init_logging
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.model.objects import Price
 
 
 CLIENT = None
 PROVIDER = None
+DATA_CLIENT = None
+EXEC_CLIENT = None
 
 
 
@@ -64,7 +64,7 @@ def get_client(loop, msgbus, clock, cache):
 # fmt: on
 class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
     """
-    Provides a `InteractiveBrokers` live data client factory.
+    Called from the TradingNode with fixed arguments
     """
 
     @staticmethod
@@ -76,32 +76,12 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersDataClient:
-        """
-        Create a new InteractiveBrokers data client.
-
-        Parameters
-        ----------
-        loop : asyncio.AbstractEventLoop
-            The event loop for the client.
-        name : str
-            The client name.
-        config : dict
-            The configuration dictionary.
-        msgbus : MessageBus
-            The message bus for the client.
-        cache : Cache
-            The cache for the client.
-        clock : LiveClock
-            The clock for the client.
-
-        Returns
-        -------
-        InteractiveBrokersDataClient
-
-        """
         client = get_client(loop, msgbus, clock, cache)
         provider = get_provider(config=config.instrument_provider)
-        data_client = InteractiveBrokersDataClient(
+
+        global DATA_CLIENT
+        if DATA_CLIENT is None:
+            DATA_CLIENT = InteractiveBrokersDataClient(
             loop=loop,
             client=client,
             msgbus=msgbus,
@@ -111,12 +91,12 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
             ibg_client_id=1,
             config=config,
         )
-        return data_client
+        return DATA_CLIENT
 
 
 class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
     """
-    Provides a `InteractiveBrokers` live execution client factory.
+    Called from the TradingNode with fixed arguments
     """
 
     @staticmethod
@@ -132,13 +112,9 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         client = get_client(loop, msgbus, clock, cache)
         provider = get_provider(config=config.instrument_provider)
 
-        # Set account ID
-        # ib_account = config.account_id or os.environ.get("TWS_ACCOUNT")
-        # assert ib_account, f"Must pass `{config.__class__.__name__}.account_id` or set `TWS_ACCOUNT` env var."
-
-
-        # Create client
-        exec_client = InteractiveBrokersExecutionClient(
+        global EXEC_CLIENT
+        if EXEC_CLIENT is None:
+            EXEC_CLIENT = InteractiveBrokersExecutionClient(
             loop=loop,
             client=client,
             account_id=AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
@@ -148,4 +124,4 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
             instrument_provider=provider,
             ibg_client_id=1
         )
-        return exec_client
+        return EXEC_CLIENT

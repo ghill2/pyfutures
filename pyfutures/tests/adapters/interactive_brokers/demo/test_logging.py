@@ -42,8 +42,9 @@ def test_strategy_logging():
     # monkeypatch.setenv("BINANCE_API_KEY", "SOME_API_KEY")
     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
     #
-    row = IBTestProviderStubs.universe_rows()[0]
-    bar_type = BarType.from_str(f"{row.instrument_id}-1-DAY-BID-EXTERNAL")
+    # row = IBTestProviderStubs.universe_rows()[0]
+    bar_type = BarType.from_str("EUR/USD.IDEALPRO-1-DAY-BID-EXTERNAL")
+
 
     provider_config = InteractiveBrokersInstrumentProviderConfig(
         chain_filters={
@@ -80,26 +81,29 @@ def test_strategy_logging():
         ),
     )
     node = TradingNode(config=config, loop=loop)
-    strategy = BuyOnBarX(
-        index=1,
-        bar_type=bar_type,
-        order_side=OrderSide.BUY,
-        quantity=1,
-    )
+    print("TRADING NODE")
+
     
     # add instrument to the cache,
     node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
     node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
 
     node.build()
+    print("INSTRUMENTS")
+    instruments = node.cache.instruments()
+    print(instruments)
+    strategy = BuyOnBarX(
+        index=1,
+        bar_type=bar_type,
+        order_side=OrderSide.BUY,
+        quantity=1,
+    )
+
 
     # provider = node._exec_engine._clients[0].instrument_provider()
-    exec_client_id = ClientId("IB")
-    provider = node.trader._exec_engine._clients[exec_client_id]._instrument_provider
-    provider.load_contract(row.contract_cont)
+    # exec_client_id = ClientId("IB")
 
     node.trader.add_strategy(strategy)
-
 
     node.portfolio.set_specific_venue(IB_VENUE)
 

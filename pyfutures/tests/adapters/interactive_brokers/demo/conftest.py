@@ -1,4 +1,5 @@
 import asyncio
+from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
 
 import pytest
 import os
@@ -22,7 +23,7 @@ from pyfutures.adapters.interactive_brokers.client.connection import Connection
 # fmt: off
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig, InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.tests.adapters.order_setup import OrderSetup
@@ -68,11 +69,18 @@ def instrument(event_loop, cache, instrument_provider, instrument_id) -> Futures
 
     return instrument
 
-@pytest.fixture(scope="session")
-def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
-    
-    
-    config = InteractiveBrokersInstrumentProviderConfig(
+
+
+
+
+
+
+
+
+
+@pytest.fixture()
+def provider_params():
+    return dict(
         chain_filters={
             'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
         },
@@ -84,30 +92,38 @@ def instrument_provider(client) -> InteractiveBrokersInstrumentProvider:
         },
     )
 
-    instrument_provider = InteractiveBrokersInstrumentProvider(
-        client=client,
-        config=config,
-    )
-
-    return instrument_provider
 
 @pytest.fixture(scope="session")
-def exec_client(event_loop, msgbus, cache, clock, client, instrument_provider) -> InteractiveBrokersExecutionClient:
-    
-    return InteractiveBrokersExecutionClient(
-            loop=event_loop,
-            client=client,
-            account_id=AccountId(f"InteractiveBrokers-{IB_ACCOUNT_ID}"),
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            instrument_provider=instrument_provider,
-            ibg_client_id=1,
+def exec_client(provider_params, event_loop, msgbus, cache, clock) -> InteractiveBrokersExecutionClient:
+
+    # always returns the same instance of the client
+    InteractiveBrokersLiveExecClientFactory.create(
+        loop=event_loop,
+        name="TEST",
+        config=InteractiveBrokersExecClientConfig(
+            instrument_provider=InteractiveBrokersInstrumentProviderConfig(
+                **provider_params,
+            )
+        ),
+        msgbus=msgbus,
+        cache=cache,
+        clock=clock
     )
+
+    # return InteractiveBrokersExecutionClient(
+    #         loop=event_loop,
+    #         client=client,
+    #         account_id=AccountId(f"InteractiveBrokers-{IB_ACCOUNT_ID}"),
+    #         msgbus=msgbus,
+    #         cache=cache,
+    #         clock=clock,
+    #         instrument_provider=instrument_provider,
+    #         ibg_client_id=1,
+    # )
 
 
 @pytest.fixture(scope="session")
-def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger, instrument_provider) -> LiveExecutionEngine:
+def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) -> LiveExecutionEngine:
 
     exec_engine = LiveExecutionEngine(
         loop=event_loop,
