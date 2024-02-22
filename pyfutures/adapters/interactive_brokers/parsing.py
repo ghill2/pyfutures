@@ -29,6 +29,7 @@ from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.model.identifiers import ClientOrderId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.instruments import CurrencyPair
 
 # from pyfutures.adapters.interactive_brokers.client import OrderEvent
 from nautilus_trader.model.identifiers import VenueOrderId
@@ -155,15 +156,14 @@ def _sanitize_str(value: str):
 
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
     contract = details.contract
-    print(contract.lastTradeDateOrContractMonth)
 
-    assert len(contract.lastTradeDateOrContractMonth) == 8
 
     symbol = _sanitize_str(contract.symbol)
     trading_class = _sanitize_str(contract.tradingClass)
     exchange = _sanitize_str(contract.exchange)
 
     if contract.secType == "FUT":
+        assert len(contract.lastTradeDateOrContractMonth) == 8
         month = str(ContractMonth.from_int(int(details.contractMonth)))
         return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}={month}.{exchange}")
     else:
@@ -236,6 +236,50 @@ def contract_details_to_futures_instrument(
         expiration_ns=dt_to_unix_nanos(
             parse_datetime(details.contract.lastTradeDateOrContractMonth),
         ),
+        ts_event=timestamp,
+        ts_init=timestamp,
+        info=contract_details_to_dict(details),
+    )
+
+
+def _tick_size_to_precision(tick_size: float | Decimal) -> int:
+    tick_size_str = f"{tick_size:.10f}"
+    return len(tick_size_str.partition(".")[2].rstrip("0"))
+
+# nautilus_trader/adapters/interactive_brokers/parsing/instruments.py
+# GTODO: does this function need modifying?
+# do we need the function above?
+def contract_details_to_forex_instrument(
+    details: IBContractDetails,
+) -> CurrencyPair:
+
+    timestamp = time.time_ns()
+    instrument_id = contract_details_to_instrument_id(details)
+
+    price_precision: int = _tick_size_to_precision(details.minTick)
+    size_precision: int = _tick_size_to_precision(details.minSize)
+
+
+    return CurrencyPair(
+        instrument_id=instrument_id,
+        raw_symbol=Symbol(details.contract.localSymbol),
+        base_currency=Currency.from_str(details.contract.symbol),
+        quote_currency=Currency.from_str(details.contract.currency),
+        price_precision=price_precision,
+        size_precision=size_precision,
+        price_increment=Price(details.minTick, price_precision),
+        size_increment=Quantity(details.sizeIncrement, size_precision),
+        lot_size=None,
+        max_quantity=None,
+        min_quantity=None,
+        max_notional=None,
+        min_notional=None,
+        max_price=None,
+        min_price=None,
+        margin_init=Decimal(0),
+        margin_maint=Decimal(0),
+        maker_fee=Decimal(0),
+        taker_fee=Decimal(0),
         ts_event=timestamp,
         ts_init=timestamp,
         info=contract_details_to_dict(details),

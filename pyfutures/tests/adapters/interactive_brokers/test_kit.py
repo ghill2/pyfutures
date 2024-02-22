@@ -186,6 +186,10 @@ class IBTestProviderStubs:
             lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
             axis=1,
         )
+        df["instrument_id_live"] = df.apply(
+            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"),
+            axis=1,
+        )
 
         df["quote_home_instrument"] = df.quote_currency.apply(lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")))
 
