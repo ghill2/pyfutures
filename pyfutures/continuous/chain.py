@@ -7,6 +7,7 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from nautilus_trader.model.data import Bar
 
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
@@ -47,6 +48,8 @@ class ContractChain(Actor):
         self._raise_expired = raise_expired
         self._ignore_expiry_date = ignore_expiry_date
         self._rolls: tuple[pd.Timestamp, ContractMonth] = []
+        
+        self._ignore_expiry_date = True  # TODO
 
     @property
     def rolls(self) -> pd.DataFrame:
@@ -62,22 +65,60 @@ class ContractChain(Actor):
         return self._instrument_provider
 
     def on_start(self) -> None:
+        
+        self._manage_subscriptions()
+        
         month = self._start_month
         if month not in self.hold_cycle:
             month = self.hold_cycle.next_month(month)
 
         self._roll(to_month=month)
-
+        
         self.msgbus.subscribe(
             topic=f"{self.bar_type}0",
             handler=self.on_multiple_price,
             # TODO determine priority
         )
 
-    def on_multiple_price(self, price: MultipleBar) -> None:
+    def on_bar(self, bar: Bar) -> None:
+        
+        is_forward_or_current = bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type
+        if not is_forward_or_current:
+            return
+
+        current_bar = self.cache.bar(self.current_bar_type)
+        forward_bar = self.cache.bar(self.forward_bar_type)
+
+        # # for debugging
+        # if "DAY" in str(self.bar_type) and self.chain.current_month.value == "2008M":
+        #     # self._log.debug(repr(bar))
+        #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
+        #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
+        #     print(
+        #         f"{self.chain.current_month.value} {current_timestamp_str} "
+        #         f"{self.chain.forward_month.value} {forward_timestamp_str} "
+        #         f"{str(self.chain.roll_date)[:-15]} "
+        #         f"{str(self.chain.expiry_date)[:-15]} "
+        #     )
+        
+        # calculate the strategy on every current_bar
+        # roll first time current_bar and forward_bar has same timestamp and is within roll window
+        
+        # strategy calculates, create new position size, submit new position size to forward contract 
+        # needs to use forward price
+        # add liquid window for execution
+        
+        if current_bar is None or forward_bar is None:
+            return
+
+        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
+        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
+
+        if current_timestamp != forward_timestamp:
+            return
+        
         expiry_day = self.expiry_date.floor("D")
         roll_date = self.roll_date
-        current_timestamp = unix_nanos_to_dt(price.ts_event)
 
         if not self._ignore_expiry_date:
             is_expired = current_timestamp >= (expiry_day + pd.Timedelta(days=1))
@@ -124,7 +165,9 @@ class ContractChain(Actor):
 
         # TODO: factor in the trading calendar
         self.roll_date: pd.Timestamp = self.expiry_date + pd.Timedelta(days=self._roll_offset)
-
+        
+        self._manage_subscriptions()
+        
         self.msgbus.publish(
             topic="events.roll",
             msg=RollEvent(bar_type=self.bar_type),
@@ -135,7 +178,51 @@ class ContractChain(Actor):
         if self._instrument_provider.get_contract(self._instrument_id, month) is None:
             self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
         return self._instrument_provider.get_contract(self._instrument_id, month)
+    
+    def _manage_subscriptions(self) -> None:
+        self._log.debug("Managing subscriptions...")
 
+        current_contract = self.chain.current_contract
+        forward_contract = self.chain.forward_contract
+        carry_contract = self.chain.carry_contract
+
+        if self.cache.instrument(current_contract.id) is None:
+            self.cache.add_instrument(current_contract)
+
+        if self.cache.instrument(forward_contract.id) is None:
+            self.cache.add_instrument(forward_contract)
+
+        if self.cache.instrument(carry_contract.id) is None:
+            self.cache.add_instrument(carry_contract)
+
+        self.current_bar_type = BarType(
+            instrument_id=self.chain.current_contract.id,
+            bar_spec=self.bar_type.spec,
+            aggregation_source=self.bar_type.aggregation_source,
+        )
+
+        self.previous_bar_type = BarType(
+            instrument_id=self.chain.previous_contract.id,
+            bar_spec=self.bar_type.spec,
+            aggregation_source=self.bar_type.aggregation_source,
+        )
+
+        self.forward_bar_type = BarType(
+            instrument_id=self.chain.forward_contract.id,
+            bar_spec=self.bar_type.spec,
+            aggregation_source=self.bar_type.aggregation_source,
+        )
+
+        self.carry_bar_type = BarType(
+            instrument_id=self.chain.carry_contract.id,
+            bar_spec=self.bar_type.spec,
+            aggregation_source=self.bar_type.aggregation_source,
+        )
+
+        self.subscribe_bars(self.current_bar_type)
+        self.subscribe_bars(self.forward_bar_type)
+        self.unsubscribe_bars(self.previous_bar_type)
+        
     # self.current_instrument_id = self._fmt_instrument_id(self._instrument_id, self.current_month)
     # self.forward_instrument_id = self._fmt_instrument_id(self._instrument_id, self.forward_month)
     # self.carry_instrument_id = self._fmt_instrument_id(self._instrument_id, self.carry_month)

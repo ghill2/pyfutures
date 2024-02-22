@@ -118,6 +118,7 @@ class PortaraData:
         df = df[df.columns[:6]]
 
         df.volume = 1_000_000.0
+        df.set_index("timestamp", inplace=True)
 
         return df
 

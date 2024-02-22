@@ -12,6 +12,7 @@ from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.functions import bar_aggregation_to_str
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
@@ -31,6 +32,7 @@ from pyfutures.continuous.schedule import MarketSchedule
 from pyfutures.data.files import ParquetFile
 from dataclasses import dataclass
 from dataclasses import fields
+
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
@@ -88,7 +90,7 @@ class UniverseRow:
     start_month: ContractMonth
     config: ContractChainConfig
     quote_home_instrument: Instrument
-    base_instrument: FuturesContract
+    instrument: FuturesContract
     contract: IBContract
     contract_cont: IBContract
     fee_fixed: float
@@ -103,25 +105,39 @@ class UniverseRow:
     fee_clearing_percent: float
     
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
-        instrument_id = InstrumentId(
-            symbol=Symbol(self.base_instrument.instrument_id.symbol.value + "=" + month.value),
-            venue=self.base_instrument.instrument_id.venue,
+        instrument_id = self.instrument_id_for_month(
+            month=month,
         )
         return FuturesContract(
             instrument_id=instrument_id,
-            raw_symbol=self.base_instrument.instrument_id.symbol,
-            asset_class=self.base_instrument.asset_class,
-            currency=self.base_instrument.quote_currency,
-            price_precision=self.base_instrument.price_precision,
-            price_increment=self.base_instrument.price_increment,
-            multiplier=self.base_instrument.multiplier,
-            lot_size=self.base_instrument.lot_size,
-            underlying=self.base_instrument.underlying,
+            raw_symbol=self.instrument.id.symbol,
+            asset_class=self.instrument.asset_class,
+            currency=self.instrument.quote_currency,
+            price_precision=self.instrument.price_precision,
+            price_increment=self.instrument.price_increment,
+            multiplier=self.instrument.multiplier,
+            lot_size=self.instrument.lot_size,
+            underlying=self.instrument.underlying,
             activation_ns=0,
             expiration_ns=0,
             ts_event=0,
             ts_init=0,
         )
+    
+    def instrument_id_for_month(self, month: ContractMonth) -> InstrumentId:
+        return InstrumentId(
+            symbol=Symbol(self.instrument.id.symbol.value + "=" + month.value),
+            venue=self.instrument.id.venue,
+        )
+    
+    def bar_type(self, aggregation: BarAggregation) -> BarType:
+        return BarType.from_str(f"{self.base_instrument.id}-1-{aggregation}-MID-EXTERNAL")
+        
+    def bar_type_for_month(self, month: ContractMonth, aggregation: BarAggregation) -> BarType:
+        instrument_id = self.instrument_id_for_month(
+            month=month,
+        )
+        return BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
     
     def bar_files(
         self,
@@ -327,7 +343,7 @@ class IBTestProviderStubs:
             axis=1,
         )
 
-        df["base_instrument"] = df.apply(
+        df["instrument"] = df.apply(
             lambda row: FuturesContract(
                 instrument_id=row.instrument_id,
                 raw_symbol=row.instrument_id.symbol,

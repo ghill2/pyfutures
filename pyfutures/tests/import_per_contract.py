@@ -4,9 +4,11 @@ import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import QuoteTick
+import pandas as pd
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.persistence.wranglers import BarDataWrangler
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.files import ParquetFile
@@ -17,143 +19,158 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_F
 from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
-BASENAME_TEMPLATE = lambda x: x.instrument_id.value + "-{i}"
-
-def process_minute_and_day(path: Path, row: dict) -> None:
+def process_minute_and_day_bars(row: dict, path: Path) -> None:
     
-    contract_month = ContractMonth(path.stem[-5:])
+    month = ContractMonth(path.stem[-5:])
     aggregation = path.parent.parent.stem
-
-    bar_type = BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
 
     df = PortaraData.read_dataframe(path)
     
+    # apply settlement time
+    df.index = df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30)
+    df.index = df.index.tz_localize(row.timezone)
+    df.index = df.index.tz_convert("UTC")
+            
+    instrument = row.instrument_for_month(month)
+    bar_type = row.bar_type_for_month(month, aggregation)
     wrangler = BarDataWrangler(
-        instrument=row.base_instrument,
+        instrument=instrument,
+        bar_type=bar_type,
         
     )
+    bars = wrangler.process(df)
+    bars = list(sorted(bars, key=lambda x: x.ts_init))
+    
     CATALOG.write_chunk(
         data=bars,
         data_cls=Bar,
-        basename_template=file.instrument_id.value + "-{i}",
+        basename_template=instrument.id.value + "-{i}",
     )
+    print(f"Written {bar_type!r}....")
+
+def process_instruments(row: dict, month: ContractMonth) -> None:
     
-    file = ParquetFile(
-        parent=PER_CONTRACT_FOLDER,
-        bar_type=bar_type,
-        cls=Bar,
-    )
+    instrument = row.instrument_for_month(month)
     
+    CATALOG.write_data(
+        data=[instrument],
+        basename_template=instrument.id.value + "-{i}",
+    )
+    print(f"Written {instrument.id!r}....")
     
-    writer = BarParquetWriter(
-        path=file.path,
-        bar_type=bar_type,
-        price_precision=row.price_precision,
-        size_precision=1,
-    )
-
-    file.path.parent.mkdir(exist_ok=True, parents=True)
-    print(f"Writing {bar_type} {file}...")
-
-    writer.write_dataframe(df)
-
-
-def process_hour(file: ParquetFile, row: tuple) -> None:
-    assert file.path.exists()
-
-    # MINUTE -> HOUR
-    df = file.read(
-        to_aggregation=(1, BarAggregation.HOUR),
-    )
-
-    bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
-
-    file = ParquetFile(
-        parent=PER_CONTRACT_FOLDER,
-        bar_type=bar_type,
-        cls=Bar,
-    )
-    file.path.parent.mkdir(exist_ok=True, parents=True)
-    writer = BarParquetWriter(
-        path=file.path,
-        bar_type=bar_type,
-        price_precision=row.price_precision,
-        size_precision=1,
-    )
-
-    print(f"Writing {bar_type} {file}...")
-    writer.write_dataframe(df)
-
-
-def process_as_ticks(file: ParquetFile, row: tuple) -> None:
-    """
-    Export the bar parquet files as QuoteTick objects
-    """
-    df = file.read(
-        bar_to_quote=True,
-    )
-
-    file = ParquetFile(
-        parent=PER_CONTRACT_FOLDER,
-        bar_type=file.bar_type,
-        cls=QuoteTick,
-    )
-
-    file.path.parent.mkdir(exist_ok=True, parents=True)
-
-    writer = QuoteTickParquetWriter(
-        path=file.path,
-        instrument_id=row.instrument_id,
-        price_precision=row.price_precision,
-        size_precision=1,
-    )
-
-    writer.write_dataframe(df)
-
-
 rows = IBTestProviderStubs.universe_rows(
     filter=["ECO"],
 )
 
 
-def import_minute_and_hour():
-    # import MINUTE and DAY
+def import_minute_and_hour_bars():
     for row in rows:
         files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
         paths = sorted(set(files_d1 + files_m1))
         for path in paths:
-            yield joblib.delayed(process_minute_and_day)(path, row)
+            yield joblib.delayed(process_minute_and_day_bars)(row, path)
 
-
-def minute_to_hour():
-    # convert MINUTE > HOUR
+def import_instruments():
     for row in rows:
-        files = IBTestProviderStubs.bar_files(
-            trading_class=row.trading_class,
-            symbol=row.symbol,
-            aggregation=BarAggregation.MINUTE,
-        )
-        for file in files:
-            yield joblib.delayed(process_hour)(file, row)
-
-
-def bars_to_quote_tick():
-    # convert all to QuoteTick
-    for row in rows:
-        files = IBTestProviderStubs.bar_files(
-            trading_class=row.trading_class,
-            symbol=row.symbol,
-        )
-        for file in files:
-            yield joblib.delayed(process_as_ticks)(file, row)
-
-
+        files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+        files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+        paths = sorted(set(files_d1 + files_m1))
+        
+        months = {
+            ContractMonth(path.stem[-5:])
+            for path in paths
+        }
+        for month in months:
+            yield joblib.delayed(process_instruments)(row, month)
+            
 if __name__ == "__main__":
-    joblib.Parallel(n_jobs=-1, backend="loky")(import_minute_and_hour())
-    # joblib.Parallel(n_jobs=-1, backend="loky")(minute_to_hour())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_minute_and_hour_bars())
     # joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_quote_tick())
 
+# def process_as_ticks(file: ParquetFile, row: tuple) -> None:
+#     """
+#     Export the bar parquet files as QuoteTick objects
+#     """
+#     df = file.read(
+#         bar_to_quote=True,
+#     )
+
+#     file = ParquetFile(
+#         parent=PER_CONTRACT_FOLDER,
+#         bar_type=file.bar_type,
+#         cls=QuoteTick,
+#     )
+
+#     file.path.parent.mkdir(exist_ok=True, parents=True)
+
+#     writer = QuoteTickParquetWriter(
+#         path=file.path,
+#         instrument_id=row.instrument_id,
+#         price_precision=row.price_precision,
+#         size_precision=1,
+#     )
+
+#     writer.write_dataframe(df)
+
+
+# def process_hour(row: tuple) -> None:
+#     assert file.path.exists()
+    
+#     # load fx prices
+#     CATALOG.query(
+#         data_cls=QuoteTick,
+#         instrument_ids=[row.instrument.id],
+#         # filter_expr=Expression._field('bar_type') == str(bar_type),
+#         # filter_expr=pyarrow._compute.Expression(f"field('bar_type') == '{bar_type}'"),
+#     )
+    
+#     # MINUTE -> HOUR
+#     df = file.read(
+#         to_aggregation=(1, BarAggregation.HOUR),
+#     )
+
+#     bar_type = BarType.from_str(str(file.bar_type).replace("MINUTE", "HOUR"))
+
+#     file = ParquetFile(
+#         parent=PER_CONTRACT_FOLDER,
+#         bar_type=bar_type,
+#         cls=Bar,
+#     )
+    
+#     file.path.parent.mkdir(exist_ok=True, parents=True)
+#     writer = BarParquetWriter(
+#         path=file.path,
+#         bar_type=bar_type,
+#         price_precision=row.price_precision,
+#         size_precision=1,
+#     )
+
+#     print(f"Writing {bar_type} {file}...")
+#     writer.write_dataframe(df)
+
+# def minute_to_hour():
+#     # convert MINUTE > HOUR
+#     for row in rows:
+#         files = IBTestProviderStubs.bar_files(
+#             trading_class=row.trading_class,
+#             symbol=row.symbol,
+#             aggregation=BarAggregation.MINUTE,
+#         )
+#         for file in files:
+#             yield joblib.delayed(process_hour)(file, row)
+
+
+# def bars_to_quote_tick():
+#     # convert all to QuoteTick
+#     for row in rows:
+#         files = IBTestProviderStubs.bar_files(
+#             trading_class=row.trading_class,
+#             symbol=row.symbol,
+#         )
+#         for file in files:
+#             yield joblib.delayed(process_as_ticks)(file, row)
 
 # @pytest.mark.asyncio()
 # async def test_load_precisions(client):
