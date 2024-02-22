@@ -1,20 +1,17 @@
-import pytest
-from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
 import gc
-import random
-import time
-import pandas as pd
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Frequency
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.enums import Duration
-from nautilus_trader.model.data import BarType
+import pandas as pd
+import pytest
 from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+
+from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import BarParquetWriter
+from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 @pytest.mark.asyncio()
@@ -24,7 +21,6 @@ async def test_import_spread(client):
     Make one of the markets a liquid one like ZN
     And an illiquid one like Aluminium
     """
-
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )

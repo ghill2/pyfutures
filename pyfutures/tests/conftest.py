@@ -1,15 +1,15 @@
 # TODO: temporary location, where to keep this conftest so test_stats.py and the IB tests have access to the fixtures?
 import asyncio
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.adapters.interactive_brokers.client.client import (
-    InteractiveBrokersClient,
-)
+
 import pytest
 from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
+from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 
 
 @pytest.fixture(scope="session")

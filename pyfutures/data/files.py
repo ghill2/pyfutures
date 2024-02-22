@@ -1,7 +1,5 @@
 from __future__ import annotations
-from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 
-from nautilus_trader.model.data import capsule_to_list
 import os
 
 # import time
@@ -9,32 +7,32 @@ from pathlib import Path
 
 import pandas as pd
 import pyarrow.parquet as pq
-from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
-from nautilus_trader.model.data import BarAggregation
-from nautilus_trader.model.data import DataType
+import pytz
+from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarAggregation
 from nautilus_trader.model.data import BarSpecification
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import DataType
 from nautilus_trader.model.data import QuoteTick
+from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
-import pytz
-from pyfutures.data.writer import MultipleBarParquetWriter
-from pyfutures.data.conversion import bar_to_bar
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
+from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 from nautilus_trader.persistence.funcs import urisafe_instrument_id
-from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
-from pyfutures.data.writer import BarParquetWriter
-from pyfutures.data.writer import ParquetWriter
-from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.continuous.multiple_bar import MultipleBar
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 
-
 from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
+from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
+from pyfutures.data.conversion import bar_to_bar
+from pyfutures.data.writer import BarParquetWriter
+from pyfutures.data.writer import MultipleBarParquetWriter
+from pyfutures.data.writer import ParquetWriter
+from pyfutures.data.writer import QuoteTickParquetWriter
 
 
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:

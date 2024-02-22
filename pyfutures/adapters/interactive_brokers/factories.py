@@ -1,31 +1,22 @@
 import asyncio
-import os
-from functools import lru_cache
-import pytest
 
 # fmt: off
 from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
-
-
-from pyfutures import IB_ACCOUNT_ID
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.data import InteractiveBrokersDataClient
-from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
-from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
-from pyfutures.adapters.interactive_brokers import IB_VENUE
-
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.live.factories import LiveDataClientFactory
 from nautilus_trader.live.factories import LiveExecClientFactory
 from nautilus_trader.model.identifiers import AccountId
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.model.objects import Price
+
+from pyfutures import IB_ACCOUNT_ID
+from pyfutures.adapters.interactive_brokers import IB_VENUE
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapters.interactive_brokers.data import InteractiveBrokersDataClient
+from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
+from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 
 
 CLIENT = None

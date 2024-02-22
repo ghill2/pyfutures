@@ -1,5 +1,5 @@
-from pyfutures.tests.import_per_contract_data import read_dataframe
 from pyfutures import PACKAGE_ROOT
+from pyfutures.tests.import_per_contract_data import read_dataframe
 
 
 def test_read_dataframe():

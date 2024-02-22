@@ -1,7 +1,9 @@
 from pathlib import Path
-from pyfutures import PACKAGE_ROOT
+
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
+
+from pyfutures import PACKAGE_ROOT
 from pyfutures.data.files import ParquetFile
 
 

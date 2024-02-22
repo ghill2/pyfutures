@@ -2,7 +2,6 @@ import asyncio
 
 import pytest
 from ibapi.order import Order
-
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder

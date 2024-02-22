@@ -1,22 +1,19 @@
 import asyncio
+from collections import deque
 
 import pandas as pd
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.core.uuid import UUID4
-from collections import deque
 from nautilus_trader.common.component import Logger
+
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Duration
-
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
-from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
+from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
+from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
 class InteractiveBrokersHistoric:
@@ -249,7 +246,6 @@ class InteractiveBrokersHistoric:
             first_tick = x
             break on first tick timestamp
         """
-
         assert start_time is not None and end_time is not None
 
         results = []

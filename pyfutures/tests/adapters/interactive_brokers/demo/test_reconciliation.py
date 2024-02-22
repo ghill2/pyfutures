@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+
 """
 generate responses for each active order situation
 

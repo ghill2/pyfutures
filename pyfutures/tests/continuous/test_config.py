@@ -1,5 +1,6 @@
-from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.pyfutures.continuous.config import FuturesChainConfig
+
+from pyfutures.continuous.cycle import RollCycle
 
 
 class TestRollConfig:

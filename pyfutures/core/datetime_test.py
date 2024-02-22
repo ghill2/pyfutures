@@ -5,7 +5,6 @@ from datetime import datetime
 
 import pandas as pd
 import pytest
-
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from pytower.core.datetime import dt_to_unix_nanos_vectorized
 

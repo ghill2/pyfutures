@@ -1,10 +1,11 @@
+import datetime
+import pickle
 from datetime import time
 
 import pandas as pd
 import pytz
-import pickle
+
 from pyfutures.continuous.schedule import MarketSchedule
-import datetime
 
 
 class TestMarketSchedule:

@@ -11,22 +11,20 @@ import fastparquet
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 from nautilus_trader.core.nautilus_pyo3.persistence import DataTransformer
-from nautilus_trader.model.data import DataType
-from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import DataType
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
+from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
+from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
+from nautilus_trader.serialization.arrow.serializer import register_arrow
+
 from pyfutures.continuous.multiple_bar import MultipleBar
 from pyfutures.data.schemas import BAR_TABLE_SCHEMA
 from pyfutures.data.schemas import QUOTE_TABLE_SCHEMA
 from pyfutures.data.schemas import DataFrameSchema
-from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
-from nautilus_trader.serialization.arrow.serializer import register_arrow
 
 
 class ParquetWriter:

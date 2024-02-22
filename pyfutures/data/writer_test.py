@@ -3,28 +3,25 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 import pytest
-
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.core.uuid import UUID4
-from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.objects import Price
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from pytower.data.writer import BarParquetWriter
 from pytower.data.writer import MultiplePriceParquetWriter
 from pytower.data.writer import QuoteTickParquetWriter
-from pytower.data.writer import MultiplePriceParquetWriter
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.pyfutures.continuous.multiple_price import ContinuousPrice
-from nautilus_trader.model.objects import Price
-from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 
 class TestParquetWriter:

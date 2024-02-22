@@ -1,13 +1,15 @@
 # InteractiveBrokersDataClient Tests
-from pyfutures.tests.adapters.interactive_brokers.demo.factories import InteractiveBrokersDataEngineFactory
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-import pytest
 import asyncio
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 
+import pytest
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.tests.adapters.interactive_brokers.demo.factories import InteractiveBrokersDataEngineFactory
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+
 
 init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -52,7 +54,6 @@ def test_data_forex_load_start(client, msgbus, cache, clock):
         currenct = "GBP"
 
     """
-
     data_client_config = InteractiveBrokersDataClientConfig(
         instrument_provider=InteractiveBrokersInstrumentProviderConfig(load_ids=["EUR.GBP=CASH.IDEALPRO"])
     )

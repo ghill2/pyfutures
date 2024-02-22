@@ -1,17 +1,17 @@
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.component import Logger
-from nautilus_trader.common.providers import InstrumentProvider
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-
 from decimal import Decimal
-from nautilus_trader.model.identifiers import Symbol
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.instruments import Instrument
-from nautilus_trader.model.objects import Price
-from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.objects import Currency
+
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import Logger
+from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.instruments import Instrument
+from nautilus_trader.model.objects import Currency
+from nautilus_trader.model.objects import Quantity
+
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 class UniverseInstrumentProvider(InstrumentProvider):

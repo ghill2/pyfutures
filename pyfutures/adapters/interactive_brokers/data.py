@@ -1,20 +1,20 @@
 import asyncio
 
 # fmt: off
-
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
 from nautilus_trader.live.data_client import LiveMarketDataClient
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId
-from nautilus_trader.common.component import MessageBus
+
+from pyfutures.adapters.interactive_brokers import IB_VENUE
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers import IB_VENUE
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
-from nautilus_trader.common.config import NautilusConfig
+
 
 # fmt: on
 

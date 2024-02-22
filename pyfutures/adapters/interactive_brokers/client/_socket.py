@@ -1,16 +1,9 @@
 import asyncio
-import struct
-import sys
-
-from nautilus_trader.common.component import Logger
-
 from collections.abc import Coroutine
 
-from ibapi import comm
-from ibapi.wrapper import EWrapper
-from typing import ValuesView
-from typing import Coroutine
 from eventkit import Event
+from ibapi import comm
+from nautilus_trader.common.component import Logger
 
 
 class Socket(asyncio.Protocol):
@@ -63,7 +56,7 @@ class Socket(asyncio.Protocol):
 
         self.transport, _ = await self._loop.create_connection(lambda: self, self._host, self._port)
 
-        self._log.debug(f"Socket connected")
+        self._log.debug("Socket connected")
 
     def isConnected(self):
         return self.transport is not None

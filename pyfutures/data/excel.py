@@ -1,6 +1,6 @@
-from openpyxl import Workbook
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 
 def save_excel(df: list[dict], path: Path) -> None:

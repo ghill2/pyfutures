@@ -1,14 +1,14 @@
-import json
 import time
 from pathlib import Path
-from dotenv import dotenv_values
-from selenium.webdriver.chrome.service import Service
-from selenium import webdriver
-from selenium.webdriver import ChromeOptions
-from selenium.webdriver.common.proxy import Proxy, ProxyType
+
 import requests
+from dotenv import dotenv_values
+from selenium import webdriver
+from selenium.webdriver.common.proxy import Proxy
+from selenium.webdriver.common.proxy import ProxyType
 
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+
 
 PROXY_EMAIL = dotenv_values()["PROXY_EMAIL"]
 PROXY_PASSWORD = dotenv_values()["PROXY_PASSWORD"]
@@ -30,12 +30,10 @@ class ScrapeInstrumentHtml:
         universe = IBTestProviderStubs.universe_dataframe()
 
         import geckodriver_autoinstaller
-        from selenium import webdriver
 
         geckodriver_autoinstaller.install()  # Check if the current version of geckodriver exists
         # and if it doesn't exist, download it automatically,
         # then add geckodriver to path
-        from geckodriver_autoinstaller.utils import get_geckodriver_path
 
         # from geckodriver_autoinstaller import get_geckodriver_filename
         # Initialize Firefox WebDriver with proxy settings

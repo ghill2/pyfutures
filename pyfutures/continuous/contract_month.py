@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+
 MONTH_LIST = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
 
 """

@@ -1,32 +1,32 @@
 import pathlib
-from datetime import datetime
+import re
 from collections import namedtuple
-import pandas as pd
+from datetime import datetime
 from pathlib import Path
-from ibapi.contract import Contract as IBContract
+
+import pandas as pd
 import pytz
-from pyfutures.adapters.interactive_brokers.parsing import create_contract
+from ibapi.contract import Contract as IBContract
+from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.enums import BarAggregation
+from nautilus_trader.model.functions import bar_aggregation_to_str
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Venue
-from pyfutures import PACKAGE_ROOT
-from nautilus_trader.model.enums import BarAggregation
-from pyfutures.data.files import ParquetFile
-from pyfutures.continuous.chain import ContractChain
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
-from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.model.objects import Currency
-from pyfutures.continuous.config import ContractChainConfig
-from pyfutures.continuous.schedule import MarketSchedule
-from nautilus_trader.test_kit.providers import TestInstrumentProvider
-from nautilus_trader.model.enums import AssetClass
-from pyfutures.continuous.cycle import RollCycle
-from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.functions import bar_aggregation_to_str
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
-import re
+from pyfutures import PACKAGE_ROOT
+from pyfutures.adapters.interactive_brokers.parsing import create_contract
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.schedule import MarketSchedule
+from pyfutures.data.files import ParquetFile
+
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
@@ -360,7 +360,7 @@ class IBTestProviderStubs:
         glob: str,
     ) -> ParquetFile:
         paths = list(parent.glob(glob))
-        paths = list(sorted(paths))
+        paths = sorted(paths)
         files = list(map(ParquetFile.from_path, paths))
         if len(files) == 0:
             raise RuntimeError(f"Missing files for {glob}")

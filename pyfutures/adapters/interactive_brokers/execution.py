@@ -8,11 +8,9 @@ from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 
 # fmt: off
-
-
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import MessageBus
 from nautilus_trader.core.correctness import PyCondition
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.rust.common import LogColor
@@ -20,11 +18,10 @@ from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
 from nautilus_trader.execution.messages import SubmitOrder
+from nautilus_trader.execution.reports import FillReport
 from nautilus_trader.execution.reports import OrderStatusReport
 from nautilus_trader.execution.reports import PositionStatusReport
-from nautilus_trader.execution.reports import FillReport
 from nautilus_trader.live.execution_client import LiveExecutionClient
-from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.enums import AccountType
 from nautilus_trader.model.enums import LiquiditySide
@@ -39,25 +36,24 @@ from nautilus_trader.model.identifiers import ClientOrderId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import TradeId
 from nautilus_trader.model.identifiers import VenueOrderId
+from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Money
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.orders.base import Order
-from nautilus_trader.common.component import MessageBus
+
+from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.client import IBErrorEvent
 from pyfutures.adapters.interactive_brokers.client.client import IBExecutionEvent
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
 from pyfutures.adapters.interactive_brokers.client.client import IBOrderStatusEvent
 from pyfutures.adapters.interactive_brokers.client.client import IBPositionEvent
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.parsing import ib_quote_tick_to_nautilus_quote_tick
 from pyfutures.adapters.interactive_brokers.parsing import nautilus_order_to_ib_order
 from pyfutures.adapters.interactive_brokers.parsing import order_event_to_order_status_report
 from pyfutures.adapters.interactive_brokers.parsing import order_side_to_order_action
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
-from pyfutures import IB_ACCOUNT_ID
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
 
 
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
@@ -73,7 +69,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         instrument_provider: InteractiveBrokersInstrumentProvider,
         ibg_client_id: int,
     ):
-        
+
         super().__init__(
             loop=loop,
             client_id=ClientId(IB_VENUE.value),
@@ -92,7 +88,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         )
 
         self._client: InteractiveBrokersClient = client
-        
+
         self._set_account_id(account_id)
         # self._account_summary_loaded: asyncio.Event = asyncio.Event()
 
@@ -102,12 +98,12 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         self._client.open_order_events += self.open_order_callback
 
         # self._log._is_bypassed = True
-    
+
     async def _connect(self):
-        
+
         if self._client.connection.is_connected:
             await self._client.connect()
-            
+
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
         return self._instrument_provider
@@ -193,8 +189,8 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         #     else Quantity.from_str(str(event.totalQuantity))
         # )
         total_qty = Quantity.from_str(str(event.totalQuantity))
-        
-        
+
+
         # price = (
         #     None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
         # )

@@ -1,15 +1,14 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.contract_month import ContractMonth
-import pandas as pd
 from pathlib import Path
-from pyfutures.continuous.contract_month import ContractMonth
-from pathlib import Path
-import pandas as pd
+
 import joblib
+import pandas as pd
 from nautilus_trader.core.datetime import unix_nanos_to_dt
+
+from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.chain import TestContractProvider
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+
 
 OUT_FOLDER = Path("/Users/g1/Desktop/calendars")
 

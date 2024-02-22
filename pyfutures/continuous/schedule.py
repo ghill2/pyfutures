@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import datetime
+from typing import Annotated
+
 import pandas as pd
 import pytz
 from msgspec import Meta
-from typing import Annotated
-import datetime
+
 
 # An integer constrained to values < 0
 NegativeInt = Annotated[int, Meta(lt=0)]

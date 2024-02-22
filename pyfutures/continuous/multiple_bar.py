@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import pyarrow as pa
-
 from nautilus_trader.core.correctness import PyCondition
 from nautilus_trader.core.data import Data
-from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.model.objects import Price
-from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
+
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class MultipleBar(Data):

@@ -1,17 +1,16 @@
 from dataclasses import dataclass
-import pandas as pd
-from datetime import datetime
 
-from nautilus_trader.core.uuid import UUID4
-from pyfutures.continuous.config import ContractChainConfig
-from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from nautilus_trader.model.identifiers import InstrumentId
+import pandas as pd
+from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
+
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.multiple_bar import MultipleBar
-from nautilus_trader.common.actor import Actor
 
 
 @dataclass

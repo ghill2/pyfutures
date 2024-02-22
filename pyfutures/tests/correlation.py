@@ -1,16 +1,13 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-
-import time
-import joblib
 import gc
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.data.files import ParquetFile
-import pandas as pd
-from pyfutures.continuous.adjusted import AdjustedPrices
-from pathlib import Path
-from nautilus_trader.model.enums import BarAggregation
-import polars as pl
 import itertools
+import time
+from pathlib import Path
+
+import joblib
+import pandas as pd
+from nautilus_trader.model.enums import BarAggregation
+
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:

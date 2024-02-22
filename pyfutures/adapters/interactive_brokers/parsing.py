@@ -3,26 +3,23 @@ from decimal import Decimal
 
 import pandas as pd
 import pytz
+from ibapi.common import BarData
+from ibapi.common import HistoricalTickBidAsk
 
 # from ibapi.common import UNSET_DECIMAL
 # from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order as IBOrder
-from ibapi.common import BarData
-from ibapi.common import HistoricalTickBidAsk
-
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.reports import OrderStatusReport
-from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.enums import OrderSide
-
 from nautilus_trader.model.enums import OrderStatus
 from nautilus_trader.model.enums import OrderType
 from nautilus_trader.model.enums import TimeInForce
@@ -37,9 +34,11 @@ from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import VenueOrderId
 from nautilus_trader.model.instruments import FuturesContract
 from nautilus_trader.model.instruments import Instrument
+from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.orders.base import Order
+
 from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 from pyfutures.continuous.contract_month import ContractMonth

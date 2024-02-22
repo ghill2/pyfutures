@@ -1,20 +1,16 @@
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import Logger
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.cache.cache import Cache
-
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-import logging
 import asyncio
-import functools
 import types
 
-
 from ibapi.contract import Contract
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+
 
 init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -42,7 +38,6 @@ init_logging(level_stdout=LogLevel.DEBUG)
 #
 
 
-from functools import wraps
 
 
 def wrapper(method):

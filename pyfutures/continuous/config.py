@@ -1,15 +1,14 @@
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.common.config import NonNegativeInt
-from pyfutures.continuous.cycle import RollCycle
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.schedule import MarketSchedule
-from nautilus_trader.common.config import NautilusConfig
-
-
-from typing import Annotated
+from typing import Annotated, Literal
 
 from msgspec import Meta
-from typing import Annotated, Literal
+from nautilus_trader.common.config import NautilusConfig
+from nautilus_trader.common.config import NonNegativeInt
+from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.schedule import MarketSchedule
+
 
 # An integer constrained to values <= 0
 NonPositiveInt = Annotated[int, Meta(le=0)]

@@ -1,32 +1,31 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
-from pyfutures import PACKAGE_ROOT
-from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
-from nautilus_trader.model.data import capsule_to_list
-from pyfutures.continuous.providers import TestContractProvider
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import MultipleData
-from pyfutures import PACKAGE_ROOT
-from nautilus_trader.portfolio.portfolio import Portfolio
-from nautilus_trader.model.data import BarType
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.clock import TestClock
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import MessageBus
+from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.config import DataEngineConfig
+from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
+from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.data.engine import DataEngine
-import pandas as pd
-from pyfutures.continuous.chain import ContractChain
-from nautilus_trader.backtest.data_client import BacktestMarketDataClient
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.identifiers import ClientId
-from pyfutures.continuous.config import ContractChainConfig
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.portfolio.portfolio import Portfolio
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures import PACKAGE_ROOT
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.data import MultipleData
+from pyfutures.continuous.providers import TestContractProvider
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 class TestMultipleData:
@@ -101,7 +100,7 @@ class TestMultipleData:
         for chunk in session.to_query_result():
             self.bars.extend(capsule_to_list(chunk))
 
-        self.bars = list(sorted(self.bars, key=lambda x: x.ts_init))
+        self.bars = sorted(self.bars, key=lambda x: x.ts_init)
 
         self.instrument_provider = TestContractProvider(
             approximate_expiry_offset=self.chain_config.approximate_expiry_offset,

@@ -1,6 +1,4 @@
-import pytest
 from pyfutures.stats.stats import Stats
-import asyncio
 
 
 def test_stats(client):

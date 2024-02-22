@@ -1,43 +1,19 @@
-from ibapi.contract import ContractDetails
-from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
-from pyfutures.tests.adapters.interactive_brokers.test_kit import (
-    IBTestProviderStubs as PyfuturesTestProviderStubs,
-)
-from pprint import pprint
 import asyncio
 import json
 import pickle
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
-import pytz
-from nautilus_trader.adapters.interactive_brokers.common import (
-    IBContract,
-)
-from nautilus_trader.adapters.interactive_brokers.historic.client import (
-    HistoricInteractiveBrokersClient,
-)
-from nautilus_trader.common.component import Logger
-from nautilus_trader.common.enums import LogColor
-
-from pyfutures.tests.adapters.interactive_brokers.test_kit import (
-    IBTestProviderStubs as PyfuturesTestProviderStubs,
-)
-from dotenv import dotenv_values
-import pandas as pd
-import time
 import requests
+from dotenv import dotenv_values
+from nautilus_trader.adapters.interactive_brokers.common import IBContract
+from nautilus_trader.common.component import Logger
 
-from pyfutures.adapters.interactive_brokers.client.client import (
-    InteractiveBrokersClient,
-)
-
-
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
 
 
 logger = Logger(name="stats")
@@ -66,7 +42,6 @@ class Stats:
         gets contract_details from a pickle file in local folder
         or get from IB api if the pickle file does not exist
         """
-
         outpath = Path(self.parent_out / "details" / f"{contract.exchange}-{contract.symbol}.pickle")
         outpath.parent.mkdir(parents=True, exist_ok=True)
         if outpath.exists():
@@ -90,7 +65,7 @@ class Stats:
 
         if outpath.exists():
             print("-----> Getting FX Rates from file...")
-            with open(outpath, "r") as f:
+            with open(outpath) as f:
                 return json.load(f)
         # get for the quote_home_xrate value of the stats
         currencies = list(set([f"{r.contract.currency}GBP" for r in rows]))
@@ -136,9 +111,9 @@ class Stats:
         outpath = self.parent_out / "exchange_info" / f"{exchange}-{symbol}.html"
         outpath.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with open(outpath, "r") as f:
+            with open(outpath) as f:
                 html = f.read()
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             print("-----> Getting Contract Price from Web...")
             response = requests.get(url)
             # Raise an exception for non-200 status codes
@@ -168,9 +143,9 @@ class Stats:
         # load the data that already exists
         outpath = Path(self.parent_out / "fees_contract_prices.py")
         try:
-            with open(outpath, "r") as f:
+            with open(outpath) as f:
                 prices = json.load(f)
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             prices = {}
 
         for r, detail in zip(rows, details):
@@ -234,7 +209,6 @@ class Stats:
             - non NA exchange clearing_fees, contract currency, percent (SGX Single Stock Futures)
 
         """
-
         # save the unprocessed fees
         outpath = Path(self.parent_out / "fees_data.py")
         with open(outpath, "w") as f:

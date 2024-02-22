@@ -1,23 +1,21 @@
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
 import asyncio
 import json
-
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
-from pytower import PACKAGE_ROOT
 from pathlib import Path
 
 import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
-
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from unittest.mock import Mock
-from pyfutures.adapters.interactive_brokers.client.objects import ClientException
-
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from pytower import PACKAGE_ROOT
+
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
+from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+
 
 init_logging(level_stdout=LogLevel.WARNING)
 
@@ -79,11 +77,6 @@ async def test_request_last_quote_tick_universe(client):
         print(row.trading_class, row.exchange)
 
 
-from pyfutures.adapters.interactive_brokers.client.objects import IBBar
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Duration
-from pyfutures.adapters.interactive_brokers.enums import Frequency
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 
 
 @pytest.mark.asyncio()

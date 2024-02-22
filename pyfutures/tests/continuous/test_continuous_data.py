@@ -5,22 +5,23 @@ from unittest.mock import Mock
 from nautilus_trader import PACKAGE_ROOT
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.clock import TestClock
+from nautilus_trader.common.component import Logger
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.component import Logger
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 from nautilus_trader.core.nautilus_pyo3.persistence import NautilusDataType
 from nautilus_trader.data.engine import DataEngine
-from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.config import FuturesChainConfig
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import MultipleData
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.objects import Price
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures.continuous.chain import FuturesChain
+from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.data import MultipleData
 
 
 class TestContinuousData:

@@ -1,8 +1,10 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
+
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
-from dataclasses import dataclass
 
 
 class RollCycle:
@@ -135,7 +137,7 @@ class RollCycle:
                 yield start
                 start = self.next_month(start)
         if direction == -1:
-            raise NotImplementedError()  # TODO
+            raise NotImplementedError  # TODO
 
     def __getstate__(self):
         return (self.value, self._skip_months)
@@ -225,7 +227,7 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.next_month(current=current)
 
-        raise RuntimeError()
+        raise RuntimeError
 
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         for i, r in enumerate(self.ranges):
@@ -237,7 +239,7 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.previous_month(current=current)
 
-        raise RuntimeError()
+        raise RuntimeError
 
 
 # from abc import ABC, abstractmethod

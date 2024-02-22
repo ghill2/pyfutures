@@ -1,21 +1,15 @@
 # from pyfutures.adapters.interactive_brokers.client.objects import IBFuturesInstrument
 import asyncio
-import json
-from pathlib import Path
+from unittest.mock import Mock
 
-import pandas as pd
 import pytest
-from ibapi.contract import Contract as IBContract
-
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
 from pyfutures.continuous.chain import FuturesChain
-from pyfutures.continuous.chain import ContractId
-from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from unittest.mock import Mock
 
 
 @pytest.mark.asyncio()

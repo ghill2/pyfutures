@@ -5,12 +5,13 @@ import json
 
 import pandas as pd
 import pytz
-
 from nautilus_trader.model.identifiers import Symbol
+
 from pyfutures import PACKAGE_ROOT
+from pyfutures.schedule.factory import MarketScheduleFactory
 from pyfutures.schedule.schedule import MarketSchedule
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.schedule.factory import MarketScheduleFactory
+
 
 DAY_NAME_TO_INT = {"Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6}
 # https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568

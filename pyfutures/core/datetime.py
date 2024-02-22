@@ -22,8 +22,6 @@ def timedelta_to_nanos(td):
     )
 
 
-import numpy as np
-import pandas as pd
 
 
 def dt_to_unix_nanos_vectorized(datetimes: pd.Series):

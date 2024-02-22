@@ -1,16 +1,10 @@
 import asyncio
-import struct
-import sys
 import functools
-from nautilus_trader.common.component import Logger
-
+import socket
 from collections.abc import Coroutine
 
 from ibapi import comm
-from ibapi.wrapper import EWrapper
-from typing import ValuesView
-from typing import Coroutine
-import socket
+from nautilus_trader.common.component import Logger
 
 
 class Socket(asyncio.Protocol):

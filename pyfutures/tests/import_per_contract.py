@@ -1,22 +1,20 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.enums import BarAggregation
-from nautilus_trader.model.identifiers import Symbol
-from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import Bar
-from pyfutures.data.writer import BarParquetWriter
-from pyfutures.data.portara import PortaraData
-from pyfutures.data.files import ParquetFile
-from nautilus_trader.model.data import Bar
-from nautilus_trader.model.data import QuoteTick
-from pyfutures.data.writer import QuoteTickParquetWriter
 from pathlib import Path
-import pandas as pd
-import numpy as np
-import joblib
 
+import joblib
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import QuoteTick
+from nautilus_trader.model.enums import BarAggregation
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Symbol
+
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.data.files import ParquetFile
+from pyfutures.data.portara import PortaraData
+from pyfutures.data.writer import BarParquetWriter
+from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 def process(path: Path, row: dict) -> None:
@@ -81,7 +79,6 @@ def process_as_ticks(file: ParquetFile, row: tuple) -> None:
     """
     Export the bar parquet files as QuoteTick objects
     """
-
     df = file.read(
         bar_to_quote=True,
     )
@@ -114,7 +111,7 @@ def func_gen_import_minute_and_hour():
     for row in rows:
         files_d1 = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        paths = list(sorted(set(files_d1 + files_m1)))
+        paths = sorted(set(files_d1 + files_m1))
         for path in paths:
             yield joblib.delayed(process)(path, row)
 

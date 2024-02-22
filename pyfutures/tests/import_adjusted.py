@@ -1,17 +1,15 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.data.files import ParquetFile
-from pyfutures.continuous.adjusted import AdjustedPrices
 from collections import namedtuple
-
 from pathlib import Path
-import pandas as pd
-import pytest
-import numpy as np
+
 import joblib
 from nautilus_trader.model.enums import BarAggregation
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
+from pyfutures.continuous.adjusted import AdjustedPrices
+from pyfutures.data.files import ParquetFile
 from pyfutures.tests.adapters.interactive_brokers.test_kit import ADJUSTED_PRICES_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+
 
 OUT_FOLDER = ADJUSTED_PRICES_FOLDER
 
@@ -21,7 +19,7 @@ def process(
     row: namedtuple,
 ) -> None:
     # create adusted prices
-    paths = list(sorted(paths))
+    paths = sorted(paths)
 
     files = {
         BarAggregation.DAY: ParquetFile.from_path(paths[0]),
@@ -32,7 +30,7 @@ def process(
     multiple_prices = []
     for file in files.values():
         multiple_prices.extend(file.read_objects())
-    multiple_prices = list(sorted(multiple_prices, key=lambda x: x.ts_init))
+    multiple_prices = sorted(multiple_prices, key=lambda x: x.ts_init)
 
     adjusted = {
         BarAggregation.DAY: AdjustedPrices(
@@ -64,7 +62,7 @@ def process(
         elif price.bar_type.spec.aggregation == BarAggregation.MINUTE:
             adjusted[BarAggregation.MINUTE].handle_price(price)
         else:
-            raise RuntimeError()
+            raise RuntimeError
 
     # write
     path = OUT_FOLDER / f"{row.trading_class}_adjusted.parquet"

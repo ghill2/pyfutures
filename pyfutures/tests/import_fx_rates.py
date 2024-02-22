@@ -1,18 +1,15 @@
-import requests
-from dotenv import dotenv_values
-import yfinance as yf
-import pandas as pd
 import time
-from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG_FOLDER
-from pyfutures.data.files import ParquetFile
-from pyfutures.data.writer import QuoteTickParquetWriter
+from pathlib import Path
+
+import pandas as pd
+import yfinance as yf
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.objects import Price
-from nautilus_trader.model.objects import Currency
-from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.identifiers import InstrumentId
-from pathlib import Path
+
+from pyfutures.data.files import ParquetFile
+from pyfutures.data.writer import QuoteTickParquetWriter
+from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG_FOLDER
 from pyfutures.tests.import_tradermade import TRADERMADE_SYMBOLS
 
 
@@ -55,7 +52,7 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
         price_precision=price_precision,
         size_precision=1,
     )
-    print(f"Writing {str(file.path)}...")
+    print(f"Writing {file.path!s}...")
     writer.write_dataframe(df)
 
 

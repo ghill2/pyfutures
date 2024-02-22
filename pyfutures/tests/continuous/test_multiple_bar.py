@@ -1,16 +1,15 @@
 import pickle
 
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.multiple_bar import MultipleBar
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
-from nautilus_trader.test_kit.stubs.data import TestDataStubs
-from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import Bar
+
+from pyfutures.continuous.multiple_bar import MultipleBar
 
 
 class TestMultipleBar:
@@ -127,7 +126,7 @@ class TestMultipleBar:
             "carry_ts_init": 0,
             "ts_event": 0,
             "ts_init": 0,
-        }  # noqa
+        }
 
     def test_from_dict_returns_expected_price(self):
         # Arrange, Act

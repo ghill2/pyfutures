@@ -16,36 +16,32 @@ from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport as IBCommissionReport
 from ibapi.common import BarData
+from ibapi.common import HistoricalTickBidAsk
+from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import ListOfHistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalTickLast
-from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import OrderId
-from ibapi.common import HistoricalTickBidAsk
 from ibapi.common import TickAttribBidAsk
 from ibapi.common import TickerId
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.decoder import Decoder
-from pyfutures.adapters.interactive_brokers.enums import Frequency
 from ibapi.execution import Execution as IBExecution
 from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
-
-
 from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import Component
-from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
-from nautilus_trader.core.uuid import UUID4
+from nautilus_trader.model.identifiers import ClientId
+
 from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import ClientRequest
 from pyfutures.adapters.interactive_brokers.client.objects import ClientSubscription
-from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBErrorEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBOpenOrderEvent
@@ -56,12 +52,13 @@ from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
+from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
 class InteractiveBrokersClient(Component, EWrapper):
-    
+
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
@@ -113,7 +110,6 @@ class InteractiveBrokersClient(Component, EWrapper):
         for name in names:
             if "ibapi" in name:
                 logging.getLogger(name).setLevel(api_log_level)
-                pass
 
         self._request_timeout_seconds = request_timeout_seconds
 
@@ -133,7 +129,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-        
+
 
     @property
     def cache(self) -> Cache:
@@ -146,7 +142,7 @@ class InteractiveBrokersClient(Component, EWrapper):
     @property
     def requests(self) -> list[ClientRequest]:
         return self._requests.values()
-    
+
     @property
     def connection(self) -> Connection:
         return self._conn
@@ -156,10 +152,10 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     async def reset(self) -> None:
         self._conn._reset()
-    
+
     async def connect(self) -> None:
         await self._conn.connect()
-    
+
     async def _handle_msg(self, msg: bytes) -> None:
         # self._log.debug(repr(msg))
         fields = comm.read_fields(msg)
@@ -205,7 +201,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         return request
 
     async def _wait_for_request(self, request: ClientRequest) -> Any:
-        
+
         try:
             await asyncio.wait_for(request, timeout=request.timeout_seconds)
         except asyncio.TimeoutError:
@@ -250,30 +246,30 @@ class InteractiveBrokersClient(Component, EWrapper):
             # disallow warnings to set the result of a pending request
             self._log.warning(f"{errorCode}: {errorString}")
             return
-        
+
         request = self._requests.get(reqId)
         if request is None:
             self.error_events.emit(event)
             return  # no response found for request_id
 
         exception = ClientException(code=errorCode, message=errorString)
-        
+
         request.set_result(exception)  # set_exception does not stop awaiting?
-    
+
     ################################################################################################
     # Market Data Type
-    
+
     async def request_market_data_type(self, market_data_type: int):
         """
-        	by default only real-time (1) market data is enabled sending
-            1 (real-time) disables frozen, delayed and delayed-frozen market data sending
-            2 (frozen) enables frozen market data sending
-            3 (delayed) enables delayed and disables delayed-frozen market data sending
-            4 (delayed-frozen) enables delayed and delayed-frozen market data
+        by default only real-time (1) market data is enabled sending
+           1 (real-time) disables frozen, delayed and delayed-frozen market data sending
+           2 (frozen) enables frozen market data sending
+           3 (delayed) enables delayed and disables delayed-frozen market data sending
+           4 (delayed-frozen) enables delayed and delayed-frozen market data
         """
         self._client.reqMarketDataType(marketDataType=market_data_type)
         await asyncio.sleep(1)  # no reliable way to confirm type has been changed
-        
+
     # def marketDataType(self, reqId:TickerId, marketDataType:int):
     #     """TWS sends a marketDataType(type) callback to the API, where
     #     type is set to Frozen or RealTime, to announce that market data has been
@@ -291,7 +287,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     ################################################################################################
     # reqMktData
-        
+
     async def request_market_data(
         self,
         ticker_id: int,
@@ -306,9 +302,9 @@ class InteractiveBrokersClient(Component, EWrapper):
             regulatorySnaphsot=False,
             mktDataOptions=[],
         )
-        
 
-        
+
+
     ################################################################################################
     # Order Execution
 
@@ -337,7 +333,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         return await self._wait_for_request(request)
 
     async def request_last_contract_month(self, contract: IBContract) -> str:
-        
+
         self._log.debug(
             f"Requesting last contract month for: {contract.symbol}, {contract.tradingClass}",
         )
@@ -345,24 +341,24 @@ class InteractiveBrokersClient(Component, EWrapper):
         details_list = await self.request_contract_details(contract)
 
         return details_list[-1].contractMonth
-    
+
     async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails | None:
-        
+
         self._log.debug(
             f"Requesting front contract for: {contract.symbol}, {contract.tradingClass}",
         )
-        
+
         details_list = await self.request_contract_details(contract)
-        
+
         if len(details_list) == 0:
             return None
-        
+
         return details_list[0]
-    
+
     async def request_front_contract(self, contract: IBContract) -> IBContract:
         details: IBContractDetails = await self.request_front_contract_details(contract)
         return details.contract
-        
+
     def contractDetails(
         self,
         reqId: int,
@@ -381,14 +377,14 @@ class InteractiveBrokersClient(Component, EWrapper):
         request.data.append(contractDetails)
 
     def contractDetailsEnd(self, reqId: int):
-        
+
         self._log.debug("contractDetailsEnd")
-        
+
         request = self._requests.get(reqId)
         if request is None:
             self._log.error(f"No request found for {reqId}")
             return
-        
+
         request.set_result(
             sorted(request.data, key=lambda x: x.contractMonth)
         )
@@ -406,10 +402,10 @@ class InteractiveBrokersClient(Component, EWrapper):
                 bar_size=bar_size,
                 what_to_show=what_to_show,
                 duration=self._get_appropriate_duration(bar_size),
-                
+
         )
         return bars[-1] if len(bars) > 0 else None
-    
+
     @staticmethod
     def _get_appropriate_duration(bar_size: BarSize) -> Duration:
         """
@@ -439,7 +435,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             return Duration(step=3600, freq=Frequency.SECOND)
         else:
             raise ValueError("TODO: Unsupported duration")
-        
+
     async def request_bars(
         self,
         contract: IBContract,
@@ -450,22 +446,22 @@ class InteractiveBrokersClient(Component, EWrapper):
         use_rth: bool = True,
         timeout_seconds: int | None = None,
     ) -> list[BarData]:
-        
+
         request: ClientRequest = self._create_request(
             data=[],
             timeout_seconds=timeout_seconds,
         )
-        
+
         if end_time is None:
             end_time = ""
         else:
             end_time = end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S")
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
-        
+
         if duration is None:
             duration = self._get_appropriate_duration(bar_size)
-            
+
         self._client.reqHistoricalData(
             reqId=request.id,
             contract=contract,
@@ -489,7 +485,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         bar.timestamp = parse_datetime(bar.date)
         request.data.append(bar)
-        
+
 
     def historicalDataEnd(self, reqId: int, start: str, end: str):  # : Override the EWrapper
         request = self._requests.get(reqId)
@@ -932,7 +928,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             use_rth=use_rth,
         )
         return None if len(quotes) == 0 else quotes[0]
-        
+
     async def request_quote_ticks(
         self,
         contract: IBContract,
@@ -941,7 +937,6 @@ class InteractiveBrokersClient(Component, EWrapper):
         end_time: pd.Timestamp | None = None,
         use_rth: bool = True,
     ) -> list[HistoricalTickBidAsk]:
-        
         """
         End Date/Time: The date, time, or time-zone entered is invalid.
         The correct format is yyyymmdd hh:mm:ss xx/xxxx where yyyymmdd and xx/xxxx are optional.
@@ -952,22 +947,21 @@ class InteractiveBrokersClient(Component, EWrapper):
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
         """
-        
         # TODO assert start_time is tz-aware
         # TODO assert end_time is tz-aware
         # assert start_time is not None and end_time is not None
-        
+
         request = self._create_request(data=[])
-        
+
         if start_time is None:
             start_time = ""
         else:
             start_time = start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
-            
+
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
         end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
-        
+
         self._client.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
@@ -989,10 +983,10 @@ class InteractiveBrokersClient(Component, EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-        
+
         for tick in ticks:
             tick.timestamp = parse_datetime(tick.time)
-            
+
         request.data.extend(ticks)
         if done:
             request.set_result(request.data)
@@ -1036,12 +1030,12 @@ class InteractiveBrokersClient(Component, EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-        
+
         for tick in ticks:
             tick.timestamp = parse_datetime(tick.time)
-            
+
         request.data.extend(ticks)
-        
+
         if done:
             request.set_result(request.data)
 
@@ -1060,7 +1054,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         request_id = self._next_req_id()
 
         if bar_size == BarSize._5_SECOND:
-            
+
             self._log.debug(
                 f"Requesting realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
             )
@@ -1132,7 +1126,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         subscription = self._requests.get(reqId)
         if subscription is None:
             return  # no subscription found for request_id
-        
+
         bar.timestamp = parse_datetime(bar.time)
         subscription.callback(bar)
 
@@ -1155,7 +1149,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         subscription = self._requests.get(reqId)
         if subscription is None:
             return  # no subscription found for request_id
-        
+
         bar = BarData()
         bar.timestamp = parse_datetime(time)
         bar.date = time
@@ -1166,7 +1160,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         bar.volume = volume
         bar.wap = wap
         bar.barCount = count
-        
+
         subscription.callback(bar)
 
     ################################################################################################
@@ -1379,14 +1373,14 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     ################################################################################################
     # Realtime historical schedule
-    
-    
+
+
     async def request_historical_schedule(
         self,
         contract: IBContract,
         durationStr: str | None = None
     ) -> ListOfHistoricalSessions:
-        
+
         request: ClientRequest = self._create_request()
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
@@ -1406,7 +1400,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         )
 
         return await self._wait_for_request(request)
-    
+
     def historicalSchedule(
         self,
         reqId: int,
@@ -1427,14 +1421,14 @@ class InteractiveBrokersClient(Component, EWrapper):
         ]
 
         df = pd.DataFrame(data, columns=["day", "start", "end"])
-        
+
         df.day = pd.to_datetime(df.day, format="%Y%m%d")
         df.start = pd.to_datetime(df.start, format="%Y%m%d-%H:%M:%S")
         df.end = pd.to_datetime(df.end, format="%Y%m%d-%H:%M:%S")
         df['timezone'] = timeZone
-        
+
         df.sort_values(by=['day', 'start'], inplace=True)
-        
+
         request.set_result(df)
 
 # request.data.extend(

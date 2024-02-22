@@ -1,17 +1,11 @@
-from dataclasses import dataclass
 
 import pandas as pd
-
-from pyfutures.continuous.config import ContractChainConfig
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RollCycle
-from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.common.providers import InstrumentProvider
-from pyfutures.continuous.config import NonPositiveInt
+from nautilus_trader.core.datetime import dt_to_unix_nanos
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
 
-from nautilus_trader.config import PositiveInt
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class TestContractProvider(InstrumentProvider):

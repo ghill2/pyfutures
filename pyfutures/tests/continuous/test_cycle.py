@@ -1,11 +1,11 @@
+import pickle
+
 import pandas as pd
 
 from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RangedRollCycle
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle import RollCycleRange
-from pyfutures.continuous.cycle import RangedRollCycle
-
-import pickle
 
 
 class TestRollCycle:

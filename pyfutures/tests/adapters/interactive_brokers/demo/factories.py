@@ -1,8 +1,11 @@
 import asyncio
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
+
 from nautilus_trader.live.data_engine import LiveDataEngine
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
+
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveDataClientFactory
+
 
 # Why not use fixtures?
 # Some tests require an engine with a custom instrument provider or data_client / exec_client config
@@ -34,8 +37,7 @@ class InteractiveBrokersDataEngineFactory:
 
 
 def create_exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) -> LiveExecutionEngine:
-    """creates an exec engine"""
-
+    """Creates an exec engine"""
     exec_engine = LiveExecutionEngine(
         loop=event_loop,
         msgbus=msgbus,

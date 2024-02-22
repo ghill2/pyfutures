@@ -1,8 +1,10 @@
-from nautilus_trader.model.enums import BarAggregation
 from io import StringIO
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from nautilus_trader.model.enums import BarAggregation
+
 
 PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")
 
@@ -21,14 +23,14 @@ class PortaraData:
             paths = list(folder.glob("*.txt")) + list(folder.glob("*.b01"))
 
         assert len(paths) > 0
-        return list(sorted(paths))
+        return sorted(paths)
 
     @staticmethod
     def read_dataframe(path: Path) -> pd.DataFrame:
         path = Path(path)
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 column_count = len(f.readline().split(","))
         except UnicodeDecodeError as e:  # corrupted file
             print(path)
@@ -86,7 +88,7 @@ class PortaraData:
         else:
             raise RuntimeError(str(path))
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             body = f.read()
 
         missing = _get_missing_rows(path)

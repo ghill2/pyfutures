@@ -1,7 +1,8 @@
-from pyfutures.continuous.chain import ContractChain
-from nautilus_trader.model.data import BarType
 from nautilus_trader.common.actor import Actor
+from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.chain import ContractChain
 
 
 class ChainActor(Actor):

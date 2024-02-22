@@ -1,10 +1,10 @@
 from __future__ import annotations
-import pandas as pd
 
 from enum import Enum
 
-from nautilus_trader.model.data import BarSpecification
+import pandas as pd
 from nautilus_trader.model.data import BarAggregation
+from nautilus_trader.model.data import BarSpecification
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.enums import bar_aggregation_to_str
 

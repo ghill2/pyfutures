@@ -1,9 +1,11 @@
+import time
+
+import pandas as pd
 import requests
 from dotenv import dotenv_values
-import yfinance as yf
-import pandas as pd
-import time
+
 from pyfutures.tests.adapters.interactive_brokers.test_kit import TRADERMADE_FOLDER
+
 
 TRADERMADE_SYMBOLS = [
     "GBPCAD",
@@ -68,7 +70,7 @@ if __name__ == "__main__":
                 df.loc[len(df)] = (timestamp, *quote.values())
 
         path.parent.mkdir(exist_ok=True, parents=True)
-        print(f"Writing {str(path)}...")
+        print(f"Writing {path!s}...")
         df.to_csv(path, index=False)
 
 

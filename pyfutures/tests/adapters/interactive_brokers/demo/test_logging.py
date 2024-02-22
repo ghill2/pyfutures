@@ -1,36 +1,27 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-import pytest
 
 
-from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveDataClientFactory
-from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
+import asyncio
+
 from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
-from nautilus_trader.adapters.interactive_brokers.common import IBContract
-from nautilus_trader.adapters.interactive_brokers.config import IBMarketDataTypeEnum
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
-from nautilus_trader.config import LiveDataEngineConfig
-from nautilus_trader.config import LiveExecEngineConfig
-from nautilus_trader.config import LoggingConfig
-from nautilus_trader.config import RoutingConfig
-from nautilus_trader.config import TradingNodeConfig
-from nautilus_trader.examples.strategies.subscribe import SubscribeStrategy
-from nautilus_trader.examples.strategies.subscribe import SubscribeStrategyConfig
-from nautilus_trader.live.node import TradingNode
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.enums import OrderSide
-from nautilus_trader.model.data import BarType
 from nautilus_trader.common import Environment
-from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.config import LiveExecEngineConfig
+from nautilus_trader.config import TradingNodeConfig
+from nautilus_trader.live.node import TradingNode
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.objects import Price
 
 #
 from pytower.tests.stubs.strategies import BuyOnBarX
-import asyncio
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveDataClientFactory
+from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
+
 
 init_logging(level_stdout=LogLevel.DEBUG)
 

@@ -1,22 +1,21 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.continuous.wrangler import MultiplePriceWrangler
-from nautilus_trader.model.enums import bar_aggregation_to_str
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.providers import TestContractProvider
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.data import MultipleData
-from nautilus_trader.model.enums import BarAggregation
-from pyfutures.continuous.multiple_bar import MultipleBar
-from pyfutures.data.writer import MultipleBarParquetWriter
-from pyfutures.data.files import ParquetFile
-from nautilus_trader.model.data import BarType
-import pandas as pd
 import joblib
 from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.enums import BarAggregation
+from nautilus_trader.model.enums import bar_aggregation_to_str
 from nautilus_trader.persistence.wranglers import BarDataWrangler
-from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
+
+from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.contract_month import MONTH_LIST
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.data import MultipleData
+from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.providers import TestContractProvider
+from pyfutures.continuous.wrangler import MultiplePriceWrangler
+from pyfutures.data.files import ParquetFile
+from pyfutures.data.writer import MultipleBarParquetWriter
+from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 def load_bars(row: dict) -> list[Bar]:
@@ -61,8 +60,7 @@ def load_bars(row: dict) -> list[Bar]:
 
     assert len(bars) > 0
 
-    bars = list(
-        sorted(
+    bars = sorted(
             bars,
             key=lambda x: (
                 x.ts_init,
@@ -70,7 +68,6 @@ def load_bars(row: dict) -> list[Bar]:
                 MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,  # forward then current bar
             ),
         )
-    )
 
     aggregations = {bar_aggregation_to_str(bar.bar_type.spec.aggregation) for bar in bars}
     # assert len(aggregations) == 3
@@ -159,7 +156,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
         end_year = prices_[-1].current_month.year
         if end_year != 2023:
             print(f"data.prices[-1].current_month.year != 2023 {row.symbol}")
-            raise RuntimeError()
+            raise RuntimeError
 
         print(f"Writing {bar_aggregation_to_str(aggregation)} prices... " f"{len(prices_)} items {path}")
         # write parquet

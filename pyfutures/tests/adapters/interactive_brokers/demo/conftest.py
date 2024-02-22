@@ -1,32 +1,24 @@
 import asyncio
-from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
 
 import pytest
-import os
-from nautilus_trader.common.component import LiveClock
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
 from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Price
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.component import MessageBus
 from nautilus_trader.portfolio.portfolio import Portfolio
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
 # fmt: off
 from pyfutures.adapters.interactive_brokers import IB_VENUE
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig, InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
-from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
+from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
 from pyfutures.tests.adapters.order_setup import OrderSetup
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -47,7 +39,7 @@ def pytest_addoption(parser):
         default="",
         help='Log path for the test',
     )
-    
+
 @pytest.fixture(scope="session")
 def instrument_id(request) -> InstrumentId:
     value = request.config.getoption('--instrument-id')
@@ -160,10 +152,6 @@ def exec_engine(event_loop, exec_client, msgbus, cache, clock, logger) -> LiveEx
     return exec_engine
 
 
-from nautilus_trader.config import InstrumentProviderConfig
-from nautilus_trader.config import LoggingConfig
-from nautilus_trader.config import TradingNodeConfig
-from nautilus_trader.live.node import TradingNode
 
 # @pytest.fixture(scope="session")
 # def trading_node() -> TradingNode:
@@ -206,7 +194,7 @@ def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:
     event_loop.run_until_complete(asyncio.sleep(1))
     yield order_setup
     event_loop.run_until_complete(order_setup.close_all())
-    
+
 # @pytest.fixture(scope="session")
 # def socket(event_loop) -> InteractiveBrokersClient:
 #     return Socket(
@@ -226,9 +214,9 @@ def order_setup(event_loop, exec_client, exec_engine) -> OrderSetup:
 # def log(request, clock, instrument_id) -> None:
 #     file_logging = request.config.getoption('--file-logging')
 #     file_log_path = request.config.getoption('--file-log-path')
-    
 
-    
+
+
 
 
 # @pytest.fixture(scope="session")

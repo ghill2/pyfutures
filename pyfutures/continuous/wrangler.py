@@ -1,19 +1,17 @@
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import MultipleData
-from nautilus_trader.portfolio.portfolio import Portfolio
-from pyfutures.continuous.contract_month import ContractMonth
+from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.component import TestClock
-from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.common.component import MessageBus
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.common.component import Logger
+from nautilus_trader.common.component import TestClock
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.data.engine import DataEngine
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from nautilus_trader.backtest.data_client import BacktestMarketDataClient
 from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.portfolio.portfolio import Portfolio
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.data import MultipleData
 from pyfutures.continuous.multiple_bar import MultipleBar
 
 

@@ -1,12 +1,13 @@
 import asyncio
-import struct
-import psutil
 import os
-from nautilus_trader.common.component import Logger
+import struct
 from collections.abc import Coroutine
+from collections.abc import ValuesView
+
+import psutil
 from ibapi import comm
 from ibapi.connection import Connection as IBConnection
-from typing import ValuesView
+from nautilus_trader.common.component import Logger
 
 
 class Connection:
@@ -57,7 +58,7 @@ class Connection:
                     previous_message = data
 
                     if data == b"":
-                        self._log.debug(f"0 bytes received from server, connect has been dropped")
+                        self._log.debug("0 bytes received from server, connect has been dropped")
                         await self._reset()
                         return
 
@@ -101,7 +102,7 @@ class Connection:
                 if self._is_ready.set():
                     continue
 
-                self._log.debug(f"Watchdog: connection has been disconnected. Reconnecting...")
+                self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
 
                 await self.connect()
 
@@ -230,7 +231,7 @@ class Connection:
             assert int(version) == 176
             self._serverVersion = version
             # send startApi message
-            self._log.debug(f"Sending startApi message...")
+            self._log.debug("Sending startApi message...")
             self._sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
         else:
             if not self._apiReady:
@@ -281,7 +282,7 @@ class Connection:
                 return True
         return False
 
-    def error(  # noqa: C901 too complex
+    def error(  # too complex
         self,
         req_id: int,
         error_code: int,

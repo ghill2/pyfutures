@@ -1,15 +1,15 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-import pytest
 import asyncio
+
+import pytest
+from nautilus_trader.cache.cache import Cache
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.cache.cache import Cache
 from nautilus_trader.model.identifiers import TraderId
+
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 # RUN THESE TESTS WITH:

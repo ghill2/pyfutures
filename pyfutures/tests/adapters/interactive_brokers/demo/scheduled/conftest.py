@@ -1,13 +1,11 @@
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
+import asyncio
+from datetime import datetime
+from datetime import timezone
+
 import pandas as pd
 import pytest
-import asyncio
-from ibapi.contract import Contract
 
-from datetime import datetime, timezone, timedelta
+from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 
 
 def future_for_timestamp(timestamp):
@@ -15,12 +13,13 @@ def future_for_timestamp(timestamp):
     Creates a future that resolves to True when the current time reaches the given timestamp.
 
     Args:
+    ----
         timestamp: A timestamp in milliseconds since the epoch or a datetime object.
 
     Returns:
+    -------
         A concurrent.futures.Future object that resolves to True when the timestamp is reached.
     """
-
     target_time = datetime.fromtimestamp(timestamp / 1000, timezone.utc)  # Convert ms to datetime
 
     def is_future_reached():

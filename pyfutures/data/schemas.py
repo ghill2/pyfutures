@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from nautilus_trader.model.objects import QUANTITY_MAX
 from numpy.dtypes import Float64DType
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 
-from nautilus_trader.model.objects import QUANTITY_MAX
 from pyfutures.continuous.multiple_bar import MultipleBar
 
 

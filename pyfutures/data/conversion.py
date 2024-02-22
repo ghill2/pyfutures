@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pandas as pd
 import pyarrow as pa
-
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.model.data import BarSpecification
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.enums import PriceType
+
 from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.schemas import BAR_TABLE_SCHEMA
 from pyfutures.data.schemas import QUOTE_TABLE_SCHEMA

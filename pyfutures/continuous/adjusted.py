@@ -1,10 +1,12 @@
-import pandas as pd
-from nautilus_trader.model.data import DataType
-from pyfutures.continuous.multiple_bar import MultipleBar
 from collections import deque
+
+import pandas as pd
+from nautilus_trader.common.actor import Actor
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
-from nautilus_trader.common.actor import Actor
+from nautilus_trader.model.data import DataType
+
+from pyfutures.continuous.multiple_bar import MultipleBar
 
 
 class AdjustedPrices(Actor):

@@ -1,11 +1,12 @@
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.data.writer import BarParquetWriter
-from nautilus_trader.model.data import Bar
-from pyfutures.data.files import ParquetFile
-from nautilus_trader.model.enums import BarAggregation
 import joblib
+from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.enums import BarAggregation
+
+from pyfutures.data.files import ParquetFile
+from pyfutures.data.writer import BarParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 def process(file: ParquetFile, row: dict) -> None:

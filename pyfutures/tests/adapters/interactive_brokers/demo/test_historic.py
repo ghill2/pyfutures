@@ -1,18 +1,9 @@
-import asyncio
 import pandas as pd
-
 import pytest
 from ibapi.contract import Contract as IBContract
-
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.common.component import Logger
 from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric

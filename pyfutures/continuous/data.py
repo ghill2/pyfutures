@@ -1,18 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
-import pandas as pd
-
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.multiple_bar import MultipleBar
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.objects import Price
+
 from pyfutures.continuous.actor import Actor
-from nautilus_trader.core.datetime import unix_nanos_to_dt
+from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.chain import RollEvent
-from nautilus_trader.model.enums import BarAggregation
+from pyfutures.continuous.multiple_bar import MultipleBar
 
 
 class MultipleData(Actor):

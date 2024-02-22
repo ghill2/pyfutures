@@ -4,9 +4,9 @@ import time
 import joblib
 import pandas as pd
 import pytest
+from nautilus_trader.model.identifiers import InstrumentId
 from pytest import ExitCode
 
-from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures.adapters.interactive_brokers.parsing import contract_to_instrument_id
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 

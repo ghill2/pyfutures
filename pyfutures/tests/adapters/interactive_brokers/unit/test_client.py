@@ -13,7 +13,6 @@ from ibapi.order import Order
 
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
-from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEvent

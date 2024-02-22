@@ -1,6 +1,8 @@
 import asyncio
 from decimal import Decimal
 
+from nautilus_trader.adapters.interactive_brokers.data import InteractiveBrokersDataClient
+from nautilus_trader.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.messages import CancelAllOrders
 from nautilus_trader.execution.messages import SubmitOrder
@@ -16,12 +18,6 @@ from nautilus_trader.model.orders import MarketOrder
 from nautilus_trader.model.orders import Order
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from nautilus_trader.adapters.interactive_brokers.data import (
-    InteractiveBrokersDataClient,
-)
-from nautilus_trader.adapters.interactive_brokers.execution import (
-    InteractiveBrokersExecutionClient,
-)
 
 
 class OrderSetup:

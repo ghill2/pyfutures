@@ -1,14 +1,12 @@
-import time
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-from pyfutures.adapters.interactive_brokers.parsing import row_to_contract
-from nautilus_trader.model.identifiers import InstrumentId
-from pyfutures.adapters.interactive_brokers.client.objects import ClientException
+from pathlib import Path
+
 import pandas as pd
 import pytest
-from pathlib import Path
 from ibapi.contract import Contract as IBContract
-from ibapi.contract import ContractDetails as IBContractDetails
+
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 @pytest.mark.asyncio()
@@ -114,7 +112,6 @@ def test_historic_schedules_with_sessions_out_of_day():
     """
     find instruments that have sessions where the start and end date is NOT within the same day
     """
-
     schedules_dir = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules")
     universe = IBTestProviderStubs.universe_dataframe()
 
