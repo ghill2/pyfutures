@@ -20,7 +20,8 @@ from pyfutures.continuous.multiple_bar import MultipleBar
 
 @dataclass
 class RollEvent:
-    bar_type: BarType
+    from_instrument_id: InstrumentId
+    to_instrument_id: InstrumentId
 
 
 class ContractChain(Strategy):
@@ -146,9 +147,17 @@ class ContractChain(Strategy):
             self._adjust_values()
         self._update_attributes(to_month=to_month)
         self._update_subscriptions()
-        self._update_position()
+        
         self._log.debug(
             f"Rolled {self.previous_contract.id} > {self.current_contract.id}"
+        )
+        
+        self.msgbus.publish(
+            topic=self.topic,
+            msg=RollEvent(
+                from_instrument_id=self.previous_contract.id,
+                to_instrument_id=self.current_contract.id,
+            ),
         )
         
     def _adjust_values(self) -> None:
@@ -175,26 +184,7 @@ class ContractChain(Strategy):
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
     
-    def _update_position(self) -> None:
-        
-        # after the contract has rolled: swap positions from the previous contract to the current contract
-        positions = self.cache.positions_open(
-            instrument_id=self.previous_contract.id,
-        )
-        if len(positions) == 0:
-            return  # nothing to do
-        
-        assert len(positions) == 1 # TODO: handle multiple positions?
-        
-        self.close_all_positions(instrument_id=self.previous_contract.id)
-        
-        order: MarketOrder = self.order_factory.market(
-            instrument_id=self.current_contract.id,
-            order_side=positions[0].side,
-            quantity=positions[0].quantity,
-            time_in_force=TimeInForce.FOK,
-        )
-        self.submit_order(order)
+    
         
     def _update_attributes(self, to_month: ContractMonth) -> None:
         
@@ -385,8 +375,4 @@ class ContractChain(Strategy):
 #     roll_date: pd.Timestamp
 
 
-        # self.msgbus.publish(
-        #     topic="events.roll",
-        #     msg=RollEvent(bar_type=self.bar_type),
-        #     # TODO determine priority
-        # )
+        

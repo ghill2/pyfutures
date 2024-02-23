@@ -14,6 +14,7 @@ from nautilus_trader.config import BacktestEngineConfig
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.model.orders import MarketOrder
 from nautilus_trader.config import DataEngineConfig
+from nautilus_trader.config import LoggingConfig
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.enums import TimeInForce
@@ -42,6 +43,7 @@ from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import TestClock
 from nautilus_trader.common.component import Logger
 from nautilus_trader.common.component import MessageBus
+from pyfutures.continuous.chain import RollEvent
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
@@ -61,10 +63,16 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 
 class TestContractChain:
     
     def setup_method(self):
+        
+        
+        init_logging(level_stdout=LogLevel.DEBUG)
+
         self.clock = TestClock()
         self.msgbus = MessageBus(
             trader_id=TestIdStubs.trader_id(),
@@ -106,6 +114,7 @@ class TestContractChain:
             bar_type=self.bar_type,
             config=self.config,
         )
+        
         self.chain.register(
             trader_id=TestIdStubs.trader_id(),
             portfolio=self.portfolio,
@@ -114,12 +123,33 @@ class TestContractChain:
             clock=self.clock,
         )
         
-        
         self.chain.start()
         self.data_engine.start()
     
-    
-    
+    def test_roll_sends_expected_roll_event(self):
+        
+        data = [
+            ("MES=MES=FUT=2021Z.SIM", "2021-12-10", 1),
+            ("MES=MES=FUT=2022H.SIM", "2021-12-10", 1),  # roll
+            ("MES=MES=FUT=2022M.SIM", "2021-12-11", 1),
+            ("MES=MES=FUT=2022H.SIM", "2021-12-11", 1),
+        ]
+        
+        events = []
+        self.msgbus.subscribe(self.chain.topic, events.append)
+        
+        bars = self._create_bars(data)
+        for i, bar in enumerate(bars):
+            
+            if i == 1:
+                assert len(events) == 0
+                
+            self.data_engine.process(bar)
+            
+            if i == 1:
+                assert len(events) == 1
+                # assert events == [RollEvent(bar_type=BarType.from_str("MES=MES=FUT.SIM-1-DAY-MID-EXTERNAL"))]
+            
     def test_roll_sets_expected_attributes(self):
         
         data = [
@@ -157,10 +187,10 @@ class TestContractChain:
         assert list(self.chain.rolls.timestamp) == [pd.Timestamp('2021-12-10', tz='UTC')]
         assert list(self.chain.rolls.to_month) == [ContractMonth("2022H")]
         
-    def test_rolls_to_start_month_on_start(self):
+    def test_roll_to_start_month_on_start(self):
         assert self.chain.current_month == self.config.start_month
         
-    def test_handle_subscriptions(self):
+    def test_roll_handles_subscriptions(self):
         
         data = [
             ("MES=MES=FUT=2021Z.SIM", "2021-12-09", 1),
@@ -193,23 +223,7 @@ class TestContractChain:
             'data.bars.MES=MES=FUT=2022M.SIM-1-DAY-MID-EXTERNAL',
         ]
     
-    def test_swap_position_on_roll(self):
-        order: MarketOrder = self.chain.order_factory.market(
-            instrument_id=InstrumentId.from_str("MES=MES=FUT=2021Z.SIM"),
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            time_in_force=TimeInForce.FOK,
-        )
-        self.chain.submit_order(order)
-        data = [
-            ("MES=MES=FUT=2022H.SIM", "2021-12-09", 10.0),
-            ("MES=MES=FUT=2021Z.SIM", "2021-12-09", 1),
-            ("MES=MES=FUT=2022H.SIM", "2021-12-10", 10.1),
-            ("MES=MES=FUT=2021Z.SIM", "2021-12-10", 2),  # roll
-        ]
-        bars = self._create_bars(data)
-        for bar in bars:
-            self.data_engine.process(bar)
+    
         
         
     def test_current_bar_history(self):
