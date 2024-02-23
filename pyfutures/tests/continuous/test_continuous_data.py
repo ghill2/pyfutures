@@ -26,6 +26,7 @@ from pyfutures.continuous.data import MultipleData
 
 class TestContinuousData:
     def setup(self):
+        
         self.clock = TestClock()
         self.logger = Logger(
             clock=TestClock(),

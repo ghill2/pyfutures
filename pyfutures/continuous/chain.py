@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections import deque
 
 import pandas as pd
 from nautilus_trader.common.actor import Actor
@@ -6,8 +7,11 @@ from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.trading import Strategy
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from nautilus_trader.model.enums import TimeInForce
 from nautilus_trader.model.data import Bar
+from nautilus_trader.model.orders.market import MarketOrder
 
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
@@ -19,7 +23,7 @@ class RollEvent:
     bar_type: BarType
 
 
-class ContractChain(Actor):
+class ContractChain(Strategy):
     def __init__(
         self,
         bar_type: BarType,
@@ -27,68 +31,64 @@ class ContractChain(Actor):
         instrument_provider: InstrumentProvider,
         raise_expired: bool = True,
         ignore_expiry_date: bool = False,
+        maxlen: int | None = None,
     ):
         super().__init__()
 
         self.hold_cycle = config.hold_cycle
         self.bar_type = bar_type
+        self.adjusted: deque[float] = deque(maxlen=maxlen)
+        self.current: deque[Bar] = deque(maxlen=maxlen)
         self.topic = f"{self.bar_type}r"
-
+        self.rolls: pd.DataFrame = pd.DataFrame(columns=["timestamp", "to_month"])
+        
         self._roll_offset = config.roll_offset
         self._instrument_id = InstrumentId.from_str(str(config.instrument_id))
         self._carry_offset = config.carry_offset
         self._priced_cycle = config.priced_cycle
         self._start_month = config.start_month
 
-        self._instrument_provider = instrument_provider
+        self.instrument_provider = instrument_provider
 
         assert self._roll_offset <= 0
         assert self._carry_offset == 1 or self._carry_offset == -1
-
+        assert self._start_month in self.hold_cycle
+        
         self._raise_expired = raise_expired
         self._ignore_expiry_date = ignore_expiry_date
-        self._rolls: tuple[pd.Timestamp, ContractMonth] = []
-        
         self._ignore_expiry_date = True  # TODO
-
-    @property
-    def rolls(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            {
-                "timestamp": [x[0] for x in self._rolls],
-                "month": [x[1] for x in self._rolls],
-            }
-        )
-
-    @property
-    def instrument_provider(self) -> InstrumentProvider:
-        return self._instrument_provider
-
+    
     def on_start(self) -> None:
+        self._roll(to_month=self._start_month)
+    
         
-        self._manage_subscriptions()
-        
-        month = self._start_month
-        if month not in self.hold_cycle:
-            month = self.hold_cycle.next_month(month)
-
-        self._roll(to_month=month)
-        
-        self.msgbus.subscribe(
-            topic=f"{self.bar_type}0",
-            handler=self.on_multiple_price,
-            # TODO determine priority
-        )
-
     def on_bar(self, bar: Bar) -> None:
         
-        is_forward_or_current = bar.bar_type == self.current_bar_type or bar.bar_type == self.forward_bar_type
-        if not is_forward_or_current:
-            return
-
+        is_current = bar.bar_type == self.current_bar_type
+        is_forward = bar.bar_type == self.forward_bar_type
+        if is_current:
+            self.adjusted.append(float(bar.close))
+            self.current.append(bar)
+            
+        if is_current or is_forward:
+            has_rolled: bool = self._attempt_roll()
+        
+        # is_current = bar.bar_type == self.current_bar_type
+        # if is_current:
+            
+        
+        # if has_rolled:
+        #     print(list(self.adjusted))
+        #     exit()
+        
+            
+    def _attempt_roll(self) -> bool:
+        
+        # roll when current_bar.timestamp == forward_bar.timestamp and inside roll window
+        
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
-
+        
         # # for debugging
         # if "DAY" in str(self.bar_type) and self.chain.current_month.value == "2008M":
         #     # self._log.debug(repr(bar))
@@ -102,50 +102,102 @@ class ContractChain(Actor):
         #     )
         
         # calculate the strategy on every current_bar
-        # roll first time current_bar and forward_bar has same timestamp and is within roll window
         
-        # strategy calculates, create new position size, submit new position size to forward contract 
+        
+        # strategy calculates, create new position size, submit new position size to forward contract
         # needs to use forward price
         # add liquid window for execution
-        
         if current_bar is None or forward_bar is None:
-            return
-
+            return False
+        
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-
-        if current_timestamp != forward_timestamp:
-            return
         
-        expiry_day = self.expiry_date.floor("D")
-        roll_date = self.roll_date
-
+        if current_timestamp != forward_timestamp:
+            return False
+        
+        # check expiry date
         if not self._ignore_expiry_date:
-            is_expired = current_timestamp >= (expiry_day + pd.Timedelta(days=1))
-            if is_expired and self._raise_expired:
-                raise ValueError(f"ContractExpired {self.bar_type}")
-
+            is_expired = current_timestamp >= (self.expiry_day + pd.Timedelta(days=1))
+            if is_expired:
+                raise ValueError("ContractExpired")
+        
         if self._ignore_expiry_date:
-            in_roll_window = current_timestamp >= roll_date
+            in_roll_window = current_timestamp >= self.roll_date
         else:
             current_day = current_timestamp.floor("D")
-            in_roll_window = (current_timestamp >= roll_date) and (current_day <= expiry_day)
-
-        if in_roll_window:
-            to_month = self.hold_cycle.next_month(self.current_month)
-            self._roll(to_month=to_month)
-            self._rolls.append((current_timestamp, to_month))
-
+            in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
+            
+        if not in_roll_window:
+            return False
+        
+        self.roll()
+        self.rolls.loc[len(self.rolls)] = (current_timestamp, self.current_month)
+        
+        return True
+            
     def roll(self):
         to_month = self.hold_cycle.next_month(self.current_month)
         self._roll(to_month=to_month)
 
-    def _roll(
-        self,
-        to_month: ContractMonth,
-    ) -> None:
+    def _roll(self, to_month: ContractMonth) -> None:
         self._log.debug(f"Rolling to month {to_month}...")
-
+        if len(self.adjusted) > 0:
+            self._adjust_values()
+        self._update_attributes(to_month=to_month)
+        self._update_subscriptions()
+        self._update_position()
+        self._log.debug(
+            f"Rolled {self.previous_contract.id} > {self.current_contract.id}"
+        )
+        
+    def _adjust_values(self) -> None:
+        current_bar = self.cache.bar(self.current_bar_type)
+        forward_bar = self.cache.bar(self.forward_bar_type)
+        adjustment_value = float(forward_bar.close) - float(current_bar.close)
+        
+        values = deque(maxlen=self.adjusted.maxlen)
+        for x in list(self.adjusted):
+            values.append(x + adjustment_value)
+        self.adjusted = values
+        
+    def _fetch_contract(self, month: ContractMonth) -> FuturesContract:
+        if self.instrument_provider.get_contract(self._instrument_id, month) is None:
+            self.instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
+        return self.instrument_provider.get_contract(self._instrument_id, month)
+    
+    def _update_subscriptions(self) -> None:
+        """
+        Updating subscriptions after the roll
+        """
+        self._log.debug("Updating subscriptions...")
+        self.unsubscribe_bars(self.previous_bar_type)
+        self.subscribe_bars(self.current_bar_type)
+        self.subscribe_bars(self.forward_bar_type)
+    
+    def _update_position(self) -> None:
+        
+        # after the contract has rolled: swap positions from the previous contract to the current contract
+        positions = self.cache.positions_open(
+            instrument_id=self.previous_contract.id,
+        )
+        if len(positions) == 0:
+            return  # nothing to do
+        
+        assert len(positions) == 1 # TODO: handle multiple positions?
+        
+        self.close_all_positions(instrument_id=self.previous_contract.id)
+        
+        order: MarketOrder = self.order_factory.market(
+            instrument_id=self.current_contract.id,
+            order_side=positions[0].side,
+            quantity=positions[0].quantity,
+            time_in_force=TimeInForce.FOK,
+        )
+        self.submit_order(order)
+        
+    def _update_attributes(self, to_month: ContractMonth) -> None:
+        
         self.current_month: ContractMonth = to_month
         self.previous_month: ContractMonth = self.hold_cycle.previous_month(self.current_month)
         self.forward_month: ContractMonth = self.hold_cycle.next_month(self.current_month)
@@ -162,67 +214,47 @@ class ContractChain(Actor):
         self.carry_contract: FuturesContract = self._fetch_contract(self.carry_month)
 
         self.expiry_date: pd.Timestamp = unix_nanos_to_dt(self.current_contract.expiration_ns)
+        self.expiry_day: pd.Timestamp = self.expiry_date.floor("D")
 
         # TODO: factor in the trading calendar
         self.roll_date: pd.Timestamp = self.expiry_date + pd.Timedelta(days=self._roll_offset)
         
-        self._manage_subscriptions()
-        
-        self.msgbus.publish(
-            topic="events.roll",
-            msg=RollEvent(bar_type=self.bar_type),
-            # TODO determine priority
-        )
-
-    def _fetch_contract(self, month: ContractMonth) -> FuturesContract:
-        if self._instrument_provider.get_contract(self._instrument_id, month) is None:
-            self._instrument_provider.load_contract(instrument_id=self._instrument_id, month=month)
-        return self._instrument_provider.get_contract(self._instrument_id, month)
-    
-    def _manage_subscriptions(self) -> None:
-        self._log.debug("Managing subscriptions...")
-
-        current_contract = self.chain.current_contract
-        forward_contract = self.chain.forward_contract
-        carry_contract = self.chain.carry_contract
-
-        if self.cache.instrument(current_contract.id) is None:
-            self.cache.add_instrument(current_contract)
-
-        if self.cache.instrument(forward_contract.id) is None:
-            self.cache.add_instrument(forward_contract)
-
-        if self.cache.instrument(carry_contract.id) is None:
-            self.cache.add_instrument(carry_contract)
-
         self.current_bar_type = BarType(
-            instrument_id=self.chain.current_contract.id,
+            instrument_id=self.current_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
 
         self.previous_bar_type = BarType(
-            instrument_id=self.chain.previous_contract.id,
+            instrument_id=self.previous_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
 
         self.forward_bar_type = BarType(
-            instrument_id=self.chain.forward_contract.id,
+            instrument_id=self.forward_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
 
         self.carry_bar_type = BarType(
-            instrument_id=self.chain.carry_contract.id,
+            instrument_id=self.carry_contract.id,
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
-
-        self.subscribe_bars(self.current_bar_type)
-        self.subscribe_bars(self.forward_bar_type)
-        self.unsubscribe_bars(self.previous_bar_type)
         
+        if self.cache.instrument(self.current_contract.id) is None:
+            self.cache.add_instrument(self.current_contract)
+
+        if self.cache.instrument(self.forward_contract.id) is None:
+            self.cache.add_instrument(self.forward_contract)
+
+        if self.cache.instrument(self.carry_contract.id) is None:
+            self.cache.add_instrument(self.carry_contract)
+    
+    
+    
+                
     # self.current_instrument_id = self._fmt_instrument_id(self._instrument_id, self.current_month)
     # self.forward_instrument_id = self._fmt_instrument_id(self._instrument_id, self.forward_month)
     # self.carry_instrument_id = self._fmt_instrument_id(self._instrument_id, self.carry_month)
@@ -351,3 +383,10 @@ class ContractChain(Actor):
 #     carry_contract: FuturesContract
 #     expiry_date: pd.Timestamp
 #     roll_date: pd.Timestamp
+
+
+        # self.msgbus.publish(
+        #     topic="events.roll",
+        #     msg=RollEvent(bar_type=self.bar_type),
+        #     # TODO determine priority
+        # )

@@ -19,7 +19,7 @@ from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersE
 from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
 from pyfutures.tests.adapters.order_setup import OrderSetup
 
-
+initialize_log
 def pytest_addoption(parser):
     parser.addoption(
         '--instrument-id',

@@ -19,11 +19,13 @@ class MarketSchedule:
         data: pd.DataFrame,
         timezone: pytz.timezone,
     ):
+        
+        self.data = data
+        
         self._name = name
         self._zoneinfo = timezone.zone
         self._timezone = timezone
 
-        self._data = data
 
         # TODO: removes duplicates
         # TODO: check for overlapping times
@@ -32,13 +34,18 @@ class MarketSchedule:
         # TODO: ensure integer index
         # TODO: ensure no missing days, close days have time 00:00 to 00:00
         # TODO: no timezone information before localizing
-
+    
+    def open_delta(self, dayofweek: int) -> pd.Timedelta:
+        open_times = self.data[self.data.dayofweek == dayofweek].open
+        open_time = min(open_times)
+        return pd.Timedelta(hours=open_time.hour, minutes=open_time.minute)
+    
     def is_open(self, now: pd.Timestamp) -> bool:
         now = now.tz_convert(self._timezone)
 
         now_time = now.time()
 
-        mask = (now_time >= self._data.open) & (now_time < self._data.close) & (now.dayofweek == self._data.dayofweek)
+        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
 
         return mask.any()
 
@@ -52,20 +59,20 @@ class MarketSchedule:
 
         dayofweek = now.dayofweek
 
-        sessions = self._data[self._data.dayofweek == dayofweek]
+        sessions = self.data[self.data.dayofweek == dayofweek]
         day_diff = 0
 
         if not sessions.empty and now_time < sessions.iloc[-1].open:
-            open_time = self._data[self._data.open > now_time].iloc[0].open
+            open_time = self.data[self.data.open > now_time].iloc[0].open
 
         else:
             while True:
                 dayofweek = (dayofweek + 1) % 7
                 day_diff += 1
-                if dayofweek not in self._data.dayofweek.values:
+                if dayofweek not in self.data.dayofweek.values:
                     continue
 
-                sessions = self._data[self._data.dayofweek == dayofweek]
+                sessions = self.data[self.data.dayofweek == dayofweek]
                 open_time = sessions.iloc[0].open
                 break
 
@@ -79,7 +86,7 @@ class MarketSchedule:
         matched = 0
         while True:
             date -= datetime.timedelta(days=1)
-            if date.weekday() in self._data.dayofweek.values:
+            if date.weekday() in self.data.dayofweek.values:
                 matched += 1
             if count == matched:
                 break
@@ -90,9 +97,9 @@ class MarketSchedule:
 
         now_time = now.time()
 
-        mask = (now_time >= self._data.open) & (now_time < self._data.close) & (now.dayofweek == self._data.dayofweek)
+        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
 
-        masked = self._data[mask]
+        masked = self.data[mask]
 
         if masked.empty:
             return None  # market closed
@@ -110,17 +117,17 @@ class MarketSchedule:
         return f"{type(self).__name__}({self._name})"
 
     def __getstate__(self):
-        return (self._name, self._data, self._timezone)
+        return (self._name, self.data, self._timezone)
 
     def __setstate__(self, state):
         self._name = state[0]
-        self._data = state[1]
+        self.data = state[1]
         self._timezone = state[2]
 
     def __eq__(self, other: MarketSchedule) -> bool:
         return (
             self._name == other._name,
-            self._data.equals(other._data),
+            self.data.equals(other.data),
             self._timezone == other._timezone,
         )
 
@@ -148,12 +155,12 @@ class MarketSchedule:
             end_date = pd.Timestamp.now()
         days = pd.date_range(start=start_date, end=end_date, freq="1D")
 
-        days = days[days.dayofweek.isin(self._data.dayofweek.values)]
+        days = days[days.dayofweek.isin(self.data.dayofweek.values)]
         days = days.tz_localize(self._timezone)
 
         df = pd.DataFrame(columns=["start", "end"])
         for day in days:
-            sessions = self._data[self._data.dayofweek == day.dayofweek]
+            sessions = self.data[self.data.dayofweek == day.dayofweek]
 
             for session in sessions.itertuples():
                 df.loc[len(df)] = (
@@ -164,7 +171,7 @@ class MarketSchedule:
 
     def to_weekly_calendar_utc(self) -> pd.DataFrame:
         startofweek = pd.Timestamp("2023-11-06")
-        df = self._data.copy()
+        df = self.data.copy()
         df["day"] = df["dayofweek"].apply(lambda i: startofweek + pd.Timedelta(days=i))
         df["open"] = df["open"].apply(lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute))
         df["close"] = df["close"].apply(lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute))

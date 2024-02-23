@@ -33,7 +33,7 @@ from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
-
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
@@ -61,7 +61,29 @@ def quotes_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.set_index("timestamp", inplace=True)
     return df
 
+def bars_to_dataframe(bars: list[Bar]) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "open": [float(b.open) for b in bars],
+            "high": [float(b.high) for b in bars],
+            "low": [float(b.low) for b in bars],
+            "close": [float(b.close) for b in bars],
+            "volume": [float(b.volume) for b in bars],
+            "timestamp": [unix_nanos_to_dt(b.ts_init) for b in bars],
+        }
+    ).set_index("timestamp")
 
+def bar_dataframe_to_quote_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "bid": df.close.values,
+            "ask": df.close.values,
+            "bid_size": df.volume.values,
+            "ask_size": df.volume.values,
+            "timestamp": df.index,
+        }
+    ).set_index("timestamp")
+    
 class ParquetFile:
     EXTENSION = ".parquet"
 

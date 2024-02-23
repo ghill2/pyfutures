@@ -40,7 +40,7 @@ PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
 MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/catalog/data/custom_multiple_bar")
 CATALOG_FOLDER = Path("/Users/g1/Desktop/catalog/")
-CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER, show_query_paths=True)
+CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER)  # , show_query_paths=True
 ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
 MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
@@ -131,12 +131,14 @@ class UniverseRow:
         )
     
     def bar_type(self, aggregation: BarAggregation) -> BarType:
-        return BarType.from_str(f"{self.base_instrument.id}-1-{aggregation}-MID-EXTERNAL")
+        aggregation = bar_aggregation_to_str(aggregation)
+        return BarType.from_str(f"{self.instrument.id}-1-{aggregation}-MID-EXTERNAL")
         
     def bar_type_for_month(self, month: ContractMonth, aggregation: BarAggregation) -> BarType:
         instrument_id = self.instrument_id_for_month(
             month=month,
         )
+        aggregation = bar_aggregation_to_str(aggregation)
         return BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
     
     def bar_files(

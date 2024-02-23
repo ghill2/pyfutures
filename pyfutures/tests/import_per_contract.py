@@ -9,20 +9,24 @@ from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.persistence.wranglers import BarDataWrangler
+from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
+from nautilus_trader.model.functions import bar_aggregation_from_str
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.portara import PortaraData
+from pyfutures.data.files import bars_to_dataframe
+from pyfutures.data.files import bar_dataframe_to_quote_dataframe
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
 from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
-def process_minute_and_day_bars(row: dict, path: Path) -> None:
+def process_daily_bars(row: dict, path: Path) -> None:
     
     month = ContractMonth(path.stem[-5:])
-    aggregation = path.parent.parent.stem
+    aggregation: BarAggregation = bar_aggregation_from_str(path.parent.parent.stem)
 
     df = PortaraData.read_dataframe(path)
     
@@ -57,19 +61,45 @@ def process_instruments(row: dict, month: ContractMonth) -> None:
         basename_template=instrument.id.value + "-{i}",
     )
     print(f"Written {instrument.id!r}....")
+
+def process_as_ticks(row: tuple, path: Path) -> None:
+    """
+    Export the bar parquet files as QuoteTick objects
+    """
+    month = ContractMonth(path.stem[-5:])
+    instrument = row.instrument_for_month(month)
     
+    bars = CATALOG.query(
+        data_cls=Bar,
+        instrument_ids=[
+            instrument.id.value,
+        ]
+    )
+    
+    df = bars_to_dataframe(bars)
+    df = bar_dataframe_to_quote_dataframe(df)
+    
+    wrangler = QuoteTickDataWrangler(
+        instrument=instrument,
+    )
+    quotes = wrangler.process(df)
+    CATALOG.write_data(
+        data=quotes,
+        basename_template=instrument.id.value + "-{i}",
+    )
+        
 rows = IBTestProviderStubs.universe_rows(
-    filter=["ECO", "DC"],
+    filter=["ECO", "DC", "MES"],
 )
 
 
-def import_minute_and_hour_bars():
+def import_daily_bars():
     for row in rows:
         paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
         # paths = sorted(set(files_d1))
         for path in paths:
-            yield joblib.delayed(process_minute_and_day_bars)(row, path)
+            yield joblib.delayed(process_daily_bars)(row, path)
 
 def import_instruments():
     for row in rows:
@@ -83,36 +113,21 @@ def import_instruments():
         }
         for month in months:
             yield joblib.delayed(process_instruments)(row, month)
+
+def import_daily_quotes():
+    for row in rows:
+        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+        # paths = sorted(set(files_d1))
+        for path in paths:
+            yield joblib.delayed(process_as_ticks)(row, path)
             
 if __name__ == "__main__":
     joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
-    joblib.Parallel(n_jobs=-1, backend="loky")(import_minute_and_hour_bars())
-    # joblib.Parallel(n_jobs=-1, backend="loky")(func_gen_minute_to_quote_tick())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_bars())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_quotes())
 
-# def process_as_ticks(file: ParquetFile, row: tuple) -> None:
-#     """
-#     Export the bar parquet files as QuoteTick objects
-#     """
-#     df = file.read(
-#         bar_to_quote=True,
-#     )
 
-#     file = ParquetFile(
-#         parent=PER_CONTRACT_FOLDER,
-#         bar_type=file.bar_type,
-#         cls=QuoteTick,
-#     )
-
-#     file.path.parent.mkdir(exist_ok=True, parents=True)
-
-#     writer = QuoteTickParquetWriter(
-#         path=file.path,
-#         instrument_id=row.instrument_id,
-#         price_precision=row.price_precision,
-#         size_precision=1,
-#     )
-
-#     writer.write_dataframe(df)
 
 
 # def process_hour(row: tuple) -> None:

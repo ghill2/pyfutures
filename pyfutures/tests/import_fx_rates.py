@@ -6,12 +6,15 @@ import yfinance as yf
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
-
+from nautilus_trader.test_kit.providers import TestInstrumentProvider
+from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
 from pyfutures.data.files import ParquetFile
+from nautilus_trader.model.identifiers import Venue
 from pyfutures.data.writer import QuoteTickParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG_FOLDER
 from pyfutures.tests.import_tradermade import TRADERMADE_SYMBOLS
-
+from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
+from nautilus_trader.model.instruments import CurrencyPair
 
 PRICE_PRECISIONS = {
     "GBPCAD": 5,  # tradermade 1987
@@ -29,31 +32,31 @@ PRICE_PRECISIONS = {
 
 
 def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
-    price_precision = PRICE_PRECISIONS[symbol]
+    # price_precision = PRICE_PRECISIONS[symbol]
 
     if str(symbol).startswith("GBP"):
         df.bid_price = 1 / df.bid_price
         df.ask_price = 1 / df.ask_price
         symbol = f"{symbol[3:6]}{symbol[:3]}"
 
-    instrument_id = InstrumentId.from_str(f"{symbol}.SIM")
-    bar_type = BarType.from_str(
-        f"{instrument_id}-1-DAY-MID-EXTERNAL",
+    instrument: CurrencyPair = TestInstrumentProvider.default_fx_ccy(symbol=symbol, venue=Venue("SIM"))
+    df.bid_price = df.bid_price.round(5)
+    df.ask_price = df.ask_price.round(5)
+    print(symbol, df)
+    print(f"Writing {symbol!s}...")
+    
+    wrangler = QuoteTickDataWrangler(
+        instrument=instrument,
     )
-    file = ParquetFile(
-        parent=CATALOG_FOLDER / "data/quote_tick",
-        bar_type=bar_type,
-        cls=Bar,
+    quotes = wrangler.process(df)
+    CATALOG.write_data(
+        data=quotes,
+        basename_template=instrument.id.value + "-{i}",
     )
-    file.path.parent.mkdir(exist_ok=True, parents=True)
-    writer = QuoteTickParquetWriter(
-        instrument_id=instrument_id,
-        path=file.path,
-        price_precision=price_precision,
-        size_precision=1,
+    CATALOG.write_data(
+        data=[instrument],
+        basename_template=instrument.id.value + "-{i}",
     )
-    print(f"Writing {file.path!s}...")
-    writer.write_dataframe(df)
 
 
 def import_tradermade() -> None:
@@ -81,7 +84,7 @@ def import_tradermade() -> None:
                 "bid_size": 1.0,
                 "ask_size": 1.0,
             }
-        )
+        ).set_index("timestamp")
         write_dataframe(symbol=symbol, df=df)
 
 
@@ -95,6 +98,8 @@ def import_yahoo():
     for ticker in tickers:
         msft = yf.Ticker(ticker)
         df = msft.history(period="max", interval="1d")
+        # print(ticker)
+        # print(df)
         df = pd.DataFrame(
             {
                 "timestamp": df.index.tz_convert("UTC"),
@@ -103,13 +108,10 @@ def import_yahoo():
                 "bid_size": 1.0,
                 "ask_size": 1.0,
             }
-        )
-        print(ticker)
-        print(df)
-
+        ).set_index("timestamp")
         write_dataframe(
             symbol=ticker.replace("=X", ""),
-            df=df.reset_index(drop=True),
+            df=df,
         )
         time.sleep(5)
 
@@ -117,17 +119,3 @@ def import_yahoo():
 if __name__ == "__main__":
     import_tradermade()
     import_yahoo()
-
-    # df = df \
-    #     .reset_index() \
-    #     .rename(
-    #         {
-    #             "Open":"open",
-    #             "High":"high",
-    #             "Low":"low",
-    #             "Close":"close",
-    #             "Volume":"volume",
-    #             "Date":"timestamp",
-    #         },
-    #     axis=1) \
-    #     [["timestamp", ]]
