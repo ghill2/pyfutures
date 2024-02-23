@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 from dotenv import dotenv_values
-from nautilus_trader.adapters.interactive_brokers.common import IBContract
+from ibapi.common import Contract as IBContract
 from nautilus_trader.common.component import Logger
 
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient

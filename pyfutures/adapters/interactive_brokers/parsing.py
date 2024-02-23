@@ -40,8 +40,6 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.orders.base import Order
 
-from pyfutures.adapters.interactive_brokers.client.objects import IBBar
-from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 from pyfutures.continuous.contract_month import ContractMonth
 
 
@@ -63,19 +61,43 @@ def parse_datetime(value: str) -> pd.Timestamp:
     raise RuntimeError("Unable to parse timestamp")
 
 
-def ib_quote_tick_to_nautilus_quote_tick(
+def historical_tick_to_nautilus_quote_tick(
     instrument: Instrument,
-    tick: IBQuoteTick,
+    tick: HistoricalTickBidAsk,
 ):
     return QuoteTick(
         instrument_id=instrument.id,
-        bid_price=instrument.make_price(tick.bid_price),
-        ask_price=instrument.make_price(tick.ask_price),
-        bid_size=instrument.make_qty(tick.bid_size),
-        ask_size=instrument.make_qty(tick.ask_size),
+        bid_price=instrument.make_price(tick.priceBid),
+        ask_price=instrument.make_price(tick.priceAsk),
+        bid_size=instrument.make_qty(tick.sizeBid),
+        ask_size=instrument.make_qty(tick.sizeAsk),
         ts_event=dt_to_unix_nanos(tick.time),
         ts_init=dt_to_unix_nanos(tick.time),
     )
+
+
+def bar_data_to_nautilus_bar(
+    bar_type: BarType,
+    bar: BarData,
+    instrument: Instrument,
+    is_revision: bool = False,
+) -> Bar:
+    ts_init = (
+        pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value
+        + pd.Timedelta(bar_type.spec.timedelta).value
+    )
+    bar = Bar(
+        bar_type=bar_type,
+        open=instrument.make_price(bar.open),
+        high=instrument.make_price(bar.high),
+        low=instrument.make_price(bar.low),
+        close=instrument.make_price(bar.close),
+        volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
+        ts_event=dt_to_unix_nanos(bar.date),
+        ts_init=ts_init,
+        is_revision=is_revision,
+    )
+    return bar
 
 
 def bar_data_to_dict(obj: BarData) -> dict:
@@ -101,40 +123,6 @@ def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
     }
 
 
-def bar_data_to_dict(bar: BarData) -> dict:
-    return {
-        "date": parse_datetime(bar.date),
-        "open": bar.open,
-        "high": bar.high,
-        "low": bar.low,
-        "close": bar.close,
-        "volume": bar.volume,
-        "wap": bar.wap,
-        "barCount": bar.barCount,
-    }
-
-
-def ib_bar_to_nautilus_bar(
-    bar_type: BarType,
-    bar: IBBar,
-    instrument: Instrument,
-    is_revision: bool = False,
-) -> Bar:
-    ts_init = pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value + pd.Timedelta(bar_type.spec.timedelta).value
-    bar = Bar(
-        bar_type=bar_type,
-        open=instrument.make_price(bar.open),
-        high=instrument.make_price(bar.high),
-        low=instrument.make_price(bar.low),
-        close=instrument.make_price(bar.close),
-        volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
-        ts_event=dt_to_unix_nanos(bar.date),
-        ts_init=ts_init,
-        is_revision=is_revision,
-    )
-    return bar
-
-
 def format_ib_timestamp(value: pd.Timestamp) -> str:
     return value.strftime("yyyyMMdd-HH:mm:ss")
 
@@ -156,7 +144,6 @@ def _sanitize_str(value: str):
 def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
     contract = details.contract
 
-
     symbol = _sanitize_str(contract.symbol)
     trading_class = _sanitize_str(contract.tradingClass)
     exchange = _sanitize_str(contract.exchange)
@@ -164,12 +151,22 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
     if contract.secType == "FUT":
         assert len(contract.lastTradeDateOrContractMonth) == 8
         month = str(ContractMonth.from_int(int(details.contractMonth)))
-        return InstrumentId.from_str(f"{symbol}={trading_class}={contract.secType}={month}.{exchange}")
+        return InstrumentId.from_str(
+            f"{trading_class}={symbol}={contract.secType}={month}.{exchange}"
+        )
     elif contract.secType == "CASH":
-        return InstrumentId.from_str(f"{symbol}.{contract.currency}={contract.secType}.{exchange}")
+        return InstrumentId.from_str(
+            f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+        )
 
 
-def create_contract(symbol: str, venue: str, sec_type: str, trading_class: str | None = None, currency: str | None = None) -> IBContract:
+def create_contract(
+    symbol: str,
+    venue: str,
+    sec_type: str,
+    trading_class: str | None = None,
+    currency: str | None = None,
+) -> IBContract:
     contract = IBContract()
 
     contract.symbol = _desanitize_str(symbol)
@@ -228,7 +225,8 @@ def contract_details_to_futures_instrument(
         currency=Currency.from_str(details.contract.currency),
         price_precision=overrides.get("price_precision") or price_precision,
         price_increment=overrides.get("price_increment") or price_increment,
-        multiplier=overrides.get("multiplier") or Quantity.from_str(str(details.contract.multiplier)),
+        multiplier=overrides.get("multiplier")
+        or Quantity.from_str(str(details.contract.multiplier)),
         lot_size=overrides.get("lot_size") or Quantity.from_int(1),
         underlying=details.underSymbol,
         activation_ns=0,
@@ -245,19 +243,18 @@ def _tick_size_to_precision(tick_size: float | Decimal) -> int:
     tick_size_str = f"{tick_size:.10f}"
     return len(tick_size_str.partition(".")[2].rstrip("0"))
 
+
 # nautilus_trader/adapters/interactive_brokers/parsing/instruments.py
 # GTODO: does this function need modifying?
 # do we need the function above?
 def contract_details_to_forex_instrument(
     details: IBContractDetails,
 ) -> CurrencyPair:
-
     timestamp = time.time_ns()
     instrument_id = contract_details_to_instrument_id(details)
 
     price_precision: int = _tick_size_to_precision(details.minTick)
     size_precision: int = _tick_size_to_precision(details.minSize)
-
 
     return CurrencyPair(
         instrument_id=instrument_id,
@@ -363,9 +360,15 @@ map_trigger_method: dict[int, int] = {
     TriggerType.LAST_OR_BID_ASK: 7,
     TriggerType.MID_POINT: 8,
 }
-ib_to_nautilus_trigger_method = dict(zip(map_trigger_method.values(), map_trigger_method.keys()))
-ib_to_nautilus_time_in_force = dict(zip(map_time_in_force.values(), map_time_in_force.keys()))
-ib_to_nautilus_order_side = dict(zip(map_order_action.values(), map_order_action.keys()))
+ib_to_nautilus_trigger_method = dict(
+    zip(map_trigger_method.values(), map_trigger_method.keys())
+)
+ib_to_nautilus_time_in_force = dict(
+    zip(map_time_in_force.values(), map_time_in_force.keys())
+)
+ib_to_nautilus_order_side = dict(
+    zip(map_order_action.values(), map_order_action.keys())
+)
 ib_to_nautilus_order_type = dict(zip(map_order_type.values(), map_order_type.keys()))
 
 
@@ -425,12 +428,12 @@ def order_event_to_order_status_report(
 
 
 def nautilus_order_to_ib_order(
-    order: Order,
+    order: IBOrder,
     instrument: Instrument,
     order_id: int,
 ) -> IBOrder:
     ib_order = IBOrder()
-    
+
     ib_order.orderId = order_id
     ib_order.orderRef = order.client_order_id.value
     ib_order.orderType = map_order_type[order.order_type]
@@ -456,3 +459,40 @@ def nautilus_order_to_ib_order(
     ib_order.contract = contract
 
     return ib_order
+
+
+# def ib_quote_tick_to_nautilus_quote_tick(
+#     instrument: Instrument,
+#     tick: IBQuoteTick,
+# ):
+#     return QuoteTick(
+#         instrument_id=instrument.id,
+#         bid_price=instrument.make_price(tick.bid_price),
+#         ask_price=instrument.make_price(tick.ask_price),
+#         bid_size=instrument.make_qty(tick.bid_size),
+#         ask_size=instrument.make_qty(tick.ask_size),
+#         ts_event=dt_to_unix_nanos(tick.time),
+#         ts_init=dt_to_unix_nanos(tick.time),
+#     )
+# def ib_bar_to_nautilus_bar(
+#     bar_type: BarType,
+#     bar: IBBar,
+#     instrument: Instrument,
+#     is_revision: bool = False,
+# ) -> Bar:
+#     ts_init = (
+#         pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value
+#         + pd.Timedelta(bar_type.spec.timedelta).value
+#     )
+#     bar = Bar(
+#         bar_type=bar_type,
+#         open=instrument.make_price(bar.open),
+#         high=instrument.make_price(bar.high),
+#         low=instrument.make_price(bar.low),
+#         close=instrument.make_price(bar.close),
+#         volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
+#         ts_event=dt_to_unix_nanos(bar.date),
+#         ts_init=ts_init,
+#         is_revision=is_revision,
+#     )
+#     return bar

@@ -15,7 +15,7 @@ from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport as IBCommissionReport
-from ibapi.common import BarData
+from ibapi.common import BarData, HistoricalTickLast
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import ListOfHistoricalTickBidAsk
@@ -48,8 +48,8 @@ from pyfutures.adapters.interactive_brokers.client.objects import IBOpenOrderEve
 from pyfutures.adapters.interactive_brokers.client.objects import IBOrderStatusEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPortfolioEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEvent
-from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
-from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
+# from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
+# from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
@@ -340,7 +340,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         return details_list[0]
 
-    async def request_front_contract(self, contract: IBContract) -> IBContract:
+    async def request_front_contract(self, contract: IBContract) -> Contract:
         details: IBContractDetails = await self.request_front_contract_details(contract)
         return details.contract
 
@@ -885,7 +885,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         self,
         contract: IBContract,
         use_rth: bool = True,
-    ) -> IBQuoteTick:
+    ) -> HistoricalTickBidAsk:
         self._log.debug(f"Requesting last quote tick for {contract.symbol}")
         quotes = await self.request_quote_ticks(
             contract=contract,
@@ -899,7 +899,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         self,
         contract: IBContract,
         use_rth: bool = True,
-    ) -> IBQuoteTick | None:
+    ) -> HistoricalTickBidAsk | None:
         self._log.debug(f"Requesting last quote tick for {contract.symbol}")
         head_timestamp = await self.request_head_timestamp(
             contract=contract,
@@ -986,7 +986,7 @@ class InteractiveBrokersClient(Component, EWrapper):
         count: int,
         end_time: pd.Timestamp = None,
         use_rth: bool = True,
-    ) -> list[IBTradeTick]:
+    ) -> list[HistoricalTickLast]:
         request = self._create_request(data=[], name=name)
 
         if end_time is None:
@@ -1150,7 +1150,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
     def subscribe_quote_ticks(
         self,
-        name: str,
         contract: IBContract,
         callback: Callable,
     ):
@@ -1169,7 +1168,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         subscription = ClientSubscription(
             id=request_id,
-            name=name,
             subscribe=subscribe,
             cancel=cancel,
             callback=callback,
@@ -1199,17 +1197,16 @@ class InteractiveBrokersClient(Component, EWrapper):
         subscription = self._subscriptions.get(reqId)
         if subscription is None:
             return  # no response found for request_id
-
-        subscription.callback(
-            IBQuoteTick(
-                name=subscription.name,
-                time=parse_datetime(time),
-                bid_price=bidPrice,
-                ask_price=askPrice,
-                bid_size=bidSize,
-                ask_size=askSize,
-            ),
+        
+        tick = HistoricalTickBidAsk(
+            priceBid=bidPrice,
+            priceAsk=askPrice,
+            sizeBid=bidSize,
+            sizeAsk=askSize
         )
+        tick.timestamp = parse_datetime(time)
+
+        subscription.callback(tick)
 
     async def request_accounts(self) -> list[str]:
         request = self._create_request(id="accounts")

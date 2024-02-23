@@ -19,7 +19,7 @@ from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersData
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract
-from pyfutures.adapters.interactive_brokers.parsing import ib_bar_to_nautilus_bar
+from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 
 
@@ -74,7 +74,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             self._handle_data(instrument)  # add to cache
 
     def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
-        nautilus_bar = ib_bar_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+        nautilus_bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
         self._handle_data(nautilus_bar)
 
 

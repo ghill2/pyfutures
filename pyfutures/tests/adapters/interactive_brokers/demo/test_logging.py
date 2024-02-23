@@ -1,5 +1,3 @@
-
-
 import asyncio
 
 from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
@@ -17,11 +15,21 @@ from nautilus_trader.model.objects import Price
 #
 from pytower.tests.stubs.strategies import BuyOnBarX
 
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveDataClientFactory
-from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
+from pyfutures.adapters.interactive_brokers.config import (
+    InteractiveBrokersDataClientConfig,
+)
+from pyfutures.adapters.interactive_brokers.config import (
+    InteractiveBrokersExecClientConfig,
+)
+from pyfutures.adapters.interactive_brokers.config import (
+    InteractiveBrokersInstrumentProviderConfig,
+)
+from pyfutures.adapters.interactive_brokers.factories import (
+    InteractiveBrokersLiveDataClientFactory,
+)
+from pyfutures.adapters.interactive_brokers.factories import (
+    InteractiveBrokersLiveExecClientFactory,
+)
 
 
 init_logging(level_stdout=LogLevel.DEBUG)
@@ -54,11 +62,14 @@ def test_strategy_logging():
         # logging=LoggingConfig(bypass_logging=True),
         environment=Environment.LIVE,
         data_clients={
-            "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(instrument_provider=provider_config, routing = RoutingConfig(default=True)),
+            "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(
+                instrument_provider=provider_config, routing=RoutingConfig(default=True)
+            ),
         },
         exec_clients={
-            "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(instrument_provider=provider_config, 
-                                                    routing = RoutingConfig(default=True)),
+            "INTERACTIVE_BROKERS": InteractiveBrokersExecClientConfig(
+                instrument_provider=provider_config, routing=RoutingConfig(default=True)
+            ),
         },
         timeout_disconnection=1.0,  # Short timeout for testing
         timeout_post_stop=1.0,  # Short timeout for testing
@@ -71,8 +82,12 @@ def test_strategy_logging():
     node = TradingNode(config=config, loop=loop)
 
     # add instrument to the cache,
-    node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
-    node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
+    node.add_data_client_factory(
+        "INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory
+    )
+    node.add_exec_client_factory(
+        "INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory
+    )
 
     node.build()
     strategy = BuyOnBarX(
@@ -81,10 +96,16 @@ def test_strategy_logging():
         order_side=OrderSide.BUY,
         quantity=1,
     )
+    strategytwo = BuyOnBarX(
+        index=1,
+        bar_type=bar_type,
+        order_side=OrderSide.BUY,
+        quantity=1,
+    )
 
     # exec_client_id = ClientId("IB")
     node.trader.add_strategy(strategy)
-
+    node.trader.add_strategy(strategytwo)
 
     node.portfolio.set_specific_venue(IB_VENUE)
 

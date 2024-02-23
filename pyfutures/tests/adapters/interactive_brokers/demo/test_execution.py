@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from ibapi.order import Order
+from ibapi.order import Order as IBOrder
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
@@ -14,8 +14,13 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 
-async def _wait_for_order_status(order: Order, expected: OrderStatus):
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
+async def _wait_for_order_status(order: IBOrder, expected: OrderStatus):
     while order.status != expected:
         await asyncio.sleep(0)
         print(
@@ -67,7 +72,9 @@ class TestInteractiveBrokersExecutionFilled:
 
 @pytest.mark.asyncio()
 async def test_load_instrument_id(instrument_provider):
-    instrument = await instrument_provider.load_async(InstrumentId.from_str("MIX.MEFFRV"))
+    instrument = await instrument_provider.load_async(
+        InstrumentId.from_str("MIX.MEFFRV")
+    )
     print(instrument)
 
 
@@ -75,15 +82,19 @@ class TestInteractiveBrokersExecutionCancelAccept:
     @pytest.mark.asyncio()
     async def test_limit_order_accepted(
         self,
+        event_loop,
         order_setup,
-        cache,
-        instrument,
-        delay,
-        log,
+        instrument_id,
     ):
+        print("Start test")
+        # --> DC=DA=FUT.CME
+        await order_setup._instrument_provider.load_contract(contract_id=instrument_id)
+        # --> DC=DA=2024G=FUT.CME
+        print(order_setup._instrument_provider._instruments)
+
         limit_order = await order_setup.submit_limit_order(
             order_side=OrderSide.BUY,
-            instrument_id=instrument.id,
+            instrument_id=instrument_id,
             quantity=Quantity.from_int(1),
             active=True,
         )

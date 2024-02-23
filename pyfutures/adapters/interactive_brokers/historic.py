@@ -8,11 +8,15 @@ from ibapi.contract import Contract as IBContract
 from nautilus_trader.common.component import Logger
 
 from pyfutures.adapters.interactive_brokers.client.client import ClientException
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
+from pyfutures.adapters.interactive_brokers.client.client import (
+    InteractiveBrokersClient,
+)
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
-from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
+from pyfutures.adapters.interactive_brokers.parsing import (
+    historical_tick_bid_ask_to_dict,
+)
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
@@ -57,7 +61,8 @@ class InteractiveBrokersHistoric:
             print(contract.symbol, contract.exchange)
 
             self._log.debug(
-                f"--> ({contract.symbol}{contract.exchange}) " f"Downloading bars at interval: {start_time_floor} > {end_time_ceil}",
+                f"--> ({contract.symbol}{contract.exchange}) "
+                f"Downloading bars at interval: {start_time_floor} > {end_time_ceil}",
             )
 
             try:
@@ -76,7 +81,12 @@ class InteractiveBrokersHistoric:
                 #     print(parse_datetime(b.date))
 
                 # bars can be returned that are outside the end_time - durationStr when there is no data within the range
-                bars = [b for b in bars if parse_datetime(b.date) >= start_time_floor and parse_datetime(b.date) < end_time_ceil]
+                bars = [
+                    b
+                    for b in bars
+                    if parse_datetime(b.date) >= start_time_floor
+                    and parse_datetime(b.date) < end_time_ceil
+                ]
                 print(f"Filtered {len(bars)} bars...")
 
             except ClientException as e:
@@ -95,7 +105,9 @@ class InteractiveBrokersHistoric:
 
             total_bars = bars + total_bars
 
-            assert pd.Series([parse_datetime(b.date) for b in total_bars]).is_monotonic_increasing
+            assert pd.Series(
+                [parse_datetime(b.date) for b in total_bars]
+            ).is_monotonic_increasing
 
             end_time_ceil -= freq
             start_time_floor -= freq
@@ -103,7 +115,12 @@ class InteractiveBrokersHistoric:
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
 
-        total_bars = [b for b in total_bars if parse_datetime(b.date) >= start_time and parse_datetime(b.date) < end_time]
+        total_bars = [
+            b
+            for b in total_bars
+            if parse_datetime(b.date) >= start_time
+            and parse_datetime(b.date) < end_time
+        ]
 
         if as_dataframe:
             return pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
@@ -140,7 +157,8 @@ class InteractiveBrokersHistoric:
         interval = duration.to_timedelta()
         while end_time >= start_time:
             self._log.debug(
-                f"--> ({contract.symbol}.{contract.exchange}) " f"Downloading bars at end_time: {end_time}",
+                f"--> ({contract.symbol}.{contract.exchange}) "
+                f"Downloading bars at end_time: {end_time}",
             )
 
             bars = []
@@ -191,7 +209,9 @@ class InteractiveBrokersHistoric:
         assert start_time is not None and end_time is not None
 
         freq = pd.Timedelta(seconds=60)
-        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[::-1]
+        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[
+            ::-1
+        ]
         results = []
 
         for i in range(len(timestamps) - 2):
@@ -219,7 +239,7 @@ class InteractiveBrokersHistoric:
                 await asyncio.sleep(self._delay)
 
         if as_dataframe:
-            return pd.DataFrame([historical_tick_bid_ask_to_dict(obj) for obj in results])
+            return pd.DataFrame([obj for obj in results])
 
         return results
 
@@ -286,7 +306,9 @@ class InteractiveBrokersHistoric:
         assert pd.Series(timestamps).is_monotonic_increasing
 
         if as_dataframe:
-            return pd.DataFrame([historical_tick_bid_ask_to_dict(obj) for obj in results])
+            return pd.DataFrame(
+                [historical_tick_bid_ask_to_dict(obj) for obj in results]
+            )
         return results
 
     # @staticmethod

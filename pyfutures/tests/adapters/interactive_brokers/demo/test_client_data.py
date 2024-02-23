@@ -1,12 +1,9 @@
 import asyncio
 
 import pytest
-from ibapi.common import HistoricalTickBidAsk
-from ibapi.contract import Contract
-from ibapi.contract import Contract as IBContract
+from ibapi.common import BarData, HistoricalTickBidAsk
+from ibapi.contract import Contract as IBcontract
 
-from pyfutures.adapters.interactive_brokers.client.objects import IBBar
-from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
 from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
@@ -15,14 +12,14 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 class TestInteractiveBrokersClientData:
     @pytest.mark.asyncio()
     async def test_request_head_timestamp_single(self, client):
-        contract = Contract()
+        contract = IBContract()
         contract.conId = 553444806
         contract.exchange = "ICEEUSOFT"
 
@@ -34,7 +31,7 @@ class TestInteractiveBrokersClientData:
 
     @pytest.mark.asyncio()
     async def test_request_quote_ticks(self, client):
-        contract = Contract()
+        contract = IBContract()
         contract.conId = 553444806
         contract.exchange = "ICEEUSOFT"
 
@@ -48,7 +45,7 @@ class TestInteractiveBrokersClientData:
         )
 
         assert len(quotes) == 54
-        assert all(isinstance(quote, IBQuoteTick) for quote in quotes)
+        assert all(isinstance(quote, HistoricalTickBidAsk) for quote in quotes)
 
     @pytest.mark.asyncio()
     async def test_request_quote_ticks_dc(self, client):
@@ -68,7 +65,7 @@ class TestInteractiveBrokersClientData:
         )
 
         assert len(quotes) == 54
-        assert all(isinstance(quote, IBQuoteTick) for quote in quotes)
+        assert all(isinstance(quote, HistoricalTickBidAsk) for quote in quotes)
 
     @pytest.mark.asyncio()
     async def test_request_first_quote_tick(self, client):
@@ -95,7 +92,7 @@ class TestInteractiveBrokersClientData:
     @pytest.mark.skip(reason="trade ticks return 0 for this contract")
     @pytest.mark.asyncio()
     async def test_request_trade_ticks(self, client):
-        contract = Contract()
+        contract = IBContract()
         contract.conId = 553444806
         contract.exchange = "ICEEUSOFT"
 
@@ -113,7 +110,7 @@ class TestInteractiveBrokersClientData:
 
     @pytest.mark.asyncio()
     async def test_request_bars(self, client):
-        contract = Contract()
+        contract = IBContract()
         contract.conId = 553444806
         contract.exchange = "ICEEUSOFT"
         await client.connect()
@@ -126,5 +123,5 @@ class TestInteractiveBrokersClientData:
             what_to_show=WhatToShow.BID,
         )
 
-        assert all(isinstance(bar, IBBar) for bar in bars)
+        assert all(isinstance(bar, BarData) for bar in bars)
         assert len(bars) > 0

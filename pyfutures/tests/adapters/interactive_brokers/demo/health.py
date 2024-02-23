@@ -10,8 +10,8 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 @pytest.mark.asyncio()
@@ -77,7 +77,7 @@ async def test_request_front_contract_universe(client):
         try:
             details = await client.request_front_contract_details(row.contract)
 
-            assert type(details) is ContractDetails
+            assert type(details) is IBContractDetails
             timezones.append(details.timeZoneId)
             print(row.trading_class, details.timeZoneId)
 
@@ -96,7 +96,7 @@ async def test_request_front_contract_universe_fix(client):
     """
     await client.connect()
 
-    contract = Contract()
+    contract = IBContract()
     contract.symbol = "XT"
     contract.tradingClass = "XT"
     contract.exchange = "SNFE"
@@ -117,7 +117,9 @@ def test_historic_schedules_with_sessions_out_of_day():
     """
     find instruments that have sessions where the start and end date is NOT within the same day
     """
-    schedules_dir = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules")
+    schedules_dir = Path(
+        "/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules"
+    )
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():

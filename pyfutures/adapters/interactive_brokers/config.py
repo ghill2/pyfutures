@@ -84,7 +84,9 @@ class InteractiveBrokersDataClientConfig(LiveDataClientConfig, frozen=True):
 
     """
 
-    instrument_provider: InteractiveBrokersInstrumentProviderConfig = InteractiveBrokersInstrumentProviderConfig()
+    instrument_provider: InteractiveBrokersInstrumentProviderConfig = (
+        InteractiveBrokersInstrumentProviderConfig()
+    )
 
     ibg_host: str = "127.0.0.1"
     ibg_port: int | None = None
@@ -112,7 +114,9 @@ class InteractiveBrokersExecClientConfig(LiveExecClientConfig, frozen=True):
 
     """
 
-    instrument_provider: InteractiveBrokersInstrumentProviderConfig = InteractiveBrokersInstrumentProviderConfig()
+    instrument_provider: InteractiveBrokersInstrumentProviderConfig = (
+        InteractiveBrokersInstrumentProviderConfig()
+    )
     ibg_host: str = "127.0.0.1"
     ibg_port: int | None = None
     ibg_client_id: int = 1

@@ -6,6 +6,7 @@ import pandas as pd
 # from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
+from ibapi.common import HistoricalTickBidAsk
 
 # fmt: off
 from nautilus_trader.cache.cache import Cache
@@ -22,7 +23,6 @@ from nautilus_trader.execution.reports import FillReport
 from nautilus_trader.execution.reports import OrderStatusReport
 from nautilus_trader.execution.reports import PositionStatusReport
 from nautilus_trader.live.execution_client import LiveExecutionClient
-from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.enums import AccountType
 from nautilus_trader.model.enums import LiquiditySide
 from nautilus_trader.model.enums import OmsType
@@ -49,11 +49,13 @@ from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEven
 from pyfutures.adapters.interactive_brokers.client.client import IBOrderStatusEvent
 from pyfutures.adapters.interactive_brokers.client.client import IBPositionEvent
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.parsing import ib_quote_tick_to_nautilus_quote_tick
+from pyfutures.adapters.interactive_brokers.parsing import historical_tick_to_nautilus_quote_tick
 from pyfutures.adapters.interactive_brokers.parsing import nautilus_order_to_ib_order
 from pyfutures.adapters.interactive_brokers.parsing import order_event_to_order_status_report
 from pyfutures.adapters.interactive_brokers.parsing import order_side_to_order_action
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
+
+
 
 
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
@@ -221,7 +223,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         await asyncio.sleep(0)
         await asyncio.sleep(0)
 
-    async def request_last_quote_tick(self, instrument_id: InstrumentId) -> QuoteTick:
+    async def request_last_quote_tick(self, instrument_id: InstrumentId) -> HistoricalTickBidAsk:
 
         self._log.debug(f"Requesting last quote tick for {instrument_id}")
 
@@ -236,7 +238,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         last_quote = await self._client.request_last_quote_tick(contract=contract)
 
-        return ib_quote_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
+        return historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
 
     async def _submit_order(self, command: SubmitOrder) -> None:
         PyCondition.type(command, SubmitOrder, "command")
@@ -263,7 +265,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             self._log.error(f"No instrument found for {order.instrument_id}")
             return
 
-        ib_order: IBOrder = nautilus_order_to_ib_order(
+        ib_order: Order = nautilus_order_to_ib_order(
             order=command.order,
             instrument=instrument,
             order_id=await self._client.request_next_order_id(),

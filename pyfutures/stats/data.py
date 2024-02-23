@@ -6,9 +6,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytz
-from nautilus_trader.adapters.interactive_brokers.common import (
-    IBContract,
-)
+from ibapi.common import Contract as IBContract
+
 from nautilus_trader.adapters.interactive_brokers.historic.client import (
     HistoricInteractiveBrokersClient,
 )
@@ -93,7 +92,7 @@ class DataStats:
             bars = await self._last_close_mid_bars(contract)
         except:
             print(f"-----> Getting reverse fx rate GBP.{currency}...")
-            contract = IBContract(
+            contract = Contract(
                 secType="CASH", exchange="IDEALPRO", currency="GBP", symbol=currency
             )
             bars = await self._last_close_mid_bars(contract)
