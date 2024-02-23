@@ -17,134 +17,27 @@ import json
 from pathlib import Path
 
 import pytest
-from nautilus_trader.config import LiveExecEngineConfig
-from nautilus_trader.live.execution_engine import LiveExecutionEngine
-from nautilus_trader.model.identifiers import AccountId
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.portfolio.portfolio import Portfolio
-from nautilus_trader.test_kit.stubs.events import TestEventStubs
-from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 
-from pyfutures import IB_ACCOUNT_ID
-from pyfutures.adapters.interactive_brokers import IB_VENUE
-from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
+from pyfutures.adapters.interactive_brokers.execution import (
+    InteractiveBrokersExecutionClient,
+)
 from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
+from pyfutures.tests.adapters.interactive_brokers.demo.factories import (
+    InteractiveBrokersExecEngineFactory,
+)
 
 # fmt: off
-from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
-
-
-# @pytest.fixture()
-# def event_loop():
-#     loop = asyncio.get_event_loop_policy().new_event_loop()
-#     asyncio.set_event_loop(loop)
-#     yield loop
-#     loop.close()
-#
-# @pytest.fixture()
-# def clock():
-#     return LiveClock()
-#
-# @pytest.fixture()
-# def logger(clock):
-#     return Logger(clock, level_stdout=LogLevel.DEBUG)
-#
-# @pytest.fixture()
-# def msgbus(clock):
-#     return MessageBus(
-#         TestIdStubs.trader_id(),
-#         clock,
-#     )
-#
-#
-# @pytest.fixture()
-# def cache():
-#     cache = TestComponentStubs.cache()
-#     return cache
-#
-# @pytest.fixture()
-# def client(event_loop, msgbus, cache, clock, logger) -> InteractiveBrokersClient:
-#     client = InteractiveBrokersClient(
-#             loop=event_loop,
-#             msgbus=msgbus,
-#             cache=cache,
-#             clock=clock,
-#             logger=logger,
-#             host="127.0.0.1",
-#             port=4002,
-#             client_id=1,
-#     )
-#     return client
 
 @pytest.fixture()
-def instrument_provider(event_loop, client, logger, cache) -> InteractiveBrokersInstrumentProvider:
+def exec_client(event_loop, msgbus, cache, clock) -> InteractiveBrokersExecutionClient:
+    _, exec_client, provider, _  = InteractiveBrokersExecEngineFactory.create(loop=event_loop, msgbus=msgbus, cache=cache, clock=clock)
 
-    config = InteractiveBrokersInstrumentProviderConfig()
-
-    instrument_provider = InteractiveBrokersInstrumentProvider(
-        client=client,
-        logger=logger,
-        config=config,
-    )
-
-
-
-    return instrument_provider
-
-@pytest.fixture()
-def exec_client(event_loop, msgbus, cache, clock, logger, client, instrument_provider) -> InteractiveBrokersExecutionClient:
-
-    account_id = AccountId(f"InteractiveBrokers-{IB_ACCOUNT_ID}")
-
-    # register an exec engine so incoming messages are updating the cache
-    exec_engine = LiveExecutionEngine(
-        loop=event_loop,
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
-        logger=logger,
-        config=LiveExecEngineConfig(
-            reconciliation=True,
-            inflight_check_interval_ms=0,
-            debug=True,
-        ),
-    )
-    exec_engine.start()
-
-
-    cache.add_account(TestExecStubs.margin_account(account_id))
-    portfolio = Portfolio(
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
-        logger=logger,
-    )
-
-    portfolio.set_specific_venue(IB_VENUE)
-    portfolio.update_account(TestEventStubs.margin_account_state())
-
-    exec_client = InteractiveBrokersExecutionClient(
-            loop=event_loop,
-            client=client,
-            account_id=account_id,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
-            logger=logger,
-            instrument_provider=instrument_provider,
-            ibg_client_id=1,
-    )
-
-    exec_client._set_account_id(exec_client.account_id)
-
-    exec_engine.register_default_client(exec_client)
 
     # load the contract details json files into the instrument provider
-    _load_contracts(instrument_provider)
+    _load_contracts(provider)
 
     # add contracts to the cache
-    for instrument in instrument_provider.list_all():
+    for instrument in provider.list_all():
         cache.add_instrument(instrument)
 
     return exec_client
