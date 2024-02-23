@@ -1,5 +1,10 @@
 import pytest
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 @pytest.mark.asyncio
 async def test_get_contract_details_with_warning_after(ib_client):

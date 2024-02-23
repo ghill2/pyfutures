@@ -14,6 +14,11 @@ from nautilus_trader.model.identifiers import VenueOrderId
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 class TestExecutionErrors:
     @pytest.mark.asyncio()

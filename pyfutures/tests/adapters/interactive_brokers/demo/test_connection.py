@@ -4,6 +4,11 @@ import pytest
 
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()

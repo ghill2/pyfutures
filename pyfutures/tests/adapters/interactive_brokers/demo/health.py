@@ -8,6 +8,11 @@ from pyfutures.adapters.interactive_brokers.client.objects import ClientExceptio
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 @pytest.mark.asyncio()
 async def test_request_head_timestamp_contfut(client):

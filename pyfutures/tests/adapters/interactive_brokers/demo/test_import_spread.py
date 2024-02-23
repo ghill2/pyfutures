@@ -13,6 +13,11 @@ from pyfutures.data.writer import BarParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 @pytest.mark.asyncio()
 async def test_import_spread(client):

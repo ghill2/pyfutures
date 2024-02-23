@@ -9,6 +9,11 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
+init_logging(level_stdout=LogLevel.DEBUG)
+
+
 
 class TestInteractiveBrokersHistoric:
     @pytest.mark.asyncio()
