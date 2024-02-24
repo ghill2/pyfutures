@@ -36,18 +36,20 @@ from dataclasses import fields
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
-PER_CONTRACT_FOLDER = Path("/Users/g1/Desktop/per_contract")
+PER_CONTRACT_FOLDER = Path.home() / "Desktop" / "per_contract"
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
-MULTIPLE_PRICES_FOLDER = Path("/Users/g1/Desktop/catalog/data/custom_multiple_bar")
-CATALOG_FOLDER = Path("/Users/g1/Desktop/catalog/")
+MULTIPLE_PRICES_FOLDER = (
+    Path.home() / "Desktop" / "catalog" / "data" / "custom_multiple_bar"
+)
+CATALOG_FOLDER = Path.home() / "Desktop" / "catalog"
 CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER)  # , show_query_paths=True
-ADJUSTED_PRICES_FOLDER = Path("/Users/g1/Desktop/adjusted")
-MERGED_FOLDER = Path("/Users/g1/Desktop/merged")
+ADJUSTED_PRICES_FOLDER = Path.home() / "Desktop" / "adjusted"
+MERGED_FOLDER = Path.home() / "Desktop" / "merged"
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_XLSX_PATH = PACKAGE_ROOT / "universe.xlsx"
 FX_RATES_FOLDER = PACKAGE_ROOT / "fx_rates"
 TRADERMADE_FOLDER = PACKAGE_ROOT / "tradermade"
-SPREAD_FOLDER = Path("/Users/g1/Desktop/spread")
+SPREAD_FOLDER = Path.home() / "Desktop" / "spread"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
 
 
@@ -71,6 +73,7 @@ class Session:
         for chain in self.chains:
             contracts.append(chain.current_contract(timestamp))
         return contracts
+
 
 @dataclass
 class UniverseRow:
@@ -103,7 +106,7 @@ class UniverseRow:
     fee_clearing: float
     fee_clearing_currency: float
     fee_clearing_percent: float
-    
+
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
         instrument_id = self.instrument_id_for_month(
             month=month,
@@ -123,34 +126,38 @@ class UniverseRow:
             ts_event=0,
             ts_init=0,
         )
-    
+
     def instrument_id_for_month(self, month: ContractMonth) -> InstrumentId:
         return InstrumentId(
             symbol=Symbol(self.instrument.id.symbol.value + "=" + month.value),
             venue=self.instrument.id.venue,
         )
-    
+
     def bar_type(self, aggregation: BarAggregation) -> BarType:
         aggregation = bar_aggregation_to_str(aggregation)
         return BarType.from_str(f"{self.instrument.id}-1-{aggregation}-MID-EXTERNAL")
-        
-    def bar_type_for_month(self, month: ContractMonth, aggregation: BarAggregation) -> BarType:
+
+    def bar_type_for_month(
+        self, month: ContractMonth, aggregation: BarAggregation
+    ) -> BarType:
         instrument_id = self.instrument_id_for_month(
             month=month,
         )
         aggregation = bar_aggregation_to_str(aggregation)
         return BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
-    
+
     def bar_files(
         self,
         aggregation: BarAggregation | None = None,
         month: str | None = None,
     ) -> list[ParquetFile]:
-        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
+        aggregation = (
+            bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
+        )
         month = month or "*"
         glob_str = f"{self.trading_class}={self.symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return self._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
-    
+
     @staticmethod
     def _get_files(
         parent: Path,
@@ -162,10 +169,13 @@ class UniverseRow:
         if len(files) == 0:
             raise RuntimeError(f"Missing files for {glob}")
         return files
-    
+
+
 class IBTestProviderStubs:
     @staticmethod
-    def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
+    def universe_dataframe(
+        filter: list | None = None, skip: list | None = None
+    ) -> pd.DataFrame:
         file = UNIVERSE_XLSX_PATH
         assert file.exists()
 
@@ -270,18 +280,28 @@ class IBTestProviderStubs:
             )
         )
 
-        df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)))
+        df["quote_currency"] = df.quote_currency.apply(
+            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1))
+        )
 
         df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
+            lambda row: InstrumentId.from_str(
+                f"{row.trading_class}={row.symbol}=FUT.SIM"
+            ),
             axis=1,
         )
         df["instrument_id_live"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"),
+            lambda row: InstrumentId.from_str(
+                f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"
+            ),
             axis=1,
         )
 
-        df["quote_home_instrument"] = df.quote_currency.apply(lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")))
+        df["quote_home_instrument"] = df.quote_currency.apply(
+            lambda x: TestInstrumentProvider.default_fx_ccy(
+                symbol=f"{x}GBP", venue=Venue("SIM")
+            )
+        )
 
         df["contract"] = df.apply(
             lambda row: create_contract(
@@ -323,13 +343,20 @@ class IBTestProviderStubs:
         )
 
         df["missing_months"] = df.missing_months.apply(
-            lambda x: list(map(ContractMonth, x.replace(" ", "").split(",") if not isinstance(x, float) else []))
+            lambda x: list(
+                map(
+                    ContractMonth,
+                    x.replace(" ", "").split(",") if not isinstance(x, float) else [],
+                )
+            )
         )
 
         df["config"] = df.apply(
             lambda row: ContractChainConfig(
                 instrument_id=row.instrument_id,
-                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
+                hold_cycle=RollCycle.from_str(
+                    row.hold_cycle, skip_months=row.missing_months
+                ),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
@@ -341,7 +368,9 @@ class IBTestProviderStubs:
         )
 
         df["price_precision"] = df.apply(
-            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
+            lambda row: len(
+                f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]
+            ),
             axis=1,
         )
 
@@ -352,7 +381,9 @@ class IBTestProviderStubs:
                 asset_class=AssetClass.COMMODITY,
                 currency=row.quote_currency,
                 price_precision=row.price_precision,
-                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
+                price_increment=Price(
+                    row.min_tick * row.price_magnifier, row.price_precision
+                ),
                 multiplier=Quantity.from_str(str(row.multiplier)),
                 lot_size=Quantity.from_int(1),
                 underlying="",
@@ -363,10 +394,10 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         keep = [f.name for f in fields(UniverseRow)]
         df = df[[x for x in df.columns if x in keep]]
-            
+
         return df
 
     @staticmethod
@@ -374,17 +405,13 @@ class IBTestProviderStubs:
         filter: list | None = None,
         skip: list | None = None,
     ) -> list[dict]:
-        
         df = IBTestProviderStubs.universe_dataframe(
             filter=filter,
             skip=skip,
         )
-        rows = [
-            UniverseRow(**d)
-            for d in df.to_dict(orient="records")
-        ]
+        rows = [UniverseRow(**d) for d in df.to_dict(orient="records")]
         assert len(rows) > 0
-        
+
         return rows
 
     # @classmethod
@@ -410,8 +437,3 @@ class IBTestProviderStubs:
     #     glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
     #     files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
     #     return files
-
-    
-
-
-    

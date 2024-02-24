@@ -340,7 +340,7 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         return details_list[0]
 
-    async def request_front_contract(self, contract: IBContract) -> Contract:
+    async def request_front_contract(self, contract: IBContract) -> IBContract:
         details: IBContractDetails = await self.request_front_contract_details(contract)
         return details.contract
 
