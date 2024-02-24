@@ -223,7 +223,23 @@ class TestContractChain:
             'data.bars.MES=MES=FUT=2022M.SIM-1-DAY-MID-EXTERNAL',
         ]
     
-    
+    def test_swap_position_on_roll(self):
+        order: MarketOrder = self.chain.order_factory.market(
+            instrument_id=InstrumentId.from_str("MES=MES=FUT=2021Z.SIM"),
+            order_side=OrderSide.BUY,
+            quantity=Quantity.from_int(1),
+            time_in_force=TimeInForce.FOK,
+        )
+        self.chain.submit_order(order)
+        data = [
+            ("MES=MES=FUT=2022H.SIM", "2021-12-09", 10.0),
+            ("MES=MES=FUT=2021Z.SIM", "2021-12-09", 1),
+            ("MES=MES=FUT=2022H.SIM", "2021-12-10", 10.1),
+            ("MES=MES=FUT=2021Z.SIM", "2021-12-10", 2),  # roll
+        ]
+        bars = self._create_bars(data)
+        for bar in bars:
+            self.data_engine.process(bar)
         
         
     def test_current_bar_history(self):
