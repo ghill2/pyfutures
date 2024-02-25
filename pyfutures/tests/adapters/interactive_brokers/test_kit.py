@@ -173,10 +173,17 @@ class UniverseRow:
     
     @property
     def contract_bars(self) -> list[Bar]:
+        """
+        MID point bars only to process the chain
+        """
         bars: list[Bar] = CATALOG.query(
             data_cls=Bar,
             instrument_ids=[self.instrument.id.symbol.value],
         )
+        bars = [
+            b for b in bars
+            if b.bar_type.spec.price_type == PriceType.MID
+        ]
         bars = sorted(bars, key=sort_key)
         assert len(bars) > 0
         return bars
@@ -199,11 +206,6 @@ class UniverseRow:
         session: DataBackendSession = CATALOG.backend_session(
             data_cls=QuoteTick,
             instrument_ids=[self.quote_home_instrument.id.value],  # fx rates
-        )
-        session: DataBackendSession = CATALOG.backend_session(
-            data_cls=QuoteTick,
-            instrument_ids=[self.instrument.id.symbol.value],  # bars as quote ticks
-            session=session,
         )
         session: DataBackendSession = CATALOG.backend_session(
             data_cls=Bar,
