@@ -11,6 +11,7 @@ from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.persistence.wranglers import BarDataWrangler
 from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
 from nautilus_trader.model.functions import bar_aggregation_from_str
+from nautilus_trader.model.enums import PriceType
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.files import ParquetFile
@@ -36,21 +37,26 @@ def process_daily_bars(row: dict, path: Path) -> None:
     df.index = df.index.tz_convert("UTC")
             
     instrument = row.instrument_for_month(month)
-    bar_type = row.bar_type_for_month(month, aggregation)
-    wrangler = BarDataWrangler(
-        instrument=instrument,
-        bar_type=bar_type,
-        
-    )
-    bars = wrangler.process(df)
-    bars = list(sorted(bars, key=lambda x: x.ts_init))
     
-    CATALOG.write_chunk(
-        data=bars,
-        data_cls=Bar,
-        basename_template=str(bar_type) + "-{i}",
-    )
-    print(f"Written {bar_type!r}....")
+    bar_type_bid = row.bar_type_for_month(month, aggregation, PriceType.BID)
+    bar_type_mid = row.bar_type_for_month(month, aggregation, PriceType.MID)
+    bar_type_ask = row.bar_type_for_month(month, aggregation, PriceType.ASK)
+    
+    for bar_type in (bar_type_bid, bar_type_mid, bar_type_ask):
+        wrangler = BarDataWrangler(
+            instrument=instrument,
+            bar_type=bar_type,
+            
+        )
+        bars = wrangler.process(df)
+        bars = list(sorted(bars, key=lambda x: x.ts_init))
+        
+        CATALOG.write_chunk(
+            data=bars,
+            data_cls=Bar,
+            basename_template=str(bar_type) + "-{i}",
+        )
+        print(f"Written {bar_type!r}....")
 
 def process_instruments(row: dict, month: ContractMonth) -> None:
     
@@ -114,21 +120,21 @@ def import_instruments():
         for month in months:
             yield joblib.delayed(process_instruments)(row, month)
 
-def import_daily_quotes():
-    for row in rows:
-        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        # paths = sorted(set(files_d1))
-        for path in paths:
-            yield joblib.delayed(process_as_ticks)(row, path)
+
             
 if __name__ == "__main__":
     joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
     joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_bars())
-    joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_quotes())
+    # joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_quotes())
 
 
-
+# def import_daily_quotes():
+#     for row in rows:
+#         paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
+#         # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
+#         # paths = sorted(set(files_d1))
+#         for path in paths:
+#             yield joblib.delayed(process_as_ticks)(row, path)
 
 # def process_hour(row: tuple) -> None:
 #     assert file.path.exists()

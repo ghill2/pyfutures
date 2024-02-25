@@ -11,19 +11,49 @@ from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import TestClock
 import pytest
 from nautilus_trader.config import BacktestEngineConfig
+from nautilus_trader.execution.engine import ExecutionEngine
+from nautilus_trader.model.objects import Money
+from nautilus_trader.config import RiskEngineConfig
+from nautilus_trader.backtest.data_client import BacktestMarketDataClient
+from nautilus_trader.model.objects import Money
+from nautilus_trader.model.position import Position
+from nautilus_trader.core.uuid import UUID4
+from nautilus_trader.model.identifiers import ClientOrderId
+from nautilus_trader.execution.messages import SubmitOrder
+from nautilus_trader.model.identifiers import VenueOrderId
+from nautilus_trader.model.identifiers import AccountId
+from nautilus_trader.model.identifiers import PositionId
+from nautilus_trader.model.identifiers import TradeId
+from nautilus_trader.model.enums import OrderType
+from nautilus_trader.model.enums import LiquiditySide
+from nautilus_trader.model.events.order import OrderFilled
+from nautilus_trader.backtest.models import FillModel
+from decimal import Decimal
+from nautilus_trader.accounting.factory import AccountFactory
+from nautilus_trader.backtest.exchange import SimulatedExchange
+from nautilus_trader.model.data import QuoteTick
+from nautilus_trader.backtest.data_client import BacktestDataClient
+from nautilus_trader.model.enums import AccountType
+from nautilus_trader.model.enums import OmsType
+from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.model.objects import Money
 from nautilus_trader.portfolio.portfolio import Portfolio
+from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.model.orders import MarketOrder
 from nautilus_trader.config import DataEngineConfig
 from nautilus_trader.config import LoggingConfig
+from nautilus_trader.backtest.execution_client import BacktestExecClient
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.enums import TimeInForce
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.nautilus_pyo3 import NautilusDataType
+from nautilus_trader.risk.engine import RiskEngine
 
 from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.continuous.providers import TestContractProvider
+from nautilus_trader.execution.config import ExecEngineConfig
 from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
 from nautilus_trader.model.currencies import GBP
 from nautilus_trader.model.data import Bar
@@ -37,7 +67,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import Mock
-
+from nautilus_trader.model.identifiers import Venue
 from pyfutures import PACKAGE_ROOT
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import TestClock
@@ -62,6 +92,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
@@ -102,11 +133,13 @@ class TestContractChain:
         
         self.bar_type = BarType.from_str("MES=MES=FUT.SIM-1-DAY-MID-EXTERNAL")
         
+        instrument = FuturesContract.from_dict(
+            {'type': 'FuturesContract', 'id': 'MES=MES=FUT.SIM', 'raw_symbol': 'MES', 'asset_class': 'COMMODITY', 'currency': 'USD', 'price_precision': 2, 'price_increment': '0.25', 'size_precision': 0, 'size_increment': '1', 'multiplier': '5.0', 'lot_size': '1', 'underlying': '', 'activation_ns': 0, 'expiration_ns': 0, 'margin_init': '0', 'margin_maint': '0', 'ts_event': 0, 'ts_init': 0}  # noqa
+        )
+        
         instrument_provider = TestContractProvider(
             approximate_expiry_offset=self.config.approximate_expiry_offset,
-            base=FuturesContract.from_dict(
-                {'type': 'FuturesContract', 'id': 'MES=MES=FUT.SIM', 'raw_symbol': 'MES', 'asset_class': 'COMMODITY', 'currency': 'USD', 'price_precision': 2, 'price_increment': '0.25', 'size_precision': 0, 'size_increment': '1', 'multiplier': '5.0', 'lot_size': '1', 'underlying': '', 'activation_ns': 0, 'expiration_ns': 0, 'margin_init': '0', 'margin_maint': '0', 'ts_event': 0, 'ts_init': 0}  # noqa
-            ),
+            base=instrument,
         )
         
         self.chain = ContractChain(
@@ -126,6 +159,75 @@ class TestContractChain:
         self.chain.start()
         self.data_engine.start()
     
+    def test_swap_position_on_roll(self):
+        
+        instrument = FuturesContract.from_dict(
+            {'type': 'FuturesContract', 'id': 'MES=MES=FUT=2021Z.SIM', 'raw_symbol': 'MES', 'asset_class': 'COMMODITY', 'currency': 'USD', 'price_precision': 2, 'price_increment': '0.25', 'size_precision': 0, 'size_increment': '1', 'multiplier': '5.0', 'lot_size': '1', 'underlying': '', 'activation_ns': 0, 'expiration_ns': 0, 'margin_init': '0', 'margin_maint': '0', 'ts_event': 0, 'ts_init': 0}  # noqa
+        )
+        
+        position = Position(
+            instrument=instrument,
+            fill=OrderFilled(
+                trader_id=TestIdStubs.trader_id(),
+                strategy_id=self.chain.id,
+                instrument_id=instrument.id,
+                client_order_id=ClientOrderId("1"),
+                venue_order_id=VenueOrderId("2"),
+                account_id=AccountId("SIM-001"),
+                trade_id=TradeId("3"),
+                position_id=PositionId("5"),
+                order_side=OrderSide.BUY,
+                order_type=OrderType.MARKET,
+                last_qty=Quantity.from_int(5),
+                last_px=Price.from_int(1),
+                currency=GBP,
+                commission=Money(0, GBP),
+                liquidity_side=LiquiditySide.TAKER,
+                event_id=UUID4(),
+                ts_event=dt_to_unix_nanos(pd.Timestamp("2021-12-09", tz="UTC")),
+                ts_init=dt_to_unix_nanos(pd.Timestamp("2021-12-09", tz="UTC")),
+            )
+        )
+        
+        self.cache.add_position(
+            position=position,
+            oms_type=OmsType.NETTING,
+        )
+        
+        open_positions = self.cache.positions_open(
+            instrument_id=instrument.id,
+        )
+        assert len(open_positions) == 1
+        
+        commands = []
+        self.msgbus.register(endpoint="RiskEngine.execute", handler=commands.append)
+        
+        data = [
+            ("MES=MES=FUT=2022H.SIM", "2021-12-09", 10.0),
+            ("MES=MES=FUT=2021Z.SIM", "2021-12-09", 1),
+            ("MES=MES=FUT=2022H.SIM", "2021-12-10", 10.1),
+            ("MES=MES=FUT=2021Z.SIM", "2021-12-10", 2),  # roll
+        ]
+        
+        bars = self._create_bars(data)
+        for bar in bars:
+            self.data_engine.process(bar)
+        
+        assert type(commands[0]) is SubmitOrder
+        assert commands[0].instrument_id == InstrumentId.from_str('MES=MES=FUT=2021Z.SIM')
+        assert commands[0].order.quantity == Quantity.from_int(5)
+        assert commands[0].order.side == OrderSide.SELL
+        
+        assert type(commands[1]) is SubmitOrder
+        assert commands[1].instrument_id == InstrumentId.from_str('MES=MES=FUT=2022H.SIM')
+        assert commands[1].order.quantity == Quantity.from_int(5)
+        assert commands[1].order.side == OrderSide.BUY
+        
+        
+        
+        
+            
+            
     def test_roll_sends_expected_roll_event(self):
         
         data = [
@@ -223,23 +325,7 @@ class TestContractChain:
             'data.bars.MES=MES=FUT=2022M.SIM-1-DAY-MID-EXTERNAL',
         ]
     
-    def test_swap_position_on_roll(self):
-        order: MarketOrder = self.chain.order_factory.market(
-            instrument_id=InstrumentId.from_str("MES=MES=FUT=2021Z.SIM"),
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            time_in_force=TimeInForce.FOK,
-        )
-        self.chain.submit_order(order)
-        data = [
-            ("MES=MES=FUT=2022H.SIM", "2021-12-09", 10.0),
-            ("MES=MES=FUT=2021Z.SIM", "2021-12-09", 1),
-            ("MES=MES=FUT=2022H.SIM", "2021-12-10", 10.1),
-            ("MES=MES=FUT=2021Z.SIM", "2021-12-10", 2),  # roll
-        ]
-        bars = self._create_bars(data)
-        for bar in bars:
-            self.data_engine.process(bar)
+    
         
         
     def test_current_bar_history(self):
@@ -258,7 +344,7 @@ class TestContractChain:
         
         instrument_ids = [
             bar.bar_type.instrument_id.value
-            for bar in self.chain.current
+            for bar in self.chain._current
         ]
         assert instrument_ids == [
             'MES=MES=FUT=2021Z.SIM',
@@ -283,7 +369,7 @@ class TestContractChain:
         for bar in bars:
             self.data_engine.process(bar)
             captured.append(
-                list(self.chain.adjusted)
+                list(self.chain._adjusted)
             )
         
         assert captured == [
@@ -311,7 +397,7 @@ class TestContractChain:
         for bar in bars:
             self.data_engine.process(bar)
             captured.append(
-                list(self.chain.adjusted)
+                list(self.chain._adjusted)
             )
         
         assert captured == [
@@ -377,51 +463,3 @@ class TestContractChain:
             
             
 
-# def setup_method(self):
-    #     row = IBTestProviderStubs.universe_rows(filter=["ECO"])[0]
-    #     bar_type = row.bar_type(aggregation=BarAggregation.DAY)
-
-    #     engine = BacktestEngine(
-    #         config=BacktestEngineConfig(
-    #             data_engine=DataEngineConfig(time_bars_build_with_no_updates=False),
-    #             logging=LoggingConfig(log_level="DEBUG", bypass_logging=False),
-    #             risk_engine=RiskEngineConfig(bypass=True),
-    #         ),
-    #     )
-
-    #     engine.add_venue(
-    #         venue=Venue("SIM"),
-    #         oms_type=OmsType.NETTING,
-    #         account_type=AccountType.MARGIN,
-    #         base_currency=GBP,
-    #         starting_balances=[Money(10_000, GBP)],
-    #     )
-        
-    #     provider = TestContractProvider(
-    #         approximate_expiry_offset=row.config.approximate_expiry_offset,
-    #         base=row.instrument,
-    #     )
-        
-    #     chain = ContractChain(
-    #         bar_type=bar_type,
-    #         instrument_provider=provider,
-    #         config=row.config,
-    #     )
-        
-    #     engine.add_strategy(chain)
-        
-    #     session = DataBackendSession()
-        
-    #     paths = [
-            
-    #     ]
-    #     for i, path in enumerate(paths):
-    #         session.add_file(NautilusDataType.Bar, f"table{i}", str(path))
-            
-    #     result = session.to_query_result()
-    #     data = []
-    #     for chunk in result:
-    #         data.extend(capsule_to_list(chunk))
-        
-    #     engine.add_data(data, validate=True, sort=False)
-    #     engine.run()

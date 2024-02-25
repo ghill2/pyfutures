@@ -6,6 +6,11 @@ from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import DataType
+from nautilus_trader.data.messages import Subscribe
+from nautilus_trader.model.identifiers import ClientId
+from nautilus_trader.model.identifiers import Venue
+from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.trading import Strategy
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
@@ -24,29 +29,27 @@ class RollEvent:
     to_instrument_id: InstrumentId
 
 
-class ContractChain(Strategy):
+class ContractChain(Actor):
     def __init__(
         self,
-        bar_type: BarType,
         config: ContractChainConfig,
         instrument_provider: InstrumentProvider,
-        raise_expired: bool = True,
-        ignore_expiry_date: bool = False,
-        maxlen: int | None = None,
     ):
         super().__init__()
 
-        self.hold_cycle = config.hold_cycle
-        self.bar_type = bar_type
-        self.adjusted: deque[float] = deque(maxlen=maxlen)
-        self.current: deque[Bar] = deque(maxlen=maxlen)
+        self.hold_cycle = config.roll_config.hold_cycle
+        self.bar_type = config.bar_type
+        self._adjusted: deque[float] = deque(maxlen=config.maxlen)
+        self._current: deque[Bar] = deque(maxlen=config.maxlen)
         self.topic = f"{self.bar_type}r"
         self.rolls: pd.DataFrame = pd.DataFrame(columns=["timestamp", "to_month"])
         
-        self._roll_offset = config.roll_offset
-        self._instrument_id = InstrumentId.from_str(str(config.instrument_id))
-        self._carry_offset = config.carry_offset
-        self._priced_cycle = config.priced_cycle
+        self._roll_offset = config.roll_config.roll_offset
+        self._carry_offset = config.roll_config.carry_offset
+        self._priced_cycle = config.roll_config.priced_cycle
+        
+        self._instrument_id = InstrumentId.from_str(str(config.roll_config.instrument_id))
+        
         self._start_month = config.start_month
 
         self.instrument_provider = instrument_provider
@@ -55,33 +58,30 @@ class ContractChain(Strategy):
         assert self._carry_offset == 1 or self._carry_offset == -1
         assert self._start_month in self.hold_cycle
         
-        self._raise_expired = raise_expired
-        self._ignore_expiry_date = ignore_expiry_date
-        self._ignore_expiry_date = True  # TODO
+        self._raise_expired = config.raise_expired
+        self._ignore_expiry_date = config.ignore_expiry_date
+    
+    @property
+    def adjusted(self) -> deque[float]:
+        return self._adjusted
+    
+    @property
+    def current(self) -> deque[Bar]:
+        return self._current
     
     def on_start(self) -> None:
         self._roll(to_month=self._start_month)
-    
         
     def on_bar(self, bar: Bar) -> None:
         
         is_current = bar.bar_type == self.current_bar_type
         is_forward = bar.bar_type == self.forward_bar_type
         if is_current:
-            self.adjusted.append(float(bar.close))
-            self.current.append(bar)
+            self._adjusted.append(float(bar.close))
+            self._current.append(bar)
             
         if is_current or is_forward:
             has_rolled: bool = self._attempt_roll()
-        
-        # is_current = bar.bar_type == self.current_bar_type
-        # if is_current:
-            
-        
-        # if has_rolled:
-        #     print(list(self.adjusted))
-        #     exit()
-        
             
     def _attempt_roll(self) -> bool:
         
@@ -91,15 +91,15 @@ class ContractChain(Strategy):
         forward_bar = self.cache.bar(self.forward_bar_type)
         
         # # for debugging
-        # if "DAY" in str(self.bar_type) and self.chain.current_month.value == "2008M":
+        # if "DAY" in str(self.bar_type) and self.current_month.value == "1995K":
         #     # self._log.debug(repr(bar))
         #     current_timestamp_str = str(unix_nanos_to_dt(current_bar.ts_event))[:-6] if current_bar is not None else None
         #     forward_timestamp_str = str(unix_nanos_to_dt(forward_bar.ts_event))[:-6] if forward_bar is not None else None
         #     print(
-        #         f"{self.chain.current_month.value} {current_timestamp_str} "
-        #         f"{self.chain.forward_month.value} {forward_timestamp_str} "
-        #         f"{str(self.chain.roll_date)[:-15]} "
-        #         f"{str(self.chain.expiry_date)[:-15]} "
+        #         f"{self.current_month.value} {current_timestamp_str} "
+        #         f"{self.forward_month.value} {forward_timestamp_str} "
+        #         f"{str(self.roll_date)[:-15]} "
+        #         f"{str(self.expiry_date)[:-15]} "
         #     )
         
         # calculate the strategy on every current_bar
@@ -129,25 +129,24 @@ class ContractChain(Strategy):
             current_day = current_timestamp.floor("D")
             in_roll_window = (current_timestamp >= self.roll_date) and (current_day <= self.expiry_day)
             
-        if not in_roll_window:
-            return False
+        if in_roll_window:
+            self.roll()
+            self.rolls.loc[len(self.rolls)] = (current_timestamp, self.current_month)
+            return True
         
-        self.roll()
-        self.rolls.loc[len(self.rolls)] = (current_timestamp, self.current_month)
-        
-        return True
+        return False
             
     def roll(self):
         to_month = self.hold_cycle.next_month(self.current_month)
         self._roll(to_month=to_month)
-
+        
     def _roll(self, to_month: ContractMonth) -> None:
         self._log.debug(f"Rolling to month {to_month}...")
-        if len(self.adjusted) > 0:
+        if len(self._adjusted) > 0:
             self._adjust_values()
         self._update_attributes(to_month=to_month)
         self._update_subscriptions()
-        
+        # self._update_position()
         self._log.debug(
             f"Rolled {self.previous_contract.id} > {self.current_contract.id}"
         )
@@ -165,10 +164,10 @@ class ContractChain(Strategy):
         forward_bar = self.cache.bar(self.forward_bar_type)
         adjustment_value = float(forward_bar.close) - float(current_bar.close)
         
-        values = deque(maxlen=self.adjusted.maxlen)
-        for x in list(self.adjusted):
-            values.append(x + adjustment_value)
-        self.adjusted = values
+        self._adjusted = deque(
+            [x + adjustment_value for x in self._adjusted],
+            maxlen=self._adjusted.maxlen,
+        )
         
     def _fetch_contract(self, month: ContractMonth) -> FuturesContract:
         if self.instrument_provider.get_contract(self._instrument_id, month) is None:
@@ -184,8 +183,6 @@ class ContractChain(Strategy):
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
     
-    
-        
     def _update_attributes(self, to_month: ContractMonth) -> None:
         
         self.current_month: ContractMonth = to_month

@@ -8,13 +8,22 @@ import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.functions import bar_aggregation_to_str
+from nautilus_trader.model.functions import price_type_to_str
+from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
+from nautilus_trader.model.data import capsule_to_list
+from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import Bar
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
+from nautilus_trader.core.data import Data
+from pytower.strategies.master import sort_key
+from pyfutures.continuous.config import RollConfig
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
@@ -91,7 +100,7 @@ class UniverseRow:
     market_schedule: MarketSchedule
     liquid_schedule: MarketSchedule
     start_month: ContractMonth
-    config: ContractChainConfig
+    chain_config: ContractChainConfig
     quote_home_instrument: Instrument
     instrument: FuturesContract
     contract: IBContract
@@ -138,13 +147,17 @@ class UniverseRow:
         return BarType.from_str(f"{self.instrument.id}-1-{aggregation}-MID-EXTERNAL")
 
     def bar_type_for_month(
-        self, month: ContractMonth, aggregation: BarAggregation
+        self,
+        month: ContractMonth,
+        aggregation: BarAggregation,
+        price_type: PriceType,
     ) -> BarType:
         instrument_id = self.instrument_id_for_month(
             month=month,
         )
         aggregation = bar_aggregation_to_str(aggregation)
-        return BarType.from_str(f"{instrument_id}-1-{aggregation}-MID-EXTERNAL")
+        price_type = price_type_to_str(price_type)
+        return BarType.from_str(f"{instrument_id}-1-{aggregation}-{price_type}-EXTERNAL")
 
     def bar_files(
         self,
@@ -157,7 +170,17 @@ class UniverseRow:
         month = month or "*"
         glob_str = f"{self.trading_class}={self.symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return self._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
-
+    
+    @property
+    def contract_bars(self) -> list[Bar]:
+        bars: list[Bar] = CATALOG.query(
+            data_cls=Bar,
+            instrument_ids=[self.instrument.id.symbol.value],
+        )
+        bars = sorted(bars, key=sort_key)
+        assert len(bars) > 0
+        return bars
+    
     @staticmethod
     def _get_files(
         parent: Path,
@@ -169,8 +192,46 @@ class UniverseRow:
         if len(files) == 0:
             raise RuntimeError(f"Missing files for {glob}")
         return files
-
-
+    
+    @property
+    def backend_session(self) -> DataBackendSession:
+        # create data
+        session: DataBackendSession = CATALOG.backend_session(
+            data_cls=QuoteTick,
+            instrument_ids=[self.quote_home_instrument.id.value],  # fx rates
+        )
+        session: DataBackendSession = CATALOG.backend_session(
+            data_cls=QuoteTick,
+            instrument_ids=[self.instrument.id.symbol.value],  # bars as quote ticks
+            session=session,
+        )
+        session: DataBackendSession = CATALOG.backend_session(
+            data_cls=Bar,
+            instrument_ids=[self.instrument.id.symbol.value],  # contract bars
+            session=session,
+        )
+        return session
+    
+    @property
+    def data(self) -> list[Data]:
+        result = self.backend_session.to_query_result()
+        data = []
+        for chunk in result:
+            data.extend(capsule_to_list(chunk))
+        data = sorted(data, key=sort_key)
+        return data
+    
+    @property
+    def instruments(self) -> list[Instrument]:
+        instruments = CATALOG.instruments(
+            instrument_type=FuturesContract,
+            instrument_ids=[self.instrument.id.symbol.value],
+            
+        )
+        instruments.append(self.quote_home_instrument)
+        instruments.append(self.instrument)
+        return instruments
+        
 class IBTestProviderStubs:
     @staticmethod
     def universe_dataframe(
@@ -350,18 +411,24 @@ class IBTestProviderStubs:
                 )
             )
         )
-
-        df["config"] = df.apply(
-            lambda row: ContractChainConfig(
+        
+        df["roll_config"] = df.apply(
+            lambda row: RollConfig(
                 instrument_id=row.instrument_id,
-                hold_cycle=RollCycle.from_str(
-                    row.hold_cycle, skip_months=row.missing_months
-                ),
+                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
                 carry_offset=row.carry_offset,
                 skip_months=row.missing_months,
+            ),
+            axis=1,
+        )
+        
+        df["chain_config"] = df.apply(
+            lambda row: ContractChainConfig(
+                bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
+                roll_config=row.roll_config,
                 start_month=row.start_month,
             ),
             axis=1,
