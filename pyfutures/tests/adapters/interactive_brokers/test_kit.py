@@ -220,6 +220,23 @@ class UniverseRow:
         data = []
         for chunk in result:
             data.extend(capsule_to_list(chunk))
+            
+        timestamps = {
+            x.ts_init for x in data
+        }
+        for timestamp in timestamps:
+            data.append(
+                QuoteTick(
+                    instrument_id=InstrumentId.from_str("EXECUTION.SIM"),
+                    bid_price=Price.from_int(1),
+                    ask_price=Price.from_int(1),
+                    bid_size=Quantity.from_int(1),
+                    ask_size=Quantity.from_int(1),
+                    ts_init=timestamp,
+                    ts_event=timestamp,
+                )
+            )
+            
         data = sorted(data, key=sort_key)
         return data
     
@@ -232,6 +249,29 @@ class UniverseRow:
         )
         instruments.append(self.quote_home_instrument)
         instruments.append(self.instrument)
+        from decimal import Decimal
+        from nautilus_trader.model.enums import AssetClass
+        from nautilus_trader.model.enums import InstrumentClass
+        instruments.append(
+            Instrument(
+                instrument_id=InstrumentId.from_str("EXECUTION.SIM"),
+                raw_symbol=Symbol("EXECUTION"),
+                asset_class=AssetClass.COMMODITY,
+                instrument_class=InstrumentClass.SPOT,
+                quote_currency=Currency.from_str("GBP"),
+                is_inverse=False,
+                price_precision=1,
+                size_precision=0,
+                size_increment=Quantity.from_int(1),
+                multiplier=Quantity.from_int(1),
+                margin_init=Decimal("1"),
+                margin_maint=Decimal("1"),
+                maker_fee=Decimal("1"),
+                taker_fee=Decimal("1"),
+                ts_event=0,
+                ts_init=0,
+            ),
+        )
         return instruments
         
 class IBTestProviderStubs:

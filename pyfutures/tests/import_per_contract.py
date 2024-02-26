@@ -70,16 +70,19 @@ def process_instruments(row: dict, month: ContractMonth) -> None:
 
 def process_as_ticks(row: tuple, path: Path) -> None:
     """
-    Export the bar parquet files as QuoteTick objects
+    Export execution ticks
     """
     month = ContractMonth(path.stem[-5:])
     instrument = row.instrument_for_month(month)
     
     bars = CATALOG.query(
         data_cls=Bar,
-        instrument_ids=[
-            instrument.id.value,
-        ]
+        bar_types=[
+            BarType.from_str(f"{instrument.id.value}")
+        ],
+        # instrument_ids=[
+        #     instrument.id.value,
+        # ]
     )
     
     df = bars_to_dataframe(bars)

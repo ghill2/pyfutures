@@ -7,10 +7,13 @@ from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import DataType
+from nautilus_trader.model.currencies import GBP
 from nautilus_trader.data.messages import Subscribe
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.core.uuid import UUID4
+from nautilus_trader.model.events.position import PositionClosed
+from nautilus_trader.model.events.position import PositionOpened
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.trading import Strategy
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
@@ -60,7 +63,11 @@ class ContractChain(Actor):
         
         self._raise_expired = config.raise_expired
         self._ignore_expiry_date = config.ignore_expiry_date
-    
+        self.exported_data = []
+        self._events = deque()
+        self._position_open_price = ""
+        self._position_close_price = ""
+        
     @property
     def adjusted(self) -> deque[float]:
         return self._adjusted
@@ -72,6 +79,18 @@ class ContractChain(Actor):
     def on_start(self) -> None:
         self._roll(to_month=self._start_month)
         
+        self.msgbus.subscribe(
+            topic="events.position.*",
+            handler=self._handle_position_update,
+        )
+    
+    def _handle_position_update(self, event):
+        
+        if type(event) is PositionOpened:
+            self._position_open_price = event.last_px
+        elif type(event) is PositionClosed:
+            self._position_close_price = event.last_px
+        
     def on_bar(self, bar: Bar) -> None:
         
         is_current = bar.bar_type == self.current_bar_type
@@ -79,10 +98,67 @@ class ContractChain(Actor):
         if is_current:
             self._adjusted.append(float(bar.close))
             self._current.append(bar)
-            
+        
+        # pre-roll reporting
+        current_bar = self.cache.bar(self.current_bar_type)
+        forward_bar = self.cache.bar(self.forward_bar_type)
+        stats = {}
+        stats["timestamp"] = unix_nanos_to_dt(bar.ts_init).strftime("%Y-%m-%d %H:%M:%S")
+        stats["balance"] = float(self.cache.account_for_venue(Venue("SIM")).balances().get(GBP).free)
+        stats["bar_month"] = bar.bar_type.instrument_id.symbol.value.split("=")[-1]
+        stats["current_month"] = self.current_month.value
+        stats["current_close"] = float(current_bar.close) if current_bar is not None else ""
+        stats["forward_close"] = float(forward_bar.close) if forward_bar is not None else ""
+        stats["bar_close"] = float(bar.close)
+        stats["current_bar_timestamp"] = unix_nanos_to_dt(current_bar.ts_init).strftime("%Y-%m-%d %H:%M:%S") if current_bar is not None else ""
+        stats["forward_bar_timestamp"] = unix_nanos_to_dt(forward_bar.ts_init).strftime("%Y-%m-%d %H:%M:%S") if forward_bar is not None else ""
+                                            
+        saved_positions = self.cache.positions_open()
         if is_current or is_forward:
             has_rolled: bool = self._attempt_roll()
+        
+        closed_positions = [p for p in saved_positions if p.closing_order_id is not None]
+        
+        # post-roll reporting
+        open_positions = self.cache.positions_open()
+        assert len(open_positions) in (0, 1)
+        stats["position_month"] = open_positions[0].instrument_id.symbol.value.split("=")[-1] if len(open_positions) > 0 else ""
+        
+        # stats["position_open_price"] = float(open_positions[0].avg_px_open) if len(open_positions) > 0 else ""
+        # stats["position_close_price"] = float(open_positions[0].avg_px_close) if len(open_positions) > 0 else ""
+        
+        # find event of OrderFilled with same client order id
+        
+        stats["position_open_price"] = self._position_open_price
+        stats["position_close_price"] = self._position_close_price
+        
+        # open_events = [x for x in self._events if type(x) is PositionOpened]
+        # if len(open_events) > 0 and len(open_positions) > 0:
+        #     events = [x for x in open_events if x.opening_order_id == open_positions[0].opening_order_id]
+        #     assert len(events) == 1
+        #     stats["position_open_price"] = events[0].last_px
+        # else:
+        #     stats["position_open_price"] = ""
+        # # stats["position_open_price"] = self.cache.order(open_positions[0].opening_order_id).last_px if len(open_positions) > 0 else ""
+        
+        
+        # closed_events = [x for x in self._events if type(x) is PositionClosed]
+        # if len(closed_events) > 0 and len(closed_positions) > 0:
+        #     events = [x for x in closed_events if x.closing_order_id == closed_positions[0].closing_order_id]
+        #     assert len(events) == 1
+        #     stats["position_close_price"] = events[0].last_px
+        # else:
+        #     stats["position_close_price"] = ""
             
+        stats["position_opening_order_id"] = open_positions[0].opening_order_id if len(open_positions) > 0 else ""
+        stats["net_position"] = float(self.portfolio.net_position(self.current_contract.id))
+        
+        self._position_open_price = ""
+        self._position_close_price = ""
+        
+        self.exported_data.append(stats)
+        
+                                    
     def _attempt_roll(self) -> bool:
         
         # roll when current_bar.timestamp == forward_bar.timestamp and inside roll window
@@ -373,3 +449,28 @@ class ContractChain(Actor):
 
 
         
+        # # re-order
+        # keys_order = [
+        #     "timestamp"
+        #     "net_position",
+        #     "balance",
+        #     "bar_timestamp",
+        #     "bar_month",
+        #     "current_month",
+        #     "position_open_price",
+        #     "current_close",
+        #     "forward_close",
+        #     "position_close_price",
+        #     "position_month",
+        #     "position_opening_order_id",
+        #     "current_bar_timestamp",
+        #     "forward_bar_timestamp",
+        # ]
+        # def custom_sort(item):
+        #     key, _ = item
+        #     if key in keys_order:
+        #         return keys_order.index(key)
+        #     else:
+        #         return len(keys_order)
+        # stats = dict(sorted(stats.items(), key=custom_sort))
+        # assert list(stats.keys())[:len(keys_order)] == keys_order
