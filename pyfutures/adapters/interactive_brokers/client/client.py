@@ -409,17 +409,23 @@ class InteractiveBrokersClient(Component, EWrapper):
         1 W	3 mins - 1 week
         1 M	30 mins - 1 month
         1 Y	1 day - 1 month
-        """
+
+
+       """
         if bar_size == BarSize._1_DAY:
             return Duration(step=365, freq=Frequency.DAY)
-        elif bar_size == BarSize._1_HOUR or BarSize._1_MINUTE:
+        elif bar_size == BarSize._1_HOUR:
             return Duration(step=1, freq=Frequency.DAY)
         elif bar_size == BarSize._1_MINUTE:
-            return Duration(step=57600, freq=Frequency.SECOND)  # 12 hours
+            return Duration(step=1, freq=Frequency.DAY)  # 12 hours = 57600 SECOND
         elif bar_size == BarSize._5_SECOND:
             return Duration(step=3600, freq=Frequency.SECOND)
         else:
             raise ValueError("TODO: Unsupported duration")
+
+
+
+
 
     async def request_bars(
         self,
@@ -442,11 +448,17 @@ class InteractiveBrokersClient(Component, EWrapper):
         else:
             end_time = end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S")
 
-        self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
 
         if duration is None:
             duration = self._get_appropriate_duration(bar_size)
 
+        self._log.debug(
+        f"reqHistoricalData: {request.id=}, {contract=}, "
+        f"endDateTime={end_time}, durationStr={duration}, "
+        f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}, "
+        f"useRTH={use_rth}, "
+    )
+        
         self._client.reqHistoricalData(
             reqId=request.id,
             contract=contract,
@@ -906,6 +918,7 @@ class InteractiveBrokersClient(Component, EWrapper):
             what_to_show=WhatToShow.BID_ASK,
             use_rth=use_rth,
         )
+        self._log.debug(f"--> req_head_timestamp: {head_timestamp}")
         quotes = await self.request_quote_ticks(
             contract=contract,
             count=1,
@@ -946,6 +959,14 @@ class InteractiveBrokersClient(Component, EWrapper):
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
         end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
+
+        self._log.debug(
+            f"reqHistoricalTicks: {request.id=}, {contract=}, "
+            f"startDateTime={start_time}, endDateTime={end_time}, "
+            f"numberOfTicks={count}, whatToShow='BID_ASK', "
+            f"useRth={use_rth}, "
+)
+ 
 
         self._client.reqHistoricalTicks(
             reqId=request.id,

@@ -102,7 +102,7 @@ def bar_data_to_nautilus_bar(
 
 def bar_data_to_dict(obj: BarData) -> dict:
     return {
-        "timestamp": parse_datetime(obj.time),
+        "timestamp": obj.time,
         "open": obj.open,
         "high": obj.high,
         "low": obj.low,
@@ -153,6 +153,10 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
         month = str(ContractMonth.from_int(int(details.contractMonth)))
         return InstrumentId.from_str(
             f"{trading_class}={symbol}={contract.secType}={month}.{exchange}"
+        )
+    elif contract.secType == "CONTFUT":
+        return InstrumentId.from_str(
+            f"{trading_class}={symbol}={contract.secType}.{exchange}"
         )
     elif contract.secType == "CASH":
         return InstrumentId.from_str(

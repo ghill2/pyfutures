@@ -8,12 +8,12 @@ from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
 from nautilus_trader.core.uuid import UUID4
 
-from pyfutures.adapters.interactive_brokers.client.client import ClientException
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 class TestInteractiveBrokersClient:

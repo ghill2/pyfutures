@@ -1,11 +1,13 @@
 import gc
+from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
 import pandas as pd
+from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_dict
 import pytest
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 
-from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import BarSize, Duration, Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
 from pyfutures.data.files import ParquetFile
@@ -15,12 +17,17 @@ from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProvider
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+
+# from pyfutures.tests.exporter.cache import request_bars_cached
+
+# from pyfutures.tests.exporter.cache import CachedFunc
+# from pyfutures.tests.exporter.cache import cached_func
+
 init_logging(level_stdout=LogLevel.DEBUG)
 
 
-
 @pytest.mark.asyncio()
-async def test_import_spread(client):
+async def test_export_spread(client):
     """
     Export tick history for every instrument of hte universe
     Make one of the markets a liquid one like ZN
@@ -36,47 +43,104 @@ async def test_import_spread(client):
     await client.connect()
     await client.request_market_data_type(4)
     for row in rows:
-        path = SPREAD_FOLDER / (row.uname + ".parquet")
-        if path.exists():
-            print(f"Skipping {row}")
-            continue
-
         print(f"Processing {row}")
-        df = await historic.request_bars2(
+        bars = await historic.request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
             end_time=end_time,
-            as_dataframe=True,
         )
-        assert not df.empty
-        df = df.rename({"date": "timestamp"}, axis=1)
-        df = df[["timestamp", "open", "high", "low", "close", "volume"]]
-        df.volume = 1.0
+        break
 
-        print(f"Exporting {row.uname}")
 
-        path.parent.mkdir(exist_ok=True, parents=True)
-        # df.to_parquet(path, index=False)
+@pytest.mark.asyncio()
+async def test_cache(client):
+    rows = IBTestProviderStubs.universe_rows()
 
-        file = ParquetFile(
-            parent=SPREAD_FOLDER,
-            bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
-            cls=Bar,
+    # req_cached = CachedFunc(func=request_bars_cached)
+
+    for row in rows:
+        # modify the FUT instrument for CONTFUT
+        # df["instrument_id_live"] = df.apply(
+        #     lambda row: InstrumentId.from_str(
+        #         f"{row.trading_class}={row.symbol}=CONTFUT.{row.exchange}"
+        #     ),
+        #     axis=1,
+        # )
+        #
+        # details = IBContractDetails(contract=row.contract_cont)
+        # row.instrument.info = details
+        bars = await req_cached(
+            client=client,
+            instrument=row.instrument,
+            details=IBContractDetails(contract=row.contract_cont),
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.BID_ASK,
+            duration=Duration(step=1, freq=Frequency.DAY),
+            end_time=pd.Timestamp("2020-09-16 13:30:00+0000", tz="UTC"),
+            # info=contract_details_to_dict(details),
         )
+        # print(await req_cached._cache.get("YES PLS"))
+        break
 
-        writer = BarParquetWriter(
-            path=file.path,
-            bar_type=file.bar_type,
-            price_precision=row.price_precision,
-            size_precision=1,
-        )
 
-        writer.write_dataframe(df)
-
-        del df
-        gc.collect()
-
+# @pytest.mark.asyncio()
+# async def test_export_spread(client):
+#     """
+#     Export tick history for every instrument of hte universe
+#     Make one of the markets a liquid one like ZN
+#     And an illiquid one like Aluminium
+#     """
+#     rows = IBTestProviderStubs.universe_rows(
+#         # filter=["ECO"],
+#     )
+#     historic = InteractiveBrokersHistoric(client=client, delay=2)
+#     # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+#     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+#
+#     await client.connect()
+#     await client.request_market_data_type(4)
+#     for row in rows[0:]:
+#         path = SPREAD_FOLDER / (row.uname + ".parquet")
+#         if path.exists():
+#             print(f"Skipping {row}")
+#             continue
+#
+#         print(f"Processing {row}")
+#         df = await historic.request_bars(
+#             contract=row.contract_cont,
+#             bar_size=BarSize._1_MINUTE,
+#             what_to_show=WhatToShow.BID_ASK,
+#             end_time=end_time,
+#             as_dataframe=True,
+#         )
+#         assert not df.empty
+#         df = df.rename({"date": "timestamp"}, axis=1)
+#         df = df[["timestamp", "open", "high", "low", "close", "volume"]]
+#         df.volume = 1.0
+#
+#         print(f"Exporting {row.uname}")
+#
+#         path.parent.mkdir(exist_ok=True, parents=True)
+#         # df.to_parquet(path, index=False)
+#
+#         file = ParquetFile(
+#             parent=SPREAD_FOLDER,
+#             bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
+#             cls=Bar,
+#         )
+#
+#         writer = BarParquetWriter(
+#             path=file.path,
+#             bar_type=file.bar_type,
+#             price_precision=row.price_precision,
+#             size_precision=1,
+#         )
+#
+#         writer.write_dataframe(df)
+#
+#         del df
+#         gc.collect()
 
 # @pytest.mark.asyncio()
 # async def test_import_spread(client):

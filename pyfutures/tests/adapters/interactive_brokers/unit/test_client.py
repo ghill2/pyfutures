@@ -11,7 +11,7 @@ from ibapi.contract import Contract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
 
-from pyfutures.adapters.interactive_brokers.client.client import ClientException
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent

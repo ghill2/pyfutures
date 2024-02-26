@@ -148,3 +148,18 @@ class ClientException(Exception):
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = f"Error {code}: {message}"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}: {self.code}: {self.message}"
+
+
+# class TimeoutError(asyncio.TimeoutError):
+#     """asyncio.TimeoutError that stores the timeout_seconds for use in Historic Client"""
+#
+#     def __init__(self, timeout_seconds: int):
+#         self.timeout_seconds = timeout_seconds
+#
+#     def __str__(self):
+#         return f"{self.__class__.__name__}: timeout_seconds={self.timeout_seconds}"
+#
+#     """The operation exceeded the given deadline."""

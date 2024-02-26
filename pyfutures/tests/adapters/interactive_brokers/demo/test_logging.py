@@ -11,6 +11,7 @@ from nautilus_trader.live.node import TradingNode
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.objects import Price
+from nautilus_trader.config import LoggingConfig
 
 #
 from pytower.tests.stubs.strategies import BuyOnBarX
@@ -32,7 +33,7 @@ from pyfutures.adapters.interactive_brokers.factories import (
 )
 
 
-init_logging(level_stdout=LogLevel.DEBUG)
+# init_logging(level_stdout=LogLevel.DEBUG)
 
 
 def test_strategy_logging():
@@ -61,6 +62,13 @@ def test_strategy_logging():
     config = TradingNodeConfig(
         # logging=LoggingConfig(bypass_logging=True),
         environment=Environment.LIVE,
+        logging=LoggingConfig(
+            log_level="DEBUG",
+            log_directory="logdir",
+            log_level_file="DEBUG",
+            log_file_format="log",
+            # log_component_levels={"Portfolio": "INFO"},
+        ),
         data_clients={
             "INTERACTIVE_BROKERS": InteractiveBrokersDataClientConfig(
                 instrument_provider=provider_config, routing=RoutingConfig(default=True)
