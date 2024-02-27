@@ -39,7 +39,7 @@ async def test_export_spread(client):
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    historic = InteractiveBrokersHistoric(client=client, delay=5)
     # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
 

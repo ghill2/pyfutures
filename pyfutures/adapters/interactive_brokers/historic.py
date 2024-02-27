@@ -1,7 +1,7 @@
 import asyncio
 from collections import deque
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
-
+import time
 import pandas as pd
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
@@ -208,13 +208,17 @@ class InteractiveBrokersHistoric:
         limit: int = None,
         cache: bool = True,
     ):
+        
         is_cached = False
         if cache:
             request_bars = RequestBarsCache(
-                client=self._client, name="request_bars", timeout_seconds=100
+                client=self._client, name="request_bars", timeout_seconds=60 * 10,
             )
         else:
+            
             request_bars = self._client.request_bars
+            
+        
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
@@ -259,7 +263,12 @@ class InteractiveBrokersHistoric:
                 request_bars_params["contract"] = detail.contract
 
             try:
+                start = time.perf_counter()
+                
                 bars: list[BarData] = await request_bars(**request_bars_params)
+                stop = time.perf_counter()
+                elapsed = stop - start
+                print(f"Elapsed time: {elapsed:.2f}")
                 # print([bar.timestamp for bar in bars])
             except ClientException as e:
                 self._log.error(str(e))
