@@ -48,7 +48,6 @@ def parse_datetime(value: str) -> pd.Timestamp:
         assert len(value.split()) != 3, f"""
             datetime value was {value}
             """
-
     if isinstance(value, int) or value.isdigit():
         return unix_nanos_to_dt(secs_to_nanos(int(value)))
     elif isinstance(value, str) and len(value) == 8:
@@ -102,7 +101,7 @@ def bar_data_to_nautilus_bar(
 
 def bar_data_to_dict(obj: BarData) -> dict:
     return {
-        "timestamp": obj.time,
+        "timestamp": obj.date,
         "open": obj.open,
         "high": obj.high,
         "low": obj.low,

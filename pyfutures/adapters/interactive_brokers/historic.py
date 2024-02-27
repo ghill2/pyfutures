@@ -86,7 +86,7 @@ class HistoricCache:
         return False
 
     def set_data(self, key, value: Iterable):
-        self._log.debug(f"det_data: storing data in cache: {len(value)}", LogColor.BLUE)
+        self._log.debug(f"set_data: storing data in cache: {len(value)}", LogColor.BLUE)
         pkl_path = self.cachedir / f"{key}.pkl"
         with open(pkl_path, "wb") as f:
             pickle.dump(value, f)
@@ -208,9 +208,10 @@ class InteractiveBrokersHistoric:
         limit: int = None,
         cache: bool = True,
     ):
+        is_cached = False
         if cache:
             request_bars = RequestBarsCache(
-                client=self._client, name="request_bars", timeout_seconds=25
+                client=self._client, name="request_bars", timeout_seconds=100
             )
         else:
             request_bars = self._client.request_bars
@@ -222,11 +223,12 @@ class InteractiveBrokersHistoric:
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
 
-        # caching requires conId to ensure non duplicate cache results
-        detail = await self._client.request_front_contract_details(contract)
+        # https://groups.io/g/insync/topic/adding_contfut_to_ib_insync/5850800?p=
+        # detail = await self._client.request_front_contract_details(contract)
+        detail = IBContractDetails(contract=contract)
 
         head_timestamp = await self._client.request_head_timestamp(
-            contract=detail.contract,
+            contract=contract,
             what_to_show=what_to_show,
         )
         self._log.info(f"--> req_head_timestamp: {head_timestamp}")
@@ -244,7 +246,6 @@ class InteractiveBrokersHistoric:
 
             bars = []
             request_bars_params = dict(
-                detail=detail,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
                 duration=duration,
@@ -252,10 +253,14 @@ class InteractiveBrokersHistoric:
             )
 
             if cache:
+                request_bars_params["detail"] = detail
                 is_cached = request_bars.in_cache(**request_bars_params)
+            else:
+                request_bars_params["contract"] = detail.contract
 
             try:
                 bars: list[BarData] = await request_bars(**request_bars_params)
+                # print([bar.timestamp for bar in bars])
             except ClientException as e:
                 self._log.error(str(e))
             except asyncio.TimeoutError as e:
@@ -263,11 +268,13 @@ class InteractiveBrokersHistoric:
             else:
                 total_bars.extendleft(bars)
                 if len(bars) > 0:
+                    first_date = bars[0].date
+                    last_date = bars[-1].date
                     first_timestamp = bars[0].timestamp
                     last_timestamp = bars[-1].timestamp
                     self._log.info(f"---> Retrieved {len(bars)} bars...")
-                    self._log.info(f"---> bars[0] {last_timestamp}")
-                    self._log.info(f"---> bars[-1] {first_timestamp}")
+                    self._log.info(f"---> bars[0] {first_date} {last_timestamp}")
+                    self._log.info(f"---> bars[-1] {last_date} {first_timestamp}")
 
             end_time = end_time - interval
 
@@ -276,7 +283,7 @@ class InteractiveBrokersHistoric:
 
         if as_dataframe:
             df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
-            df.volume = df.volume.astype(float)
+            df["volume"] = df.volume.astype(float)
             return df
 
         return total_bars
