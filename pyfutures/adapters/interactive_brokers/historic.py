@@ -319,7 +319,7 @@ class InteractiveBrokersHistoric:
             for quote in quotes:
                 # print(start_time, end_time)
                 # print(parse_datetime(quote.time))
-                print(quote)
+                # print(quote)
                 assert parse_datetime(quote.time) <= end_time
                 assert parse_datetime(quote.time) >= start_time
 
