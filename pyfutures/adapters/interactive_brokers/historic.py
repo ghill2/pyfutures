@@ -323,7 +323,6 @@ class InteractiveBrokersHistoric:
                 assert parse_datetime(quote.time) <= end_time
                 assert parse_datetime(quote.time) >= start_time
 
-            exit()
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
 
