@@ -23,7 +23,10 @@ from nautilus_trader.common.enums import LogLevel
 # from pyfutures.tests.exporter.cache import CachedFunc
 # from pyfutures.tests.exporter.cache import cached_func
 
-init_logging(level_stdout=LogLevel.DEBUG)
+init_logging(
+    level_stdout=LogLevel.DEBUG,
+    level_file=LogLevel.DEBUG,
+)
 
 
 @pytest.mark.asyncio()
@@ -50,6 +53,36 @@ async def test_export_spread(client):
             what_to_show=WhatToShow.BID_ASK,
             end_time=end_time,
         )
+        break
+
+
+@pytest.mark.asyncio()
+async def test_export_spread_daily(client):
+    """
+    Export tick history for every instrument of hte universe
+    Make one of the markets a liquid one like ZN
+    And an illiquid one like Aluminium
+    """
+    rows = IBTestProviderStubs.universe_rows(
+        # filter=["ECO"],
+    )
+    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+    end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+
+    await client.connect()
+    # await client.request_market_data_type(1)
+    for row in rows[30:]:
+        print(f"Processing {row}")
+        bars = await historic.request_bars(
+            contract=row.contract_cont,
+            bar_size=BarSize._1_DAY,
+            what_to_show=WhatToShow.BID_ASK,
+            end_time=end_time,
+            as_dataframe=True,
+            cache=True,
+        )
+        print(bars)
         break
 
 
