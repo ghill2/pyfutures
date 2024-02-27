@@ -67,7 +67,8 @@ class ContractChain(Actor):
         self._events = deque()
         self._position_open_price = ""
         self._position_close_price = ""
-        
+        self._position_close_timestamp = ""
+        self._position_open_timestamp = ""
     @property
     def adjusted(self) -> deque[float]:
         return self._adjusted
@@ -88,8 +89,11 @@ class ContractChain(Actor):
         
         if type(event) is PositionOpened:
             self._position_open_price = event.last_px
+            self._position_open_timestamp = event.ts_opened
         elif type(event) is PositionClosed:
             self._position_close_price = event.last_px
+            self._position_close_timestamp = event.ts_closed
+            
         
     def on_bar(self, bar: Bar) -> None:
         
@@ -109,6 +113,14 @@ class ContractChain(Actor):
         stats["current_month"] = self.current_month.value
         stats["current_close"] = float(current_bar.close) if current_bar is not None else ""
         stats["forward_close"] = float(forward_bar.close) if forward_bar is not None else ""
+        
+        forward_or_current = ""
+        if bar.bar_type == self.current_bar_type:
+            forward_or_current = "current"
+        elif bar.bar_type == self.forward_bar_type:
+            forward_or_current = "forward"
+            
+        stats["forward_or_current"] = forward_or_current
         stats["bar_close"] = float(bar.close)
         stats["current_bar_timestamp"] = unix_nanos_to_dt(current_bar.ts_init).strftime("%Y-%m-%d %H:%M:%S") if current_bar is not None else ""
         stats["forward_bar_timestamp"] = unix_nanos_to_dt(forward_bar.ts_init).strftime("%Y-%m-%d %H:%M:%S") if forward_bar is not None else ""
@@ -155,6 +167,8 @@ class ContractChain(Actor):
         
         self._position_open_price = ""
         self._position_close_price = ""
+        self._position_close_timestamp = ""
+        self._position_open_timestamp = ""
         
         self.exported_data.append(stats)
         
