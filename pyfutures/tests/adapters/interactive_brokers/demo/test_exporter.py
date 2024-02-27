@@ -44,7 +44,7 @@ async def test_export_spread(client):
     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
 
     await client.connect()
-    await client.request_market_data_type(4)
+    await client.request_market_data_type(1)
     for row in rows:
         print(f"Processing {row}")
         bars = await historic.request_bars(
