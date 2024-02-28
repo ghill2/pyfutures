@@ -37,7 +37,8 @@ class InteractiveBrokersHistoric:
         self._client = client
         self._log = Logger(type(self).__name__)
         self._delay = delay
-
+    
+    
     async def request_bars(
         self,
         contract: IBContract,
