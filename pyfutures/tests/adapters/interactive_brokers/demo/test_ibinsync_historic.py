@@ -1,49 +1,35 @@
-from collections import deque
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
-import ib_insync as ibs
-from ib_insync import Contract
-import pandas as pd
 import asyncio
+import pickle
+import time
 from collections import deque
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
+from pathlib import Path
 
+import ib_insync as ibs
+from ib_insync.util import sleep, logToConsole, logToFile
 import pandas as pd
-from ibapi.common import BarData
-from ibapi.common import HistoricalTickBidAsk
+from ib_insync import Contract
+from ibapi.common import BarData, HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
+from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 from nautilus_trader.common.component import Logger
-
-from pyfutures.adapters.interactive_brokers.client.objects import ClientException
+import logging
 
 # from pyfutures.adapters.interactive_brokers.client.objects import TimeoutError
 from pyfutures.adapters.interactive_brokers.client.client import (
     InteractiveBrokersClient,
 )
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Duration
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
-from pyfutures.adapters.interactive_brokers.parsing import (
-    historical_tick_bid_ask_to_dict,
+from pyfutures.adapters.interactive_brokers.client.objects import ClientException
+from pyfutures.adapters.interactive_brokers.enums import (
+    BarSize,
+    Duration,
+    Frequency,
+    WhatToShow,
 )
-from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
-
-from pathlib import Path
 from pyfutures.adapters.interactive_brokers.parsing import (
     contract_details_to_instrument_id,
+    parse_datetime,
 )
-
-from nautilus_trader.common.component import Logger
-from nautilus_trader.common.enums import LogColor
-import pickle
-import json
-import logging
-from typing import Iterable
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import Duration
-from pyfutures.adapters.interactive_brokers.enums import Frequency
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-
+from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 # logger = logging.getLogger("ib_insync_root")
 # logger.setLevel(logging.DEBUG)
@@ -56,6 +42,9 @@ cachedir.mkdir(parents=True, exist_ok=True)
 ib = ibs.IB()
 ibs.util.allowCtrlC()
 ib.connect(host="127.0.0.1", port=4002, clientId=345, timeout=20)
+ib.RequestTimeout = 60.0
+logToConsole(level=logging.INFO)
+logToFile(level=logging.INFO, path=Path.home() / "Desktop" / "ib_insync.log")
 
 rows = IBTestProviderStubs.universe_rows()
 
@@ -79,6 +68,7 @@ def key_builder(
 
 for row in rows:
     contract = ibs.Contract(
+        tradingClass=row.contract_cont.tradingClass,
         exchange=row.contract_cont.exchange,
         secType="CONTFUT",
         symbol=row.contract_cont.symbol,
@@ -95,22 +85,14 @@ for row in rows:
     total_bars = []
     interval = duration.to_timedelta()
 
-    print(f"--> req_head_timestamp: {head_timestamp}")
+    print(f"-> req_head_timestamp: {head_timestamp}")
     # if start_time is None or start_time < head_timestamp:
     start_time = head_timestamp
 
-    end_time = pd.Timestamp.utcnow()
+    end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+
     while end_time >= start_time:
-        bars = ib.reqHistoricalData(
-            contract,
-            # endDateTime=datetime.datetime.now(),
-            endDateTime="",
-            durationStr=duration.value,
-            barSizeSetting=str(bar_size),
-            whatToShow=what_to_show.value,
-            useRTH=True,
-            formatDate=2,
-        )
+        print(f"--> {end_time} -> {end_time - interval}")
         key = key_builder(
             detail=IBContractDetails(contract=contract),
             bar_size=bar_size,
@@ -118,12 +100,36 @@ for row in rows:
             duration=duration,
             end_time=end_time,
         )
-        end_time = end_time - interval
 
         pkl_path = cachedir / f"{key}.pkl"
-        with open(pkl_path, "wb") as f:
-            pickle.dump(bars, f)
-        print(len(bars))
+        if pkl_path.exists():
+            end_time = end_time - interval
+            continue
+
+        start = time.perf_counter()
+
+        request_bars_params = dict(
+            contract=contract,
+            endDateTime=end_time,
+            durationStr=duration.value,
+            barSizeSetting=str(bar_size),
+            whatToShow=what_to_show.value,
+            useRTH=True,
+            formatDate=2,
+        )
+        print(f"---> {request_bars_params=}")
+        bars = ib.reqHistoricalData(**request_bars_params)
+        stop = time.perf_counter()
+        elapsed = stop - start
+        print(f"---> Elapsed time: {elapsed:.2f}")
+
+        if len(bars) > 0:
+            print("---> Writing bars: ", len(bars))
+            with open(pkl_path, "wb") as f:
+                pickle.dump(bars, f)
+
+        end_time = end_time - interval
+        sleep(2)
 
 
 ib.disconnect()
