@@ -51,6 +51,38 @@ class CachedFunc:
         # delete iterate json files in the cache dir
         pass
     
+    
+    
+    def _get(
+        self,
+        key: str,
+    ) -> list[Any] | asyncio.TimeoutError | ClientException | None:
+        
+        path = self._pickle_path(key)
+        if path.exists():
+            with open(path, "rb") as f:
+                return pickle.load(f)
+        return None
+
+    def _set(
+        self,
+        key: str,
+        value: list[Any] | asyncio.TimeoutError | ClientException,
+    ) -> None:
+        
+        if isinstance(value, (list | asyncio.TimeoutError | ClientException)):
+            with open(self._pickle_path(key), "wb") as f:
+                pickle.dump(value, f)
+        else:
+            raise RuntimeError(f"Unsupported type {type(value).__name__}")
+    
+    def get_cached_path(self, *args, **kwargs) -> Path:
+        assert args == (), "Keywords arguments only"
+        return self._pickle_path(self._build_key(**kwargs))
+    
+    def _pickle_path(self, key: str) -> Path:
+        return self._cachedir / f"{key}.pkl"
+    
     def _build_key(
         self,
         **kwargs
@@ -103,74 +135,6 @@ class CachedFunc:
         sanitized_filename = sanitized_filename.strip().strip('.')
         
         return sanitized_filename
-    
-    def _get(
-        self,
-        key: str,
-    ) -> list[Any] | None:
-        
-        pickle_path = self._cachedir / f"{key}.pkl"
-        json_path = self._cachedir / f"{key}.json"
-        
-        if pickle_path.exists():
-            with open(pickle_path, "rb") as f:
-                return pickle.load(f)
-        elif json_path.exists():
-            with open(json_path, "r") as f:
-                raise self._dict_to_exception(json.load(f))
-        
-        return None
-
-    def _set(
-        self,
-        key: str,
-        value: list[Any] | asyncio.TimeoutError | ClientException,
-    ) -> None:
-        
-        if isinstance(value, list):
-            with open(self._pickle_path(key), "wb") as f:
-                pickle.dump(value, f)
-        elif isinstance(value, (asyncio.TimeoutError, ClientException)):
-            with open(self._json_path(key), "w") as f:
-                f.write(
-                    json.dumps(self._exception_to_dict(value), indent=4)
-                )
-        else:
-            raise RuntimeError(f"Unsupported type {type(value).__name__}")
-    
-    @staticmethod
-    def _exception_to_dict(exc: ClientException | asyncio.TimeoutError) -> dict:
-        data = dict(type=type(exc).__name__)
-        
-        if isinstance(exc, ClientException):
-            data["code"] = exc.code
-            data["message"] = exc.message
-        
-        return data
-            
-    
-    @staticmethod
-    def _dict_to_exception(data: dict) -> ClientException | asyncio.TimeoutError:
-        if data["type"] == "ClientException":
-            return ClientException(code=data["code"], message=data["message"])
-        elif data["type"] == "TimeoutError":
-            return asyncio.TimeoutError()
-    
-    
-    def json_path(self, *args, **kwargs) -> Path:
-        assert args == (), "Keywords arguments only"
-        return self._json_path(self._build_key(**kwargs))
-    
-    def pickle_path(self, *args, **kwargs) -> Path:
-        assert args == (), "Keywords arguments only"
-        return self._pickle_path(self._build_key(**kwargs))
-    
-    def _json_path(self, key: str) -> Path:
-        return self._cachedir / f"{key}.json"
-    
-    def _pickle_path(self, key: str) -> Path:
-        return self._cachedir / f"{key}.pkl"
-    
     
     
 # class RequestBarsCachedFunc(CachedFunc):

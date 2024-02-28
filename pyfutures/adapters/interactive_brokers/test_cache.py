@@ -45,7 +45,7 @@ class TestCachedFunc:
     async def test_call_writes_bar_data(self):
         cached_func = CachedFunc(func=self.request_bars)
         await cached_func(**self._cached_func_kwargs)
-        assert cached_func.pickle_path(**self._cached_func_kwargs).exists()
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
         
     @pytest.mark.asyncio()
     async def test_call_writes_client_exception(self):
