@@ -1,5 +1,6 @@
 import asyncio
 from collections import deque
+from pyfutures.adapters.interactive_brokers.enums import Frequency
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 import time
 import pandas as pd
@@ -15,14 +16,12 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
-
+from pyfutures.adapters.interactive_brokers.parsing import is_unqualified_contract
 from pathlib import Path
-from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_instrument_id
-
 from nautilus_trader.common.component import Logger
 from nautilus_trader.common.enums import LogColor
 from pyfutures.adapters.interactive_brokers.cache import CachedFunc
-from pyfutures.adapters.interactive_brokers.cache import RequestBarsCachedFunc
+
 
 class InteractiveBrokersHistoric:
     def __init__(
@@ -33,7 +32,6 @@ class InteractiveBrokersHistoric:
         self._client = client
         self._log = Logger(type(self).__name__)
         self._delay = delay
-    
     
     async def request_bars(
         self,
@@ -46,18 +44,7 @@ class InteractiveBrokersHistoric:
         limit: int = None,
         cache: bool = True,
     ):
-        
-        is_cached = False
-        if cache:
-            request_bars = RequestBarsCachedFunc(
-                client=self._client,
-                name="request_bars",
-                timeout_seconds=60 * 10,
-            )
-        else:
-            
-            request_bars = self._client.request_bars
-            
+        assert is_unqualified_contract(contract)
         
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
@@ -67,71 +54,80 @@ class InteractiveBrokersHistoric:
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
 
-        # https://groups.io/g/insync/topic/adding_contfut_to_ib_insync/5850800?p=
-        # detail = await self._client.request_front_contract_details(contract)
-        detail = IBContractDetails(contract=contract)
-
         head_timestamp = await self._client.request_head_timestamp(
             contract=contract,
             what_to_show=what_to_show,
         )
-        self._log.info(f"--> req_head_timestamp: {head_timestamp}")
         if start_time is None or start_time < head_timestamp:
             start_time = head_timestamp
-
-        total_bars = deque()
-        duration = self._client._get_appropriate_duration(bar_size)
-        interval = duration.to_timedelta()
+            
+        self._log.info(f"head_timestamp: {head_timestamp}: start_timestamp: {start_time}")
         
+        duration = self._get_appropriate_duration(bar_size)
+        interval = duration.to_timedelta()
+        end_time = end_time.ceil(interval)
+        cached_request_bars = CachedFunc(self._client.request_bars)
+        
+        total_bars = deque()
+        i = 0
         while end_time >= start_time:
+            
             self._log.info(
-                f"========== ({contract.symbol}.{contract.exchange}) =========="
-                f"========== {end_time} -> {end_time - interval} ==========",
+                f"{contract.symbol}.{contract.exchange} | {end_time - interval} -> {end_time}"
             )
 
             bars = []
-            request_bars_params = dict(
-                bar_size=bar_size,
-                what_to_show=what_to_show,
-                duration=duration,
-                end_time=end_time,
-            )
-
-            if cache:
-                request_bars_params["detail"] = detail
-                is_cached = request_bars.in_cache(**request_bars_params)
-            else:
-                request_bars_params["contract"] = detail.contract
-                
-    
+            start = time.perf_counter()
             try:
-                start = time.perf_counter()
                 
-                bars: list[BarData] = await request_bars(**request_bars_params)
-                stop = time.perf_counter()
-                elapsed = stop - start
-                print(f"Elapsed time: {elapsed:.2f}")
-                # print([bar.timestamp for bar in bars])
+                use_cache = cache and i > 0
+                
+                if use_cache:
+                    func = cached_request_bars
+                else:
+                    func = self._client.request_bars
+                
+                kwargs = dict(
+                    contract=contract,
+                    bar_size=bar_size,
+                    what_to_show=what_to_show,
+                    duration=duration,
+                    end_time=end_time,
+                )
+                
+                is_cached = cached_request_bars.is_cached(**kwargs)
+                
+                bars: list[BarData] = await func(**kwargs)
+                
+                # delay if not cached
+                if self._delay > 0 and use_cache and not is_cached:
+                    self._log.debug(f"Waiting for {self._delay} seconds...", LogColor.BLUE)
+                    await asyncio.sleep(self._delay)
+                    
             except ClientException as e:
                 self._log.error(str(e))
             except asyncio.TimeoutError as e:
                 self._log.error(str(e.__class__.__name__))
+            
+            total_bars.extendleft(bars)
+            
+            if len(bars) > 0:
+                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}", LogColor.BLUE)
             else:
-                total_bars.extendleft(bars)
-                if len(bars) > 0:
-                    first_date = bars[0].date
-                    last_date = bars[-1].date
-                    first_timestamp = bars[0].timestamp
-                    last_timestamp = bars[-1].timestamp
-                    self._log.info(f"---> Retrieved {len(bars)} bars...")
-                    self._log.info(f"---> bars[0] {first_date} {last_timestamp}")
-                    self._log.info(f"---> bars[-1] {last_date} {first_timestamp}")
+                self._log.debug("---> Downloaded 0 bars.", LogColor.BLUE)
 
             end_time = end_time - interval
-
-            if not is_cached and self._delay > 0:
-                await asyncio.sleep(self._delay)
-
+            stop = time.perf_counter()
+            elapsed = stop - start
+            self._log.debug(f"Elapsed time: {elapsed:.2f}")
+                
+            i += 1
+        
+        total_bars = [
+            b for b in total_bars
+            if b.timestamp >= start_time
+        ]
+        
         if as_dataframe:
             df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
             df["volume"] = df.volume.astype(float)
@@ -139,10 +135,37 @@ class InteractiveBrokersHistoric:
 
         return total_bars
     
-    def request_bars(
-        self,
-        
-    ):
+    @staticmethod
+    def _get_appropriate_duration(bar_size: BarSize) -> Duration:
+        """
+        Return an appopriate interval range depending on the desired data frequency
+        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
+        This method returns a duration that is respectful to the IB api recommendations, higher counts are favored.
+        Duration    Allowed Bar Sizes
+        60 S	1 sec - 1 mins
+        120 S	1 sec - 2 mins
+        1800 S (30 mins)	1 sec - 30 mins
+        3600 S (1 hr)	5 secs - 1 hr
+        14400 S (4hr)	10 secs - 3 hrs
+        28800 S (8 hrs)	30 secs - 8 hrs
+        1 D	1 min - 1 day
+        2 D	2 mins - 1 day
+        1 W	3 mins - 1 week
+        1 M	30 mins - 1 month
+        1 Y	1 day - 1 month
+
+
+       """
+        if bar_size == BarSize._1_DAY:
+            return Duration(step=365, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_HOUR:
+            return Duration(step=1, freq=Frequency.DAY)
+        elif bar_size == BarSize._1_MINUTE:
+            return Duration(step=1, freq=Frequency.DAY)  # 12 hours = 57600 SECOND
+        elif bar_size == BarSize._5_SECOND:
+            return Duration(step=3600, freq=Frequency.SECOND)
+        else:
+            raise ValueError("TODO: Unsupported duration")
         
     async def request_quote_ticks(
         self,
@@ -173,9 +196,6 @@ class InteractiveBrokersHistoric:
 
             assert len(quotes) <= 1000
             for quote in quotes:
-                # print(start_time, end_time)
-                # print(parse_datetime(quote.time))
-                # print(quote)
                 assert parse_datetime(quote.time) <= end_time
                 assert parse_datetime(quote.time) >= start_time
 

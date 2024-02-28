@@ -162,6 +162,12 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
             f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
         )
     
+def is_unqualified_contract(contract: IBContract) -> bool:
+    if contract.secType == "CONTFUT":
+        return len(contract.lastTradeDateOrContractMonth) == 0
+    else:
+        raise NotImplementedError()
+
 def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
     
     symbol = _sanitize_str(contract.symbol)
@@ -169,7 +175,7 @@ def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
     exchange = _sanitize_str(contract.exchange)
     
     if contract.secType == "FUT":
-        raise RuntimeError("TODO")
+        raise NotImplementedError()
     elif contract.secType == "CONTFUT":
         return InstrumentId.from_str(
             f"{trading_class}={symbol}={contract.secType}.{exchange}"

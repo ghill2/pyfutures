@@ -71,8 +71,7 @@ class Duration:
             return pd.Timedelta(days=self.step * 7)
         else:
             raise RuntimeError(f"Timedelta parsing error: the Duration {self} is not a fixed length of time.")
-
-
+    
 class BarSize(Enum):
     _1_SECOND = (1, Frequency.SECOND)
     _5_SECOND = (5, Frequency.SECOND)

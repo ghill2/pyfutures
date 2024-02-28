@@ -14,6 +14,7 @@ from nautilus_trader.common.component import Logger
 import pickle
 import json
 from ibapi.contract import Contract as IBContract
+from nautilus_trader.core.rust.common import LogColor
 
 class CachedFunc:
     """
@@ -39,7 +40,10 @@ class CachedFunc:
         
         cached = self._get(key)
         if cached is not None:
+            self._log.debug(f"Returning cached {key}", LogColor.BLUE)
             return cached
+        
+        self._log.debug(f"No cached {key}", LogColor.BLUE)
         
         result = await self._func(**kwargs)
         
@@ -78,6 +82,10 @@ class CachedFunc:
                 pickle.dump(value, f)
         else:
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
+    
+    def is_cached(self, *args, **kwargs) -> bool:
+        assert args == (), "Keywords arguments only"
+        return self.get_cached_path(*args, **kwargs).exists()
     
     def get_cached_path(self, *args, **kwargs) -> Path:
         assert args == (), "Keywords arguments only"

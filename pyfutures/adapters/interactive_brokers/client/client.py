@@ -48,11 +48,8 @@ from pyfutures.adapters.interactive_brokers.client.objects import IBOpenOrderEve
 from pyfutures.adapters.interactive_brokers.client.objects import IBOrderStatusEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPortfolioEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEvent
-# from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
-# from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
-from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
@@ -391,89 +388,54 @@ class InteractiveBrokersClient(Component, EWrapper):
         )
         return bars[-1] if len(bars) > 0 else None
 
-    @staticmethod
-    def _get_appropriate_duration(bar_size: BarSize) -> Duration:
-        """
-        Return an appopriate interval range depending on the desired data frequency
-        Historical Data requests need to be assembled in such a way that only a few thousand bars are returned at a time.
-        This method returns a duration that is respectful to the IB api recommendations, higher counts are favored.
-        Duration    Allowed Bar Sizes
-        60 S	1 sec - 1 mins
-        120 S	1 sec - 2 mins
-        1800 S (30 mins)	1 sec - 30 mins
-        3600 S (1 hr)	5 secs - 1 hr
-        14400 S (4hr)	10 secs - 3 hrs
-        28800 S (8 hrs)	30 secs - 8 hrs
-        1 D	1 min - 1 day
-        2 D	2 mins - 1 day
-        1 W	3 mins - 1 week
-        1 M	30 mins - 1 month
-        1 Y	1 day - 1 month
-
-
-       """
-        if bar_size == BarSize._1_DAY:
-            return Duration(step=365, freq=Frequency.DAY)
-        elif bar_size == BarSize._1_HOUR:
-            return Duration(step=1, freq=Frequency.DAY)
-        elif bar_size == BarSize._1_MINUTE:
-            return Duration(step=1, freq=Frequency.DAY)  # 12 hours = 57600 SECOND
-        elif bar_size == BarSize._5_SECOND:
-            return Duration(step=3600, freq=Frequency.SECOND)
-        else:
-            raise ValueError("TODO: Unsupported duration")
-
-
-
-
 
     async def request_bars(
         self,
         contract: IBContract,
         bar_size: BarSize,
         what_to_show: WhatToShow,
-        duration: Duration = None,
-        end_time: pd.Timestamp = None,
-        use_rth: bool = True,
-        timeout_seconds: int | None = None,
+        duration: Duration,
+        end_time: pd.Timestamp,
     ) -> list[BarData]:
 
         request: ClientRequest = self._create_request(
             data=[],
-            timeout_seconds=timeout_seconds,
+            timeout_seconds=60 * 10,
         )
-
-        if end_time is None:
-            end_time = ""
-        else:
-            end_time = end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S")
-
-
-        if duration is None:
-            duration = self._get_appropriate_duration(bar_size)
-
-        self._log.debug(
-        f"reqHistoricalData: {request.id=}, {contract=}, "
-        f"endDateTime={end_time}, durationStr={duration}, "
-        f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}, "
-        f"useRTH={use_rth}, "
-    )
         
-        self._client.reqHistoricalData(
-            reqId=request.id,
-            contract=contract,
-            endDateTime=end_time,
-            durationStr=duration,
-            barSizeSetting=str(bar_size),
-            whatToShow=what_to_show.name,
-            useRTH=use_rth,
-            formatDate=2,
-            keepUpToDate=False,
-            chartOptions=[],
+        self._log.debug(
+            f"reqHistoricalData: {request.id}, {contract}, "
+            f"endDateTime={end_time}, durationStr={duration}, "
+            f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}"
         )
-
-        # cancel=functools.partial(self._client.cancelHistoricalData, reqId=req_id),
-        return await self._wait_for_request(request)
+        
+        try:
+            self._client.reqHistoricalData(
+                reqId=request.id,
+                contract=contract,
+                endDateTime=end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S"),
+                durationStr=duration,
+                barSizeSetting=str(bar_size),
+                whatToShow=what_to_show.name,
+                useRTH=True,
+                formatDate=2,
+                keepUpToDate=False,
+                chartOptions=[],
+            )
+            
+            bars = await self._wait_for_request(request)
+        except ClientException:
+            self._client.cancelHistoricalData(reqId=request.id)
+            raise
+        
+        # bars can be returned before the start time
+        start_time = end_time - duration.to_timedelta()
+        
+        bars = [
+            b for b in bars
+            if b.timestamp >= start_time and b.timestamp < end_time
+        ]
+        return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper
         request = self._requests.get(reqId)
