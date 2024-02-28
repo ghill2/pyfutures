@@ -21,12 +21,8 @@ from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_i
 
 from nautilus_trader.common.component import Logger
 from nautilus_trader.common.enums import LogColor
-import pickle
-import json
-import logging
-from typing import Iterable
-from pyfutures.adapters.interactive_brokers.cache import HistoricCache
-from pyfutures.adapters.interactive_brokers.cache import RequestBarsCache
+from pyfutures.adapters.interactive_brokers.cache import CachedFunc
+from pyfutures.adapters.interactive_brokers.cache import RequestBarsCachedFunc
 
 class InteractiveBrokersHistoric:
     def __init__(
@@ -53,7 +49,7 @@ class InteractiveBrokersHistoric:
         
         is_cached = False
         if cache:
-            request_bars = RequestBarsCache(
+            request_bars = RequestBarsCachedFunc(
                 client=self._client,
                 name="request_bars",
                 timeout_seconds=60 * 10,
@@ -106,7 +102,8 @@ class InteractiveBrokersHistoric:
                 is_cached = request_bars.in_cache(**request_bars_params)
             else:
                 request_bars_params["contract"] = detail.contract
-
+                
+    
             try:
                 start = time.perf_counter()
                 
@@ -141,7 +138,12 @@ class InteractiveBrokersHistoric:
             return df
 
         return total_bars
-
+    
+    def request_bars(
+        self,
+        
+    ):
+        
     async def request_quote_ticks(
         self,
         contract: IBContract,

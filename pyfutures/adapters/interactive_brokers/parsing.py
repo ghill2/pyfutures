@@ -161,7 +161,24 @@ def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentI
         return InstrumentId.from_str(
             f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
         )
-
+    
+def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
+    
+    symbol = _sanitize_str(contract.symbol)
+    trading_class = _sanitize_str(contract.tradingClass)
+    exchange = _sanitize_str(contract.exchange)
+    
+    if contract.secType == "FUT":
+        raise RuntimeError("TODO")
+    elif contract.secType == "CONTFUT":
+        return InstrumentId.from_str(
+            f"{trading_class}={symbol}={contract.secType}.{exchange}"
+        )
+    elif contract.secType == "CASH":
+        return InstrumentId.from_str(
+            f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+        )
+        
 
 def create_contract(
     symbol: str,

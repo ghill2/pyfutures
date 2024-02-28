@@ -144,15 +144,26 @@ class ClientSubscription:
 
 
 class ClientException(Exception):
+    
     def __init__(self, code: int, message: str):
-        super().__init__(f"{code}: {message}")
+        
         self.code = code
         self.message = f"Error {code}: {message}"
+        super().__init__(code, message)  # Pass code and message as separate arguments
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.code}: {self.message}"
 
-
+    def __getstate__(self):
+        return {
+            'code': self.code,
+            'message': self.message,
+        }
+    
+    def __setstate__(self, state):
+        self.code = state['code']
+        self.message = state['message']
+        
 # class TimeoutError(asyncio.TimeoutError):
 #     """asyncio.TimeoutError that stores the timeout_seconds for use in Historic Client"""
 #
