@@ -27,9 +27,9 @@ class CachedFunc:
     ):
         self._func = func
         self._cachedir = Path.home() / "Desktop" / "download_cache" / func.__name__
-        self._log = Logger("HistoricCache")
+        self._log = Logger(f"{func.__name__}Cache")
     
-    async def __call__(self, *args, **kwargs) -> list[Any] | asyncio.TimeoutError | ClientException:
+    async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
         
         assert args == (), "Keywords arguments only"
         
@@ -47,30 +47,33 @@ class CachedFunc:
         
         return result
     
-    def purge_errors(self):
-        # delete iterate json files in the cache dir
-        pass
-    
-    
+    def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
+        for path in self._cachedir.rglob("*.pkl"):
+            with open(path, "rb") as f:
+                cached = pickle.load(f)
+            if isinstance(cached, cls):
+                path.unlink()
     
     def _get(
         self,
         key: str,
-    ) -> list[Any] | asyncio.TimeoutError | ClientException | None:
+    ) -> list[Any] | Exception | None:
         
         path = self._pickle_path(key)
         if path.exists():
             with open(path, "rb") as f:
-                return pickle.load(f)
+                cached = pickle.load(f)
+                return cached
+                
         return None
 
     def _set(
         self,
         key: str,
-        value: list[Any] | asyncio.TimeoutError | ClientException,
+        value: list[Any] | Exception,
     ) -> None:
         
-        if isinstance(value, (list | asyncio.TimeoutError | ClientException)):
+        if isinstance(value, (list, Exception)):
             with open(self._pickle_path(key), "wb") as f:
                 pickle.dump(value, f)
         else:
@@ -83,18 +86,11 @@ class CachedFunc:
     def _pickle_path(self, key: str) -> Path:
         return self._cachedir / f"{key}.pkl"
     
+    @classmethod
     def _build_key(
-        self,
+        cls,
         **kwargs
     ):
-        # https://blog.xam.de/2016/07/standard-format-for-time-stamps-in-file.html
-        """
-        contract: IBContractDetails,
-        bar_size: BarSize,
-        what_to_show: WhatToShow,
-        duration: Duration,
-        end_time: pd.Timestamp,
-        """
         parsing = {
             IBContract: lambda x: str(unqualified_contract_to_instrument_id(x)),
             pd.Timestamp: lambda x: x.strftime("%Y-%m-%d %H%M%S"),
@@ -116,7 +112,7 @@ class CachedFunc:
         
         key = "-".join(parts)
         
-        return self._sanitize_filename(key)
+        return cls._sanitize_filename(key)
     
     @staticmethod
     def _sanitize_filename(filename):

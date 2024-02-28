@@ -51,7 +51,49 @@ class TestCachedFunc:
     async def test_call_writes_client_exception(self):
         cached_func = CachedFunc(func=self.request_bars_with_client_exception)
         await cached_func(**self._cached_func_kwargs)
-        assert cached_func.json_path(**self._cached_func_kwargs).exists()
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        
+    @pytest.mark.asyncio()
+    async def test_call_writes_timeout_error(self):
+        cached_func = CachedFunc(func=self.request_bars_with_timeout_error)
+        await cached_func(**self._cached_func_kwargs)
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        
+    @pytest.mark.asyncio()
+    async def test_call_reads_bar_data(self):
+        cached_func = CachedFunc(func=self.request_bars)
+        await cached_func(**self._cached_func_kwargs)
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        bars = await cached_func(**self._cached_func_kwargs)
+        assert str(bars[0]) == str(self._bar)  # no equality implemented on BarData
+        assert bars[0].timestamp == self._bar.timestamp
+        
+    @pytest.mark.asyncio()
+    async def test_call_reads_client_exception(self):
+        cached_func = CachedFunc(func=self.request_bars_with_client_exception)
+        await cached_func(**self._cached_func_kwargs)
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        exception = await cached_func(**self._cached_func_kwargs)
+        assert isinstance(exception, ClientException)
+        assert exception.code == 123
+        assert exception.message == "Error 123: test"
+        
+    @pytest.mark.asyncio()
+    async def test_call_reads_client_exception(self):
+        cached_func = CachedFunc(func=self.request_bars_with_timeout_error)
+        await cached_func(**self._cached_func_kwargs)
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        exception = await cached_func(**self._cached_func_kwargs)
+        assert isinstance(exception, asyncio.TimeoutError)
+        
+    @pytest.mark.asyncio()
+    async def test_purge_errors(self):
+        cached_func = CachedFunc(func=self.request_bars_with_timeout_error)
+        await cached_func(**self._cached_func_kwargs)
+        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        cached_func.purge_errors(asyncio.TimeoutError)
+        assert not cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        
     
     async def request_bars(
         self,
