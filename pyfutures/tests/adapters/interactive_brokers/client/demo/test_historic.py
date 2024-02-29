@@ -41,7 +41,7 @@ class TestInteractiveBrokersHistoric:
         contract = IBContract()
         contract.conId = 452341897
         contract.symbol = "ALI"
-        contract.exchange = "COMEX"
+        contract.exchange = "COMEX"             
 
         # for contract in IBTestProviderStubs.universe_contracts():
         df = await self.historic.download(
