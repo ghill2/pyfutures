@@ -43,9 +43,6 @@ def cache():
 def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
     client = InteractiveBrokersClient(
         loop=event_loop,
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
         host="127.0.0.1",
         port=4002,
         client_id=1,
