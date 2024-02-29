@@ -1,6 +1,6 @@
 from ibapi.common import BarData
+from ibapi.common import HistoricalTickBidAsk
 import pandas as pd
-from pyfutures.adapters.interactive_brokers.parsing import HistoricalTickBidAsk
 
 
 def bar_data_to_dict(obj: BarData) -> dict:

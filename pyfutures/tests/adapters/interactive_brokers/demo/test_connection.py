@@ -11,6 +11,18 @@ init_logging(level_stdout=LogLevel.DEBUG)
 
 
 class TestInteractiveBrokersClient:
+    
+    @pytest.mark.asyncio()
+    async def test_connect_and_handshake(self, client):
+        
+        await client.connect()
+        # Mocking asyncio.open_connection
+        # mock_reader = mocker.MagicMock()
+        # mock_writer = mocker.MagicMock()
+        # mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        
+        # test that the client opens a connection
+        
     @pytest.mark.asyncio()
     async def test_reconnect(self, client):
         await Connection.start_tws()

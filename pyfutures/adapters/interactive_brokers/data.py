@@ -18,7 +18,7 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.client.parsing import dict_to_contract
+from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract
 from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapters.interactive_brokers.providers import InteractiveBrokersInstrumentProvider
 
