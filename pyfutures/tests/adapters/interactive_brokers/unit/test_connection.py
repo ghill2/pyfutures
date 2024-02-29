@@ -1,8 +1,6 @@
 import asyncio
 
 import pytest
-from nautilus_trader.model.identifiers import InstrumentId
-
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import instrument_id_to_contract
