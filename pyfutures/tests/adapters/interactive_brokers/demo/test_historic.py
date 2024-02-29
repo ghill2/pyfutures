@@ -6,7 +6,7 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+from pyfutures.adapters.interactive_brokers.client.historic import InteractiveBrokersHistoric
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 from nautilus_trader.common.component import init_logging

@@ -9,7 +9,7 @@ from nautilus_trader.model.data import BarType
 
 from pyfutures.adapters.interactive_brokers.enums import BarSize, Duration, Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.historic import InteractiveBrokersHistoric
+from pyfutures.adapters.interactive_brokers.client.historic import InteractiveBrokersHistoric
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.tests.adapters.interactive_brokers.test_kit import SPREAD_FOLDER
