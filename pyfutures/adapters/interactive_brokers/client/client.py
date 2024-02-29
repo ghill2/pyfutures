@@ -98,6 +98,7 @@ class InteractiveBrokersClient(EWrapper):
             host=host,
             port=port,
         )
+        self._conn.register_handler(self._handle_msg)
 
         self._client = EClient(wrapper=None)
         self._client.isConnected = lambda: True
@@ -107,6 +108,7 @@ class InteractiveBrokersClient(EWrapper):
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
         self._client_id = client_id
+        
 
     @property
     def subscriptions(self) -> list[ClientSubscription]:
@@ -129,11 +131,9 @@ class InteractiveBrokersClient(EWrapper):
     async def connect(self) -> None:
         await self._conn.connect()
 
-    async def _handle_msg(self, msg: bytes) -> None:
-        print("interpret called")
+    def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
         self._decoder.interpret(fields)
-        await asyncio.sleep(0)
 
     ################################################################################################
     # Responses
