@@ -1,13 +1,12 @@
 import asyncio
 from collections import deque
+import logging
 from pyfutures.adapters.interactive_brokers.enums import Frequency
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 import time
 import pandas as pd
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
-from nautilus_trader.common.component import Logger
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.enums import BarSize
@@ -17,20 +16,18 @@ from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 from pyfutures.adapters.interactive_brokers.parsing import is_unqualified_contract
-from pathlib import Path
-from nautilus_trader.common.component import Logger
-from nautilus_trader.common.enums import LogColor
 from pyfutures.adapters.interactive_brokers.cache import CachedFunc
 
-
 class InteractiveBrokersHistoric:
+    
     def __init__(
         self,
         client: InteractiveBrokersClient,
+        logger: logging.Logger,  # logging.getLogger(), Logger(type(self).__name__)
         delay: float = 0,
     ):
         self._client = client
-        self._log = Logger(type(self).__name__)
+        self._log = logger
         self._delay = delay
     
     async def request_bars(
@@ -101,7 +98,7 @@ class InteractiveBrokersHistoric:
                 
                 # delay if not cached
                 if self._delay > 0 and use_cache and not is_cached:
-                    self._log.debug(f"Waiting for {self._delay} seconds...", LogColor.BLUE)
+                    self._log.debug(f"Waiting for {self._delay} seconds...")
                     await asyncio.sleep(self._delay)
                     
             except ClientException as e:
@@ -112,9 +109,9 @@ class InteractiveBrokersHistoric:
             total_bars.extendleft(bars)
             
             if len(bars) > 0:
-                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}", LogColor.BLUE)
+                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
             else:
-                self._log.debug("---> Downloaded 0 bars.", LogColor.BLUE)
+                self._log.debug("---> Downloaded 0 bars.")
 
             end_time = end_time - interval
             stop = time.perf_counter()
