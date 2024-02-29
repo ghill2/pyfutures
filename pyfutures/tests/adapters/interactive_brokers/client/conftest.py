@@ -1,11 +1,21 @@
+import asyncio
+import logging
 import pytest
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
 @pytest.fixture
-def client(loop) -> InteractiveBrokersClient:
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture
+def client(event_loop) -> InteractiveBrokersClient:
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
     client = InteractiveBrokersClient(
-        loop=loop,
+        loop=event_loop,
         host="127.0.0.1",
         port=4002,
         client_id=1,
@@ -13,10 +23,11 @@ def client(loop) -> InteractiveBrokersClient:
     return client
 
 @pytest.fixture
-def connection(loop) -> Connection:
+def connection(event_loop) -> Connection:
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
     return Connection(
-            loop=loop,
-            handler=lambda x: print(x),
+            loop=event_loop,
             host="127.0.0.1",
             port=4002,
         )

@@ -7,6 +7,7 @@ from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from unittest.mock import AsyncMock
+from unittest.mock import Mock
 init_logging(level_stdout=LogLevel.DEBUG)
 
 
@@ -16,22 +17,40 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_connect_and_handshake(self, connection):
         
+        # Arrange
+        # handshake_responses = [
+        #     b'176\x0020240229 12:41:55 Greenwich Mean Time\x00',
+        #     b'15\x001\x00DU1234567\x00',
+        # ]
+        # mocker.patch('asyncio.wait_for')
+        
+        # def send_mocked_response(_):
+        #     connection._handle_msg(handshake_responses.pop(0))
+        # connection._sendMsg = Mock(side_effect=send_mocked_response)
+        
+        # mock_reader = mocker.MagicMock()
+        # mock_writer = mocker.MagicMock()
+        # mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        
+        # Act
         await connection.connect()
         
-        # assert isinstance(connection._reader, asyncio.streams.StreamReader)
-        # assert isinstance(connection._writer, asyncio.streams.StreamWriter)
-        # task_names = [t.name for t in asyncio.all_tasks(connection._loop)]
-        # assert "listen" in task_names
         
-        # connection._sendMsg = AsyncMock(
-            
-        # )
+        # Assert
+        # assert connection._reader == mock_reader
+        # assert connection._writer == mock_writer
+        # assert isinstance(connection._listen_task, asyncio.Task)
+        # assert not connection._listen_task.done() and not connection._listen_task.cancelled()
+        # assert connection._listen_task in asyncio.all_tasks(connection._loop)
+        # assert connection.is_connected
+        # asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
         
+        # sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
         
-        # mocked = AsyncMock(return_value=(AsyncMock(), AsyncMock()))
-        # asyncio.open_connection = mocked
-        
-        # mocked.assert_called_once_with("127.0.0.1", 4002)
+        # assert sent_messages == [
+        #     b'API\x00\x00\x00\x00\nv176..176 ',
+        #     b'\x00\x00\x00\x0871\x002\x001\x00\x00',
+        # ]
         
     @pytest.mark.asyncio()
     async def test_reconnect(self, client):

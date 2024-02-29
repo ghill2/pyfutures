@@ -13,14 +13,11 @@ class Connection:
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        handler: Coroutine,
         host: str,
         port: int,
         logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
         self._loop = loop
-        self._handler = handler
-
         self._watch_dog_task: asyncio.Task | None = None
 
         self.socket = IBConnection(host=host, port=port)
@@ -39,8 +36,12 @@ class Connection:
         self._log = logger
         if self._log is None:
             self._log = logging.getLogger()
-
+        
+        self._handlers = set()
         self._loop.run_until_complete(self._reset())
+    
+    def register_handler(self, handler: Coroutine) -> None:
+        self._handlers.add(handler)
         
     async def _listen(self) -> None:
         assert self._reader is not None
@@ -69,11 +70,14 @@ class Connection:
 
                         if msg:
                             # self._log.debug(f"<-- {msg!r}")
-
+                            
+                            await self._handle_msg(msg)
                             if self._is_ready.is_set():
-                                await self._handler(msg)
+                                for handler in self._handlers:
+                                    handler(msg)
                             else:
                                 self._process_handshake(msg)
+                            
 
                             await asyncio.sleep(0)
 
@@ -90,7 +94,14 @@ class Connection:
 
         except asyncio.CancelledError:
             self._log.debug("`listen` task was canceled.")
-
+    
+    def _handle_msg(self, msg: bytes) -> None:
+        if self._is_ready.is_set():
+            for handler in self._handlers:
+                handler(msg)
+        else:
+            self._process_handshake(msg)
+            
     async def _run_watch_dog(self):
         """
         Monitors the socket connection for disconnections.
@@ -170,7 +181,7 @@ class Connection:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
             await self._reset()
             return
-        self._log.debug("Socket connected")
+        self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 
         # start listen task
         self._log.debug("Starting listen task...")
