@@ -16,8 +16,6 @@ class Connection:
         handler: Coroutine,
         host: str,
         port: int,
-        client_id: int,
-        subscriptions: ValuesView,
         logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
         self._loop = loop
@@ -30,8 +28,6 @@ class Connection:
 
         self._host = host
         self._port = port
-        self._client_id = client_id
-        self._subscriptions = subscriptions
 
         self._connection_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
@@ -178,23 +174,23 @@ class Connection:
 
         # start listen task
         self._log.debug("Starting listen task...")
-        self._listen_task = self._loop.create_task(self._listen())
+        self._listen_task = self._loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
 
-        # # handshake
-        # self._log.debug("Performing handshake...")
-        # try:
-        #     self._log.debug("Sending handshake message...")
-        #     await self._send_handshake()
-        #     self._log.debug("Waiting for handshake response")
-        #     await asyncio.wait_for(self._is_ready.wait(), 5)
-        #     self._log.info("API connection ready, server version 176")
-        #     self.is_connected = True
+        # handshake
+        self._log.debug("Performing handshake...")
+        try:
+            self._log.debug("Sending handshake message...")
+            await self._send_handshake()
+            self._log.debug("Waiting for handshake response")
+            await asyncio.wait_for(self._is_ready.wait(), 5)
+            self._log.info("API connection ready, server version 176")
+            self.is_connected = True
 
-        # except asyncio.TimeoutError as e:
-        #     self._log.error(f"Handshake failed {e!r}")
-        #     await self._reset()
-        #     return
+        except asyncio.TimeoutError as e:
+            self._log.error(f"Handshake failed {e!r}")
+            await self._reset()
+            return
 
     def sendMsg(self, msg: bytes) -> None:
         if not self.is_connected:

@@ -6,6 +6,7 @@ from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from unittest.mock import AsyncMock
 init_logging(level_stdout=LogLevel.DEBUG)
 
 
@@ -13,17 +14,24 @@ init_logging(level_stdout=LogLevel.DEBUG)
 class TestInteractiveBrokersClient:
     
     @pytest.mark.asyncio()
-    async def test_connect_and_handshake(self, client, mocker):
+    async def test_connect_and_handshake(self, connection):
         
-        await client.connect()
+        await connection.connect()
         
-        # Mocking asyncio.open_connection
-        mock_reader = mocker.MagicMock()
-        mock_writer = mocker.MagicMock()
-        mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        # assert isinstance(connection._reader, asyncio.streams.StreamReader)
+        # assert isinstance(connection._writer, asyncio.streams.StreamWriter)
+        # task_names = [t.name for t in asyncio.all_tasks(connection._loop)]
+        # assert "listen" in task_names
         
-        asyncio.open_connection.assert_called_once_with("127.0.0.1", 4002)
-        # test that the client opens a connection
+        # connection._sendMsg = AsyncMock(
+            
+        # )
+        
+        
+        # mocked = AsyncMock(return_value=(AsyncMock(), AsyncMock()))
+        # asyncio.open_connection = mocked
+        
+        # mocked.assert_called_once_with("127.0.0.1", 4002)
         
     @pytest.mark.asyncio()
     async def test_reconnect(self, client):

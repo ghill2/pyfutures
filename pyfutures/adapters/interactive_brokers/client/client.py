@@ -100,8 +100,6 @@ class InteractiveBrokersClient(EWrapper):
             handler=self._handle_msg,
             host=host,
             port=port,
-            client_id=client_id,
-            subscriptions=self._subscriptions.values(),
         )
 
         self._client = EClient(wrapper=None)
