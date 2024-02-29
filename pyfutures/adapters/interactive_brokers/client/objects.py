@@ -5,19 +5,15 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 import pandas as pd
+from ibapi.contract import Contract as IBContract
+from ibapi.order import Order as IBOrder
+from ibapi.order_state import OrderState as IBOrderState
 
 @dataclass
 class IBOpenOrderEvent:
-    conId: int
-    totalQuantity: Decimal
-    filledQuantity: Decimal
-    status: str
-    lmtPrice: Decimal
-    action: str
-    orderId: int
-    orderType: str
-    tif: str
-    orderRef: str
+    contract: IBContract
+    order: IBOrder
+    orderState: IBOrderState
 
 @dataclass
 class IBPortfolioEvent:
@@ -169,3 +165,16 @@ class ClientException(Exception):
 #     conditions: str
 #
 
+
+# @dataclass
+# class IBOpenOrderEvent:
+#     conId: int
+#     totalQuantity: Decimal
+#     filledQuantity: Decimal
+#     status: str
+#     lmtPrice: Decimal
+#     action: str
+#     orderId: int
+#     orderType: str
+#     tif: str
+#     orderRef: str

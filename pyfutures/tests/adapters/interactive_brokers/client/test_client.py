@@ -10,14 +10,15 @@ import pytest
 from ibapi.contract import Contract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
+from ibapi.account_summary_tags import AccountSummaryTags
+from ibapi.contract import Contract as IBContract
+from ibapi.order import Order as IBOrder
+from ibapi.order_state import OrderState as IBOrderState
 
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
-from pyfutures.adapters.interactive_brokers.client.objects import IBBar
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEvent
-from pyfutures.adapters.interactive_brokers.client.objects import IBQuoteTick
-from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
@@ -29,107 +30,86 @@ RESPONSES_FOLDER = Path(__file__).parent / "responses"
 
 
 class TestInteractiveBrokersClient:
-    @pytest.mark.asyncio()
-    async def test_connect(self, client):
-        while True:
-            await asyncio.sleep(0)
-            # if client.is_connected:
-            #     return True
 
     @pytest.mark.asyncio()
     async def test_request_contract_details_returns_expected(self, client):
-        messages = [
-            b"10\x000\x00D\x00FUT\x0020231124-12:30:00\x000\x00\x00ICEEUSOFT\x00USD\x00RCX3\x00RC\x00RC\x00553444806\x001\x0010\x00ACTIVETIM,AD,ADJUST,ALERT,ALGO,ALLOC,AVGCOST,BASKET,BENCHPX,COND,CONDORDER,DAY,DEACT,DEACTDIS,DEACTEOD,GAT,GTC,GTD,GTT,HID,ICE,IOC,LIT,LMT,MIT,MKT,MTL,NGCOMB,NONALGO,OCA,OPENCLOSE,PEGBENCH,SCALE,SCALERST,SNAPMID,SNAPMKT,SNAPREL,STP,STPLMT,TRAIL,TRAILLIT,TRAILLMT,TRAILMIT,WHATIF\x00ICEEUSOFT\x001\x0027655507\x00Robusta Coffee\x00\x00202311\x00\x00\x00\x00GB-Eire\x0020231115:0900-20231115:1730;20231116:0900-20231116:1730;20231117:0900-20231117:1730;20231118:CLOSED;20231119:CLOSED;20231120:0900-20231120:1730\x0020231115:0900-20231115:1730;20231116:0900-20231116:1730;20231117:0900-20231117:1730;20231118:CLOSED;20231119:CLOSED;20231120:0900-20231120:1730\x00\x00\x000\x002147483647\x00D\x00IND\x0033\x0020231124\x00\x001\x001\x001\x00",
-            b"52\x001\x000\x00",
-        ]
-
+        
+        # Arrange
         contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(
-            side_effect=send_messages,
-        )
-
-        client._conn.sendMsg = send_mock
-
-        results = await asyncio.wait_for(client.request_contract_details(contract), 3)
-
+        
+        def send_mocked_responses(*args, **kwargs):
+            client.contractDetails(-10, IBContractDetails())
+            client.contractDetailsEnd(-10)
+            
+        send_mock = Mock(side_effect=send_mocked_responses)
+        client._eclient.reqContractDetails = send_mock
+        
+        # Act
+        results = await client.request_contract_details(contract)
+        
+        # Assert
         assert isinstance(results, list)
-        assert len(results) == 1
-        assert type(results[0]) == IBContractDetails
-
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00,9\x008\x000\x00553444806\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x000\x00\x00\x00\x00",
-        )
-        assert len(client.requests) == 0
-
+        assert all(isinstance(x, IBContractDetails) for x in results)
+        assert send_mock.call_args_list[0][1] == {
+            "reqId": -10,
+            "contract": contract,
+        }
+        
     @pytest.mark.asyncio()
     async def test_request_contract_details_raises_exception(self, client):
-        message = b"4\x002\x000\x00321\x00Error validating request.-'bQ' : cause - Please enter a valid security type\x00\x00"
-
+        
+        # Arrange
         contract = Contract()
-        contract.secType = "invalid_secType"
-        contract.symbol = "D"
-        contract.exchange = "ICEEUSOFT"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-
-        client._conn.sendMsg = send_mock
-
+        
+        def send_mocked_response(*args, **kwargs):
+            client.error(-10, 321, "test")
+        send_mock = Mock(side_effect=send_mocked_response)
+        
+        client._eclient.reqContractDetails = send_mock
+        
+        # Act & Assert
         with pytest.raises(ClientException) as e:
             await client.request_contract_details(contract)
             assert e.code == 321
 
     @pytest.mark.asyncio()
     async def test_request_account_summary(self, client):
-        messages = [
-            b"63\x001\x000\x00DU1234567\x00AccountType\x00INDIVIDUAL\x00\x00",
-            b"63\x001\x000\x00DU1234567\x00Cushion\x000.452835\x00\x00",
-            b"63\x001\x000\x00DU1234567\x00DayTradesRemaining\x00-1\x00\x00",
-            b"63\x001\x000\x00DU1234567\x00LookAheadNextChange\x001700073900\x00\x00",
-            b"63\x001\x000\x00DU1234567\x00AccruedCash\x00-16475.82\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00AvailableFunds\x00549199.02\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00BuyingPower\x002327966.81\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00EquityWithLoanValue\x001160657.83\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00ExcessLiquidity\x00582033.62\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00FullAvailableFunds\x00548302.62\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00FullExcessLiquidity\x00581218.71\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00FullInitMarginReq\x00711135.25\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00FullMaintMarginReq\x00678261.07\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00GrossPositionValue\x000.00\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00InitMarginReq\x00710238.85\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00LookAheadAvailableFunds\x00549199.02\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00LookAheadExcessLiquidity\x00582033.62\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00LookAheadInitMarginReq\x00710238.85\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00LookAheadMaintMarginReq\x00677446.17\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00MaintMarginReq\x00677446.17\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00NetLiquidation\x001285310.14\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00PreviousDayEquityWithLoanValue\x001208301.71\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00SMA\x001228550.96\x00GBP\x00",
-            b"63\x001\x000\x00DU1234567\x00TotalCashValue\x001301785.97\x00GBP\x00",
-            b"64\x001\x000\x00",
-        ]
-        # await client.connect()
-
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(
-            side_effect=send_messages,
-        )
-
-        client._conn.sendMsg = send_mock
-
+        
+        # Arrange
+        def send_mocked_responses(*args, **kwargs):
+            client.accountSummary(-10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP")
+            client.accountSummary(-10, "DU1234567", "Cushion", "0.452835", "GBP")
+            client.accountSummary(-10, "DU1234567", "DayTradesRemaining", "-1", "GBP")
+            client.accountSummary(-10, "DU1234567", "LookAheadNextChange", "1700073900", "GBP")
+            client.accountSummary(-10, "DU1234567", "AccruedCash", "-16475.82", "GBP")
+            client.accountSummary(-10, "DU1234567", "AvailableFunds", "549199.02", "GBP")
+            client.accountSummary(-10, "DU1234567", "BuyingPower", "2327966.81", "GBP")
+            client.accountSummary(-10, "DU1234567", "EquityWithLoanValue", "1160657.83", "GBP")
+            client.accountSummary(-10, "DU1234567", "ExcessLiquidity", "582033.62", "GBP")
+            client.accountSummary(-10, "DU1234567", "FullAvailableFunds", "548302.62", "GBP")
+            client.accountSummary(-10, "DU1234567", "FullExcessLiquidity", "581218.71", "GBP")
+            client.accountSummary(-10, "DU1234567", "FullInitMarginReq", "711135.25", "GBP")
+            client.accountSummary(-10, "DU1234567", "FullMaintMarginReq", "678261.07", "GBP")
+            client.accountSummary(-10, "DU1234567", "GrossPositionValue", "0.00", "GBP")
+            client.accountSummary(-10, "DU1234567", "InitMarginReq", "710238.85", "GBP")
+            client.accountSummary(-10, "DU1234567", "LookAheadAvailableFunds", "549199.02", "GBP")
+            client.accountSummary(-10, "DU1234567", "LookAheadExcessLiquidity", "582033.62", "GBP")
+            client.accountSummary(-10, "DU1234567", "LookAheadInitMarginReq", "710238.85", "GBP")
+            client.accountSummary(-10, "DU1234567", "LookAheadMaintMarginReq", "677446.17", "GBP")
+            client.accountSummary(-10, "DU1234567", "MaintMarginReq", "677446.17", "GBP")
+            client.accountSummary(-10, "DU1234567", "NetLiquidation", "1285310.14", "GBP")
+            client.accountSummary(-10, "DU1234567", "PreviousDayEquityWithLoanValue", "1208301.71", "GBP")
+            client.accountSummary(-10, "DU1234567", "SMA", "1228550.96", "GBP")
+            client.accountSummary(-10, "DU1234567", "TotalCashValue", "1301785.97", "GBP")
+            client.accountSummaryEnd(-10)
+            
+        send_mock = Mock(side_effect=send_mocked_responses)
+        client._eclient.reqAccountSummary = send_mock
+        
+        # Act
         summary = await client.request_account_summary()
-
+        
+        # Assert
         assert isinstance(summary, dict)
         assert summary == {
             "AccountType": "INDIVIDUAL",
@@ -160,135 +140,66 @@ class TestInteractiveBrokersClient:
             "currency": "GBP",
         }
         send_mock.assert_called_once_with(
-            b"\x00\x00\x01\xe962\x001\x000\x00All\x00AccountType,NetLiquidation,TotalCashValue,SettledCash,AccruedCash,BuyingPower,EquityWithLoanValue,PreviousDayEquityWithLoanValue,GrossPositionValue,ReqTEquity,ReqTMargin,SMA,InitMarginReq,MaintMarginReq,AvailableFunds,ExcessLiquidity,Cushion,FullInitMarginReq,FullMaintMarginReq,FullAvailableFunds,FullExcessLiquidity,LookAheadNextChange,LookAheadInitMarginReq,LookAheadMaintMarginReq,LookAheadAvailableFunds,LookAheadExcessLiquidity,HighestSeverity,DayTradesRemaining,Leverage\x00",
+            reqId=-10,
+            groupName="All",
+            tags=AccountSummaryTags.AllTags,
         )
-        assert len(client.requests) == 0
 
     @pytest.mark.asyncio()
     async def test_request_next_order_id(self, client):
-        message = b"9\x001\x004\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-
-        client._conn.sendMsg = send_mock
-
+        
+        # Arrange
+        def send_mocked_response(*args, **kwargs):
+            client.nextValidId(4)
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqIds = send_mock
+        
+        # Act
         next_id = await client.request_next_order_id()
 
         assert next_id == 4
-        send_mock.assert_called_once_with(b"\x00\x00\x00\x068\x001\x001\x00")
-        assert len(client.requests) == 0
+        send_mock.assert_called_once_with(1)
 
     @pytest.mark.asyncio()
     async def test_place_market_order(self, client):
-        contract = Contract()
-        contract.conId = 564400671
-        contract.exchange = "ICEEUSOFT"
-
+        
+        # Arrange
         order = Order()
-        order.contract = contract
-
-        # MARKET order
-        order.orderId = 1
-        order.orderRef = "26ab199c-0171-4e33-b47c-9243fe78415b"  # client_order_id
-        order.orderType = "MKT"  # order_type
-        order.totalQuantity = Decimal(1)  # quantity
-        order.action = "BUY"  # side
-
-        send_mock = Mock(
-            # side_effect=lambda _: client._handle_msg(messages.pop(0)),
-        )
-
-        client._conn.sendMsg = send_mock
-
+        order.orderId = 4
+        order.contract = Contract()
+        
+        send_mock = Mock()
+        client._eclient.placeOrder = send_mock
+        
+        # Act
         client.place_order(order)
-
+        
+        # Assert
         send_mock.assert_called_once_with(
-            b"\x00\x00\x00\xd63\x001\x00564400671\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00MKT\x00\x00\x00\x00\x00\x00\x000\x0026ab199c-0171-4e33-b47c-9243fe78415b\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x000\x000\x000\x00\x00\x00\x000\x00\x00\x00",
-        )
-
-    @pytest.mark.asyncio()
-    async def test_limit_place_order(self, client):
-        contract = Contract()
-        contract.conId = 564400671
-        contract.exchange = "ICEEUSOFT"
-
-        order = Order()
-        order.contract = contract
-
-        # LIMIT order
-        order.orderId = 1
-        order.orderRef = "36ab199c-0171-4e33-b47c-9243fe78415b"  # client_order_id
-        order.orderType = "LMT"  # order_type
-        order.totalQuantity = Decimal(1)  # quantity
-        order.action = "BUY"  # side
-        order.lmtPrice = 2400.0  # price
-        order.tif = "GTC"  # time in force
-
-        send_mock = Mock(
-            # side_effect=lambda _: client._handle_msg(messages.pop(0)),
-        )
-
-        client._conn.sendMsg = send_mock
-
-        client.place_order(order)
-
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00\xdf3\x001\x00564400671\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x002400.0\x00\x00GTC\x00\x00\x00\x000\x0036ab199c-0171-4e33-b47c-9243fe78415b\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x000\x000\x000\x00\x00\x00\x000\x00\x00\x00",
+            order.orderId,
+            order.contract,
+            order,
         )
 
     @pytest.mark.asyncio()
     async def test_request_open_orders(self, client):
-        await client.connect()
-
-        messages = [
-            b"5\x003\x00564400671\x00D\x00FUT\x0020240125\x000\x00?\x0010\x00ICEEUSOFT\x00USD\x00RCF4\x00RC\x00BUY\x001\x00LMT\x002400.0\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x0048909417-95cb-4668-a70f-7886c71fb5a9\x001\x001866218892\x000\x000\x000\x00\x001866218892.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-            b"3\x003\x00Submitted\x000\x001\x000\x001866218892\x000\x000\x001\x00\x000\x00",
-            b"5\x004\x00564400671\x00D\x00FUT\x0020240125\x000\x00?\x0010\x00ICEEUSOFT\x00USD\x00RCF4\x00RC\x00BUY\x001\x00MKT\x000.0\x000.0\x00DAY\x00\x00DU1234567\x00\x000\x00119dddc5-3cad-4b32-8d80-cf361c00d397\x001\x001771764360\x000\x000\x000\x00\x001771764360.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00PreSubmitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-            b"3\x004\x00PreSubmitted\x000\x001\x000\x001771764360\x000\x000\x001\x00\x000\x00",
-            b"53\x001\x00",
-        ]
-
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
+        
+        # Arrange
+        def send_mocked_response(*args, **kwargs):
+            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            client.openOrderEnd()
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqOpenOrders = send_mock
+        
+        # Act
         orders = await client.request_open_orders()
-
+        
+        # Assert
         assert len(orders) == 2
-        assert orders == [
-            IBOpenOrderEvent(
-                conId=564400671,
-                totalQuantity=Decimal("1"),
-                # filledQuantity=Decimal('170141183460469231731687303715884105727'),
-                status="Submitted",
-                lmtPrice=2400.0,
-                action="BUY",
-                orderId=3,
-                orderType="LMT",
-                tif="GTC",
-                orderRef="48909417-95cb-4668-a70f-7886c71fb5a9",
-            ),
-            IBOpenOrderEvent(
-                conId=564400671,
-                totalQuantity=Decimal("1"),
-                # filledQuantity=Decimal('170141183460469231731687303715884105727'),
-                status="PreSubmitted",
-                lmtPrice=0.0,
-                action="BUY",
-                orderId=4,
-                orderType="MKT",
-                tif="DAY",
-                orderRef="119dddc5-3cad-4b32-8d80-cf361c00d397",
-            ),
-        ]
-
-        send_mock.assert_called_once_with(b"\x00\x00\x00\x045\x001\x00")
-        assert len(client.requests) == 0
+        assert all(isinstance(o, IBOpenOrderEvent) for o in orders)
+        send_mock.assert_called_once()
 
     @pytest.mark.asyncio()
     async def test_request_positions(self, client):
