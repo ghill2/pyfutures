@@ -108,6 +108,7 @@ class InteractiveBrokersClient(EWrapper):
 
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
+        self._client_id = client_id
 
     @property
     def subscriptions(self) -> list[ClientSubscription]:

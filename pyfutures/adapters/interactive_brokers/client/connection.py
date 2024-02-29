@@ -89,7 +89,7 @@ class Connection:
             self._log.debug("`listen` task was canceled.")
     
     def _handle_msg(self, msg: bytes) -> None:
-        if self._is_ready.is_set():
+        if self.is_connected:
             for handler in self._handlers:
                 handler(msg)
         else:
@@ -103,7 +103,7 @@ class Connection:
             while True:
                 self._log.debug("Watchdog: Running...")
 
-                if self._is_ready.is_set():
+                if self.is_connected:
                     continue
 
                 self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
@@ -119,12 +119,8 @@ class Connection:
     async def _reset(self) -> bool:
         self._log.debug("Resetting...")
 
-        self._is_ready = asyncio.Event()
-        self._accounts = None
-        self._hasReqId = False
-        self._apiReady = False
-        self._serverVersion = None
-        self.is_connected = False
+        self._is_connected = asyncio.Event()
+        self._handshake_message_ids = []
 
         if self._connection_task is not None:
             self._connection_task.cancel()
@@ -150,7 +146,11 @@ class Connection:
         self._reader, self._writer = (None, None)
 
         self._log.debug("Reset")
-
+    
+    @property
+    def is_connected(self) -> bool:
+        return self._is_connected.is_set()
+    
     async def start(self) -> bool:
         self._log.debug("Starting...")
         if self._watch_dog_task is not None:
@@ -160,8 +160,8 @@ class Connection:
     async def connect(self, timeout_seconds: int = 5) -> None:
         async with self._is_connecting_lock:
             await self._connect()
-            await self._handshake()
-
+            await self._handshake(timeout_seconds=timeout_seconds)
+            
     async def _connect(self) -> None:
         self._log.debug("Connecting...")
 
@@ -189,9 +189,9 @@ class Connection:
             self._log.debug("Sending handshake message...")
             await self._send_handshake()
             self._log.debug("Waiting for handshake response")
-            await asyncio.wait_for(self._is_ready.wait(), timeout_seconds)
+            await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
             self._log.info("API connection ready, server version 176")
-            self.is_connected = True
+            
 
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
@@ -230,31 +230,18 @@ class Connection:
         msg = msg.decode(errors="backslashreplace")
         fields = msg.split("\0")
         fields.pop()
-
-        if not self._serverVersion and len(fields) == 2:
-            version, _connTime = fields
+        
+        id = int(fields[0])
+        self._handshake_message_ids.append(id)
+        
+        if self._handshake_message_ids == [176] and len(fields) == 2:
+            version, _ = fields
             assert int(version) == 176
-            self._serverVersion = version
-            # send startApi message
             self._log.debug("Sending startApi message...")
             self._sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
-        else:
-            if not self._apiReady:
-                # snoop for nextValidId and managedAccounts response,
-                # when both are in then the client is ready
-                msgId = int(fields[0])
-                if msgId == 9:
-                    _, _, validId = fields
-                    # self.updateReqId(int(validId))
-                    # self.wrapper.nextValidID()
-                    self._hasReqId = True
-                elif msgId == 15:
-                    _, _, accts = fields
-                    self._accounts = [a for a in accts.split(",") if a]
-                if self._hasReqId and self._accounts is not None:
-                    self._apiReady = True
-                    self._is_ready.set()
-
+        elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
+            self._is_connected.set()
+        
     def _prefix(self, msg):
         # prefix a message with its length
         return struct.pack(">I", len(msg)) + msg
