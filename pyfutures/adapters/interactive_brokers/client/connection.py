@@ -37,7 +37,6 @@ class Connection:
         self._listen_task: asyncio.Task | None = None
         self._reader, self._writer = (None, None)
 
-        self._loop.run_until_complete(self._reset())
 
         self._is_connecting_lock = asyncio.Lock()
         
@@ -45,6 +44,8 @@ class Connection:
         if self._log is None:
             self._log = logging.getLogger()
 
+        self._loop.run_until_complete(self._reset())
+        
     async def _listen(self) -> None:
         assert self._reader is not None
 
