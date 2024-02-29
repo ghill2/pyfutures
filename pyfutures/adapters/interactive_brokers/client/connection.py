@@ -20,7 +20,6 @@ class Connection:
         subscriptions: ValuesView,
         logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
-        self._log = logger
         self._loop = loop
         self._handler = handler
 
