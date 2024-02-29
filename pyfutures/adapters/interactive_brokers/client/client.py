@@ -70,6 +70,7 @@ class InteractiveBrokersClient(EWrapper):
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
+        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
 
         # Events
@@ -77,7 +78,10 @@ class InteractiveBrokersClient(EWrapper):
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
-
+        self._log = logger
+        if self._log is None:
+            self._log = logging.getLogger()
+        
         # Config
         self._loop = loop
         self._requests = {}
@@ -98,6 +102,7 @@ class InteractiveBrokersClient(EWrapper):
             port=port,
             client_id=client_id,
             subscriptions=self._subscriptions.values(),
+            logger=logger,
         )
 
         self._client = EClient(wrapper=None)
@@ -130,11 +135,7 @@ class InteractiveBrokersClient(EWrapper):
         await self._conn.connect()
 
     async def _handle_msg(self, msg: bytes) -> None:
-        # self._log.debug(repr(msg))
         fields = comm.read_fields(msg)
-        # self._log.debug(
-        #     "Received fields: " + ",".join([x.decode(errors="backslashreplace") for x in fields]),
-        # )
         self._decoder.interpret(fields)
         await asyncio.sleep(0)
 

@@ -23,12 +23,14 @@ class InteractiveBrokersHistoric:
     def __init__(
         self,
         client: InteractiveBrokersClient,
-        logger: logging.Logger,  # logging.getLogger(), Logger(type(self).__name__)
         delay: float = 0,
+        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
         self._client = client
-        self._log = logger
         self._delay = delay
+        self._log = logger
+        if self._log is None:
+            self._log = logging.getLogger()
     
     async def request_bars(
         self,

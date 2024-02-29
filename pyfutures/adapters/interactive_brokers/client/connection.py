@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import os
 import struct
@@ -7,8 +8,6 @@ from collections.abc import ValuesView
 import psutil
 from ibapi import comm
 from ibapi.connection import Connection as IBConnection
-from nautilus_trader.common.component import Logger
-
 
 class Connection:
     def __init__(
@@ -19,8 +18,9 @@ class Connection:
         port: int,
         client_id: int,
         subscriptions: ValuesView,
+        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
-        self._log = Logger(name=type(self).__name__)
+        self._log = logger
         self._loop = loop
         self._handler = handler
 
@@ -41,6 +41,10 @@ class Connection:
         self._loop.run_until_complete(self._reset())
 
         self._is_connecting_lock = asyncio.Lock()
+        
+        self._log = logger
+        if self._log is None:
+            self._log = logging.getLogger()
 
     async def _listen(self) -> None:
         assert self._reader is not None
