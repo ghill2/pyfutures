@@ -3,11 +3,8 @@ import asyncio
 import os
 import struct
 from collections.abc import Coroutine
-from collections.abc import ValuesView
-
 import psutil
 from ibapi import comm
-from ibapi.connection import Connection as IBConnection
 
 class Connection:
     def __init__(
@@ -18,20 +15,12 @@ class Connection:
         logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
         self._loop = loop
-        self._watch_dog_task: asyncio.Task | None = None
-
-        self.socket = IBConnection(host=host, port=port)
-        self.socket.wrapper = self
-
         self._host = host
         self._port = port
-
-        self._connection_task: asyncio.Task | None = None
-        self._listen_task: asyncio.Task | None = None
-        self._reader, self._writer = (None, None)
-
-
+        
         self._is_connecting_lock = asyncio.Lock()
+        self._watch_dog_task: asyncio.Task | None = None
+        self._listen_task: asyncio.Task | None = None
         
         self._log = logger
         if self._log is None:
@@ -104,6 +93,7 @@ class Connection:
                 self._log.debug("Watchdog: Running...")
 
                 if self.is_connected:
+                    await asyncio.sleep(5)
                     continue
 
                 self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
@@ -121,10 +111,7 @@ class Connection:
 
         self._is_connected = asyncio.Event()
         self._handshake_message_ids = []
-
-        if self._connection_task is not None:
-            self._connection_task.cancel()
-        self._connection_task = None
+        self._reader, self._writer = (None, None)
 
         self._log.debug("Destroying listen task...")
         if self._listen_task is not None:
@@ -142,8 +129,6 @@ class Connection:
                 pass
             else:
                 raise
-
-        self._reader, self._writer = (None, None)
 
         self._log.debug("Reset")
     
@@ -191,7 +176,6 @@ class Connection:
             self._log.debug("Waiting for handshake response")
             await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
             self._log.info("API connection ready, server version 176")
-            
 
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
