@@ -31,13 +31,7 @@ from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
-from nautilus_trader.cache.cache import Cache
-from nautilus_trader.common.component import Component
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.model.identifiers import ClientId
 
-from pyfutures.adapters.interactive_brokers import IB_VENUE
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.objects import ClientRequest
@@ -54,7 +48,7 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
 
 
-class InteractiveBrokersClient(Component, EWrapper):
+class InteractiveBrokersClient(EWrapper):
 
     _request_id_map = {
         # position request id is reserve for order
@@ -71,23 +65,12 @@ class InteractiveBrokersClient(Component, EWrapper):
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        msgbus: MessageBus,
-        cache: Cache,
-        clock: LiveClock,
         host: str = "127.0.0.1",
         port: int = 7497,
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
     ):
-        super().__init__(
-            clock=clock,
-            component_id=ClientId(f"{IB_VENUE.value}-{client_id:03d}"),
-            component_name=f"{type(self).__name__}-{client_id:03d}",
-            msgbus=msgbus,
-            # config=NautilusConfig({"name": f"{type(self).__name__}-{client_id:03d}", "client_id": client_id},
-            # config=NautilusConfig(name=f"{type(self).__name__}-{client_id:03d}", client_id=client_id),
-        )
 
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
@@ -97,8 +80,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         # Config
         self._loop = loop
-        self._cache = cache
-
         self._requests = {}
         self._subscriptions = {}
         self._executions = {}  # hot cache
@@ -126,11 +107,6 @@ class InteractiveBrokersClient(Component, EWrapper):
 
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-
-
-    @property
-    def cache(self) -> Cache:
-        return self._cache
 
     @property
     def subscriptions(self) -> list[ClientSubscription]:
