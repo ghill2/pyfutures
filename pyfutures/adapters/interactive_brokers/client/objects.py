@@ -4,30 +4,7 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
-
 import pandas as pd
-
-
-# @dataclass
-# class IBQuoteTick:
-#     name: str
-#     time: pd.Timestamp
-#     bid_price: float
-#     ask_price: float
-#     bid_size: Decimal
-#     ask_size: Decimal
-#
-
-# @dataclass
-# class IBTradeTick:
-#     name: str
-#     time: int
-#     price: float
-#     size: Decimal
-#     exchange: str
-#     conditions: str
-#
-
 
 @dataclass
 class IBOpenOrderEvent:
@@ -42,7 +19,6 @@ class IBOpenOrderEvent:
     tif: str
     orderRef: str
 
-
 @dataclass
 class IBPortfolioEvent:
     conId: int
@@ -53,33 +29,6 @@ class IBPortfolioEvent:
     unrealizedPNL: float
     realizedPNL: float
     accountName: str
-
-
-# @dataclass
-# class IBBar:
-#     name: str
-#     time: int
-#     open: float
-#     high: float
-#     low: float
-#     close: float
-#     volume: Decimal
-#     wap: Decimal
-#     count: int
-#
-#     @staticmethod
-#     def to_dict(obj: IBBar) -> dict:
-#         {
-#             "date": [parse_datetime(bar.date) for bar in bars],
-#             "open": [bar.open for bar in bars],
-#             "high": [bar.high for bar in bars],
-#             "low": [bar.low for bar in bars],
-#             "close": [bar.close for bar in bars],
-#             "volume": [float(bar.volume) for bar in bars],
-#             "wap": [float(bar.wap) for bar in bars],
-#             "barCount": [bar.barCount for bar in bars],
-#         }
-
 
 @dataclass
 class IBPositionEvent:
@@ -113,15 +62,15 @@ class IBErrorEvent:
 class IBOrderStatusEvent:
     order_id: int
     status: str
-    # filled: Decimal
-    # remaining: Decimal
-    # avg_fill_price: float
-    # perm_id: int
-    # parent_id: int
-    # last_fill_price: float
-    # client_id: int
-    # why_held: str
-    # mkt_cap_price: float
+    filled: Decimal
+    remaining: Decimal
+    avgFillPrice: float
+    permId: int
+    parentId: int
+    lastFillPrice: float
+    clientId: int
+    whyHeld: str
+    mktCapPrice: float
 
 
 @dataclass
@@ -174,3 +123,49 @@ class ClientException(Exception):
 #         return f"{self.__class__.__name__}: timeout_seconds={self.timeout_seconds}"
 #
 #     """The operation exceeded the given deadline."""
+
+# @dataclass
+# class IBBar:
+#     name: str
+#     time: int
+#     open: float
+#     high: float
+#     low: float
+#     close: float
+#     volume: Decimal
+#     wap: Decimal
+#     count: int
+#
+#     @staticmethod
+#     def to_dict(obj: IBBar) -> dict:
+#         {
+#             "date": [parse_datetime(bar.date) for bar in bars],
+#             "open": [bar.open for bar in bars],
+#             "high": [bar.high for bar in bars],
+#             "low": [bar.low for bar in bars],
+#             "close": [bar.close for bar in bars],
+#             "volume": [float(bar.volume) for bar in bars],
+#             "wap": [float(bar.wap) for bar in bars],
+#             "barCount": [bar.barCount for bar in bars],
+#         }
+
+# @dataclass
+# class IBQuoteTick:
+#     name: str
+#     time: pd.Timestamp
+#     bid_price: float
+#     ask_price: float
+#     bid_size: Decimal
+#     ask_size: Decimal
+#
+
+# @dataclass
+# class IBTradeTick:
+#     name: str
+#     time: int
+#     price: float
+#     size: Decimal
+#     exchange: str
+#     conditions: str
+#
+

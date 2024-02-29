@@ -261,8 +261,6 @@ class InteractiveBrokersClient(EWrapper):
             mktDataOptions=[],
         )
 
-
-
     ################################################################################################
     # Order Execution
 
@@ -500,15 +498,15 @@ class InteractiveBrokersClient(EWrapper):
         event = IBOrderStatusEvent(
             order_id=orderId,
             status=status,
-            # filled=filled,
-            # remaining=remaining,
-            # avg_fill_price=avgFillPrice,
-            # perm_id=permId,
-            # parent_id=parentId,
-            # last_fill_price=lastFillPrice,
-            # client_id=clientId,
-            # why_held=whyHeld,
-            # mkt_cap_price=mktCapPrice,
+            filled=filled,
+            remaining=remaining,
+            avgFillPrice=avgFillPrice,
+            permId=permId,
+            parentId=parentId,
+            lastFillPrice=lastFillPrice,
+            clientId=clientId,
+            whyHeld=whyHeld,
+            mktCapPrice=mktCapPrice,
         )
 
         self.order_status_events.emit(event)
