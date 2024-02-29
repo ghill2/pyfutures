@@ -97,7 +97,6 @@ class InteractiveBrokersClient(EWrapper):
 
         self._conn = Connection(
             loop=loop,
-            handler=self._handle_msg,
             host=host,
             port=port,
         )

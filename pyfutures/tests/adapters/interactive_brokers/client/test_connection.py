@@ -10,66 +10,78 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 init_logging(level_stdout=LogLevel.DEBUG)
 
-
-
-class TestInteractiveBrokersClient:
+class TestConnection:
     
     @pytest.mark.asyncio()
-    async def test_connect_and_handshake(self, connection):
+    async def test_connect(self, connection, mocker):
         
         # Arrange
-        # handshake_responses = [
-        #     b'176\x0020240229 12:41:55 Greenwich Mean Time\x00',
-        #     b'15\x001\x00DU1234567\x00',
-        # ]
-        # mocker.patch('asyncio.wait_for')
+        mock_reader = mocker.MagicMock()
+        async def mocked_read(_):
+            return b"nothing"  # do nothing
+        mock_reader.read = mocked_read
+        mock_writer = mocker.MagicMock()
         
-        # def send_mocked_response(_):
-        #     connection._handle_msg(handshake_responses.pop(0))
-        # connection._sendMsg = Mock(side_effect=send_mocked_response)
-        
-        # mock_reader = mocker.MagicMock()
-        # mock_writer = mocker.MagicMock()
-        # mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
         
         # Act
-        await connection.connect()
-        
+        await connection._connect()
         
         # Assert
-        # assert connection._reader == mock_reader
-        # assert connection._writer == mock_writer
-        # assert isinstance(connection._listen_task, asyncio.Task)
-        # assert not connection._listen_task.done() and not connection._listen_task.cancelled()
-        # assert connection._listen_task in asyncio.all_tasks(connection._loop)
-        # assert connection.is_connected
-        # asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
-        
-        # sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
-        
-        # assert sent_messages == [
-        #     b'API\x00\x00\x00\x00\nv176..176 ',
-        #     b'\x00\x00\x00\x0871\x002\x001\x00\x00',
-        # ]
-        
+        assert connection._reader == mock_reader
+        assert connection._writer == mock_writer
+        assert isinstance(connection._listen_task, asyncio.Task)
+        assert not connection._listen_task.done() and not connection._listen_task.cancelled()
+        assert connection._listen_task in asyncio.all_tasks(connection._loop)
+        asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
+    
     @pytest.mark.asyncio()
-    async def test_reconnect(self, client):
-        await Connection.start_tws()
-        await asyncio.sleep(15)
+    async def test_handshake(self, connection):
+        
+        # Arrange
+        sent_expected = [
+            b'API\x00\x00\x00\x00\nv176..176 ',
+            b'\x00\x00\x00\x0871\x002\x001\x00\x00',
+        ]
+        handshake_responses = [
+            [b'176\x0020240229 12:41:55 Greenwich Mean Time\x00'],
+            [b'15\x001\x00DU1234567\x00', b'9\x001\x006\x00'],
+        ]
+        
+        def send_mocked_response(_):
+            responses = handshake_responses.pop(0)
+            while len(responses) > 0:
+                connection._handle_msg(responses.pop(0))
+                
+        connection._sendMsg = Mock(side_effect=send_mocked_response)
+        
+        # Assert
+        await connection._handshake(timeout_seconds=1)
+        assert connection.is_connected
+        
+        sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
+        
+        assert sent_messages == sent_expected
+        
+        
+    # @pytest.mark.asyncio()
+    # async def test_reconnect(self, client):
+    #     await Connection.start_tws()
+    #     await asyncio.sleep(15)
 
-        # await client.connection.connect()
-        await client.connection.start()
+    #     # await client.connection.connect()
+    #     await client.connection.start()
 
-        await asyncio.sleep(5)
-        await Connection.kill_tws()
+    #     await asyncio.sleep(5)
+    #     await Connection.kill_tws()
 
-        await asyncio.sleep(5)
+    #     await asyncio.sleep(5)
 
-        await Connection.start_tws()
-        await asyncio.sleep(15)
+    #     await Connection.start_tws()
+    #     await asyncio.sleep(15)
 
-        while True:
-            await asyncio.sleep(0)
+    #     while True:
+    #         await asyncio.sleep(0)
 
     # @pytest.mark.asyncio()
     # async def test_connect(self, client):

@@ -69,16 +69,9 @@ class Connection:
                         (size, msg, buf) = comm.read_msg(buf)
 
                         if msg:
-                            # self._log.debug(f"<-- {msg!r}")
+                            self._log.debug(f"<-- {msg!r}")
                             
-                            await self._handle_msg(msg)
-                            if self._is_ready.is_set():
-                                for handler in self._handlers:
-                                    handler(msg)
-                            else:
-                                self._process_handshake(msg)
-                            
-
+                            self._handle_msg(msg)
                             await asyncio.sleep(0)
 
                         else:
@@ -110,7 +103,7 @@ class Connection:
             while True:
                 self._log.debug("Watchdog: Running...")
 
-                if self._is_ready.set():
+                if self._is_ready.is_set():
                     continue
 
                 self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
@@ -164,9 +157,10 @@ class Connection:
             self._watch_dog_task.cancel()
         self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
 
-    async def connect(self) -> None:
+    async def connect(self, timeout_seconds: int = 5) -> None:
         async with self._is_connecting_lock:
             await self._connect()
+            await self._handshake()
 
     async def _connect(self) -> None:
         self._log.debug("Connecting...")
@@ -187,21 +181,21 @@ class Connection:
         self._log.debug("Starting listen task...")
         self._listen_task = self._loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
-
-        # handshake
+    
+    async def _handshake(self, timeout_seconds: int = 5) -> None:
+        
         self._log.debug("Performing handshake...")
         try:
             self._log.debug("Sending handshake message...")
             await self._send_handshake()
             self._log.debug("Waiting for handshake response")
-            await asyncio.wait_for(self._is_ready.wait(), 5)
+            await asyncio.wait_for(self._is_ready.wait(), timeout_seconds)
             self._log.info("API connection ready, server version 176")
             self.is_connected = True
 
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
             await self._reset()
-            return
 
     def sendMsg(self, msg: bytes) -> None:
         if not self.is_connected:
@@ -293,14 +287,14 @@ class Connection:
                 return True
         return False
 
-    def error(  # too complex
-        self,
-        req_id: int,
-        error_code: int,
-        error_string: str,
-        advanced_order_reject_json: str = "",
-    ) -> None:
-        self._log.debug(error_string)
+    # def error(  # too complex
+    #     self,
+    #     req_id: int,
+    #     error_code: int,
+    #     error_string: str,
+    #     advanced_order_reject_json: str = "",
+    # ) -> None:
+    #     self._log.debug(error_string)
 
     # def is_connected(self) -> bool:
     #     """
