@@ -31,18 +31,20 @@ async def test_export_spread(client):
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(client=client, delay=5)
+    historic = InteractiveBrokersHistoric(client=client, delay=3)
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     await client.connect()
     await client.request_market_data_type(4)
     for row in rows:
         print(f"Processing {row}...")
-        bars: list[BarData] = await historic.request_bars(
+        bars: pd.DataFrame = await historic.request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
             start_time=start_time,
+            as_dataframe=True,
         )
+        bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
 
 @pytest.mark.asyncio()
 async def test_export_spread_daily(client):

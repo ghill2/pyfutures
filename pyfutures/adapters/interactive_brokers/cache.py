@@ -41,15 +41,29 @@ class CachedFunc:
         cached = self._get(key)
         if cached is not None:
             self._log.debug(f"Returning cached {key}", LogColor.BLUE)
-            return cached
+            if isinstance(cached, Exception):
+                raise cached
+            else:
+                return cached
         
         self._log.debug(f"No cached {key}", LogColor.BLUE)
         
-        result = await self._func(**kwargs)
+        try:
+            result = await self._func(**kwargs)
+            self._set(key, result)
+            self._log.debug(f"Saved {len(result)} items...", LogColor.BLUE)
+            return result
+        except ClientException as e:
+            self._log.error(str(e))
+            self._set(key, e)
+            self._log.debug(f"Saved {e} items...", LogColor.BLUE)
+            raise
+        except asyncio.TimeoutError as e:
+            self._log.error(str(e.__class__.__name__))
+            self._set(key, e)
+            raise
         
-        self._set(key, result)
-        
-        return result
+        raise NotImplementedError()
     
     def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
         for path in self._cachedir.rglob("*.pkl"):
