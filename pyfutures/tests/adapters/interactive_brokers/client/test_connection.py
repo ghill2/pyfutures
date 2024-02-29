@@ -16,6 +16,7 @@ class TestInteractiveBrokersClient:
     async def test_connect_and_handshake(self, client):
         
         await client.connect()
+        
         # Mocking asyncio.open_connection
         # mock_reader = mocker.MagicMock()
         # mock_writer = mocker.MagicMock()
