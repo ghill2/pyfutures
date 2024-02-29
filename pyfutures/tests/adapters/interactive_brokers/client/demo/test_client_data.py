@@ -2,9 +2,9 @@ import asyncio
 
 import pytest
 from ibapi.common import BarData, HistoricalTickBidAsk
-from ibapi.contract import Contract as IBcontract
+from ibapi.contract import Contract as IBContract
 
-from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
+# from pyfutures.adapters.interactive_brokers.client.objects import IBTradeTick
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
@@ -12,6 +12,8 @@ from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+import pandas as pd
+
 
 init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -125,3 +127,29 @@ class TestInteractiveBrokersClientData:
 
         assert all(isinstance(bar, BarData) for bar in bars)
         assert len(bars) > 0
+
+    @pytest.mark.asyncio()
+    async def test_client_handles_errors(self, client):
+        """if an error is raised within the callback responses, the client should show the errors in the log"""
+
+        await client.connect()
+        #
+        # def side_effect(**kwargs):
+            # client.historicalData(reqId=1, bar=BarData())
+
+        # send_mock = Mock(side_effect=side_effect)
+        # client._client.reqHistoricalData = send_mock
+        # error_mock()
+        #
+        contract = IBContract()
+        contract.secType = "CONTFUT"
+        contract.exchange = "CME"
+        contract.symbol = "DA"
+
+        await client.request_bars(
+            contract=contract,
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.TRADES,
+            duration=Duration(step=1, freq=Frequency.DAY),
+            end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D")
+        )

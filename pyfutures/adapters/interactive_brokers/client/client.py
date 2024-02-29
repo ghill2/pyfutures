@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 import eventkit
+import traceback
 
 # fmt: off
 import pandas as pd
@@ -70,7 +71,6 @@ class InteractiveBrokersClient(EWrapper):
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
-        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
 
         # Events
@@ -78,9 +78,7 @@ class InteractiveBrokersClient(EWrapper):
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
-        self._log = logger
-        if self._log is None:
-            self._log = logging.getLogger()
+        self._log = logging.getLogger(self.__class__.__name__)
         
         # Config
         self._loop = loop
@@ -132,6 +130,7 @@ class InteractiveBrokersClient(EWrapper):
         await self._conn.connect()
 
     async def _handle_msg(self, msg: bytes) -> None:
+        print("interpret called")
         fields = comm.read_fields(msg)
         self._decoder.interpret(fields)
         await asyncio.sleep(0)
@@ -410,6 +409,8 @@ class InteractiveBrokersClient(EWrapper):
         return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper
+        print(traceback.print_stack())
+        raise Exception("")
         request = self._requests.get(reqId)
         if request is None:
             return  # no request found for request_id

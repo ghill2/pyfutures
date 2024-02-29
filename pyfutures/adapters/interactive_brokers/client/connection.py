@@ -12,7 +12,6 @@ class Connection:
         loop: asyncio.AbstractEventLoop,
         host: str,
         port: int,
-        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
     ):
         self._loop = loop
         self._host = host
@@ -22,9 +21,7 @@ class Connection:
         self._watch_dog_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
         
-        self._log = logger
-        if self._log is None:
-            self._log = logging.getLogger()
+        self._log = logging.getLogger(self.__class__.__name__)
         
         self._handlers = set()
         self._loop.run_until_complete(self._reset())
