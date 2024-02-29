@@ -12,9 +12,9 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.parsing import bar_data_to_dict
-from pyfutures.adapters.interactive_brokers.parsing import historical_tick_bid_ask_to_dict
-from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
+from pyfutures.adapters.interactive_brokers.client.parsing import bar_data_to_dict
+from pyfutures.adapters.interactive_brokers.client.parsing import historical_tick_bid_ask_to_dict
+from pyfutures.adapters.interactive_brokers.client.parsing import parse_datetime
 from pyfutures.adapters.interactive_brokers.parsing import is_unqualified_contract
 from pyfutures.adapters.interactive_brokers.cache import CachedFunc
 

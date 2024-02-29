@@ -21,7 +21,7 @@ import pytest
 from pyfutures.adapters.interactive_brokers.execution import (
     InteractiveBrokersExecutionClient,
 )
-from pyfutures.adapters.interactive_brokers.parsing import dict_to_contract_details
+from pyfutures.adapters.interactive_brokers.client.parsing import dict_to_contract_details
 from pyfutures.tests.adapters.interactive_brokers.demo.factories import (
     InteractiveBrokersExecEngineFactory,
 )

@@ -4,6 +4,8 @@ import time
 from collections import deque
 from pathlib import Path
 
+from pyfutures.adapters.interactive_brokers.client.parsing import parse_datetime
+
 import ib_insync as ibs
 from ib_insync.util import sleep, logToConsole, logToFile
 import pandas as pd
@@ -27,7 +29,6 @@ from pyfutures.adapters.interactive_brokers.enums import (
 )
 from pyfutures.adapters.interactive_brokers.parsing import (
     contract_details_to_instrument_id,
-    parse_datetime,
 )
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 

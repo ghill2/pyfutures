@@ -2,7 +2,7 @@ import gc
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
 import pandas as pd
-from pyfutures.adapters.interactive_brokers.parsing import contract_details_to_dict
+from pyfutures.adapters.interactive_brokers.client.parsing import contract_details_to_dict
 import pytest
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType

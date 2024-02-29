@@ -45,7 +45,7 @@ from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEven
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.parsing import parse_datetime
+from pyfutures.adapters.interactive_brokers.client.parsing import parse_datetime
 
 
 class InteractiveBrokersClient(EWrapper):

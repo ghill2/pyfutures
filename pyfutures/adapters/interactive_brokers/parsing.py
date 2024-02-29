@@ -2,18 +2,14 @@ import time
 from decimal import Decimal
 
 import pandas as pd
+from pyfutures.adapters.interactive_brokers.client.parsing import parse_datetime
 import pytz
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
-
-# from ibapi.common import UNSET_DECIMAL
-# from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order as IBOrder
 from nautilus_trader.core.datetime import dt_to_unix_nanos
-from nautilus_trader.core.datetime import secs_to_nanos
-from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.reports import OrderStatusReport
 from nautilus_trader.model.data import Bar
@@ -30,34 +26,13 @@ from nautilus_trader.model.identifiers import ClientOrderId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
 from nautilus_trader.model.instruments import CurrencyPair
-
-# from pyfutures.adapters.interactive_brokers.client import OrderEvent
 from nautilus_trader.model.identifiers import VenueOrderId
 from nautilus_trader.model.instruments import FuturesContract
 from nautilus_trader.model.instruments import Instrument
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.orders.base import Order
-
 from pyfutures.continuous.contract_month import ContractMonth
-
-
-def parse_datetime(value: str) -> pd.Timestamp:
-    if isinstance(value, str):
-        assert len(value.split()) != 3, f"""
-            datetime value was {value}
-            """
-    if isinstance(value, int) or value.isdigit():
-        return unix_nanos_to_dt(secs_to_nanos(int(value)))
-    elif isinstance(value, str) and len(value) == 8:
-        # YYYYmmdd
-        # daily historical bars
-        return pd.to_datetime(value, format="%Y%m%d", utc=True)
-    elif isinstance(value, str) and len(value) == 17:
-        return pd.to_datetime(value, format="%Y%m%d-%H:%M:%S", utc=True)
-
-    raise RuntimeError("Unable to parse timestamp")
 
 
 def historical_tick_to_nautilus_quote_tick(
@@ -98,39 +73,10 @@ def bar_data_to_nautilus_bar(
     )
     return bar
 
-
-def bar_data_to_dict(obj: BarData) -> dict:
-    return {
-        "timestamp": obj.date,
-        "open": obj.open,
-        "high": obj.high,
-        "low": obj.low,
-        "close": obj.close,
-        "volume": obj.volume,
-        "wap": obj.wap,
-        "barCount": obj.barCount,
-    }
-
-
-def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
-    return {
-        "time": parse_datetime(obj.time),
-        "bid": obj.priceBid,
-        "ask": obj.priceAsk,
-        "bid_size": obj.sizeBid,
-        "ask_size": obj.sizeAsk,
-    }
-
-
-def format_ib_timestamp(value: pd.Timestamp) -> str:
-    return value.strftime("yyyyMMdd-HH:mm:ss")
-
-
 order_side_to_order_action: dict[str, str] = {
     "BOT": "BUY",
     "SLD": "SELL",
 }
-
 
 def _desanitize_str(value: str):
     return value.replace(",", ".")
@@ -184,7 +130,6 @@ def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
         return InstrumentId.from_str(
             f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
         )
-        
 
 def create_contract(
     symbol: str,
@@ -199,7 +144,7 @@ def create_contract(
     contract.exchange = _desanitize_str(venue)
     contract.secType = sec_type
     # contract.includeExpired = False
-    #
+    
     if trading_class is not None:
         contract.tradingClass = _desanitize_str(trading_class)
 
@@ -264,15 +209,33 @@ def contract_details_to_futures_instrument(
         info=contract_details_to_dict(details),
     )
 
+def dict_to_contract(value: dict) -> IBContract:
+    contract = IBContract()
+    for key, value in value.items():
+        setattr(contract, key, value)
+    return contract
+
+
+def dict_to_contract_details(value: dict) -> IBContractDetails:
+    details = IBContractDetails()
+    details.contract = dict_to_contract(value["contract"])
+    value.pop("contract")
+    for key, value in value.items():
+        setattr(details, key, value)
+    return details
+
+
+def contract_details_to_dict(value: IBContractDetails) -> dict:
+    data = {}
+    data = data | value.__dict__.copy()
+    data["contract"] = value.contract.__dict__.copy()
+    return data
 
 def _tick_size_to_precision(tick_size: float | Decimal) -> int:
     tick_size_str = f"{tick_size:.10f}"
     return len(tick_size_str.partition(".")[2].rstrip("0"))
 
 
-# nautilus_trader/adapters/interactive_brokers/parsing/instruments.py
-# GTODO: does this function need modifying?
-# do we need the function above?
 def contract_details_to_forex_instrument(
     details: IBContractDetails,
 ) -> CurrencyPair:
@@ -316,29 +279,6 @@ def _sec_type_to_asset_class(sec_type: str):
         "BOND": "BOND",
     }
     return asset_class_from_str(mapping.get(sec_type, sec_type))
-
-
-def dict_to_contract(value: dict) -> IBContract:
-    contract = IBContract()
-    for key, value in value.items():
-        setattr(contract, key, value)
-    return contract
-
-
-def dict_to_contract_details(value: dict) -> IBContractDetails:
-    details = IBContractDetails()
-    details.contract = dict_to_contract(value["contract"])
-    value.pop("contract")
-    for key, value in value.items():
-        setattr(details, key, value)
-    return details
-
-
-def contract_details_to_dict(value: IBContractDetails) -> dict:
-    data = {}
-    data = data | value.__dict__.copy()
-    data["contract"] = value.contract.__dict__.copy()
-    return data
 
 
 map_order_status = {
