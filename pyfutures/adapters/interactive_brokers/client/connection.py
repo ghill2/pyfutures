@@ -33,47 +33,39 @@ class Connection:
         assert self._reader is not None
 
         buf = b""
-        previous_message = None
+
         try:
-            try:
-                while True:
-                    # data = await self._loop.run_in_executor(None, self.socket.recvMsg)
-                    data = await self._reader.read(4096)
+            while True:
+                
+                data = await self._reader.read(4096)
 
-                    # if data == b"" and data != previous_message:
-                    #     print(data)
-                    previous_message = data
+                if data == b"":
+                    self._log.debug("0 bytes received from server, connect has been dropped")
+                    await self._reset()
+                    return
 
-                    if data == b"":
-                        self._log.debug("0 bytes received from server, connect has been dropped")
-                        await self._reset()
-                        return
+                buf += data
 
-                    buf += data
+                while len(buf) > 0:
+                    (size, msg, buf) = comm.read_msg(buf)
 
-                    while len(buf) > 0:
-                        (size, msg, buf) = comm.read_msg(buf)
+                    if msg:
+                        self._log.debug(f"<-- {msg!r}")
+                        
+                        self._handle_msg(msg)
+                        await asyncio.sleep(0)
 
-                        if msg:
-                            self._log.debug(f"<-- {msg!r}")
-                            
-                            self._handle_msg(msg)
-                            await asyncio.sleep(0)
+                    else:
+                        self._log.debug("more incoming packet(s) are needed ")
+                        break
 
-                        else:
-                            self._log.debug("more incoming packet(s) are needed ")
-                            break
+                await asyncio.sleep(0)
 
-                    await asyncio.sleep(0)
+        except ConnectionResetError as e:
+            self._log.error(f"listen: TWS closed the connection {e!r}...")
+            await self._reset()
+            return
 
-            except ConnectionResetError as e:
-                self._log.error(f"listen: TWS closed the connection {e!r}...")
-                await self._reset()
-                return
-
-        except asyncio.CancelledError:
-            self._log.debug("`listen` task was canceled.")
-    
     def _handle_msg(self, msg: bytes) -> None:
         if self.is_connected:
             for handler in self._handlers:
@@ -90,7 +82,6 @@ class Connection:
                 self._log.debug("Watchdog: Running...")
 
                 if self.is_connected:
-                    await asyncio.sleep(5)
                     continue
 
                 self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
@@ -100,7 +91,6 @@ class Connection:
                 await asyncio.sleep(5)
 
         except Exception as e:
-            # self._log.error("`watch_dog` task was canceled.")
             self._log.error(repr(e))
 
     async def _reset(self) -> bool:

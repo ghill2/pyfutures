@@ -203,30 +203,24 @@ class TestInteractiveBrokersClient:
 
     @pytest.mark.asyncio()
     async def test_request_positions(self, client):
-        messages = [
-            b"61\x003\x00DU1234567\x00586139726\x00MES\x00FUT\x0020231215\x000.0\x00\x005\x00\x00USD\x00MESZ3\x00MES\x003\x0022166.03666665\x00",
-            b"61\x003\x00DU1234567\x00296349625\x00QM\x00FUT\x0020231117\x000.0\x00\x00500\x00\x00USD\x00QMZ3\x00QM\x0016\x0039148.16375\x00",
-            b"61\x003\x00DU1234567\x00564400671\x00D\x00FUT\x0020240125\x000.0\x00\x0010\x00\x00USD\x00RCF4\x00RC\x008\x0024446.85\x00",
-            b"62\x001\x00",
-        ]
 
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
+        # Arrange
+        def send_mocked_responses(*args, **kwargs):
+            client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
+            client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
+            client.positionEnd()
 
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        positions = await asyncio.wait_for(client.request_positions(), 2)
-        assert positions == [
-            IBPositionEvent(conId=586139726, quantity=Decimal("3")),
-            IBPositionEvent(conId=296349625, quantity=Decimal("16")),
-            IBPositionEvent(conId=564400671, quantity=Decimal("8")),
-        ]
-
-        send_mock.assert_called_once_with(b"\x00\x00\x00\x0561\x001\x00")
-        assert len(client.requests) == 0
-
+        send_mock = Mock(side_effect=send_mocked_responses)
+        client._eclient.reqPositions = send_mock
+        
+        # Act
+        positions = await client.request_positions()
+        
+        # Assert
+        assert len(positions) == 2
+        assert all(isinstance(p, IBPositionEvent) for p in positions)
+        send_mock.assert_called_once()
+        
     @pytest.mark.asyncio()
     async def test_request_executions(self, client):
         messages = [

@@ -587,7 +587,7 @@ class InteractiveBrokersClient(EWrapper):
         contract: IBContract,
         position: Decimal,
         avgCost: float,
-    ) -> list[dict]:
+    ) -> None:
         """
         This event returns real-time positions for all accounts in response to the
         reqPositions() method.
@@ -602,8 +602,10 @@ class InteractiveBrokersClient(EWrapper):
 
         request.data.append(
             IBPositionEvent(
+                account=account,
                 conId=contract.conId,
                 quantity=position,
+                avgCost=avgCost,
             ),
         )
 

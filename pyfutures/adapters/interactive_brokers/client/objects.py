@@ -28,9 +28,10 @@ class IBPortfolioEvent:
 
 @dataclass
 class IBPositionEvent:
+    account: str
     conId: int
     quantity: Decimal
-
+    avgCost: float
 
 @dataclass
 class IBExecutionEvent:

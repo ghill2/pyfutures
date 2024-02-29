@@ -62,7 +62,15 @@ class TestConnection:
         sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
         
         assert sent_messages == sent_expected
-        
+    
+    @pytest.mark.asyncio()
+    async def test_handle_disconnect_on_empty_bytestring(self, connection):
+        # check the handle disconnect method is called when a empty bytestring is received on the reader
+        pass
+    
+    @pytest.mark.asyncio()
+    async def test_handle_disconnect_connection_reset_error(self, connection):
+        pass
         
     # @pytest.mark.asyncio()
     # async def test_reconnect(self, client):
