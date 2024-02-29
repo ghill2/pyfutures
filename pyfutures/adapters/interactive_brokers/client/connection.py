@@ -181,20 +181,20 @@ class Connection:
         self._listen_task = self._loop.create_task(self._listen())
         self._log.info("Listen task started")
 
-        # handshake
-        self._log.debug("Performing handshake...")
-        try:
-            self._log.debug("Sending handshake message...")
-            await self._send_handshake()
-            self._log.debug("Waiting for handshake response")
-            await asyncio.wait_for(self._is_ready.wait(), 5)
-            self._log.info("API connection ready, server version 176")
-            self.is_connected = True
+        # # handshake
+        # self._log.debug("Performing handshake...")
+        # try:
+        #     self._log.debug("Sending handshake message...")
+        #     await self._send_handshake()
+        #     self._log.debug("Waiting for handshake response")
+        #     await asyncio.wait_for(self._is_ready.wait(), 5)
+        #     self._log.info("API connection ready, server version 176")
+        #     self.is_connected = True
 
-        except asyncio.TimeoutError as e:
-            self._log.error(f"Handshake failed {e!r}")
-            await self._reset()
-            return
+        # except asyncio.TimeoutError as e:
+        #     self._log.error(f"Handshake failed {e!r}")
+        #     await self._reset()
+        #     return
 
     def sendMsg(self, msg: bytes) -> None:
         if not self.is_connected:
