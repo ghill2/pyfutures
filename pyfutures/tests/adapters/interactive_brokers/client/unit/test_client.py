@@ -81,7 +81,22 @@ class TestInteractiveBrokersClient:
         with pytest.raises(ClientException) as e:
             await client.request_contract_details(contract)
             assert e.code == 321
-
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_request_last_contract_month(self) -> str:
+        pass
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_request_front_contract_details(self):
+        pass
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_request_front_contract(self):
+        pass
+    
     @pytest.mark.asyncio()
     async def test_request_account_summary(self, client):
         
@@ -765,10 +780,35 @@ class TestInteractiveBrokersClient:
     async def test_order_status_events_blocks_on_request(self, client):
         pass
     
-    @pytest.mark.skip(reason="TODO")
+    
     @pytest.mark.asyncio()
     async def test_subscribe_execution_events(self, client):
-        pass
+        
+        # Arrange
+        callback_mock = AsyncMock()
+        client.execution_events += callback_mock
+        
+        # Act
+        
+        # Arrange
+
+        client.execDetails(-10, )
+        
+        client.error(
+            reqId=4,
+            errorCode=5,
+            errorString="error message",
+            advancedOrderRejectJson="",
+        )
+        
+        # Assert
+        event_response = callback_mock.call_args_list[0][0][0]
+        assert isinstance(event_response, IBErrorEvent)
+        assert event_response.reqId == 4
+        assert event_response.errorCode == 5
+        assert event_response.errorString == "error message"
+        assert event_response.advancedOrderRejectJson == ""
+        
 
     @pytest.mark.asyncio()
     async def test_subscribe_error_events(self, client):
@@ -805,3 +845,14 @@ class TestInteractiveBrokersClient:
     async def test_request_portfolio(self):
         pass
     
+    @pytest.mark.asyncio()
+    async def test_order_filled(self):
+        """
+        INFO:Connection:API connection ready, server version 176
+        INFO:InteractiveBrokersClient:openOrder 7, orderStatus PreSubmitted, commission: 1.7976931348623157e+308, completedStatus: 
+        INFO:InteractiveBrokersClient:execDetails reqId=-1 ExecId: 0000e1a7.65e1df89.01.01, Time: 20240301-18:17:09, Account: DU7779554, Exchange: CME, Side: BOT, Shares: 1, Price: 16.81, PermId: 1432478520, ClientId: 1, OrderId: 7, Liquidation: 0, CumQty: 1, AvgPrice: 16.81, OrderRef: aa3ab6d6-3ff8-4630-af41-b5a0e27f2f06, EvRule: , EvMultiplier: 0, ModelCode: , LastLiquidity: 1
+        INFO:InteractiveBrokersClient:openOrder 7, orderStatus Filled, commission: 1.7976931348623157e+308, completedStatus: 
+        INFO:InteractiveBrokersClient:openOrder 7, orderStatus Filled, commission: 2.97USD, completedStatus: 
+        INFO:InteractiveBrokersClient:commissionReport
+        """
+        

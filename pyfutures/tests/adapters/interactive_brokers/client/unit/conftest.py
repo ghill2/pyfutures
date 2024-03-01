@@ -21,11 +21,12 @@ def event_loop():
 @pytest.fixture
 def client(event_loop) -> InteractiveBrokersClient:
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     client = InteractiveBrokersClient(
         loop=event_loop,
         host="127.0.0.1",
         port=4002,
+        
     )
     return client
 

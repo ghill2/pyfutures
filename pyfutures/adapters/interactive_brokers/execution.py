@@ -221,24 +221,8 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         )
 
         await asyncio.sleep(0)
-        await asyncio.sleep(0)
 
-    async def request_last_quote_tick(self, instrument_id: InstrumentId) -> HistoricalTickBidAsk:
-
-        self._log.debug(f"Requesting last quote tick for {instrument_id}")
-
-        instrument = self._instrument_provider.find(instrument_id)
-        if instrument is None:
-            self._log.error(f"No instrument found for {instrument_id}")
-            return
-
-        contract = IBContract()
-        contract.conId = instrument.info["contract"]["conId"]
-        contract.exchange = instrument.info["contract"]["exchange"]
-
-        last_quote = await self._client.request_last_quote_tick(contract=contract)
-
-        return historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
+    
 
     async def _submit_order(self, command: SubmitOrder) -> None:
         PyCondition.type(command, SubmitOrder, "command")
@@ -585,3 +569,20 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 )
 
         return report
+    
+    async def request_last_quote_tick(self, instrument_id: InstrumentId) -> HistoricalTickBidAsk:
+
+        self._log.debug(f"Requesting last quote tick for {instrument_id}")
+
+        instrument = self._instrument_provider.find(instrument_id)
+        if instrument is None:
+            self._log.error(f"No instrument found for {instrument_id}")
+            return
+
+        contract = IBContract()
+        contract.conId = instrument.info["contract"]["conId"]
+        contract.exchange = instrument.info["contract"]["exchange"]
+
+        last_quote = await self._client.request_last_quote_tick(contract=contract)
+
+        return historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)

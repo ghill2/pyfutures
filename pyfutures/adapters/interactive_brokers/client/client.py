@@ -71,6 +71,7 @@ class InteractiveBrokersClient(EWrapper):
         port: int = 7497,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
+        
     ):
 
         # Events
@@ -143,18 +144,12 @@ class InteractiveBrokersClient(EWrapper):
 
     def _create_request(
         self,
-        id: int | str,
+        id: int,
         data: list | dict | None = None,
         timeout_seconds: int | None = None,
-        
     ) -> ClientRequest:
         
-        assert isinstance(id, (int, str))
-        if isinstance(id, str):
-            id: int = self._request_id_map.get(id)
-            if id is None:
-                raise RuntimeError(f"No map for id {id}")
-
+        assert isinstance(id, int)
         request = ClientRequest(
             id=id,
             data=data,
@@ -425,7 +420,9 @@ class InteractiveBrokersClient(EWrapper):
     async def request_next_order_id(
         self,
     ) -> int:
-        request = self._create_request(id="next_order_id")
+        
+        request_id = self._request_id_map["next_order_id"]
+        request = self._create_request(request_id)
 
         self._eclient.reqIds(1)
 
@@ -453,7 +450,9 @@ class InteractiveBrokersClient(EWrapper):
         functions on the EWrapper.
 
         """
-        request = self._create_request(id="orders", data=[])
+        
+        request_id = self._request_id_map["positions"]
+        request = self._create_request(id=request_id, data=[])
 
         self._eclient.reqOpenOrders()
 
@@ -524,15 +523,16 @@ class InteractiveBrokersClient(EWrapper):
 
         The IBApi.EWrapper.openOrder method delivers an IBApi.Order object representing an
         open order within the system.
+        
         In addition, IBApi.EWrapper.openOrder returns an an IBApi.OrderState object that is used
-        to return estimated pre-trade marginand commission information in response
+        to return estimated pre-trade margin and commission information in response
         to invoking IBApi.EClient.placeOrderwith a IBApi.Order object that has the flag
         IBApi.Order.WhatIf flag set to True
 
         OrderStatusReport
 
         """
-        self._log.debug(f"openOrder {orderId}")
+        self._log.info(f"openOrder {orderId}, orderStatus {orderState.status}, commission: {orderState.commission}{orderState.commissionCurrency}, completedStatus: {orderState.completedStatus}")
 
         if orderState.warningText != "":
             self._log.warning(f"order {orderId} has warning: {orderState.warningText}")
@@ -560,7 +560,7 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._client.reqOpenOrders callback.
         """
-        self._log.debug("openOrderEnd")
+        self._log.info("openOrderEnd")
 
         request_id = self._request_id_map["orders"]
         request = self._requests.get(request_id)
@@ -574,8 +574,10 @@ class InteractiveBrokersClient(EWrapper):
     # Positions query
 
     async def request_positions(self) -> list[IBPositionEvent]:
+        
+        request_id = self._request_id_map["positions"]
         request = self._create_request(
-            id="positions",
+            id=request_id,
             data=[],
         )
 
@@ -594,7 +596,7 @@ class InteractiveBrokersClient(EWrapper):
         This event returns real-time positions for all accounts in response to the
         reqPositions() method.
         """
-        self._log.debug("position")
+        self._log.info("position")
 
         request_id = self._request_id_map["positions"]
         request = self._requests.get(request_id)
@@ -616,7 +618,7 @@ class InteractiveBrokersClient(EWrapper):
         This is called once all position data for a given request are received and
         functions as an end marker for the position() data.
         """
-        self._log.debug("positionEnd")
+        self._log.info("positionEnd")
 
         request_id = self._request_id_map["positions"]
         request = self._requests.get(request_id)
@@ -630,14 +632,19 @@ class InteractiveBrokersClient(EWrapper):
 
     async def request_executions(self, client_id: int):
         
+        request_id: int = self._request_id_map.get("executions")
         request = self._create_request(
-            id=self._next_request_id(),
-            data=[])
+            id=request_id,
+            data=[],
+        )
 
         filter = ExecutionFilter()
         filter.client_id = client_id
 
-        self._eclient.reqExecutions(reqId=request.id, execFilter=filter)
+        self._eclient.reqExecutions(
+            reqId=request.id,
+            execFilter=filter,
+        )
         
         return await self._wait_for_request(request)
 
@@ -650,31 +657,21 @@ class InteractiveBrokersClient(EWrapper):
         """
         This event is fired when the reqExecutions() functions is invoked, or when an
         order is filled.
+        
+        NOTE: when an order is filled, the execDetails and commissionReport endpoint is called
+        The order is execDetails -> commissionReport
+        
         """
-        self._log.debug(f"execDetails reqId={reqId}")
+        self._log.info(
+            f"execDetails reqId={reqId} {execution}"
+        )
 
         event = IBExecutionEvent(
             contract=contract,
             execution=execution,
             commissionReport=None,  # filled on commissionReport callback
         )
-        
-        # handle event-driven based response without a request
-        if reqId == -1:
-            self.execution_events.emit(event)
-            return
-        
-        request = self._requests.get(reqId)
-        if request is None:
-            self._log.debug(f"no request for request_id: {reqId}")
-            return
-
-        self._log.debug(f"request found with id {request.id}")
-        
-        self._executions[execution.execId] = event
-        
-        # handle request based response
-        request.data.append(event)
+        self._executions[execution.execId] = event  # hot cache
 
     def commissionReport(self, commissionReport: IBCommissionReport):  # : Override the EWrapper
         """
@@ -682,15 +679,23 @@ class InteractiveBrokersClient(EWrapper):
 
         - immediately after a trade execution
         - by calling reqExecutions().
-
+        
+        NOTE: when an order is filled, the execDetails and commissionReport endpoint is called
+        The order is execDetails -> commissionReport
         """
         
-        self._log.debug("commissionReport")
-
+        self._log.info("commissionReport")
+        
         event = self._executions[commissionReport.execId]  # hot cache
+        
+        request_id: int = self._request_id_map.get("executions")
+        request = self._requests.get(request_id)
+        if request is not None:
+            self._log.debug("blocking event-driven execution flow for request")
+            request.data.append(event)
+            return
+        
         event.commissionReport = commissionReport
-
-        # TODO: make sure reconciliation does not emit order filled events
         self.execution_events.emit(event)
 
     def execDetailsEnd(self, reqId: int):  # : Override the EWrapper
@@ -698,19 +703,15 @@ class InteractiveBrokersClient(EWrapper):
         This function is called once all executions have been sent to a client in
         response to reqExecutions().
         """
+        self._log.info("execDetailsEnd")
+        
         request = self._requests.get(reqId)
         if request is None:
-            self._log.debug(f"no request for request_id: {reqId}")
-            return  # no response found for request_id
-
-        # add commission info
-        # for event in request.data:
-        #     report = self._commission_reports[event.execId]
-        #     event.commission = report.commission
-        #     event.commissionCurrency = report.currency
-
+            self._log.debug("no active request for executions")
+            return
+        
         request.set_result(request.data)
-
+        
     ################################################################################################
     # Account and Portfolio
     async def request_account_summary(self) -> dict:
@@ -817,14 +818,13 @@ class InteractiveBrokersClient(EWrapper):
     async def request_last_quote_tick(
         self,
         contract: IBContract,
-        use_rth: bool = True,
     ) -> HistoricalTickBidAsk:
         self._log.debug(f"Requesting last quote tick for {contract.symbol}")
         quotes = await self.request_quote_ticks(
             contract=contract,
             count=1,
             end_time=pd.Timestamp.utcnow(),
-            use_rth=use_rth,
+            use_rth=True,
         )
         return None if len(quotes) == 0 else quotes[-1]
 
@@ -1451,3 +1451,19 @@ class InteractiveBrokersClient(EWrapper):
     #         return  # no request found for request_id
 
     #     request.set_result(marketDataType)
+
+# # handle event-driven based response without a request
+        # if reqId == -1:
+        #     self.execution_events.emit(event)
+        #     return
+        
+        # request = self._requests.get(reqId)
+        # if request is None:
+        #     self._log.debug(f"no request for request_id: {reqId}")
+        #     return
+
+        # self._log.debug(f"request found with id {request.id}")
+        
+        
+        
+        # handle request based response
