@@ -73,7 +73,6 @@ class ClientRequest(asyncio.Future):
     id: int | str
     data: list | dict | None = None
     timeout_seconds: int = 5
-    name: str | None = None
 
     def __post_init__(self):
         super().__init__()

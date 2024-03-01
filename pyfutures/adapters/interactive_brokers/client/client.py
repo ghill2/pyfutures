@@ -136,32 +136,29 @@ class InteractiveBrokersClient(EWrapper):
     ################################################################################################
     # Responses
 
-    def _next_req_id(self) -> int:
+    def _next_request_id(self) -> int:
         current = self._request_id_seq
         self._request_id_seq -= 1
         return current
 
     def _create_request(
         self,
+        id: int | str,
         data: list | dict | None = None,
         timeout_seconds: int | None = None,
-        name: str | None = None,
-        id: int | None = None,
+        
     ) -> ClientRequest:
-        if id is None:
-            id: int = self._next_req_id()
-        elif isinstance(id, str):
+        
+        assert isinstance(id, (int, str))
+        if isinstance(id, str):
             id: int = self._request_id_map.get(id)
             if id is None:
                 raise RuntimeError(f"No map for id {id}")
-        else:
-            raise RuntimeError
 
         request = ClientRequest(
             id=id,
             data=data,
             timeout_seconds=timeout_seconds or self._request_timeout_seconds,
-            name=name,
         )
 
         self._requests[id] = request
@@ -273,7 +270,10 @@ class InteractiveBrokersClient(EWrapper):
         
         self._log.debug(f"Requesting contract details for {contract=}")
 
-        request = self._create_request(data=[])
+        request = self._create_request(
+            id=self._next_request_id(),
+            data=[],
+        )
 
         self._eclient.reqContractDetails(reqId=request.id, contract=contract)
 
@@ -364,6 +364,7 @@ class InteractiveBrokersClient(EWrapper):
     ) -> list[BarData]:
 
         request: ClientRequest = self._create_request(
+            id=self._next_request_id(),
             data=[],
             timeout_seconds=60 * 10,
         )
@@ -451,7 +452,7 @@ class InteractiveBrokersClient(EWrapper):
         functions on the EWrapper.
 
         """
-        request = self._create_request(data=[], id="orders")
+        request = self._create_request(id="orders", data=[])
 
         self._eclient.reqOpenOrders()
 
@@ -571,7 +572,10 @@ class InteractiveBrokersClient(EWrapper):
     # Positions query
 
     async def request_positions(self) -> list[IBPositionEvent]:
-        request = self._create_request(data=[], id="positions")
+        request = self._create_request(
+            id="positions",
+            data=[],
+        )
 
         self._eclient.reqPositions()
 
@@ -624,7 +628,9 @@ class InteractiveBrokersClient(EWrapper):
 
     async def request_executions(self, client_id: int):
         
-        request = self._create_request(data=[])
+        request = self._create_request(
+            id=self._next_request_id(),
+            data=[])
 
         filter = ExecutionFilter()
         filter.client_id = client_id
@@ -956,7 +962,7 @@ class InteractiveBrokersClient(EWrapper):
         callback: Callable,
     ) -> ClientSubscription:
         
-        request_id = self._next_req_id()
+        request_id = self._next_request_id()
 
         subscribe = functools.partial(
             self._eclient.reqTickByTickData,
@@ -1060,7 +1066,7 @@ class InteractiveBrokersClient(EWrapper):
             f"Subscribing to realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
         )
         
-        request_id = self._next_req_id()
+        request_id = self._next_request_id()
         
         cancel = functools.partial(
             self._unsubscribe,
@@ -1100,7 +1106,7 @@ class InteractiveBrokersClient(EWrapper):
         callback: Callable,
     ) -> ClientSubscription:
         
-        request_id = self._next_req_id()
+        request_id = self._next_request_id()
         
         self._log.debug(
             f"Subscribing to historical bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
@@ -1206,6 +1212,7 @@ class InteractiveBrokersClient(EWrapper):
     # Accounts
     
     async def request_accounts(self) -> list[str]:
+        
         request = self._create_request(id="accounts")
 
         self._eclient.reqManagedAccts()
@@ -1236,7 +1243,7 @@ class InteractiveBrokersClient(EWrapper):
         """
         accounts = await self.request_accounts()
 
-        request_id = self._next_req_id()
+        request_id = self._next_request_id()
 
         subscribe = functools.partial(
             self._eclient.reqAccountUpdates,
@@ -1267,7 +1274,10 @@ class InteractiveBrokersClient(EWrapper):
     async def request_portfolio(self) -> list[IBPortfolioEvent]:
         accounts = await self.request_accounts()
 
-        request = self._create_request(data=[], id="portfolio")
+        request = self._create_request(
+            id="portfolio",
+            data=[],
+        )
 
         self._eclient.reqAccountUpdates(
             subscribe=True,  # TODO: check for an active account update subscription first
@@ -1357,7 +1367,9 @@ class InteractiveBrokersClient(EWrapper):
         durationStr: str | None = None
     ) -> ListOfHistoricalSessions:
 
-        request: ClientRequest = self._create_request()
+        request: ClientRequest = self._create_request(
+            id=self._next_request_id(),
+        )
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
 

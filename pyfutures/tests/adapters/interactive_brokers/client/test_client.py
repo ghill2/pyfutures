@@ -713,17 +713,16 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.asyncio()
     async def test_request_accounts(self, client):
-        message = b"15\x001\x00DU1234567\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
+        
+        def send_mocked_response(*args, **kwargs):
+            client.managedAccounts("DU1234567,DU1234568")
+        
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqManagedAccts = send_mock
 
         accounts = await client.request_accounts()
-        assert accounts == ["DU1234567"]
-
-        send_mock.assert_called_once_with(b"\x00\x00\x00\x0517\x001\x00")
+        assert accounts == ["DU1234567", "DU1234568"]
+        send_mock.assert_called_once()
             
     @pytest.mark.asyncio()
     async def test_subscribe_order_status_events(self, client):
@@ -736,10 +735,7 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_subscribe_error_events(self, client):
         pass
-
-    
     
     @pytest.mark.asyncio()
     async def test_request_historical_schedule(self):
-        
         pass
