@@ -8,6 +8,9 @@ import pandas as pd
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
+from ibapi.execution import Execution as IBExecution
+from ibapi.commission_report import CommissionReport as IBCommissionReport
+from pyfutures.adapters.interactive_brokers.client.parsing import parse_datetime
 
 @dataclass
 class IBOpenOrderEvent:
@@ -35,25 +38,20 @@ class IBPositionEvent:
 
 @dataclass
 class IBExecutionEvent:
-    time: pd.Timestamp
-    reqId: int
-    conId: int
-    orderId: int
-    execId: str
-    side: str
-    shares: Decimal
-    price: float
-    commission: float
-    commissionCurrency: str
-
-
+    contract: IBContract
+    execution: IBExecution
+    commissionReport: IBCommissionReport
+    
+    @property
+    def timestamp(self) -> pd.Timestamp:
+        return parse_datetime(self.execution.time)
+    
 @dataclass
 class IBErrorEvent:
     request_id: int
     code: int
     message: str
     advanced_order_reject_json: str
-
 
 @dataclass
 class IBOrderStatusEvent:

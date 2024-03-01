@@ -9,12 +9,17 @@ import pandas as pd
 import pytest
 from ibapi.contract import Contract
 from ibapi.contract import ContractDetails as IBContractDetails
+from ibapi.common import HistoricalTickLast
 from ibapi.order import Order
+from ibapi.common import BarData
 from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
+from ibapi.common import TickAttribBidAsk
 from ibapi.order_state import OrderState as IBOrderState
-
+from pyfutures.adapters.interactive_brokers.client.objects import ClientSubscription
+from ibapi.execution import Execution as IBExecution
+from ibapi.commission_report import CommissionReport as IBCommissionReport
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
@@ -23,6 +28,7 @@ from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from ibapi.common import HistoricalTickBidAsk
 from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
@@ -37,11 +43,11 @@ class TestInteractiveBrokersClient:
         # Arrange
         contract = Contract()
         
-        def send_mocked_responses(*args, **kwargs):
+        def send_mocked_response(*args, **kwargs):
             client.contractDetails(-10, IBContractDetails())
             client.contractDetailsEnd(-10)
             
-        send_mock = Mock(side_effect=send_mocked_responses)
+        send_mock = Mock(side_effect=send_mocked_response)
         client._eclient.reqContractDetails = send_mock
         
         # Act
@@ -76,7 +82,7 @@ class TestInteractiveBrokersClient:
     async def test_request_account_summary(self, client):
         
         # Arrange
-        def send_mocked_responses(*args, **kwargs):
+        def send_mocked_response(*args, **kwargs):
             client.accountSummary(-10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP")
             client.accountSummary(-10, "DU1234567", "Cushion", "0.452835", "GBP")
             client.accountSummary(-10, "DU1234567", "DayTradesRemaining", "-1", "GBP")
@@ -103,7 +109,7 @@ class TestInteractiveBrokersClient:
             client.accountSummary(-10, "DU1234567", "TotalCashValue", "1301785.97", "GBP")
             client.accountSummaryEnd(-10)
             
-        send_mock = Mock(side_effect=send_mocked_responses)
+        send_mock = Mock(side_effect=send_mocked_response)
         client._eclient.reqAccountSummary = send_mock
         
         # Act
@@ -205,12 +211,12 @@ class TestInteractiveBrokersClient:
     async def test_request_positions(self, client):
 
         # Arrange
-        def send_mocked_responses(*args, **kwargs):
+        def send_mocked_response(*args, **kwargs):
             client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
             client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
             client.positionEnd()
 
-        send_mock = Mock(side_effect=send_mocked_responses)
+        send_mock = Mock(side_effect=send_mocked_response)
         client._eclient.reqPositions = send_mock
         
         # Act
@@ -223,386 +229,488 @@ class TestInteractiveBrokersClient:
         
     @pytest.mark.asyncio()
     async def test_request_executions(self, client):
-        messages = [
-            b"11\x000\x001\x00564400671\x00D\x00FUT\x0020240125\x000.0\x00\x0010\x00ICEEUSOFT\x00USD\x00RCF4\x00RC\x000001b269.6554510d.01.01\x0020231115 09:20:44 GB-Eire\x00DU1234567\x00ICEEUSOFT\x00BOT\x001\x002498.00\x001866218890\x001\x000\x001\x002498.00\x00d7eb38a3-4f8c-4073-8fa8-1ba2c9c61ffe\x00\x00\x00\x001\x00",
-            b"11\x000\x002\x00564400671\x00D\x00FUT\x0020240125\x000.0\x00\x0010\x00ICEEUSOFT\x00USD\x00RCF4\x00RC\x000001b269.6554510e.01.01\x0020231115 09:20:44 GB-Eire\x00DU1234567\x00ICEEUSOFT\x00BOT\x001\x002498.00\x001866218891\x001\x000\x001\x002498.00\x000d13b34c-c80f-4335-b704-cb226f445691\x00\x00\x00\x001\x00",
-            b"59\x001\x000001b269.6554510d.01.01\x003.1\x00USD\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00",
-            b"59\x001\x000001b269.6554510e.01.01\x003.1\x00USD\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00",
-            b"55\x001\x000\x00",
-        ]
-        # await client.connect()
+        
+        # Arrange
+        def send_mocked_response(*args, **kwargs):
+            execution = IBExecution()
+            execution.execId = 1
+            report = IBCommissionReport()
+            report.execId = 1
+            client.execDetails(-10, IBContract(), execution)
+            client.commissionReport(report)
+            
+            execution = IBExecution()
+            execution.execId = 2
+            report = IBCommissionReport()
+            report.execId = 2
+            client.execDetails(-10, IBContract(), execution)
+            client.commissionReport(report)
+            
+            client.execDetailsEnd(-10)
 
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        executions = await asyncio.wait_for(client.request_executions(), 3)
-
-        assert executions == [
-            IBExecutionEvent(
-                reqId=0,
-                conId=564400671,
-                orderId=1,
-                execId="0001b269.6554510d.01.01",
-                side="BOT",
-                shares=Decimal("1"),
-                price=2498.0,
-                commission=3.1,
-                commissionCurrency="USD",
-                time="20231115 09:20:44 GB-Eire",
-            ),
-            IBExecutionEvent(
-                reqId=0,
-                conId=564400671,
-                orderId=2,
-                execId="0001b269.6554510e.01.01",
-                side="BOT",
-                shares=Decimal("1"),
-                price=2498.0,
-                commission=3.1,
-                commissionCurrency="USD",
-                time="20231115 09:20:44 GB-Eire",
-            ),
-        ]
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00\x0e7\x003\x000\x000\x00\x00\x00\x00\x00\x00\x00",
-        )
-        assert len(client.requests) == 0
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqExecutions = send_mock
+        
+        # Act
+        executions = await client.request_executions(client_id=1)
+        
+        # Assert
+        assert len(executions) == 2
+        assert all(isinstance(e, IBExecutionEvent) for e in executions)
+        send_mock.assert_called_once()
 
     @pytest.mark.asyncio()
-    async def test_request_head_timestamp_single(self, client):
+    async def test_request_head_timestamp(self, client):
+        
+        # Arrange
         contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        message = b"88\x000\x0020220329-08:00:00\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
+        what_to_show = WhatToShow.BID
+        
+        def send_mocked_response(*args, **kwargs):
+            client.headTimestamp(-10, "20220329-08:00:00")
+        send_mock = Mock(side_effect=send_mocked_response)
+        
+        client._eclient.reqHeadTimeStamp = send_mock
+        
+        # Act
         timestamp = await client.request_head_timestamp(
             contract=contract,
-            what_to_show=WhatToShow.BID,
+            what_to_show=what_to_show,
         )
-
-        assert str(timestamp) == "2022-03-29 08:00:00+00:00"
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00087\x000\x00553444806\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x000\x001\x00BID\x001\x00",
+        
+        # Assert
+        assert timestamp == pd.Timestamp("2022-03-29 08:00:00+00:00", tz="UTC")
+        assert send_mock.call_args_list[0][1] == dict(
+            contract=contract,
+            formatDate=1,
+            reqId=-10,
+            useRTH=True,
+            whatToShow="BID",
         )
-        assert len(client.requests) == 0
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_request_head_timestamp_universe(self, client):
-        for contract in IBTestProviderStubs.universe_contracts():
-            timestamp = await client.request_head_timestamp(
-                contract=contract,
-                what_to_show=WhatToShow.BID,
-            )
-            if timestamp is None:
-                print(
-                    f"No head timestamp for {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-                )
-                continue
-            else:
-                print(
-                    f"Head timestamp found: {timestamp}  {contract.symbol} {contract.exchange} {contract.lastTradeDateOrContractMonth} {contract.conId}",
-                )
-
-            time.sleep(1)
-
-    @pytest.mark.asyncio()
-    async def test_request_historical_schedule(self):
+    async def test_request_first_quote_tick(self, client):
         pass
-
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_request_last_quote_tick(self, client):
+        pass
+        
     @pytest.mark.asyncio()
     async def test_request_quote_ticks(self, client):
+        
+        # Act
         contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        message = b"97\x000\x003\x001700069390\x000\x002720.00\x002735.00\x001\x001\x001700069392\x000\x002720.00\x002736.00\x001\x001\x001700069395\x000\x002721.00\x002736.00\x001\x001\x001\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
-
+        
+        tick = HistoricalTickBidAsk()
+        tick.time = 1700069390
+        start_time = pd.Timestamp("2023-01-01 08:00:00", tz="UTC")
+        end_time = pd.Timestamp("2023-01-01 12:00:00", tz="UTC")
+        
+        def send_mocked_response(*args, **kwargs):
+            
+            client.historicalTicksBidAsk(-10, [tick], False)
+            client.historicalTicksBidAsk(-10, [tick], True)
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqHistoricalTicks = send_mock
+        
+        # Act
         quotes = await client.request_quote_ticks(
-            name="test",
             contract=contract,
+            start_time=start_time,
+            end_time=end_time,
             count=2,
         )
-
-        assert len(quotes) == 3
-        assert all(isinstance(quote, IBQuoteTick) for quote in quotes)
-        assert len(client.requests) == 0
-        # send_mock.assert_called_once_with(
-        #     b'\x00\x00\x00N96\x000\x00553444806\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x000\x00\x0020231115 21:22:38 UTC\x002\x00BID_ASK\x001\x000\x00\x00'
-        # )
+        
+        # Assert
+        assert len(quotes) == 2
+        assert all(isinstance(q, HistoricalTickBidAsk) for q in quotes)
+        assert quotes[0].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert quotes[1].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert send_mock.call_args_list[0][1] == dict(
+            reqId=-10,
+            contract=contract,
+            startDateTime="20230101-08:00:00",
+            endDateTime="20230101-12:00:00",
+            numberOfTicks=2,
+            whatToShow="BID_ASK",
+            useRth=True,
+            ignoreSize=False,
+            miscOptions=[],
+        )
 
     @pytest.mark.asyncio()
     async def test_request_trade_ticks(self, client):
+        
+        # Arrange
         contract = Contract()
-        contract.conId = 564400671
-        contract.exchange = "ICEEUSOFT"
-
-        message = b"98\x000\x003\x001700069395\x000\x002539.00\x001\x00\x00\x001700069395\x000\x002541.00\x001\x00\x00\x001700069395\x000\x002541.00\x001\x00\x00\x001\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
-
+        
+        tick = HistoricalTickLast()
+        tick.time = 1700069390
+        start_time = pd.Timestamp("2023-01-01 08:00:00", tz="UTC")
+        end_time = pd.Timestamp("2023-01-01 12:00:00", tz="UTC")
+        
+        def send_mocked_response(*args, **kwargs):
+            client.historicalTicksLast(-10, [tick], False)
+            client.historicalTicksLast(-10, [tick], True)
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqHistoricalTicks = send_mock
+        
+        # Act
         trades = await client.request_trade_ticks(
-            name="test",
             contract=contract,
+            start_time=start_time,
+            end_time=end_time,
             count=2,
         )
-
-        assert len(trades) == 3
-        assert all(isinstance(trade, IBTradeTick) for trade in trades)
-        assert len(client.requests) == 0
-
-    @pytest.mark.skip(reason="market closed")
-    @pytest.mark.asyncio()
-    async def test_subscribe_quote_ticks(self, client):
-        await client.connect()
-
-        callback_mock = Mock()
-
-        contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        client.subscribe_quote_ticks(
-            name="test",
+        
+        # Assert
+        assert len(trades) == 2
+        assert all(isinstance(q, HistoricalTickLast) for q in trades)
+        assert trades[0].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert trades[1].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert send_mock.call_args_list[0][1] == dict(
+            reqId=-10,
             contract=contract,
+            startDateTime="20230101-08:00:00",
+            endDateTime="20230101-12:00:00",
+            numberOfTicks=2,
+            whatToShow="TRADES",
+            useRth=True,
+            ignoreSize=False,
+            miscOptions=[],
+        )
+
+    @pytest.mark.asyncio()
+    async def test_subscribe_quote_ticks_sends_expected(self, client):
+        
+        # Arrange
+        contract = Contract()
+        send_mock = Mock()
+        client._eclient.reqTickByTickData = send_mock
+        
+        # Act
+        subscription = client.subscribe_quote_ticks(
+            contract=contract,
+            callback=Mock(),
+        )
+        assert isinstance(subscription, ClientSubscription)
+        
+        # Assert
+        sent_kwargs = send_mock.call_args_list[0][1]
+        assert sent_kwargs == dict(
+            reqId=-10,
+            contract=contract,
+            tickType="BidAsk",
+            numberOfTicks=0,
+            ignoreSize=True,
+        )
+        
+    
+    @pytest.mark.asyncio()
+    async def test_subscribe_quote_ticks_returns_expected(self, client):
+        
+        tickAttribBidAsk = TickAttribBidAsk()
+        
+        def send_mocked_response(*args, **kwargs):
+            client.tickByTickBidAsk(
+                reqId=-10,
+                time=1700069390,
+                bidPrice=1.1,
+                askPrice=1.2,
+                bidSize=Decimal("1"),
+                askSize=Decimal("1"),
+                tickAttribBidAsk=tickAttribBidAsk,
+            )
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqTickByTickData = send_mock
+        
+        callback_mock = Mock()
+        
+        # Act
+        client.subscribe_quote_ticks(
+            contract=Contract(),
             callback=callback_mock,
         )
-
-        async def wait_for_quote_tick():
-            while callback_mock.call_count == 0:
-                await asyncio.sleep(0)
-
-        await asyncio.wait_for(wait_for_quote_tick(), 10)
-
-        assert callback_mock.call_count > 0
-
+        
+        # Assert
+        expected = dict(
+            timestamp=pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"),
+            time=1700069390,
+            priceBid=1.1,
+            priceAsk=1.2,
+            sizeBid=Decimal("1"),
+            sizeAsk=Decimal("1"),
+            tickAttribBidAsk=tickAttribBidAsk,
+        )
+        tick_response = callback_mock.call_args_list[0][0][0]
+        assert tick_response.__dict__ == expected
+        
     @pytest.mark.asyncio()
-    async def test_subscribe_quote_ticks_cancel(self, client):
+    async def test_unsubscribe_quote_ticks(self, client):
+        
+        # Arrange
+        client._eclient.reqTickByTickData = Mock()
+        
+        cancel_mock = Mock()
+        client._eclient.cancelTickByTickData = cancel_mock
+        
+        # Act
+        subscription = client.subscribe_quote_ticks(
+            contract=Contract(),
+            callback=Mock(),
+        )
+        subscription.cancel()
+        
+        # Assert
+        cancel_mock.assert_called_once_with(reqId=-10)
+        assert subscription not in client.subscriptions
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    def test_request_last_bar(self):
         pass
-
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    def test_request_bars_filters_bars_outside_range(self):
+        pass
+    
     @pytest.mark.asyncio()
     async def test_request_bars_daily(self, client):
-        # await client.connect()
 
-        message = b"17\x000\x0020231111-21:34:26\x0020231115-21:34:26\x004\x0020231110\x002603.00\x002616.00\x002577.00\x002596.00\x00-1\x00-1\x00-1\x0020231113\x002587.00\x002687.00\x002574.00\x002681.00\x00-1\x00-1\x00-1\x0020231114\x002673.00\x002697.00\x002637.00\x002653.00\x00-1\x00-1\x00-1\x0020231115\x002639.00\x002732.00\x002639.00\x002721.00\x00-1\x00-1\x00-1\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
-
+        # Arrange
         contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
+        
+        end_time = pd.Timestamp("2023-11-16", tz="UTC")
+        
+        def send_mocked_response(*args, **kwargs):
+            bar1 = BarData()
+            bar1.date = 1700069390  # TODO: find correct timestamp format
+            bar2 = BarData()
+            bar2.date = 1700069390  # TODO: find correct timestamp format
+            client.historicalData(-10, bar2)
+            client.historicalData(-10, bar1)
+            client.historicalDataEnd(-10, "", "")
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqHistoricalData = send_mock
+        
+        # Act
         bars = await client.request_bars(
             contract=contract,
             bar_size=BarSize._1_DAY,
             duration=Duration(4, Frequency.DAY),
             what_to_show=WhatToShow.BID,
+            end_time=end_time,
         )
-        assert bars == [
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-10 00:00:00+0000", tz="UTC"),
-                open=2603.0,
-                high=2616.0,
-                low=2577.0,
-                close=2596.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-13 00:00:00+0000", tz="UTC"),
-                open=2587.0,
-                high=2687.0,
-                low=2574.0,
-                close=2681.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-14 00:00:00+0000", tz="UTC"),
-                open=2673.0,
-                high=2697.0,
-                low=2637.0,
-                close=2653.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-15 00:00:00+0000", tz="UTC"),
-                open=2639.0,
-                high=2732.0,
-                low=2639.0,
-                close=2721.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-        ]
-
-        assert len(bars) == 4
-        assert all(isinstance(bar, IBBar) for bar in bars)
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00>20\x000\x00553444806\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x000\x00\x001 day\x004 D\x001\x00BID\x002\x000\x00\x00",
+        
+        # Assert
+        assert len(bars) == 2
+        assert isinstance(bars, list)
+        assert all(isinstance(bar, BarData) for bar in bars)
+        assert bars[0].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert bars[1].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        
+        sent_kwargs = send_mock.call_args_list[0][1]
+        assert sent_kwargs == dict(
+            reqId=-10,
+            contract=contract,
+            endDateTime="20231116-00:00:00",
+            durationStr="4 D",
+            barSizeSetting="1 day",
+            whatToShow="BID",
+            useRTH=True,
+            formatDate=2,
+            keepUpToDate=False,
+            chartOptions=[],
         )
-        assert len(client.requests) == 0
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_request_bars_minute(self, client):
-        # await client.connect()
+        pass
 
-        message = b"17\x000\x0020231115-22:14:33\x0020231115-22:17:33\x003\x001700069220\x002729.00\x002729.00\x002726.00\x002726.00\x00-1\x00-1\x00-1\x001700069280\x002726.00\x002726.00\x002723.00\x002723.00\x00-1\x00-1\x00-1\x001700069340\x002723.00\x002723.00\x002720.00\x002721.00\x00-1\x00-1\x00-1\x00"
-
-        send_mock = Mock(
-            side_effect=lambda _: client._handle_msg(message),
-        )
-        client._conn.sendMsg = send_mock
-
-        contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        bars = await client.request_bars(
-            contract=contract,
-            bar_size=BarSize._1_MINUTE,
-            duration=Duration(60 * 3, Frequency.SECOND),
-            what_to_show=WhatToShow.BID,
-        )
-
-        assert bars == [
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-15 17:27:00+0000", tz="UTC"),
-                open=2729.0,
-                high=2729.0,
-                low=2726.0,
-                close=2726.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-15 17:28:00+0000", tz="UTC"),
-                open=2726.0,
-                high=2726.0,
-                low=2723.0,
-                close=2723.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-            IBBar(
-                name=None,
-                time=pd.Timestamp("2023-11-15 17:29:00+0000", tz="UTC"),
-                open=2723.0,
-                high=2723.0,
-                low=2720.0,
-                close=2721.0,
-                volume=Decimal("-1"),
-                wap=Decimal("-1"),
-                count=-1,
-            ),
-        ]
-        assert len(bars) == 3
-        assert all(isinstance(bar, IBBar) for bar in bars)
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x00@20\x000\x00553444806\x00\x00\x00\x000.0\x00\x00\x00ICEEUSOFT\x00\x00\x00\x00\x000\x00\x001 min\x00180 S\x001\x00BID\x002\x000\x00\x00",
-        )
-        assert len(client.requests) == 0
-
-    @pytest.mark.skip(reason="market closed")
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_realtime(self, client):
-        callback_mock = AsyncMock()
-
-        client.bar_events += callback_mock
-
+    async def test_subscribe_bars_5_seconds_sends_expected(self, client):
+        
+        # Arrange
         contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
-        client.subscribe_bars(
-            name="test",
+        send_mock = Mock()
+        client._eclient.reqRealTimeBars = send_mock
+        
+        # Act
+        subscription = client.subscribe_bars(
             contract=contract,
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._5_SECOND,
+            callback=Mock(),
+        )
+        assert isinstance(subscription, ClientSubscription)
+        
+        # Assert
+        sent_kwargs = send_mock.call_args_list[0][1]
+        assert sent_kwargs == dict(
+            reqId=-10,
+            contract=contract,
+            barSize="",  # currently being ignored
+            whatToShow="BID",
+            useRTH=True,
+            realTimeBarsOptions=[],
         )
 
-        async def wait_for_bar():
-            while callback_mock.call_count == 0:
-                await asyncio.sleep(0)
-
-        await asyncio.wait_for(wait_for_bar(), 2)
-
-        assert callback_mock.call_count > 0
-
-    @pytest.mark.skip(reason="market closed")
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_historical(self, client):
-        callback_mock = AsyncMock()
-
-        client.bar_events += callback_mock
-
-        contract = Contract()
-        contract.conId = 553444806
-        contract.exchange = "ICEEUSOFT"
-
+    async def test_subscribe_bars_5_seconds_returns_expected(self, client):
+        
+        def send_mocked_response(*args, **kwargs):
+            client.realtimeBar(
+                reqId=-10,
+                time=1700069390,
+                open_=1.1,
+                high=1.1,
+                low=1.1,
+                close=1.1,
+                volume=Decimal("1"),
+                wap=Decimal("2"),
+                count=1,
+            )
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqRealTimeBars = send_mock
+        
+        callback_mock = Mock()
+        
+        # Act
         client.subscribe_bars(
-            name="test",
+            contract=Contract(),
+            what_to_show=WhatToShow.BID,
+            bar_size=BarSize._5_SECOND,
+            callback=callback_mock,
+        )
+        
+        # Assert
+        expected = dict(
+            timestamp=pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"),
+            date=1700069390,
+            open=1.1,
+            high=1.1,
+            low=1.1,
+            close=1.1,
+            volume=Decimal("1"),
+            wap=Decimal("2"),
+            barCount=1,
+        )
+        
+        bar_response = callback_mock.call_args_list[0][0][0]
+        assert bar_response.__dict__ == expected
+        
+    @pytest.mark.asyncio()
+    async def test_unsubscribe_5_second_bars(self, client):
+        
+        # Arrange
+        client._eclient.reqRealTimeBars = Mock()
+        
+        cancel_mock = Mock()
+        client._eclient.cancelRealTimeBars = cancel_mock
+        
+        # Act
+        subscription = client.subscribe_bars(
+            contract=Contract(),
+            what_to_show=WhatToShow.BID,
+            bar_size=BarSize._5_SECOND,
+            callback=Mock(),
+        )
+        subscription.cancel()
+        
+        # Assert
+        cancel_mock.assert_called_once_with(reqId=-10)
+        assert subscription not in client.subscriptions
+    
+    @pytest.mark.asyncio()
+    async def test_subscribe_bars_historical_sends_expected(self, client):
+        
+        # Arrange
+        contract = Contract()
+        send_mock = Mock()
+        client._eclient.reqHistoricalData = send_mock
+        
+        # Act
+        subscription = client.subscribe_bars(
             contract=contract,
             what_to_show=WhatToShow.BID,
-            bar_size=BarSize._15_SECOND,
+            bar_size=BarSize._1_MINUTE,
+            callback=Mock(),
+        )
+        assert isinstance(subscription, ClientSubscription)
+        
+        # Assert
+        sent_kwargs = send_mock.call_args_list[0][1]
+        assert sent_kwargs == dict(
+            reqId=-10,
+            contract=contract,
+            endDateTime="",
+            durationStr="60 S",
+            barSizeSetting="1 min",
+            whatToShow="BID",
+            useRTH=True,
+            formatDate=1,
+            keepUpToDate=True,
+            chartOptions=[],
         )
 
-        async def wait_for_bar():
-            while callback_mock.call_count == 0:
-                await asyncio.sleep(0)
-
-        await asyncio.wait_for(wait_for_bar(), 2)
-
-        assert callback_mock.call_count > 0
-
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_cancel(self, client):
-        pass
-
+    async def test_subscribe_bars_historical_returns_expected(self, client):
+        
+        def send_mocked_response(*args, **kwargs):
+            bar = BarData()
+            bar.date = 1700069390
+            client.historicalDataUpdate(-10, bar)
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqHistoricalData = send_mock
+        
+        callback_mock = Mock()
+        
+        # Act
+        client.subscribe_bars(
+            contract=Contract(),
+            what_to_show=WhatToShow.BID,
+            bar_size=BarSize._1_MINUTE,
+            callback=callback_mock,
+        )
+        
+        # Assert
+        bar = callback_mock.call_args_list[0][0][0]
+        assert isinstance(bar, BarData)
+        assert bar.timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        
     @pytest.mark.asyncio()
-    async def test_subscribe_order_status_events(self, client):
-        pass
-
-    @pytest.mark.asyncio()
-    async def test_subscribe_execution_events(self, client):
-        pass
-
-    @pytest.mark.asyncio()
-    async def test_subscribe_error_events(self, client):
-        pass
-
+    async def test_unsubscribe_historical_second_bars(self, client):
+        
+        # Arrange
+        client._eclient.reqHistoricalData = Mock()
+        
+        cancel_mock = Mock()
+        client._eclient.cancelHistoricalData = cancel_mock
+        
+        # Act
+        subscription = client.subscribe_bars(
+            contract=Contract(),
+            what_to_show=WhatToShow.BID,
+            bar_size=BarSize._1_MINUTE,
+            callback=Mock(),
+        )
+        subscription.cancel()
+        
+        # Assert
+        cancel_mock.assert_called_once_with(reqId=-10)
+        assert subscription not in client.subscriptions
+    
     @pytest.mark.asyncio()
     async def test_request_accounts(self, client):
         message = b"15\x001\x00DU1234567\x00"
@@ -616,3 +724,22 @@ class TestInteractiveBrokersClient:
         assert accounts == ["DU1234567"]
 
         send_mock.assert_called_once_with(b"\x00\x00\x00\x0517\x001\x00")
+            
+    @pytest.mark.asyncio()
+    async def test_subscribe_order_status_events(self, client):
+        pass
+
+    @pytest.mark.asyncio()
+    async def test_subscribe_execution_events(self, client):
+        pass
+
+    @pytest.mark.asyncio()
+    async def test_subscribe_error_events(self, client):
+        pass
+
+    
+    
+    @pytest.mark.asyncio()
+    async def test_request_historical_schedule(self):
+        
+        pass

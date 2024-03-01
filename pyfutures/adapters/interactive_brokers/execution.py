@@ -386,7 +386,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 Currency.from_str(event.commissionCurrency),
             ),
             liquidity_side=LiquiditySide.NO_LIQUIDITY_SIDE,
-            ts_event=dt_to_unix_nanos(event.time),
+            ts_event=dt_to_unix_nanos(event.timestamp),
         )
 
         await asyncio.sleep(0)

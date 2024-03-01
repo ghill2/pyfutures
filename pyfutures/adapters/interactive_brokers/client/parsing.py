@@ -20,7 +20,7 @@ def parse_datetime(value: str) -> pd.Timestamp:
     if isinstance(value, str):
         assert len(value.split()) != 3, f"datetime value was {value}"
     if isinstance(value, int) or value.isdigit():
-        return pd.to_datetime(int(value), unit='s', tz="UTC")
+        return pd.to_datetime(int(value), unit='s', utc=True)
     elif isinstance(value, str) and len(value) == 8:
         return pd.to_datetime(value, format="%Y%m%d", utc=True)  # daily historical bars: YYYYmmdd
     elif isinstance(value, str) and len(value) == 17:

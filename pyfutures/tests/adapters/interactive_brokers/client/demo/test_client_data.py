@@ -153,3 +153,27 @@ class TestInteractiveBrokersClientData:
             duration=Duration(step=1, freq=Frequency.DAY),
             end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D")
         )
+    
+    @pytest.mark.asyncio()
+    async def test_subscribe_quote_ticks(self, client):
+        await client.connect()
+
+        callback_mock = Mock()
+
+        contract = Contract()
+        contract.conId = 553444806
+        contract.exchange = "ICEEUSOFT"
+
+        client.subscribe_quote_ticks(
+            name="test",
+            contract=contract,
+            callback=callback_mock,
+        )
+
+        async def wait_for_quote_tick():
+            while callback_mock.call_count == 0:
+                await asyncio.sleep(0)
+
+        await asyncio.wait_for(wait_for_quote_tick(), 10)
+
+        assert callback_mock.call_count > 0

@@ -9,6 +9,7 @@ from typing import Any
 
 import eventkit
 import traceback
+from datetime import timezone
 
 # fmt: off
 import pandas as pd
@@ -16,7 +17,8 @@ from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport as IBCommissionReport
-from ibapi.common import BarData, HistoricalTickLast
+from ibapi.common import BarData
+from ibapi.common import HistoricalTickLast
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import ListOfHistoricalTickBidAsk
@@ -67,7 +69,6 @@ class InteractiveBrokersClient(EWrapper):
         loop: asyncio.AbstractEventLoop,
         host: str = "127.0.0.1",
         port: int = 7497,
-        client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
     ):
@@ -106,8 +107,6 @@ class InteractiveBrokersClient(EWrapper):
 
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-        self._client_id = client_id
-        
 
     @property
     def subscriptions(self) -> list[ClientSubscription]:
@@ -380,7 +379,7 @@ class InteractiveBrokersClient(EWrapper):
                 reqId=request.id,
                 contract=contract,
                 endDateTime=end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S"),
-                durationStr=duration,
+                durationStr=str(duration),
                 barSizeSetting=str(bar_size),
                 whatToShow=what_to_show.name,
                 useRTH=True,
@@ -404,15 +403,12 @@ class InteractiveBrokersClient(EWrapper):
         return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper
-        print(traceback.print_stack())
-        raise Exception("")
         request = self._requests.get(reqId)
         if request is None:
             return  # no request found for request_id
 
         bar.timestamp = parse_datetime(bar.date)
         request.data.append(bar)
-
 
     def historicalDataEnd(self, reqId: int, start: str, end: str):  # : Override the EWrapper
         request = self._requests.get(reqId)
@@ -626,17 +622,15 @@ class InteractiveBrokersClient(EWrapper):
     ################################################################################################
     # Executions query
 
-    async def request_executions(self):
+    async def request_executions(self, client_id: int):
+        
         request = self._create_request(data=[])
 
         filter = ExecutionFilter()
-        filter.client_id = self._client_id
+        filter.client_id = client_id
 
-        self._eclient.reqExecutions(
-            reqId=request.id,
-            execFilter=filter,
-        )
-
+        self._eclient.reqExecutions(reqId=request.id, execFilter=filter)
+        
         return await self._wait_for_request(request)
 
     def execDetails(
@@ -652,21 +646,15 @@ class InteractiveBrokersClient(EWrapper):
         self._log.debug(f"execDetails reqId={reqId}")
 
         event = IBExecutionEvent(
-            reqId=reqId,
-            conId=contract.conId,
-            orderId=execution.orderId,
-            execId=execution.execId,
-            side=execution.side,
-            shares=execution.shares,
-            price=execution.price,
-            commission=None,  # filled on commissionReport
-            commissionCurrency=None,  # filled on commissionReport
-            time=parse_datetime(execution.time),
+            contract=contract,
+            execution=execution,
+            commissionReport=None,  # filled on commissionReport callback
         )
-
+        
+        self._executions[execution.execId] = event
+        
         # handle event-driven based response
         if reqId == -1:
-            self._executions[execution.execId] = event
             return
 
         request = self._requests.get(reqId)
@@ -689,10 +677,8 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.debug("commissionReport")
 
-        # self._commission_reports[commissionReport.execId] = commissionReport
-        event = self._executions[commissionReport.execId]
-        event.commission = commissionReport.commission
-        event.commissionCurrency = commissionReport.currency
+        event = self._executions[commissionReport.execId]  # hot cache
+        event.commissionReport = commissionReport
 
         # TODO: make sure reconciliation does not emit order filled events
         self.execution_events.emit(event)
@@ -802,8 +788,8 @@ class InteractiveBrokersClient(EWrapper):
             if not e.message.endswith("No head time stamp"):
                 raise e
 
-            # 162: Historical Market Data Service error message:No head time stamp
-            return None
+        # 162: Historical Market Data Service error message:No head time stamp
+        return None
 
     def headTimestamp(self, reqId: int, headTimestamp: str):
         # print("headTimestamp")
@@ -811,9 +797,9 @@ class InteractiveBrokersClient(EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-
-        request.set_result(pd.to_datetime(headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True))
-
+        
+        head_timestamp: pd.Timestamp = pd.to_datetime(headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True)
+        request.set_result(head_timestamp)
 
     ################################################################################################
     # Request quote ticks
@@ -855,10 +841,9 @@ class InteractiveBrokersClient(EWrapper):
     async def request_quote_ticks(
         self,
         contract: IBContract,
+        start_time: pd.Timestamp,
+        end_time: pd.Timestamp,
         count: int = 1000,
-        start_time: pd.Timestamp | None = None,
-        end_time: pd.Timestamp | None = None,
-        use_rth: bool = True,
     ) -> list[HistoricalTickBidAsk]:
         """
         End Date/Time: The date, time, or time-zone entered is invalid.
@@ -870,37 +855,28 @@ class InteractiveBrokersClient(EWrapper):
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
         """
-        # TODO assert start_time is tz-aware
-        # TODO assert end_time is tz-aware
-        # assert start_time is not None and end_time is not None
+        
+        assert start_time.tz is not None, "Timestamp is not timezone aware"
+        assert end_time.tz is not None, "Timestamp is not timezone aware"
+        assert start_time < end_time
 
         request = self._create_request(data=[])
-
-        if start_time is None:
-            start_time = ""
-        else:
-            start_time = start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
-
-        if end_time is None:
-            end_time = pd.Timestamp.utcnow()
-        end_time = end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S")
 
         self._log.debug(
             f"reqHistoricalTicks: {request.id=}, {contract=}, "
             f"startDateTime={start_time}, endDateTime={end_time}, "
             f"numberOfTicks={count}, whatToShow='BID_ASK', "
-            f"useRth={use_rth}, "
-)
+        )
  
 
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
-            startDateTime=start_time,
-            endDateTime=end_time,
+            startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
+            endDateTime=end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
             numberOfTicks=count,  # Max is 1000 per request.
             whatToShow="BID_ASK",
-            useRth=use_rth,
+            useRth=True,
             ignoreSize=False,
             miscOptions=[],
             # formatDate=1,
@@ -927,25 +903,26 @@ class InteractiveBrokersClient(EWrapper):
 
     async def request_trade_ticks(
         self,
-        name: str,
         contract: IBContract,
-        count: int,
-        end_time: pd.Timestamp = None,
-        use_rth: bool = True,
+        start_time: pd.Timestamp,
+        end_time: pd.Timestamp,
+        count: int = 1000,
     ) -> list[HistoricalTickLast]:
-        request = self._create_request(data=[], name=name)
-
-        if end_time is None:
-            end_time = pd.Timestamp.utcnow()
+        
+        assert start_time.tz is not None, "Timestamp is not timezone aware"
+        assert end_time.tz is not None, "Timestamp is not timezone aware"
+        assert start_time < end_time
+        
+        request = self._create_request(data=[])
 
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
-            startDateTime="",
-            endDateTime=end_time.strftime("%Y%m%d %H:%M:%S %Z"),
+            startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
+            endDateTime=end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
             numberOfTicks=count,
             whatToShow="TRADES",
-            useRth=use_rth,
+            useRth=True,
             ignoreSize=False,
             miscOptions=[],
         )
@@ -969,59 +946,33 @@ class InteractiveBrokersClient(EWrapper):
 
         if done:
             request.set_result(request.data)
-
+    
     ################################################################################################
-    # Realtime bars
+    # Subscribe ticks
 
-    def subscribe_bars(
+    def subscribe_quote_ticks(
         self,
         contract: IBContract,
-        what_to_show: WhatToShow,
-        bar_size: BarSize,
         callback: Callable,
-        use_rth: bool = True,
     ) -> ClientSubscription:
-
+        
         request_id = self._next_req_id()
 
-        if bar_size == BarSize._5_SECOND:
+        subscribe = functools.partial(
+            self._eclient.reqTickByTickData,
+            reqId=request_id,
+            contract=contract,
+            tickType="BidAsk",
+            numberOfTicks=0,
+            ignoreSize=True,
+        )
 
-            self._log.debug(
-                f"Requesting realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
-            )
-
-            cancel = functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
-
-            subscribe = functools.partial(
-                self._eclient.reqRealTimeBars,
-                reqId=request_id,
-                contract=contract,
-                barSize="",  # currently being ignored
-                whatToShow=what_to_show.name,
-                useRTH=use_rth,
-                realTimeBarsOptions=[],
-            )
-
-        else:
-            self._log.debug(
-                f"Requesting realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
-            )
-
-            cancel = functools.partial(self._eclient.cancelHistoricalData, reqId=request_id)
-
-            subscribe = functools.partial(
-                self._eclient.reqHistoricalData,
-                reqId=request_id,
-                contract=contract,
-                endDateTime="",
-                durationStr=bar_size.to_duration().value,
-                barSizeSetting=str(bar_size),
-                whatToShow=what_to_show.value,
-                useRTH=use_rth,
-                formatDate=1,
-                keepUpToDate=True,
-                chartOptions=[],
-            )
+        cancel = functools.partial(
+            self._unsubscribe,
+            request_id=request_id,
+            cancel_func=functools.partial(self._eclient.cancelTickByTickData, reqId=request_id),
+        )
+        
 
         subscription = ClientSubscription(
             id=request_id,
@@ -1033,31 +984,187 @@ class InteractiveBrokersClient(EWrapper):
         self._subscriptions[request_id] = subscription
 
         subscription.subscribe()
+        
+        return subscription
 
-    async def unsubscribe(
+    def tickByTickBidAsk(  # : Override the EWrapper
         self,
-        name: str,
-    ) -> None:
-        subscription = self._subscriptions.get(name)
-        if subscription is None:
-            return  # no subscription for name
+        reqId: int,
+        time: int,
+        bidPrice: float,
+        askPrice: float,
+        bidSize: Decimal,
+        askSize: Decimal,
+        tickAttribBidAsk: TickAttribBidAsk,  # tick-by-tick real-time bid/ask tick attribs (bit 0 – bid past low, bit 1 – ask past high).
+    ):
+        """
+        Returns tick-by-tick data for tickType = "BidAsk".
+        """
+        self._log.debug(
+            f"Received quote tick {reqId} {time}, {bidPrice}, {askPrice}, {bidSize}, {askSize}",
+        )
 
-        subscription.cancel()
-        del self._subscriptions[name]
+        subscription = self._subscriptions.get(reqId)
+        if subscription is None:
+            self._log.debug(
+                f"No subscription found for request_id {reqId}",
+            )
+            return  # no response found for request_id
+        
+        tick = HistoricalTickBidAsk()
+        tick.time = time
+        tick.priceBid = bidPrice
+        tick.priceAsk = askPrice
+        tick.sizeBid = bidSize
+        tick.sizeAsk = askSize
+        tick.timestamp = parse_datetime(time)
+        tick.tickAttribBidAsk = tickAttribBidAsk
+
+        subscription.callback(tick)
+        
+    ################################################################################################
+    # Realtime bars
+
+    def subscribe_bars(
+        self,
+        contract: IBContract,
+        what_to_show: WhatToShow,
+        bar_size: BarSize,
+        callback: Callable,
+    ) -> ClientSubscription:
+
+        if bar_size == BarSize._5_SECOND:
+            return self._subscribe_realtime_bars(
+                contract=contract,
+                what_to_show=what_to_show,
+                bar_size=bar_size,
+                callback=callback,
+            )
+        else:
+            return self._subscribe_historical_bars(
+                contract=contract,
+                what_to_show=what_to_show,
+                bar_size=bar_size,
+                callback=callback,
+            )
+    
+    def _subscribe_realtime_bars(
+        self,
+        contract: IBContract,
+        what_to_show: WhatToShow,
+        bar_size: BarSize,
+        callback: Callable,
+    ) -> ClientSubscription:
+        
+        self._log.debug(
+            f"Subscribing to realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
+        )
+        
+        request_id = self._next_req_id()
+        
+        cancel = functools.partial(
+            self._unsubscribe,
+            request_id=request_id,
+            cancel_func=functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
+        )
+        
+
+        subscribe = functools.partial(
+            self._eclient.reqRealTimeBars,
+            reqId=request_id,
+            contract=contract,
+            barSize="",  # currently being ignored
+            whatToShow=what_to_show.name,
+            useRTH=True,
+            realTimeBarsOptions=[],
+        )
+        
+        subscription = ClientSubscription(
+            id=request_id,
+            subscribe=subscribe,
+            cancel=cancel,
+            callback=callback,
+        )
+
+        self._subscriptions[request_id] = subscription
+
+        subscription.subscribe()
+        
+        return subscription
+    
+    def _subscribe_historical_bars(
+        self,
+        contract: IBContract,
+        what_to_show: WhatToShow,
+        bar_size: BarSize,
+        callback: Callable,
+    ) -> ClientSubscription:
+        
+        request_id = self._next_req_id()
+        
+        self._log.debug(
+            f"Subscribing to historical bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
+        )
+
+        cancel = functools.partial(
+            self._unsubscribe,
+            request_id=request_id,
+            cancel_func=functools.partial(self._eclient.cancelHistoricalData, reqId=request_id)
+        )
+
+        subscribe = functools.partial(
+            self._eclient.reqHistoricalData,
+            reqId=request_id,
+            contract=contract,
+            endDateTime="",
+            durationStr=bar_size.to_duration().value,
+            barSizeSetting=str(bar_size),
+            whatToShow=what_to_show.value,
+            useRTH=True,
+            formatDate=1,
+            keepUpToDate=True,
+            chartOptions=[],
+        )
+        
+        subscription = ClientSubscription(
+            id=request_id,
+            subscribe=subscribe,
+            cancel=cancel,
+            callback=callback,
+        )
+
+        self._subscriptions[request_id] = subscription
+
+        subscription.subscribe()
+        
+        return subscription
+    
+    def _unsubscribe(
+        self,
+        request_id: int,
+        cancel_func: Callable,
+    ) -> None:
+        
+        subscription = self._subscriptions.get(request_id)
+        if subscription is None:
+            self._log.debug(f"No subscription found for request_id {request_id}")
+            return
+
+        cancel_func()
+        del self._subscriptions[request_id]
 
     def historicalDataUpdate(self, reqId: int, bar: BarData):
         """
         Returns updates in real time when keepUpToDate is set to True.
         """
-        self._log.debug(
-            f"Received realtime bar {reqId}, {bar.date}, {bar.open_} {bar.high} {bar.low}, {bar.close} {bar.volume} {bar.wap} {bar.count}",
-        )
+        self._log.debug(f"Received historical bar reqId: {reqId}, {bar}")
 
-        subscription = self._requests.get(reqId)
+        subscription = self._subscriptions.get(reqId)
         if subscription is None:
-            return  # no subscription found for request_id
+            self._log.debug(f"No subscription found for request_id {reqId}")
+            return
 
-        bar.timestamp = parse_datetime(bar.time)
+        bar.timestamp = parse_datetime(bar.date)
         subscription.callback(bar)
 
     def realtimeBar(
@@ -1072,8 +1179,11 @@ class InteractiveBrokersClient(EWrapper):
         wap: Decimal,
         count: int,
     ):  # : Override the EWrapper
+        """
+        Returns updates in real time when subscribed to 5 second bars.
+        """
         self._log.debug(
-            f"Received realtime bar {reqId}, {time}, {open_} {high} {low}, {close} {volume} {wap} {count}",
+            f"Received realtime bar reqId: {reqId}, {time}, {open_} {high} {low}, {close} {volume} {wap} {count}",
         )
         subscription = self._subscriptions.get(reqId)
         if subscription is None:
@@ -1089,71 +1199,12 @@ class InteractiveBrokersClient(EWrapper):
         bar.volume = volume
         bar.wap = wap
         bar.barCount = count
-        subscription.callback(bar=bar)
-
-    ################################################################################################
-    # Realtime ticks
-
-    def subscribe_quote_ticks(
-        self,
-        contract: IBContract,
-        callback: Callable,
-    ):
-        request_id = self._next_req_id()
-
-        subscribe = functools.partial(
-            self._eclient.reqTickByTickData,
-            reqId=request_id,
-            contract=contract,
-            tickType="BidAsk",
-            numberOfTicks=0,
-            ignoreSize=True,
-        )
-
-        cancel = functools.partial(self._eclient.cancelTickByTickData, reqId=request_id)
-
-        subscription = ClientSubscription(
-            id=request_id,
-            subscribe=subscribe,
-            cancel=cancel,
-            callback=callback,
-        )
-
-        self._subscriptions[request_id] = subscription
-
-        subscription.subscribe()
-
-    def tickByTickBidAsk(  # : Override the EWrapper
-        self,
-        reqId: int,
-        time: int,
-        bidPrice: float,
-        askPrice: float,
-        bidSize: Decimal,
-        askSize: Decimal,
-        tickAttribBidAsk: TickAttribBidAsk,
-    ):
-        """
-        Returns tick-by-tick data for tickType = "BidAsk".
-        """
-        self._log.debug(
-            f"Received quote tick {reqId} {time}, {bidPrice}, {askPrice}, {bidSize}, {askSize}",
-        )
-
-        subscription = self._subscriptions.get(reqId)
-        if subscription is None:
-            return  # no response found for request_id
         
-        tick = HistoricalTickBidAsk(
-            priceBid=bidPrice,
-            priceAsk=askPrice,
-            sizeBid=bidSize,
-            sizeAsk=askSize
-        )
-        tick.timestamp = parse_datetime(time)
-
-        subscription.callback(tick)
-
+        subscription.callback(bar)
+    
+    ################################################################################################
+    # Accounts
+    
     async def request_accounts(self) -> list[str]:
         request = self._create_request(id="accounts")
 
