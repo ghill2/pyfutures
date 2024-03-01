@@ -26,7 +26,7 @@ def client(event_loop) -> InteractiveBrokersClient:
         loop=event_loop,
         host="127.0.0.1",
         port=4002,
-        
+        request_timeout_seconds=0.5,  # requests should fail immediately for unit tests
     )
     return client
 

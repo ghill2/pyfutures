@@ -38,6 +38,7 @@ class IBPositionEvent:
 
 @dataclass
 class IBExecutionEvent:
+    reqId: int
     contract: IBContract
     execution: IBExecution
     commissionReport: IBCommissionReport

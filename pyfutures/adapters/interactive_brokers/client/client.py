@@ -454,7 +454,7 @@ class InteractiveBrokersClient(EWrapper):
 
         """
         
-        request_id = self._request_id_map["positions"]
+        request_id = self._request_id_map["orders"]
         request = self._create_request(id=request_id, data=[])
 
         self._eclient.reqOpenOrders()
@@ -483,12 +483,11 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.debug(f"orderStatus {status}")
 
-        # block when request_open_orders is active
         request_id = self._request_id_map["orders"]
         request = self._requests.get(request_id)
         if request is not None:
-            self._log.debug("returning because the client is currently retrieving orders")
-            return  # request processing, do not submit to execution handling
+            self._log.debug("blocking event: client is currently requesting orders")
+            return
 
         event = IBOrderStatusEvent(
             orderId=orderId,
@@ -664,16 +663,17 @@ class InteractiveBrokersClient(EWrapper):
         NOTE: when an order is filled, the execDetails and commissionReport endpoint is called
         The order is execDetails -> commissionReport
         
+        NOTE: the reqId is -1 for events
         """
-        self._log.info(
-            f"execDetails reqId={reqId} {execution}"
-        )
+        self._log.info(f"execDetails reqId={reqId} {execution}")
 
         event = IBExecutionEvent(
+            reqId=reqId,
             contract=contract,
             execution=execution,
             commissionReport=None,  # filled on commissionReport callback
         )
+        
         self._executions[execution.execId] = event  # hot cache
 
     def commissionReport(self, commissionReport: IBCommissionReport):  # : Override the EWrapper
@@ -687,20 +687,35 @@ class InteractiveBrokersClient(EWrapper):
         The order is execDetails -> commissionReport
         """
         
-        self._log.info("commissionReport")
+        self._log.info(f"commissionReport {commissionReport}")
         
-        event = self._executions[commissionReport.execId]  # hot cache
+        # find execution from hot cache
+        exec_id = commissionReport.execId
         
-        request_id: int = self._request_id_map.get("executions")
-        request = self._requests.get(request_id)
-        if request is not None:
-            self._log.debug("blocking event-driven execution flow for request")
-            request.data.append(event)
+        event = self._executions.get(exec_id)  # hot cache
+        
+        if event is None:
+            self._log.debug(f"No execution event found in hot cache for {exec_id}")
             return
         
+        del self._executions[exec_id]
+            
         event.commissionReport = commissionReport
-        self.execution_events.emit(event)
-
+            
+        # event based
+        if event.reqId == -1:
+            self.execution_events.emit(event)
+            return
+        
+        # request based
+        # request_id: int = self._request_id_map.get("executions")
+        request = self._requests.get(event.reqId)
+        if request is None:
+            self._log.debug(f"No request found for request_id {event.reqId}")
+            return
+        
+        request.data.append(event)
+        
     def execDetailsEnd(self, reqId: int):  # : Override the EWrapper
         """
         This function is called once all executions have been sent to a client in
@@ -708,9 +723,10 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.info("execDetailsEnd")
         
+        # request_id: int = self._request_id_map.get("executions")
         request = self._requests.get(reqId)
         if request is None:
-            self._log.debug("no active request for executions")
+            self._log.debug(f"No request found for request_id {reqId}")
             return
         
         request.set_result(request.data)
@@ -725,7 +741,10 @@ class InteractiveBrokersClient(EWrapper):
         The data is returned by accountSummary().
 
         """
-        request = self._create_request(data={})
+        request = self._create_request(
+            id=self._next_request_id(),
+            data={},
+        )
 
         self._eclient.reqAccountSummary(
             reqId=request.id,
@@ -826,8 +845,8 @@ class InteractiveBrokersClient(EWrapper):
         quotes = await self.request_quote_ticks(
             contract=contract,
             count=1,
+            start_time=pd.Timestamp.utcnow() - pd.Timedelta(days=365),
             end_time=pd.Timestamp.utcnow(),
-            use_rth=True,
         )
         return None if len(quotes) == 0 else quotes[-1]
 
@@ -873,7 +892,10 @@ class InteractiveBrokersClient(EWrapper):
         assert end_time.tz is not None, "Timestamp is not timezone aware"
         assert start_time < end_time
 
-        request = self._create_request(data=[])
+        request = self._create_request(
+            id=self._next_request_id(),
+            data=[],
+        )
 
         self._log.debug(
             f"reqHistoricalTicks: {request.id=}, {contract=}, "
@@ -1220,7 +1242,10 @@ class InteractiveBrokersClient(EWrapper):
     
     async def request_accounts(self) -> list[str]:
         
-        request = self._create_request(id="accounts")
+        request_id = self._request_id_map["accounts"]
+        request = self._create_request(
+            id=request_id,
+        )
 
         self._eclient.reqManagedAccts()
 
