@@ -45,7 +45,6 @@ def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
         loop=event_loop,
         host="127.0.0.1",
         port=4002,
-        client_id=1,
     )
 
     init_logging(level_stdout=LogLevel.DEBUG)
