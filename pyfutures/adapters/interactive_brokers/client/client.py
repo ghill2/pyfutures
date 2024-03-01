@@ -364,6 +364,9 @@ class InteractiveBrokersClient(EWrapper):
             data=[],
             timeout_seconds=60 * 10,
         )
+        """
+            formatDate=1, returns bars as a timestamp in the exchange timezone
+        """
         
         self._log.debug(
             f"reqHistoricalData: {request.id}, {contract}, "

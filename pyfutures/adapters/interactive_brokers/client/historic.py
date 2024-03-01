@@ -53,6 +53,8 @@ class InteractiveBrokersHistoric:
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
 
+        assert start_time < end_time
+
         head_timestamp = await self._client.request_head_timestamp(
             contract=contract,
             what_to_show=what_to_show,

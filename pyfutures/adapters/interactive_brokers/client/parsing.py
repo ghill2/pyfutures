@@ -17,13 +17,22 @@ def bar_data_to_dict(obj: BarData) -> dict:
 
 
 def parse_datetime(value: str) -> pd.Timestamp:
-    if isinstance(value, str):
-        assert len(value.split()) != 3, f"datetime value was {value}"
-    if isinstance(value, int) or value.isdigit():
-        return pd.to_datetime(int(value), unit='s', utc=True)
-    elif isinstance(value, str) and len(value) == 8:
-        return pd.to_datetime(value, format="%Y%m%d", utc=True)  # daily historical bars: YYYYmmdd
+    if isinstance(value, int):
+        # historical ticks int: DDDDDDDDDD
+        return pd.to_datetime(value, unit='s', utc=True) 
+
+    # related to request_bars
+    # when formatDate=1, timestamps return as 3 parts
+    assert len(value.split()) != 3, f"datetime value was {value}"
+
+    if isinstance(value, str) and len(value) == 8:
+        # daily historical bars str: YYYYmmdd
+        return pd.to_datetime(value, format="%Y%m%d", utc=True)  
+    elif isinstance(value, str) and len(value) == 10:
+        # < BarSize._1_HOUR historical bars -> str: "DDDDDDDDDD"
+        return pd.to_datetime(int(value), unit='s', utc=True)  
     elif isinstance(value, str) and len(value) == 17:
+        # formatDate=1
         return pd.to_datetime(value, format="%Y%m%d-%H:%M:%S", utc=True)
 
     raise RuntimeError("Unable to parse timestamp")
