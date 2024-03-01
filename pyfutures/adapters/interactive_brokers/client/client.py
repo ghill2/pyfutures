@@ -480,6 +480,7 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.debug(f"orderStatus {status}")
 
+        # block when request_open_orders is active
         request_id = self._request_id_map["orders"]
         request = self._requests.get(request_id)
         if request is not None:

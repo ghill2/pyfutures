@@ -2,6 +2,7 @@ import asyncio
 import time
 from decimal import Decimal
 from pathlib import Path
+import dataclasses
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
@@ -23,7 +24,11 @@ from ibapi.commission_report import CommissionReport as IBCommissionReport
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.client.client import IBOpenOrderEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
+from pyfutures.adapters.interactive_brokers.client.objects import IBOrderStatusEvent
+from pyfutures.adapters.interactive_brokers.client.objects import IBErrorEvent
+from pyfutures.adapters.interactive_brokers.client.objects import IBExecutionEvent
 from pyfutures.adapters.interactive_brokers.client.objects import IBPositionEvent
+from pyfutures.adapters.interactive_brokers.client.objects import IBPortfolioEvent
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
@@ -726,7 +731,36 @@ class TestInteractiveBrokersClient:
             
     @pytest.mark.asyncio()
     async def test_subscribe_order_status_events(self, client):
-        pass
+        
+        expected = dict(
+            orderId=4,
+            status="FILLED",
+            filled=Decimal("1"),
+            remaining=Decimal("1"),
+            avgFillPrice=1.2,
+            permId=5,
+            parentId=6,
+            lastFillPrice=1.4,
+            clientId=9,
+            whyHeld="test",
+            mktCapPrice=1.32,
+        )
+        received = None
+        def callback(event: IBOrderStatusEvent):
+            global received
+            received = event
+        
+        # Act
+        client.order_status_events += callback
+        client.orderStatus(
+            
+        )
+        
+        
+        # Assert
+        assert isinstance(received, IBOrderStatusEvent)
+        assert dataclasses.asdict(received) == expected
+        
 
     @pytest.mark.asyncio()
     async def test_subscribe_execution_events(self, client):
