@@ -20,9 +20,9 @@ from pyfutures.data.files import bars_to_dataframe
 from pyfutures.data.files import bar_dataframe_to_quote_dataframe
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.tests.adapters.interactive_brokers.test_kit import PER_CONTRACT_FOLDER
-from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import PER_CONTRACT_FOLDER
+from pyfutures.tests.test_kit import CATALOG
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 def process_daily_bars(row: dict, path: Path) -> None:
     

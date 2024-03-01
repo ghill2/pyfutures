@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.common.proxy import Proxy
 from selenium.webdriver.common.proxy import ProxyType
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 PROXY_EMAIL = dotenv_values()["PROXY_EMAIL"]

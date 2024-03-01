@@ -14,13 +14,13 @@ from nautilus_trader.adapters.interactive_brokers.historic.client import (
 from nautilus_trader.common.component import Logger
 from nautilus_trader.common.enums import LogColor
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import (
+from pyfutures.tests.test_kit import (
     IBTestProviderStubs as PyfuturesTestProviderStubs,
 )
 from dotenv import dotenv_values
 import pandas as pd
 import time
-from pyfutures.tests.adapters.interactive_brokers.test_kit import TRADERMADE_FOLDER
+from pyfutures.tests.test_kit import TRADERMADE_FOLDER
 
 logger = Logger(name="data_stats")
 

@@ -3,7 +3,7 @@ import json
 from pytower import PACKAGE_ROOT
 
 from pyfutures.schedule.factory import TIMEZONE_FOR_EXCHANGE
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 class TestExchangeCalendarFactory:

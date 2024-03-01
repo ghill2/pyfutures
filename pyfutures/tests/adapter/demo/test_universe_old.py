@@ -14,7 +14,7 @@ from pyfutures.adapters.interactive_brokers.client.objects import ClientExceptio
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.client.historic import InteractiveBrokersHistoric
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 init_logging(level_stdout=LogLevel.WARNING)

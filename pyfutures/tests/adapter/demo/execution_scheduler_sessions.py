@@ -3,7 +3,7 @@ import pytest
 
 from pyfutures.adapters.interactive_brokers.parsing import contract_to_instrument_id
 from pyfutures.data.schedule.factory import MarketScheduleFactory
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 if __name__ == "__main__":

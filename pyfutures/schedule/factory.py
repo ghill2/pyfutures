@@ -10,7 +10,7 @@ from nautilus_trader.model.identifiers import Symbol
 from pyfutures import PACKAGE_ROOT
 from pyfutures.schedule.factory import MarketScheduleFactory
 from pyfutures.schedule.schedule import MarketSchedule
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 DAY_NAME_TO_INT = {"Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6}

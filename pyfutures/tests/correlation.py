@@ -7,7 +7,7 @@ import joblib
 import pandas as pd
 from nautilus_trader.model.enums import BarAggregation
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 def merge_dataframes_pandas(dfs: list[pd.DataFrame]) -> pd.DataFrame:

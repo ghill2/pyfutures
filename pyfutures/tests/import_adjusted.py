@@ -6,9 +6,9 @@ from nautilus_trader.model.enums import BarAggregation
 
 from pyfutures.continuous.adjusted import AdjustedPrices
 from pyfutures.data.files import ParquetFile
-from pyfutures.tests.adapters.interactive_brokers.test_kit import ADJUSTED_PRICES_FOLDER
-from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import ADJUSTED_PRICES_FOLDER
+from pyfutures.tests.test_kit import MULTIPLE_PRICES_FOLDER
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 OUT_FOLDER = ADJUSTED_PRICES_FOLDER

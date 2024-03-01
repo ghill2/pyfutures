@@ -16,7 +16,7 @@ from pyfutures.adapters.interactive_brokers.config import (
 from pyfutures.tests.adapters.interactive_brokers.demo.factories import (
     InteractiveBrokersDataEngineFactory,
 )
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 init_logging(level_stdout=LogLevel.DEBUG)

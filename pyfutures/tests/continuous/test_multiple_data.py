@@ -25,7 +25,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.data import MultipleData
 from pyfutures.continuous.providers import TestContractProvider
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 class TestMultipleData:

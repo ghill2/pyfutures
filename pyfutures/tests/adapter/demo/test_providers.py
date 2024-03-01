@@ -12,7 +12,7 @@ from nautilus_trader.model.objects import Price
 from pyfutures.continuous.chain import FuturesChain
 from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel

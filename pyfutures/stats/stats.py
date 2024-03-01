@@ -13,7 +13,7 @@ from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrok
 from pyfutures.adapters.interactive_brokers.enums import BarSize
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from pyfutures.adapters.interactive_brokers.client.historic import InteractiveBrokersHistoric
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
 
 
 logger = Logger(name="stats")

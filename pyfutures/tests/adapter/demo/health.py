@@ -6,7 +6,7 @@ from ibapi.contract import Contract as IBContract
 
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel

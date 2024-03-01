@@ -21,7 +21,7 @@ from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersExec
 from pyfutures.adapters.interactive_brokers.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from pyfutures.adapters.interactive_brokers.factories import InteractiveBrokersLiveExecClientFactory
-from pyfutures.tests.adapters.order_setup import OrderSetup
+from pyfutures.tests.adapter.order_setup import OrderSetup
 
 
 

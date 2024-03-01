@@ -14,8 +14,8 @@ from pyfutures.continuous.providers import TestContractProvider
 from pyfutures.continuous.wrangler import MultiplePriceWrangler
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import MultipleBarParquetWriter
-from pyfutures.tests.adapters.interactive_brokers.test_kit import MULTIPLE_PRICES_FOLDER
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import MULTIPLE_PRICES_FOLDER
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 def load_bars(row: dict) -> list[Bar]:

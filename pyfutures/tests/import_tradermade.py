@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 from dotenv import dotenv_values
 
-from pyfutures.tests.adapters.interactive_brokers.test_kit import TRADERMADE_FOLDER
+from pyfutures.tests.test_kit import TRADERMADE_FOLDER
 
 
 TRADERMADE_SYMBOLS = [

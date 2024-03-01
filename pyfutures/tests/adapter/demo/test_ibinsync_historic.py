@@ -30,7 +30,7 @@ from pyfutures.adapters.interactive_brokers.enums import (
 from pyfutures.adapters.interactive_brokers.parsing import (
     contract_details_to_instrument_id,
 )
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 # logger = logging.getLogger("ib_insync_root")
 # logger.setLevel(logging.DEBUG)

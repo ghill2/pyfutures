@@ -7,7 +7,7 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.chain import TestContractProvider
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 OUT_FOLDER = Path("/Users/g1/Desktop/calendars")

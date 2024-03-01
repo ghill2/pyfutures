@@ -11,9 +11,9 @@ from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
 from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.identifiers import Venue
 from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG_FOLDER
+from pyfutures.tests.test_kit import CATALOG_FOLDER
 from pyfutures.tests.import_tradermade import TRADERMADE_SYMBOLS
-from pyfutures.tests.adapters.interactive_brokers.test_kit import CATALOG
+from pyfutures.tests.test_kit import CATALOG
 from nautilus_trader.model.instruments import CurrencyPair
 
 PRICE_PRECISIONS = {

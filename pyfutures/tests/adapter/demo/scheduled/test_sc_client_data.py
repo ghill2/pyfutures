@@ -9,7 +9,7 @@ from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.model.identifiers import TraderId
 
 from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 # RUN THESE TESTS WITH:
