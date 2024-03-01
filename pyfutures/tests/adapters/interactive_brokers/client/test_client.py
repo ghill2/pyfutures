@@ -34,7 +34,6 @@ from pyfutures.adapters.interactive_brokers.enums import Duration
 from pyfutures.adapters.interactive_brokers.enums import Frequency
 from pyfutures.adapters.interactive_brokers.enums import WhatToShow
 from ibapi.common import HistoricalTickBidAsk
-from pyfutures.tests.adapters.interactive_brokers.test_kit import IBTestProviderStubs
 
 
 RESPONSES_FOLDER = Path(__file__).parent / "responses"
@@ -719,19 +718,24 @@ class TestInteractiveBrokersClient:
     @pytest.mark.asyncio()
     async def test_request_accounts(self, client):
         
+        # Arrange
         def send_mocked_response(*args, **kwargs):
             client.managedAccounts("DU1234567,DU1234568")
         
         send_mock = Mock(side_effect=send_mocked_response)
         client._eclient.reqManagedAccts = send_mock
-
+        
+        # Act
         accounts = await client.request_accounts()
+        
+        # Assert
         assert accounts == ["DU1234567", "DU1234568"]
         send_mock.assert_called_once()
             
     @pytest.mark.asyncio()
     async def test_subscribe_order_status_events(self, client):
         
+        # Arrange
         expected = dict(
             orderId=4,
             status="FILLED",
@@ -745,31 +749,59 @@ class TestInteractiveBrokersClient:
             whyHeld="test",
             mktCapPrice=1.32,
         )
-        received = None
-        def callback(event: IBOrderStatusEvent):
-            global received
-            received = event
+        callback_mock = AsyncMock()
+        client.order_status_events += callback_mock
         
         # Act
-        client.order_status_events += callback
-        client.orderStatus(
-            
-        )
-        
+        client.orderStatus(**expected)
         
         # Assert
-        assert isinstance(received, IBOrderStatusEvent)
-        assert dataclasses.asdict(received) == expected
-        
-
+        event_response = callback_mock.call_args_list[0][0][0]
+        assert isinstance(event_response, IBOrderStatusEvent)
+        assert dataclasses.asdict(event_response) == expected
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_order_status_events_blocks_on_request(self, client):
+        pass
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_subscribe_execution_events(self, client):
         pass
 
     @pytest.mark.asyncio()
     async def test_subscribe_error_events(self, client):
+        
+        # Arrange
+        callback_mock = AsyncMock()
+        client.error_events += callback_mock
+        
+        # Act
+        client.error(
+            reqId=4,
+            errorCode=5,
+            errorString="error message",
+            advancedOrderRejectJson="",
+        )
+        
+        # Assert
+        event_response = callback_mock.call_args_list[0][0][0]
+        assert isinstance(event_response, IBErrorEvent)
+        assert event_response.reqId == 4
+        assert event_response.errorCode == 5
+        assert event_response.errorString == "error message"
+        assert event_response.advancedOrderRejectJson == ""
+    
+    @pytest.mark.asyncio()
+    async def test_subscribe_account_updates(self):
         pass
     
     @pytest.mark.asyncio()
     async def test_request_historical_schedule(self):
         pass
+    
+    @pytest.mark.asyncio()
+    async def test_request_portfolio(self):
+        pass
+    

@@ -48,14 +48,14 @@ class IBExecutionEvent:
     
 @dataclass
 class IBErrorEvent:
-    request_id: int
-    code: int
-    message: str
-    advanced_order_reject_json: str
+    reqId: int
+    errorCode: int
+    errorString: str
+    advancedOrderRejectJson: str
 
 @dataclass
 class IBOrderStatusEvent:
-    order_id: int
+    orderId: int
     status: str
     filled: Decimal
     remaining: Decimal
@@ -66,7 +66,6 @@ class IBOrderStatusEvent:
     clientId: int
     whyHeld: str
     mktCapPrice: float
-
 
 @dataclass
 class ClientRequest(asyncio.Future):

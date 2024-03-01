@@ -197,12 +197,13 @@ class InteractiveBrokersClient(EWrapper):
         # TODO: if reqId is negative, its part of a request
 
         event = IBErrorEvent(
-            request_id=reqId,
-            code=errorCode,
-            message=errorString,
-            advanced_order_reject_json=advancedOrderRejectJson,
+            reqId=reqId,
+            errorCode=errorCode,
+            errorString=errorString,
+            advancedOrderRejectJson=advancedOrderRejectJson,
         )
-
+        self.error_events.emit(event)
+        
         # Note: -1 will indicate a notification and not true error condition
         if reqId == -1:
             # self._log.debug(f"Notification {errorCode}: {errorString}")
@@ -488,7 +489,7 @@ class InteractiveBrokersClient(EWrapper):
             return  # request processing, do not submit to execution handling
 
         event = IBOrderStatusEvent(
-            order_id=orderId,
+            orderId=orderId,
             status=status,
             filled=filled,
             remaining=remaining,
@@ -658,19 +659,20 @@ class InteractiveBrokersClient(EWrapper):
             commissionReport=None,  # filled on commissionReport callback
         )
         
-        self._executions[execution.execId] = event
-        
-        # handle event-driven based response
+        # handle event-driven based response without a request
         if reqId == -1:
+            self.execution_events.emit(event)
             return
-
+        
         request = self._requests.get(reqId)
         if request is None:
             self._log.debug(f"no request for request_id: {reqId}")
             return
 
         self._log.debug(f"request found with id {request.id}")
-
+        
+        self._executions[execution.execId] = event
+        
         # handle request based response
         request.data.append(event)
 
@@ -682,6 +684,7 @@ class InteractiveBrokersClient(EWrapper):
         - by calling reqExecutions().
 
         """
+        
         self._log.debug("commissionReport")
 
         event = self._executions[commissionReport.execId]  # hot cache
@@ -1233,6 +1236,7 @@ class InteractiveBrokersClient(EWrapper):
 
     ################################################################################################
     # Subscribe account summary
+    
     async def subscribe_account_updates(self, callback: Callable) -> ClientSubscription:
         """
         All account values and positions will be returned initially, and then there will
@@ -1420,7 +1424,7 @@ class InteractiveBrokersClient(EWrapper):
 
         request.set_result(df)
 
-# request.data.extend(
+    # request.data.extend(
         #     [
         #         IBQuoteTick(
         #             name=request.name,
