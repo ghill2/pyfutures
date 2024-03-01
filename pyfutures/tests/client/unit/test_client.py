@@ -225,7 +225,48 @@ class TestInteractiveBrokersClient:
         assert len(orders) == 2
         assert all(isinstance(o, IBOpenOrderEvent) for o in orders)
         send_mock.assert_called_once()
-
+    
+    @pytest.mark.asyncio()
+    async def test_request_open_orders_no_event_emit(self, client):
+        
+        """
+        when there is an active open orders request an event should not be emitted
+        """
+        # Arrange
+        def send_mocked_response(*args, **kwargs):
+            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            client.orderStatus(
+                orderId=4,
+                status="FILLED",
+                filled=Decimal("1"),
+                remaining=Decimal("1"),
+                avgFillPrice=1.23,
+                permId=5,
+                parentId=6,
+                lastFillPrice=1.43,
+                clientId=1,
+                whyHeld="reason",
+                mktCapPrice=1.76,
+            )
+            client.openOrderEnd()
+            
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqOpenOrders = send_mock
+        
+        open_order_callback_mock = AsyncMock()
+        client.open_order_events += open_order_callback_mock
+        
+        order_status_callback_mock = AsyncMock()
+        client.order_status_events += order_status_callback_mock
+        
+        # Act
+        await client.request_open_orders()
+        
+        # Assert
+        order_status_callback_mock.assert_not_called()
+        open_order_callback_mock.assert_not_called()
+        
+        
     @pytest.mark.asyncio()
     async def test_request_positions(self, client):
 
@@ -280,7 +321,36 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.asyncio()
     async def test_request_executions_no_event_emit(self, client):
-        pass
+        
+        # Arrange
+        def send_mocked_response(*args, **kwargs):
+            execution = IBExecution()
+            execution.execId = 1
+            report = IBCommissionReport()
+            report.execId = execution.execId
+            client.execDetails(-10, IBContract(), execution)
+            client.commissionReport(report)
+            
+            execution = IBExecution()
+            execution.execId = 2
+            report = IBCommissionReport()
+            report.execId = execution.execId
+            client.execDetails(-10, IBContract(), execution)
+            client.commissionReport(report)
+            
+            client.execDetailsEnd(-10)
+
+        send_mock = Mock(side_effect=send_mocked_response)
+        client._eclient.reqExecutions = send_mock
+        
+        callback_mock = AsyncMock()
+        client.execution_events += callback_mock
+        
+        # Act
+        await client.request_executions(client_id=1)
+        
+        # Assert
+        callback_mock.assert_not_called()
         
     @pytest.mark.asyncio()
     async def test_request_head_timestamp(self, client):

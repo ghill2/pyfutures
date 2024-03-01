@@ -55,7 +55,6 @@ class InteractiveBrokersClient(EWrapper):
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
-        "executions": -2,
         "next_order_id": -3,
         "positions": -4,
         "accounts": -5,
@@ -451,7 +450,6 @@ class InteractiveBrokersClient(EWrapper):
 
         Each open order will be fed back through the openOrder() and orderStatus()
         functions on the EWrapper.
-
         """
         
         request_id = self._request_id_map["orders"]
@@ -548,15 +546,10 @@ class InteractiveBrokersClient(EWrapper):
         request_id = self._request_id_map["orders"]
         request = self._requests.get(request_id)
         if request is None:
-            self._log.debug("no orders response, emitting event...")
-
-            # TODO: make sure execution callbacks are not triggered on reconciliation
             self.open_order_events.emit(event)
-
             return
-
+        
         request.data.append(event)
-        self._log.debug(f"Received {len(request.data)} items")
 
     def openOrderEnd(self):
         """
@@ -634,7 +627,7 @@ class InteractiveBrokersClient(EWrapper):
 
     async def request_executions(self, client_id: int):
         
-        request_id: int = self._request_id_map.get("executions")
+        request_id: int = self._next_request_id()
         request = self._create_request(
             id=request_id,
             data=[],
@@ -708,7 +701,6 @@ class InteractiveBrokersClient(EWrapper):
             return
         
         # request based
-        # request_id: int = self._request_id_map.get("executions")
         request = self._requests.get(event.reqId)
         if request is None:
             self._log.debug(f"No request found for request_id {event.reqId}")
@@ -723,7 +715,6 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.info("execDetailsEnd")
         
-        # request_id: int = self._request_id_map.get("executions")
         request = self._requests.get(reqId)
         if request is None:
             self._log.debug(f"No request found for request_id {reqId}")
@@ -804,7 +795,9 @@ class InteractiveBrokersClient(EWrapper):
         self._log.debug(
             f"Requesting head timestamp for {contract.symbol} {contract.exchange} {contract.conId}",
         )
-        request = self._create_request()
+        request = self._create_request(
+            id=self._next_request_id(),
+        )
 
         try:
             self._eclient.reqHeadTimeStamp(
@@ -948,7 +941,10 @@ class InteractiveBrokersClient(EWrapper):
         assert end_time.tz is not None, "Timestamp is not timezone aware"
         assert start_time < end_time
         
-        request = self._create_request(data=[])
+        request = self._create_request(
+            id=self._next_request_id(),
+            data=[],
+        )
 
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
@@ -1357,7 +1353,8 @@ class InteractiveBrokersClient(EWrapper):
         request_id = self._request_id_map["portfolio"]
         request = self._requests.get(request_id)
         if request is None:
-            return  # no response found for request_id
+            self._log.debug(f"No request found for id {request_id}")
+            return
 
         request.data.append(
             IBPortfolioEvent(
