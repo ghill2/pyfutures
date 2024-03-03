@@ -106,6 +106,10 @@ class ClientException(Exception):
     def __setstate__(self, state):
         self.code = state['code']
         self.message = state['message']
+
+class ClientDisconnected(Exception):
+    def __init__(self, message: str = None):
+        super().__init__(message)
         
 # class TimeoutError(asyncio.TimeoutError):
 #     """asyncio.TimeoutError that stores the timeout_seconds for use in Historic Client"""

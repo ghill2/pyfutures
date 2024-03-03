@@ -351,7 +351,6 @@ class InteractiveBrokersClient(EWrapper):
         )
         return bars[-1] if len(bars) > 0 else None
 
-
     async def request_bars(
         self,
         contract: IBContract,
@@ -360,15 +359,16 @@ class InteractiveBrokersClient(EWrapper):
         duration: Duration,
         end_time: pd.Timestamp,
     ) -> list[BarData]:
+        """
+            formatDate=1, returns bars as a timestamp in the exchange timezone
+        """
+        await self._conn._is_connected.wait()
 
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
             data=[],
             timeout_seconds=60 * 10,
         )
-        """
-            formatDate=1, returns bars as a timestamp in the exchange timezone
-        """
         
         self._log.debug(
             f"reqHistoricalData: {request.id}, {contract}, "
@@ -416,7 +416,6 @@ class InteractiveBrokersClient(EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no request found for request_id
-
         request.set_result(request.data)
 
     ################################################################################################

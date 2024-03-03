@@ -4,127 +4,20 @@ import pytest
 
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
+
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
-
-from collections import deque
-
-import logging
-
-
-class MockSocket:
-    """ """
-
-    def __init__(self):
-        # append to this queue to receive msg at self._reader.read()
-        self._mocked_responses = deque()
-
-        mock_reader = AsyncMock()
-        mock_reader.read.side_effect = self._read_generator
-
-        self.respond = asyncio.Event()
-
-        mock_writer = MagicMock()
-        mock_writer.drain = AsyncMock()
-        mock_writer.write.side_effect = self._write_generator
-
-        # internal storage for req res
-        self._requests = deque()
-        self._responses = deque()
-
-        self.mock_reader = mock_reader
-        self.mock_writer = mock_writer
-
-        self._log = logging.getLogger("MockSocket")
-
-    async def _read_generator(self, _):
-        """
-        do not yield, otherwise the function is not executed
-        """
-        self._log.debug("_read_generator")
-        if len(self._mocked_responses) == 0:
-            self.respond.clear()
-
-        await self.respond.wait()
-
-        response = self._mocked_responses.popleft()
-        self._log.debug(f"_read_generator: sending {response}")
-        return response
-
-    def _write_generator(self, msg):
-        """
-        Executed every time Connection._writer.write() is executed
-        Ensures a transaction Client -> Gateway, Gateway -> Server
-        do not yield, otherwise the function is not executed
-        """
-        self._log.debug(f"_write_generator: {msg}")
-        assert (
-            msg == self._requests.popleft()
-        ), "expected write value != actual write value"
-        responses = self._responses.popleft()
-        self._mocked_responses.extend(responses)
-        self.respond.set()
-
-    def send_responses(self, responses):
-        """
-        send a response from gateway to client immediately without an associated client request
-        eg, for simulating empty bytestrings
-        """
-        assert isinstance(responses, list)
-        self._mocked_responses.extend(responses)
-
-    def queue_transaction(self, request, responses):
-        """
-
-        Queue a response that will be received at a later time
-        Example:
-          - For the request, send the responses when the client executed _listen socket.read()
-
-        """
-        assert isinstance(request, bytes)
-        assert isinstance(responses, list)
-        self._requests.append(request)
-        self._responses.append(responses)
-
-    def queue_handshake(self):
-        """
-        High Level, Queues the handshake routine
-        """
-        # handshake message
-        self.queue_transaction(
-            request=b"API\x00\x00\x00\x00\nv176..176 ",
-            # res=[b'176\x0020240229 12:41:55 Greenwich Mean Time\x00'],
-            # responses=[b'176\x0020240303 03:56:49 GMT\x00']
-            responses=[
-                b"\x00\x00\x00*176\x0020240303 20:39:51 Greenwich Mean Time\x00"
-            ],
-        )
-
-        # startApi message
-        self.queue_transaction(
-            request=b"\x00\x00\x00\x0871\x002\x001\x00\x00",
-            # responses=[b"15\x001\x00DU1234567\x00", b"9\x001\x006\x00"],
-            responses=[
-                b"\x00\x00\x00\x0f15\x001\x00DU7606863\x00",
-                b"\x00\x00\x00\x089\x001\x00530\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00\x00\x00\x0044\x002\x00-1\x002106\x00HMDS data farm connection is OK:ushmds\x00\x00"
-                b"9\x001\x00530\x00",
-            ],
-        )
+import pandas as pd
 
 
 @pytest.mark.asyncio()
-async def test_reconnect(connection):
+async def test_reconnect(mock_socket, connection):
     """
     tests connect then reconnect of the client
     """
-    mock_socket = MockSocket()
-    mock_socket.queue_handshake()
-    with patch(
-        "asyncio.open_connection",
-        return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
-    ) as _:
-        await connection.connect()
+
+    await mock_socket.connect(connection)
 
     assert connection._is_connected.is_set()
 
@@ -133,9 +26,57 @@ async def test_reconnect(connection):
     mock_socket.send_responses([b""])
     await asyncio.sleep(10)
     # await asyncio.sleep(25)
+    #
+    #
+    #
+
+from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import Duration
+from pyfutures.adapters.interactive_brokers.enums import Frequency
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from ibapi.contract import Contract as IBContract
 
 
-########################## G TESTS ############################
+
+@pytest.mark.asyncio()
+async def test_request_bars_on_disconnect(mock_socket, client):        
+    """
+        If request_bars() is executed when the client is disconnected
+        the client should wait to send the request until the client is connected again
+    """
+    contract = IBContract()
+    contract.secType = "CONTFUT"
+    contract.exchange = "CME"
+    contract.symbol = "DA"
+
+
+    with patch(
+        "asyncio.open_connection",
+        return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+    ) as _:
+
+        mock_socket.queue_handshake()
+        await client.connect()
+        await mock_socket.disconnect(client._conn)
+
+        # client should automatically reconnect, so queue the connection requests and responses
+        mock_socket.queue_handshake()
+
+        bars = await client.request_bars(
+        contract=contract,
+        bar_size=BarSize._1_DAY,
+        what_to_show=WhatToShow.TRADES,
+        duration=Duration(step=7, freq=Frequency.DAY),
+        end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D")
+        )
+        print(bars)
+    # client.wait_until_connected = MagicMock(return_value)
+    # asyncio.create_task(
+    # mock_socket.connect(client._conn)
+    # )
+
+
+########################## G OLD TESTS ############################
 
 
 # def mock_handshake(connection):
