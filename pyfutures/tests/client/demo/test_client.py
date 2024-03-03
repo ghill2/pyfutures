@@ -10,10 +10,10 @@ from nautilus_trader.core.uuid import UUID4
 
 from pyfutures.adapters.interactive_brokers.client.objects import ClientException
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
+import logging
+import sys
 
-init_logging(level_stdout=LogLevel.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class TestInteractiveBrokersClient:
@@ -47,7 +47,9 @@ class TestInteractiveBrokersClient:
 
     @pytest.mark.asyncio()
     async def test_request_account_summary(self, client):
+        await client.connect()
         summary = await client.request_account_summary()
+        print(summary)
         assert isinstance(summary, dict)
 
     @pytest.mark.asyncio()

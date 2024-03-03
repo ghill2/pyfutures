@@ -8,9 +8,6 @@ from pyfutures.adapters.interactive_brokers.client.client import (
 )
 from pyfutures.adapters.interactive_brokers.client.connection import Connection
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()
@@ -20,23 +17,21 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 def client(event_loop) -> InteractiveBrokersClient:
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
     client = InteractiveBrokersClient(
         loop=event_loop,
         host="127.0.0.1",
         port=4002,
-        
+        log_level=logging.DEBUG,
+        api_log_level=logging.INFO,
     )
     return client
 
 
 @pytest.fixture(scope="session")
 def connection(event_loop) -> Connection:
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     return Connection(
         loop=event_loop,
         host="127.0.0.1",
         port=4002,
     )
+
