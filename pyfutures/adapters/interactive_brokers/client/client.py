@@ -68,6 +68,7 @@ class InteractiveBrokersClient(EWrapper):
         loop: asyncio.AbstractEventLoop,
         host: str = "127.0.0.1",
         port: int = 7497,
+        log_level: int = logging.ERROR,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: int | None = None,
         
@@ -79,6 +80,7 @@ class InteractiveBrokersClient(EWrapper):
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
         self._log = logging.getLogger(self.__class__.__name__)
+        self._log.setLevel(log_level)
         
         # Config
         self._loop = loop
@@ -97,6 +99,7 @@ class InteractiveBrokersClient(EWrapper):
             loop=loop,
             host=host,
             port=port,
+            log_level=log_level,
         )
         self._conn.register_handler(self._handle_msg)
 
@@ -123,9 +126,9 @@ class InteractiveBrokersClient(EWrapper):
     ################################################################################################
     # Connection
 
-    async def reset(self) -> None:
-        self._conn._reset()
-
+    # async def reset(self) -> None:
+    #     self._conn._reset()
+    #
     async def connect(self) -> None:
         await self._conn.connect()
 

@@ -6,25 +6,35 @@ from collections.abc import Coroutine
 import psutil
 from ibapi import comm
 
+# this bug is still present on the gnznz fork:
+# https://github.com/UnusualAlpha/ib-gateway-docker/issues/88
+
 class Connection:
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
         host: str,
         port: int,
+        log_level: int = logging.WARN,
     ):
         self._loop = loop
         self._host = host
         self._port = port
         
+
+        self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
         self._watch_dog_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
         
         self._log = logging.getLogger(self.__class__.__name__)
+        # FIX THIS - log_level does not work with pytest tests
+        self._log.setLevel(level=logging.DEBUG)
         
         self._handlers = set()
-        self._loop.run_until_complete(self._reset())
+
+        self._handshake_message_ids = []
+        self._reader, self._writer = (None, None)
     
     def register_handler(self, handler: Coroutine) -> None:
         self._handlers.add(handler)
@@ -34,37 +44,36 @@ class Connection:
 
         buf = b""
 
-        try:
-            while True:
-                
+        while True:
+            
+            try:
                 data = await self._reader.read(4096)
+            except ConnectionResetError as e:
+                self._log.error(f"listen: TWS closed the connection {e!r}...")
+                self._is_connected = asyncio.Event()
+                return
 
-                if data == b"":
-                    self._log.debug("0 bytes received from server, connect has been dropped")
-                    await self._reset()
-                    return
+            if data == b"":
+                self._log.debug("0 bytes received from server, connect has been dropped")
+                self._is_connected = asyncio.Event()
+                return
 
-                buf += data
+            buf += data
 
-                while len(buf) > 0:
-                    (size, msg, buf) = comm.read_msg(buf)
+            while len(buf) > 0:
+                (size, msg, buf) = comm.read_msg(buf)
 
-                    if msg:
-                        self._log.debug(f"<-- {msg!r}")
-                        
-                        self._handle_msg(msg)
-                        await asyncio.sleep(0)
+                if msg:
+                    self._log.debug(f"<-- {msg!r}")
+                    
+                    self._handle_msg(msg)
+                    await asyncio.sleep(0)
 
-                    else:
-                        self._log.debug("more incoming packet(s) are needed ")
-                        break
+                else:
+                    self._log.debug("more incoming packet(s) are needed ")
+                    break
 
-                await asyncio.sleep(0)
-
-        except ConnectionResetError as e:
-            self._log.error(f"listen: TWS closed the connection {e!r}...")
-            await self._reset()
-            return
+            await asyncio.sleep(0)
 
     def _handle_msg(self, msg: bytes) -> None:
         if self.is_connected:
@@ -79,7 +88,7 @@ class Connection:
         """
         try:
             while True:
-                self._log.debug("Watchdog: Running...")
+                await asyncio.sleep(5)
 
                 if self.is_connected:
                     continue
@@ -88,19 +97,17 @@ class Connection:
 
                 await self.connect()
 
-                await asyncio.sleep(5)
 
         except Exception as e:
             self._log.error(repr(e))
 
-    async def _reset(self) -> bool:
-        self._log.debug("Resetting...")
+    async def _initialize(self) -> bool:
+        self._log.debug("Initializing...")
 
-        self._is_connected = asyncio.Event()
         self._handshake_message_ids = []
         self._reader, self._writer = (None, None)
 
-        self._log.debug("Destroying listen task...")
+        self._log.debug("Initializing listen task...")
         if self._listen_task is not None:
             self._listen_task.cancel()
         self._listen_task = None
@@ -117,7 +124,7 @@ class Connection:
             else:
                 raise
 
-        self._log.debug("Reset")
+        self._log.debug("Successfully Initialized...")
     
     @property
     def is_connected(self) -> bool:
@@ -125,19 +132,25 @@ class Connection:
     
     async def start(self) -> bool:
         self._log.debug("Starting...")
-        if self._watch_dog_task is not None:
-            self._watch_dog_task.cancel()
-        self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
 
     async def connect(self, timeout_seconds: int = 5) -> None:
+        """
+            Called by the user
+        """
+        if self._watch_dog_task is None:
+            self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
+
         async with self._is_connecting_lock:
-            await self._connect()
-            await self._handshake(timeout_seconds=timeout_seconds)
+            await self._connect(timeout_seconds=timeout_seconds)
+
             
-    async def _connect(self) -> None:
+    async def _connect(self, timeout_seconds: int = 5) -> None:
+        """
+            Called by watch_dog and manually with connect() by the user
+        """
         self._log.debug("Connecting...")
 
-        await self._reset()
+        await self._initialize()
 
         # connect socket
         self._log.debug("Connecting socket...")
@@ -145,7 +158,6 @@ class Connection:
             self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
-            await self._reset()
             return
         self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 
@@ -153,6 +165,8 @@ class Connection:
         self._log.debug("Starting listen task...")
         self._listen_task = self._loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
+
+        await self._handshake(timeout_seconds=timeout_seconds)
     
     async def _handshake(self, timeout_seconds: int = 5) -> None:
         
@@ -166,7 +180,6 @@ class Connection:
 
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
-            await self._reset()
 
     def sendMsg(self, msg: bytes) -> None:
         if not self.is_connected:
