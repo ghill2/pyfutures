@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import ClassVar, Optional
+from dotenv import dotenv_values
 
 import aiodocker
 
@@ -29,26 +30,42 @@ class Gateway:
         if c:
             await self.stop()
 
+        tws_userid = dotenv_values()["TWS_USERNAME"]
+        tws_password = dotenv_values()["TWS_PASSWORD"]
+
+        # https://github.com/aio-libs/aiodocker/issues/829
+        config=dict(
+            Image="ghcr.io/gnzsnz/ib-gateway:stable",
+            Restart_policy={"Name": "always"},
+            # detach=True,
+            Platform="amd64",
+            ExposedPorts={
+                "4001/tcp": {},
+                "4002/tcp": {},
+                "5900/tcp": {},
+            },
+            # Ports={
+            #     "4003": {host, 4001),
+            #     "4004": {host, 4002),
+            #     "5900": {host, 5900,
+            # },
+            Env=[
+            "TRADING_MODE=paper",
+            f"TWS_USERID={tws_userid}",
+            f"TWS_PASSWORD={tws_password}",
+            "READ_ONLY_API=yes"
+            ]
+            )
+
+
         c = await _docker.containers.create(
-            image=self.IMAGE,
-            name=self.CONTAINER_NAME,
-            restart_policy={"Name": "always"},
-            detach=True,
-            ports={
-                "4003": (host, 4001),
-                "4004": (host, 4002),
-                "5900": (host, 5900),
-            },
-            platform="amd64",
-            environment={
-                "TWS_USERID": dotenv_values()["TWS_USERNAME"],
-                "TWS_PASSWORD": dotenv_values()["TWS_PASSWORD"],
-                "TRADING_MODE": "paper",
-                "READ_ONLY_API": {True: "yes", False: "no"}[True],
-            },
+            name=self.CONTAINER_NAME, 
+            config=config
         )
 
-        await self.wait_until_login(c)
+        # await self.wait_until_login(c)
+        await c.start()
+        return c
 
     async def wait_until_login(self, c) -> bool:
         """
@@ -64,21 +81,25 @@ class Gateway:
                 self.log.info("Gateway Started and Ready... Continuing...")
                 break
 
-    async def start(self):
+    async def start(self, wait: bool = True):
         """
         Starts the container if it's not already running.
         """
 
         c = await self.container()
+
+        if not c:
+            c = await self.create_container()
+
+
+        self.log.info("Starting Gateway...")
         metadata = await c.show()
         if metadata["State"]["Status"] == "running":
             self.log.info("start() called when container is already running...")
             return
 
-        if not c:
-            await self.create_container()
-        else:
-            await c.start()  # Use aiodocker's async start()
+        await c.start()  # Use aiodocker's async start()
+        if wait:
             await self.wait_until_login(c)
 
     async def restart(self):
@@ -95,9 +116,10 @@ class Gateway:
         """
         c = await self.container()
         if c:
-            await c.stop()  # Use aiodocker's async stop()
-            await c.wait()  # Use aiodocker's async wait()
-            self._container = None  # Clear the cached container object
+            self.log.info("Stopping Gateway...")
+            await c.stop()
+            await c.wait()
+            self._container = None
 
     async def container(self) -> Optional[aiodocker.containers.DockerContainer]:
         # ... (rest of the code remains the same)
@@ -116,4 +138,4 @@ class Gateway:
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     gateway = Gateway()
-    loop.run_until_complete(gateway.start())
+    loop.run_until_complete(gateway.create_container())

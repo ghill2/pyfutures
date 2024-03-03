@@ -48,14 +48,15 @@ class Connection:
             
             try:
                 data = await self._reader.read(4096)
+                # self._log.debug(f"<-data: {data}")
             except ConnectionResetError as e:
                 self._log.error(f"listen: TWS closed the connection {e!r}...")
-                self._is_connected = asyncio.Event()
+                self._is_connected.clear()
                 return
 
             if data == b"":
                 self._log.debug("0 bytes received from server, connect has been dropped")
-                self._is_connected = asyncio.Event()
+                self._is_connected.clear()
                 return
 
             buf += data

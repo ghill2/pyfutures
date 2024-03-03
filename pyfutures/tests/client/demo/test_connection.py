@@ -6,6 +6,16 @@ import pytest
 # from nautilus_trader.adapters.interactive_brokers.config import (
 #     InteractiveBrokersGatewayConfig,
 # )
+#
+
+
+from pyfutures.adapters.interactive_brokers.enums import BarSize
+from pyfutures.adapters.interactive_brokers.enums import Duration
+from pyfutures.adapters.interactive_brokers.enums import Frequency
+from pyfutures.adapters.interactive_brokers.enums import WhatToShow
+from ibapi.contract import Contract as IBContract
+
+import pandas as pd
 import logging
 import sys
 import asyncio
@@ -67,7 +77,7 @@ async def test_reconnect(gateway, client):
     await client.connect()
     expected = await client.request_account_summary()
     print(expected)
-    await gateway.restart()
+    # await gateway.restart()
     # At this point, gateway has restarted
     # in the worst case,
     # there needs to be a wait of 5 seconds for an entire watchdog task cycle
@@ -77,5 +87,53 @@ async def test_reconnect(gateway, client):
     print("Waiting 10 seconds ")
     await asyncio.sleep(10)
     details = await client.request_account_summary()
+    assert details == expected
     print(details)
-    
+
+
+
+# Possibly test all methods in these 2 tests to avoid the amount of docker container restarts
+@pytest.mark.asyncio()
+async def test_disconnect_then_request(gateway, client):
+    """
+        If request_bars() is executed when the client is disconnected
+        the client should wait to send the request until the client is connected again
+    """
+    contract = IBContract()
+    contract.secType = "CONTFUT"
+    contract.exchange = "CME"
+    contract.symbol = "DA"
+
+    # start the test connected
+    await gateway.start()
+    await client.connect()
+    await client.request_account_summary() # is_connected
+
+    # stop gateway (simulate disconnection)
+    await gateway.stop()
+    # start gateway again, do not block
+    asyncio.create_task(gateway.start())
+    # try to send a client request when the gateway is disconnected
+    bars = await client.request_bars(
+        contract=contract,
+        bar_size=BarSize._1_DAY,
+        what_to_show=WhatToShow.TRADES,
+        duration=Duration(step=7, freq=Frequency.DAY),
+        end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D")
+    )
+    print("BARS")
+    print(type(bars))
+    print(bars)
+
+
+
+
+
+
+
+@pytest.mark.asyncio()
+async def test_request_then_disconnect():
+    """
+        if request_bars() is executed and then the client is disconnected before a response is received
+        the client should immediately set the response to a ClientDisconnected Exception so the parent can handle?
+    """
