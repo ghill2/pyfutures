@@ -460,7 +460,13 @@ class InteractiveBrokersClient(EWrapper):
         self._eclient.reqOpenOrders()
 
         return await self._wait_for_request(request)
-
+    
+    async def request_completed_orders(self) -> list[IBOpenOrderEvent]:
+        """
+        TODO: for trade reporting
+        self._eclient.reqCompletedOrders
+        """
+        
     def orderStatus(
         self,
         orderId: OrderId,
