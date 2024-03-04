@@ -40,7 +40,9 @@ class CachedFunc:
         
         cached = self._get(key)
         if cached is not None:
-            self._log.debug(f"Returning cached {key}", LogColor.BLUE)
+            
+            value = repr(cached) if isinstance(cached, Exception) else f"{len(cached)} items"
+            self._log.debug(f"Returning cached {key}={value}", LogColor.BLUE)
             if isinstance(cached, Exception):
                 raise cached
             else:

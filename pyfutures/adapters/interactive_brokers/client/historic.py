@@ -55,6 +55,7 @@ class InteractiveBrokersHistoric:
 
         assert start_time < end_time
 
+        self._log.info(f"requesting head_timestamp for {contract.tradingClass}")
         head_timestamp = await self._client.request_head_timestamp(
             contract=contract,
             what_to_show=what_to_show,
@@ -131,7 +132,6 @@ class InteractiveBrokersHistoric:
         
         if as_dataframe:
             df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
-            df["volume"] = df.volume.astype(float)
             return df
 
         return total_bars
@@ -154,8 +154,6 @@ class InteractiveBrokersHistoric:
         1 W	3 mins - 1 week
         1 M	30 mins - 1 month
         1 Y	1 day - 1 month
-
-
        """
         if bar_size == BarSize._1_DAY:
             return Duration(step=365, freq=Frequency.DAY)
