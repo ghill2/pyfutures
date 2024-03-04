@@ -1,7 +1,4 @@
 import asyncio
-from pyfutures.tests.adapters.interactive_brokers.demo.factories import (
-    InteractiveBrokersExecEngineFactory,
-)
 
 import pytest
 import pytest_asyncio
