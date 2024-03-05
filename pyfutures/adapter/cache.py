@@ -83,12 +83,12 @@ class CachedFunc:
     ) -> list[Any] | Exception | None:
         
         path = self._pickle_path(key)
-        if path.exists():
-            with open(path, "rb") as f:
-                cached = pickle.load(f)
-                return cached
-                
-        return None
+        if not path.exists():
+            return None
+        
+        with open(path, "rb") as f:
+            cached = pickle.load(f)
+            return cached
     
     def _set(
         self,
