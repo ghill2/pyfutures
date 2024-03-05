@@ -32,8 +32,9 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 from pyfutures.adapter.client.objects import IBOrderStatusEvent
 from pyfutures.adapter.client.objects import IBOpenOrderEvent
-from pyfutures.tests.unit.adapter.execution_stubs import IBTestExecutionStubs
-
+from pyfutures.tests.unit.adapter.stubs.execution import IBTestExecutionStubs
+from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
+from pyfutures.adapter.client.client import IBExecutionEvent
 
 class TestInteractiveBrokersExecution:
     
@@ -63,13 +64,13 @@ class TestInteractiveBrokersExecution:
         
         # Assert
         sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == 5
+        assert sent_order.orderId == IBTestIdStubs.orderId()
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
         assert sent_order.orderType == "MKT"
         assert sent_order.totalQuantity == Decimal("100")
         assert sent_order.action == "BUY"
         assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == 1
+        assert sent_order.contract.conId == IBTestIdStubs.conId()
         assert sent_order.contract.exchange == "CME"
         assert sent_order.lmtPrice == UNSET_DOUBLE  # unset
     
@@ -98,13 +99,13 @@ class TestInteractiveBrokersExecution:
         
         # Assert
         sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == 5
+        assert sent_order.orderId == IBTestIdStubs.orderId()
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
         assert sent_order.orderType == "LMT"
         assert sent_order.totalQuantity == Decimal("100")
         assert sent_order.action == "BUY"
         assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == 1
+        assert sent_order.contract.conId == IBTestIdStubs.conId()
         assert sent_order.contract.exchange == "CME"
         assert sent_order.lmtPrice == 55.0
     
@@ -166,14 +167,13 @@ class TestInteractiveBrokersExecution:
         assert accepted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert accepted_kwargs["instrument_id"] == instrument_id
         assert accepted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert accepted_kwargs["venue_order_id"] == VenueOrderId("5")
+        assert accepted_kwargs["venue_order_id"] == VenueOrderId(str(IBTestIdStubs.orderId()))
         
-    @pytest.mark.skip(reason="TODO")
     def test_order_filled(
         self,
         exec_client,
     ):
-        
+        """
         messages = [
             b"5\x005\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00MKT\x0096.79\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x005\x001\x002138440174\x000\x000\x000\x00\x002138440174.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0097.79\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
             b"3\x005\x00Submitted\x000\x001\x000\x002138440174\x000\x000\x001\x00\x000\x00",
@@ -184,6 +184,8 @@ class TestInteractiveBrokersExecution:
             # b'3\x005\x00Filled\x001\x000\x0096.79\x002138440174\x000\x0096.79\x001\x00\x000\x00',
             b"59\x001\x000000e9b5.6555a859.01.01\x001.7\x00GBP\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00",
         ]
+        """
+        
         
         # Arrange
         instrument_id = InstrumentId.from_str("MES=MES=2023Z.CME")
@@ -194,21 +196,19 @@ class TestInteractiveBrokersExecution:
         exec_client.generate_order_filled = Mock()
         
         # Act
-        event: IBExecutionEvent = IBTestExecutionStubs.execution_event(
-            orderRef=TestIdStubs.client_order_id().value,
-        )
-        exec_client.open_order_callback(event)
+        event: IBExecutionEvent = IBTestExecutionStubs.execution_event()
+        exec_client.execution_callback(event)
         
         # Assert
         filled_kwargs = exec_client.generate_order_filled.call_args_list[0][1]
         assert filled_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert filled_kwargs["instrument_id"] == instrument_id
         assert filled_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert filled_kwargs["venue_order_id"] == VenueOrderId("5")
+        assert filled_kwargs["venue_order_id"] == VenueOrderId(str(IBTestIdStubs.orderId()))
         assert filled_kwargs["venue_position_id"] is None
         assert filled_kwargs["trade_id"] == TradeId("0000e9b5.6555a859.01.01")
         assert filled_kwargs["order_side"] == OrderSide.BUY
-        assert filled_kwargs["order_type"] == OrderType.LIMIT
+        assert filled_kwargs["order_type"] == OrderType.MARKET
         assert filled_kwargs["last_qty"] == Quantity.from_int(1)
         assert filled_kwargs["last_px"] == Price.from_str("1.2345")
         assert filled_kwargs["quote_currency"] == GBP

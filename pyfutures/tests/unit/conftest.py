@@ -22,6 +22,7 @@ from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from pyfutures.tests.demo.adapter.factories import InteractiveBrokersExecEngineFactory
+from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -71,7 +72,7 @@ def exec_client(event_loop) -> InteractiveBrokersExecutionClient:
     provider.add(contract)
     cache.add_instrument(contract)
     
-    client.request_next_order_id = AsyncMock(return_value=5)
+    client.request_next_order_id = AsyncMock(return_value=IBTestIdStubs.orderId())
     
     yield exec_client
     

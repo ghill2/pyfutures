@@ -11,13 +11,14 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from ibapi.contract import Contract as IBContract
 from ibapi.execution import Execution as IBExecution
 from ibapi.commission_report import CommissionReport as IBCommissionReport
+from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
 
 class IBTestExecutionStubs:
     
     @staticmethod
     def order_status_event() -> IBOrderStatusEvent:
         return IBOrderStatusEvent(
-            orderId=5,
+            orderId=IBTestIdStubs.orderId(),
             status="Submitted",
             filled=Decimal("0"),
             remaining=Decimal("0"),
@@ -34,18 +35,18 @@ class IBTestExecutionStubs:
     def open_order_event() -> IBOpenOrderEvent:
         
         contract = IBContract()
-        contract.conId = 1
+        contract.conId = IBTestIdStubs.conId()
         contract.exchange = "CME"
         
         order = IBOrder()
         order.orderRef = TestIdStubs.client_order_id().value
         order.lmtPrice = Decimal("1.2345")
         order.action = "BUY"
-        order.orderId = 5
+        order.orderId = IBTestIdStubs.orderId()
         order.orderType = "MKT"
         order.tif = "GTC"
-        order.totalQuantity=Decimal("1")
-        order.filledQuantity=Decimal("0")
+        order.totalQuantity = Decimal("1")
+        order.filledQuantity = Decimal("0")
             
         order_state = IBOrderState()
         order_state.status = "Submitted"
@@ -57,13 +58,12 @@ class IBTestExecutionStubs:
         )
         
     @staticmethod
-    def execution_event(
-        orderRef: str,
-    ) -> IBExecutionEvent:
+    def execution_event() -> IBExecutionEvent:
         execution = IBExecution()
-        execution.orderId = 5
-        execution.orderRef = orderRef
-        execution.execId = "0000e9b5.6555a859.01.01"
+        execution.orderId = IBTestIdStubs.orderId()
+        
+        execution.orderRef = TestIdStubs.client_order_id().value
+        execution.execId = IBTestIdStubs.execId()
         execution.side = "BOT"
         execution.shares = Decimal("1")
         execution.price = 1.2345

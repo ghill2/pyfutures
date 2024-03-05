@@ -56,9 +56,6 @@ from pyfutures.adapter.parsing import order_event_to_order_status_report
 from pyfutures.adapter.parsing import order_side_to_order_action
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
-
-
-
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
     def __init__(
@@ -125,10 +122,15 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         need access to quantity and price to compare the new order with the previous order
         can only access the order's price and quantity from openOrder
         """
+        
+        if event.orderState.status == "Filled":
+            self._log.debug(f"Ignoring open order filled event, order filled handled by executioin {event}")
+            return  # nothing to do
+        
         client_order_id = ClientOrderId(str(event.order.orderRef))
         order, instrument = self._find_order_and_instrument(client_order_id)
-        if order is None and instrument is None:
-            return # nothing to do
+        if order is None or instrument is None:
+            return  # nothing to do
         
         self._log.debug(f"Received {event}")
         
@@ -305,18 +307,17 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         self._log.debug(f"IBExecutionEvent received: {event}")
 
-        client_order_id = ClientOrderId(str(event.execution.orderId))
-        client_order_id = ClientOrderId(str(event.orderRef))
+        client_order_id = ClientOrderId(str(event.execution.orderRef))
         
         order, instrument = self._find_order_and_instrument(client_order_id)
-        if order is None and instrument is None:
+        if order is None or instrument is None:
             return # nothing to do
         
         self._execution_callback(event)
         
     def _execution_callback(self, event: IBExecutionEvent):
         
-        client_order_id = ClientOrderId(str(event.execution.orderId))
+        client_order_id = ClientOrderId(str(event.execution.orderRef))
         
         order = self._cache.order(client_order_id)
         
@@ -327,7 +328,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             strategy_id=order.strategy_id,
             instrument_id=order.instrument_id,
             client_order_id=order.client_order_id,
-            venue_order_id=VenueOrderId(str(event.orderId)),
+            venue_order_id=VenueOrderId(str(event.execution.orderId)),
             venue_position_id=None,
             trade_id=TradeId(event.execution.execId),
             order_side=OrderSide[order_side_to_order_action[event.execution.side]],
