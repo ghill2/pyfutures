@@ -10,7 +10,7 @@ from pyfutures.continuous.contract_month import MONTH_LIST
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.data import MultipleData
 from pyfutures.continuous.multiple_bar import MultipleBar
-from pyfutures.continuous.providers import TestContractProvider
+from pyfutures.continuous.providers import ContractProvider
 from pyfutures.continuous.wrangler import MultiplePriceWrangler
 from pyfutures.data.files import ParquetFile
 from pyfutures.data.writer import MultipleBarParquetWriter
@@ -102,7 +102,7 @@ def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
         return
     print(f"Processing {row.trading_class}")
 
-    instrument_provider = TestContractProvider(
+    instrument_provider = ContractProvider(
         approximate_expiry_offset=row.config.approximate_expiry_offset,
         base=row.base_instrument,
     )

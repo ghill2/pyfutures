@@ -8,7 +8,7 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.continuous.contract_month import ContractMonth
 
 
-class TestContractProvider(InstrumentProvider):
+class ContractProvider(InstrumentProvider):
     def __init__(
         self,
         approximate_expiry_offset: int,

@@ -9,10 +9,10 @@ from dotenv import dotenv_values
 from ibapi.common import Contract as IBContract
 from nautilus_trader.common.component import Logger
 
-from pyfutures.adapters.interactive_brokers.client.client import InteractiveBrokersClient
-from pyfutures.adapters.interactive_brokers.enums import BarSize
-from pyfutures.adapters.interactive_brokers.enums import WhatToShow
-from pyfutures.adapters.interactive_brokers.client.historic import InteractiveBrokersHistoric
+from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import WhatToShow
+from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
 from pyfutures.tests.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
 
 

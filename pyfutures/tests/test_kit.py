@@ -32,7 +32,7 @@ from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 
 from pyfutures import PACKAGE_ROOT
-from pyfutures.adapters.interactive_brokers.parsing import create_contract
+from pyfutures.adapter.parsing import create_contract
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
