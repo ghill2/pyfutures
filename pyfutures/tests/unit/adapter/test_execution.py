@@ -332,171 +332,29 @@ class TestInteractiveBrokersExecution:
 
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_limit_order_modify_price(
+    async def test_modify_order_response(
         self,
-        client,
         exec_client,
-        cache,
     ):
-        message_list = [
-            [
-                b"5\x0061\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00LMT\x0086.95\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x002138440228\x000\x000\x000\x00\x002138440228.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0087.95\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-                b"3\x0061\x00Submitted\x000\x001\x000\x002138440228\x000\x000\x001\x00\x000\x00",
-            ],
-            [
-                b"5\x0061\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00LMT\x0087.95\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x002138440228\x000\x000\x000\x00\x002138440228.1/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-                b"3\x0061\x00Submitted\x000\x001\x000\x002138440228\x000\x000\x001\x00\x000\x00",
-            ],
-        ]
-
-        def send_messages(_):
-            messages = message_list.pop(0)
-            for message in messages:
-                client._handle_msg(message)
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        instrument_id = InstrumentId.from_str("R[Z23].ICEEU")
-
-        limit_order = TestExecStubs.limit_order(
-            instrument_id=instrument_id,
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            client_order_id=ClientOrderId("61"),
-            trader_id=TestIdStubs.trader_id(),
-            strategy_id=TestIdStubs.strategy_id(),
-            price=Price.from_str("86.95"),
-        )
-
-        cache.add_order(limit_order)
-
-        submit_order = SubmitOrder(
-            trader_id=limit_order.trader_id,
-            strategy_id=limit_order.strategy_id,
-            order=limit_order,
-            command_id=UUID4(),
-            ts_init=0,
-        )
-
-        print(limit_order.client_order_id)
-        print(limit_order.price)
-
-        await exec_client._submit_order(submit_order)
-
-        await self._wait_for_order_status(limit_order, OrderStatus.ACCEPTED)
-
-        modify_order = ModifyOrder(
-            trader_id=limit_order.trader_id,
-            strategy_id=limit_order.strategy_id,
-            instrument_id=limit_order.instrument_id,
-            client_order_id=limit_order.client_order_id,
-            venue_order_id=limit_order.venue_order_id,
-            quantity=limit_order.quantity,
-            price=Price.from_str("87.95"),
-            trigger_price=None,
-            command_id=UUID4(),
-            ts_init=0,
-        )
-
-        await exec_client._modify_order(modify_order)
-
-        await asyncio.sleep(0.00001)
-
-        cached_order = cache.order(limit_order.client_order_id)
-
-        assert cached_order.price == Price.from_str("87.95")
-
-        send_mock.assert_called_with(
-            b"\x00\x00\x01U3\x0061\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x0087.95\x00\x00GTC\x00\x00\x00\x000\x00\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
-        )
+        pass
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_limit_order_modify_price_and_quantity(
+    async def test_modify_order_rejected_response(
         self,
-        client,
         exec_client,
-        cache,
     ):
-        message_list = [
-            [
-                b"5\x0069\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00LMT\x0087.68\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x00311900000\x000\x000\x000\x00\x00311900000.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0088.68\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-                b"3\x0069\x00Submitted\x000\x001\x000\x00311900000\x000\x000\x001\x00\x000\x00",
-            ],
-            [
-                b"5\x0069\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x002\x00LMT\x0088.68\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x00311900000\x000\x000\x000\x00\x00311900000.1/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-                b"3\x0069\x00Submitted\x000\x002\x000\x00311900000\x000\x000\x001\x00\x000\x00",
-            ],
-        ]
-
-        def send_messages(_):
-            messages = message_list.pop(0)
-            for message in messages:
-                client._handle_msg(message)
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        instrument_id = InstrumentId.from_str("R[Z23].ICEEU")
-
-        limit_order = TestExecStubs.limit_order(
-            instrument_id=instrument_id,
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            client_order_id=ClientOrderId("69"),
-            trader_id=TestIdStubs.trader_id(),
-            strategy_id=TestIdStubs.strategy_id(),
-            price=Price.from_str("87.68"),
-        )
-
-        cache.add_order(limit_order)
-
-        submit_order = SubmitOrder(
-            trader_id=limit_order.trader_id,
-            strategy_id=limit_order.strategy_id,
-            order=limit_order,
-            command_id=UUID4(),
-            ts_init=0,
-        )
-
-        print(limit_order.client_order_id)
-        print(limit_order.price)
-
-        await exec_client._submit_order(submit_order)
-
-        await self._wait_for_order_status(limit_order, OrderStatus.ACCEPTED)
-
-        modify_order = ModifyOrder(
-            trader_id=limit_order.trader_id,
-            strategy_id=limit_order.strategy_id,
-            instrument_id=limit_order.instrument_id,
-            client_order_id=limit_order.client_order_id,
-            venue_order_id=limit_order.venue_order_id,
-            quantity=Quantity.from_int(2),
-            price=Price.from_str("88.68"),
-            trigger_price=None,
-            command_id=UUID4(),
-            ts_init=0,
-        )
-
-        await exec_client._modify_order(modify_order)
-
-        await asyncio.sleep(0.00001)
-
-        cached_order = cache.order(limit_order.client_order_id)
-
-        assert cached_order.price == Price.from_str("88.68")
-        assert cached_order.quantity == Quantity.from_int(2)
-
-        send_mock.assert_called_with(
-            b"\x00\x00\x01W3\x0069\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x002.0\x00LMT\x0088.68\x00\x00GTC\x00\x00\x00\x000\x00\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
-        )
-
-    async def _wait_for_order_status(self, order, status):
-        print(f"Waiting for status {order_status_to_str(status)} for order {order.client_order_id}")
-        while order.status != status:
-            await asyncio.sleep(0)
+        pass
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_order_rejected_response(
+        self,
+        exec_client,
+    ):
+        pass
+        
+    
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
@@ -516,6 +374,11 @@ class TestInteractiveBrokersExecution:
         reports = await exec_client.generate_order_status_reports()
         print(reports)
 
+    
+    # async def _wait_for_order_status(self, order, status):
+    #     print(f"Waiting for status {order_status_to_str(status)} for order {order.client_order_id}")
+    #     while order.status != status:
+    #         await asyncio.sleep(0)
         
     # @pytest.mark.skip(reason="not needed, fractional price reject at client level")
     # @pytest.mark.asyncio()
@@ -748,3 +611,85 @@ class TestInteractiveBrokersExecution:
 
     #     expected = b"\x00\x00\x01W3\x0032\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x0096.84\x00\x00GTC\x00\x00\x00\x000\x0032\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00"
     #     send_mock.assert_called_once_with(expected)
+    
+    # @pytest.mark.skip(reason="TODO")
+    # @pytest.mark.asyncio()
+    # async def test_limit_order_modify_price_and_quantity(
+    #     self,
+    #     client,
+    #     exec_client,
+    #     cache,
+    # ):
+    #     message_list = [
+    #         [
+    #             b"5\x0069\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00LMT\x0087.68\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x00311900000\x000\x000\x000\x00\x00311900000.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0088.68\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
+    #             b"3\x0069\x00Submitted\x000\x001\x000\x00311900000\x000\x000\x001\x00\x000\x00",
+    #         ],
+    #         [
+    #             b"5\x0069\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x002\x00LMT\x0088.68\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x00\x001\x00311900000\x000\x000\x000\x00\x00311900000.1/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
+    #             b"3\x0069\x00Submitted\x000\x002\x000\x00311900000\x000\x000\x001\x00\x000\x00",
+    #         ],
+    #     ]
+
+    #     def send_messages(_):
+    #         messages = message_list.pop(0)
+    #         for message in messages:
+    #             client._handle_msg(message)
+
+    #     send_mock = Mock(side_effect=send_messages)
+    #     client._conn.sendMsg = send_mock
+
+    #     instrument_id = InstrumentId.from_str("R[Z23].ICEEU")
+
+    #     limit_order = TestExecStubs.limit_order(
+    #         instrument_id=instrument_id,
+    #         order_side=OrderSide.BUY,
+    #         quantity=Quantity.from_int(1),
+    #         client_order_id=ClientOrderId("69"),
+    #         trader_id=TestIdStubs.trader_id(),
+    #         strategy_id=TestIdStubs.strategy_id(),
+    #         price=Price.from_str("87.68"),
+    #     )
+
+    #     cache.add_order(limit_order)
+
+    #     submit_order = SubmitOrder(
+    #         trader_id=limit_order.trader_id,
+    #         strategy_id=limit_order.strategy_id,
+    #         order=limit_order,
+    #         command_id=UUID4(),
+    #         ts_init=0,
+    #     )
+
+    #     print(limit_order.client_order_id)
+    #     print(limit_order.price)
+
+    #     await exec_client._submit_order(submit_order)
+
+    #     await self._wait_for_order_status(limit_order, OrderStatus.ACCEPTED)
+
+    #     modify_order = ModifyOrder(
+    #         trader_id=limit_order.trader_id,
+    #         strategy_id=limit_order.strategy_id,
+    #         instrument_id=limit_order.instrument_id,
+    #         client_order_id=limit_order.client_order_id,
+    #         venue_order_id=limit_order.venue_order_id,
+    #         quantity=Quantity.from_int(2),
+    #         price=Price.from_str("88.68"),
+    #         trigger_price=None,
+    #         command_id=UUID4(),
+    #         ts_init=0,
+    #     )
+
+    #     await exec_client._modify_order(modify_order)
+
+    #     await asyncio.sleep(0.00001)
+
+    #     cached_order = cache.order(limit_order.client_order_id)
+
+    #     assert cached_order.price == Price.from_str("88.68")
+    #     assert cached_order.quantity == Quantity.from_int(2)
+
+        # send_mock.assert_called_with(
+        #     b"\x00\x00\x01W3\x0069\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x002.0\x00LMT\x0088.68\x00\x00GTC\x00\x00\x00\x000\x00\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
+        # )

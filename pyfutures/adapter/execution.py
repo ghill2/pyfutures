@@ -57,7 +57,9 @@ from pyfutures.adapter.parsing import order_side_to_order_action
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
 class InteractiveBrokersExecutionClient(LiveExecutionClient):
-
+    
+    SUBMITTED_STATUSES = ("Submitted")
+         
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
@@ -136,12 +138,13 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
         self._log.debug(f"Received {event}")
         
-        self._handle_open_order(event) # events related to orders that have been modified
-        
-        # is_modified_event = event.status not in ["PreSubmitted", "Submitted"] or event.orderType != "LMT"
-        # if is_modified_event:
-        #     self._open_order_modified_callback(event) # events related to orders that have been modified
-        # else:
+        is_modified_event = event.orderState.status not in self.SUBMITTED_STATUSES and event.orderType == "LMT"
+        if is_modified_event:
+            # events related to orders that have been modified
+            self._handle_open_order_modified(event)
+        else:
+            # new orders
+            self._handle_open_order(event)
     
     def _handle_open_order(self, event: IBOpenOrderEvent) -> None:
         
@@ -155,7 +158,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         event.status == "ApiPending"
         event.status == "PendingSubmit"
         """
-        if event.orderState.status == "Submitted":
+        if event.orderState.status in self.SUBMITTED_STATUSES:
             self._log.debug("generate_order_accepted")
             self.generate_order_accepted(
                 strategy_id=order.strategy_id,
@@ -357,7 +360,19 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         return order
         
     def error_callback(self, event: IBErrorEvent) -> None:
-
+        
+        """
+        # 201: This order does not comply with our order handling rules for derivatives subject to IBKR near-expiration and<br>physical delivery risk policies.<br>Please refer to our <a href="https://www.interactivebrokers.com/en/index.php?f=1567&p=physical">website</a> for further details
+        # --> Warning 202 req_id= Order Canceled - reason
+        # 10318: This order doesn't support fractional quantity trading
+        # 203: The security is not available or allowed for this account.
+        IBErrorEvent(request_id=0, code=10318, message="This order doesn't support fractional quantity trading", advanced_order_reject_json='')
+        IBErrorEvent(request_id=111, code=201, message='Order rejected - reason:YOUR ORDER IS NOT ACCEPTED. IN ORDER TO OBTAIN THE DESIRED POSITION YOUR NET LIQ [-16132592.69 GBP] MUST EXCEED THE MARGIN REQ [54635513425.67 GBP]', advanced_order_reject_json='')
+        IBErrorEvent(request_id=9999999, code=10147, message='OrderId 9999999 that needs to be cancelled is not found.', advanced_order_reject_json='')
+        IBErrorEvent(request_id=128, code=110, message='The price does not conform to the minimum price variation for this contract.', advanced_order_reject_json='')
+        IBErrorEvent(request_id=166, code=161, message='Cancel attempted when order is not in a cancellable state.  Order permId =1334608417', advanced_order_reject_json='')
+        IBErrorEvent(request_id=5905, code=2161, message="BUY 1 MDAX DEC'23 @ 26439.00  In accordance with our regulatory obligations as a broker, we will initially cap (or limit) the price of your Limit Order to 26270.00 or a more aggressive price still within your specified limit price.  If your order is not immediately executable, our systems may, depending on market conditions, cap your order to a limit price that is no more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace. Please note that in some circumstances this may result in you receiving a less favorable fill or not receiving a fill.  In the future, please submit your order using a limit price that is closer to the current market price or submit an algorithmic Market Order (IBALGO).  If you would like to cancel your order, please use cancel order action.", advanced_order_reject_json='')
+        """
         self._log.error(f"{event.reqId} {event!r}")
     
         # error_codes = [201, 202, 203, 10318]
@@ -376,11 +391,9 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         if client_order_id is None:
             self._log.debug(f"client_order_id not found for venue_order_id: {venue_order_id}")
             return
-            
-        order = self._cache.order(client_order_id)
-        if order is None:
-            self._log.info(f"No order found for client_order_id: {event}")
-            return
+        
+        if (order := self._find_order(client_order_id)) is None:
+            return  # nothing to do
         
         if event.errorCode == 202:
             self._log.error(f"Order with id {event.reqId} was canceled: {event.errorString}")
@@ -394,21 +407,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             )
             return
 
-        # 201: This order does not comply with our order handling rules for derivatives subject to IBKR near-expiration and<br>physical delivery risk policies.<br>Please refer to our <a href="https://www.interactivebrokers.com/en/index.php?f=1567&p=physical">website</a> for further details
-        # --> Warning 202 req_id= Order Canceled - reason
-        # 10318: This order doesn't support fractional quantity trading
-        # 203: The security is not available or allowed for this account.
         # if event.code in [201, 203, 10318]:
-
-        """
-        IBErrorEvent(request_id=0, code=10318, message="This order doesn't support fractional quantity trading", advanced_order_reject_json='')
-        IBErrorEvent(request_id=111, code=201, message='Order rejected - reason:YOUR ORDER IS NOT ACCEPTED. IN ORDER TO OBTAIN THE DESIRED POSITION YOUR NET LIQ [-16132592.69 GBP] MUST EXCEED THE MARGIN REQ [54635513425.67 GBP]', advanced_order_reject_json='')
-        IBErrorEvent(request_id=9999999, code=10147, message='OrderId 9999999 that needs to be cancelled is not found.', advanced_order_reject_json='')
-        IBErrorEvent(request_id=128, code=110, message='The price does not conform to the minimum price variation for this contract.', advanced_order_reject_json='')
-        IBErrorEvent(request_id=166, code=161, message='Cancel attempted when order is not in a cancellable state.  Order permId =1334608417', advanced_order_reject_json='')
-        IBErrorEvent(request_id=5905, code=2161, message="BUY 1 MDAX DEC'23 @ 26439.00  In accordance with our regulatory obligations as a broker, we will initially cap (or limit) the price of your Limit Order to 26270.00 or a more aggressive price still within your specified limit price.  If your order is not immediately executable, our systems may, depending on market conditions, cap your order to a limit price that is no more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace. Please note that in some circumstances this may result in you receiving a less favorable fill or not receiving a fill.  In the future, please submit your order using a limit price that is closer to the current market price or submit an algorithmic Market Order (IBALGO).  If you would like to cancel your order, please use cancel order action.", advanced_order_reject_json='')
-        """
-
         if event.code in [201, 10318, 110, 161, 2161]:
             if order.status == OrderStatus.PENDING_UPDATE:
                 self._log.debug("generate_modify_rejected")
