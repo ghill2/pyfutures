@@ -11,6 +11,7 @@ from ibapi.order_state import OrderState as IBOrderState
 from ibapi.execution import Execution as IBExecution
 from ibapi.commission_report import CommissionReport as IBCommissionReport
 from pyfutures.adapter.client.parsing import parse_datetime
+from ibapi.common import BarData
 
 @dataclass
 class IBOpenOrderEvent:
@@ -38,14 +39,12 @@ class IBPositionEvent:
 
 @dataclass
 class IBExecutionEvent:
+    timestamp: pd.Timestamp
     reqId: int
     contract: IBContract
     execution: IBExecution
     commissionReport: IBCommissionReport
     
-    @property
-    def timestamp(self) -> pd.Timestamp:
-        return parse_datetime(self.execution.time)
     
 @dataclass
 class IBErrorEvent:
@@ -68,6 +67,7 @@ class IBOrderStatusEvent:
     whyHeld: str
     mktCapPrice: float
 
+
 @dataclass
 class ClientRequest(asyncio.Future):
     id: int | str
@@ -76,7 +76,6 @@ class ClientRequest(asyncio.Future):
 
     def __post_init__(self):
         super().__init__()
-
 
 @dataclass
 class ClientSubscription:
@@ -169,3 +168,22 @@ class ClientDisconnected(Exception):
 
 
 
+# @dataclass
+# class IBBar:
+#     timestamp: pd.Timestamp
+#     open: float
+#     high: float
+#     low: float
+#     close: float
+#     volume: Decimal
+#     wap: int
+#     barCount: int
+    
+#     @staticmethod
+#     def from_bar_data(obj: BarData) -> IBBar:
+#         pass
+        
+# @dataclass
+# class QuoteTick:
+#     pass
+    

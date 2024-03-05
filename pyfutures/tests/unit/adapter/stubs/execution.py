@@ -74,6 +74,7 @@ class IBTestExecutionStubs:
         report.currency = "GBP"
         
         return IBExecutionEvent(
+            timestamp=pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"),
             reqId=-1,
             contract=IBContract,
             execution=execution,

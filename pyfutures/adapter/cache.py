@@ -89,18 +89,18 @@ class CachedFunc:
                 return cached
                 
         return None
-
+    
     def _set(
         self,
         key: str,
         value: list[Any] | Exception,
     ) -> None:
         
-        if isinstance(value, (list, Exception)):
-            with open(self._pickle_path(key), "wb") as f:
-                pickle.dump(value, f)
-        else:
+        if not isinstance(value, (list, Exception)):
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
+        
+        with open(self._pickle_path(key), "wb") as f:
+            pickle.dump(value, f)
     
     def is_cached(self, *args, **kwargs) -> bool:
         assert args == (), "Keywords arguments only"

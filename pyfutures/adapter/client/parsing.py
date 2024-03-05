@@ -24,9 +24,11 @@ def parse_datetime(value: str) -> pd.Timestamp:
     raise RuntimeError("Unable to parse timestamp")
 
 
+
 def bar_data_to_dict(obj: BarData) -> dict:
     return {
         "timestamp": parse_datetime(obj.date),
+        "date": obj.date,
         "open": obj.open,
         "high": obj.high,
         "low": obj.low,
@@ -39,8 +41,24 @@ def bar_data_to_dict(obj: BarData) -> dict:
 def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
     return {
         "timestamp": parse_datetime(obj.time),
+        "time": obj.time,
         "bid": obj.priceBid,
         "ask": obj.priceAsk,
         "bid_size": obj.sizeBid,
         "ask_size": obj.sizeAsk,
     }
+
+
+# def attach_bar_methods():
+    
+#     BarData.to_dict = bar_data_to_dict
+    
+#     BarData.__reduce__ = __reduce__
+    # HistoricalTickBidAsk.to_dict = historical_tick_bid_ask_to_dict
+    
+    # def __reduce__(self):
+    # HistoricalTickBidAsk.to_dict = historical_tick_bid_ask_to_dict
+        
+    # HistoricalTickBidAsk.__ = historical_tick_bid_ask_to_dict
+    
+    
