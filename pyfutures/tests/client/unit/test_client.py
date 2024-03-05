@@ -38,7 +38,7 @@ from ibapi.common import HistoricalTickBidAsk
 
 RESPONSES_FOLDER = Path(__file__).parent / "responses"
 
-
+@pytest.mark.unit
 class TestInteractiveBrokersClient:
 
     @pytest.mark.asyncio()

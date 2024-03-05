@@ -143,11 +143,12 @@ class Connection:
 
         async with self._is_connecting_lock:
             await self._connect(timeout_seconds=timeout_seconds)
-
+            await self._handshake(timeout_seconds=timeout_seconds)
             
     async def _connect(self, timeout_seconds: int = 5) -> None:
         """
             Called by watch_dog and manually with connect() by the user
+            NOTE: do not call handshake here so we can test connect and handshake separately
         """
         self._log.debug("Connecting...")
 
@@ -167,9 +168,9 @@ class Connection:
         self._listen_task = self._loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
 
-        await self._handshake(timeout_seconds=timeout_seconds)
+        
     
-    async def _handshake(self, timeout_seconds: int = 5) -> None:
+    async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
         
         self._log.debug("Performing handshake...")
         try:
@@ -219,6 +220,7 @@ class Connection:
         id = int(fields[0])
         self._handshake_message_ids.append(id)
         
+        print(self._handshake_message_ids)
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
