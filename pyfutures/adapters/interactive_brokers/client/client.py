@@ -70,8 +70,8 @@ class InteractiveBrokersClient(EWrapper):
         port: int = 7497,
         log_level: int = logging.ERROR,
         api_log_level: int = logging.ERROR,
-        request_timeout_seconds: int | None = None,
-        
+        request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
+        override_timeout: bool = False,  # overrides timeout for all request even if given, useful for testing
     ):
 
         # Events
@@ -94,7 +94,10 @@ class InteractiveBrokersClient(EWrapper):
                 logging.getLogger(name).setLevel(api_log_level)
 
         self._request_timeout_seconds = request_timeout_seconds
-
+        self._override_timeout = override_timeout
+        if override_timeout:
+            assert isinstance(self._request_timeout_seconds, (float, int))
+            
         self._conn = Connection(
             loop=loop,
             host=host,
@@ -152,10 +155,16 @@ class InteractiveBrokersClient(EWrapper):
     ) -> ClientRequest:
         
         assert isinstance(id, int)
+        
+        if self._override_timeout:
+            timeout_seconds = self._request_timeout_seconds
+        else:
+            timeout_seconds = timeout_seconds or self._request_timeout_seconds
+        
         request = ClientRequest(
             id=id,
             data=data,
-            timeout_seconds=timeout_seconds or self._request_timeout_seconds,
+            timeout_seconds=timeout_seconds,
         )
 
         self._requests[id] = request

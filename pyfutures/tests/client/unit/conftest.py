@@ -30,6 +30,7 @@ def client(event_loop) -> InteractiveBrokersClient:
         log_level=logging.DEBUG,
         api_log_level=logging.DEBUG,
         request_timeout_seconds=0.5,  # requests should fail immediately for unit tests
+        override_timeout=True,  # use timeout for all requests even if timeout is given
     )
     return client
 
