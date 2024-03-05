@@ -40,8 +40,8 @@ class InteractiveBrokersHistoric:
         start_time: pd.Timestamp = None,
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
-        limit: int = None,
-        cache: bool = True,
+        limit: int | None = None,
+        cache: bool | None = True,
     ):
         assert is_unqualified_contract(contract)
         
@@ -53,17 +53,15 @@ class InteractiveBrokersHistoric:
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
 
-        assert start_time < end_time
-
-        self._log.info(f"requesting head_timestamp for {contract.tradingClass}")
-        head_timestamp = await self._client.request_head_timestamp(
-            contract=contract,
-            what_to_show=what_to_show,
-        )
-        if start_time is None or start_time < head_timestamp:
-            start_time = head_timestamp
+        if start_time is None:
+            self._log.info(f"requesting head_timestamp for {contract.tradingClass}")
+            start_time = await self._client.request_head_timestamp(
+                contract=contract,
+                what_to_show=what_to_show,
+            )
+            self._log.info(f"head_timestamp: {start_time}")
             
-        self._log.info(f"head_timestamp: {head_timestamp}: start_timestamp: {start_time}")
+        assert start_time < end_time
         
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
@@ -97,7 +95,8 @@ class InteractiveBrokersHistoric:
                     end_time=end_time,
                 )
                 
-                is_cached = cached_request_bars.is_cached(**kwargs)
+                if use_cache:
+                    is_cached = cached_request_bars.is_cached(**kwargs)
                 
                 bars: list[BarData] = await func(**kwargs)
                 
