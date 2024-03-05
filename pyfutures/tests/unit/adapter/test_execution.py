@@ -12,12 +12,17 @@ from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
 from nautilus_trader.execution.messages import SubmitOrder
 from nautilus_trader.model.enums import OrderSide
+from nautilus_trader.model.enums import OrderType
+from nautilus_trader.model.enums import LiquiditySide
 from nautilus_trader.model.orders import LimitOrder
+from nautilus_trader.model.currencies import GBP
 from nautilus_trader.model.enums import OrderStatus
 from nautilus_trader.model.enums import order_status_to_str
 from nautilus_trader.model.identifiers import ClientOrderId
+from nautilus_trader.model.objects import Money
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import VenueOrderId
+from nautilus_trader.model.identifiers import TradeId
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.enums import TimeInForce
 from nautilus_trader.model.objects import Quantity
@@ -25,28 +30,12 @@ from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
+from pyfutures.adapter.client.objects import IBOrderStatusEvent
+from pyfutures.adapter.client.objects import IBOpenOrderEvent
+from pyfutures.tests.unit.adapter.execution_stubs import IBTestExecutionStubs
+
 
 class TestInteractiveBrokersExecution:
-    
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_generate_position_status_reports(self):
-        await self.client.connect()
-        reports = await self.exec_client.generate_position_status_reports()
-        print(reports)
-    
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_generate_position_status_report(self):
-        await self.client.connect()
-        reports = await self.exec_client.generate_position_status_report()
-        print(reports)
-
-    @pytest.mark.skip(reason="TODO")
-    async def test_generate_order_status_reports(self):
-        await self.client.connect()
-        reports = await self.exec_client.generate_order_status_reports()
-        print(reports)
     
     @pytest.mark.asyncio()
     async def test_submit_market_order_sends_expected(
@@ -73,7 +62,6 @@ class TestInteractiveBrokersExecution:
         await exec_client._submit_order(submit_order)
         
         # Assert
-        
         sent_order = exec_client._client.place_order.call_args_list[0][0][0]
         assert sent_order.orderId == 5
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
@@ -157,35 +145,35 @@ class TestInteractiveBrokersExecution:
         assert submitted_kwargs["instrument_id"] == instrument_id
         assert submitted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
     
-    @pytest.mark.skip(reason="TODO")
-    async def test_market_order_accepted(
+    
+    def test_order_accepted(
         self,
         exec_client,
-        cache,
     ):
-        messages = [
-            b"5\x005\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00MKT\x0096.79\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x005\x001\x002138440174\x000\x000\x000\x00\x002138440174.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0097.79\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
-            b"3\x005\x00Submitted\x000\x001\x000\x002138440174\x000\x000\x001\x00\x000\x00",
-        ]
-        # def send_mocked_response(*args, **kwargs):
-        #     while len(messages) > 0:
-        #         client._handle_msg(messages.pop(0))
-
-        # send_mock = Mock(side_effect=send_mocked_response)
-        # client._conn.sendMsg = send_mock
+        # Arrange
+        instrument_id = InstrumentId.from_str("MES=MES=2023Z.CME")
+        market_order = TestExecStubs.market_order(
+            instrument_id=instrument_id,
+        )
+        exec_client.cache.add_order(market_order)
+        exec_client.generate_order_accepted = Mock()
         
-        # await asyncio.wait_for(
-        #     self._wait_for_order_status(market_order, OrderStatus.ACCEPTED),
-        #     2,
-        # )
+        # Act
+        event: IBOpenOrderEvent = IBTestExecutionStubs.open_order_event()
+        exec_client.open_order_callback(event)
         
+        # Assert
+        accepted_kwargs = exec_client.generate_order_accepted.call_args_list[0][1]
+        assert accepted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
+        assert accepted_kwargs["instrument_id"] == instrument_id
+        assert accepted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
+        assert accepted_kwargs["venue_order_id"] == VenueOrderId("5")
     @pytest.mark.skip(reason="TODO")
-    async def test_market_order_filled(
+    def test_order_filled(
         self,
-        client,
         exec_client,
-        cache,
     ):
+        
         messages = [
             b"5\x005\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00MKT\x0096.79\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x005\x001\x002138440174\x000\x000\x000\x00\x002138440174.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0097.79\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
             b"3\x005\x00Submitted\x000\x001\x000\x002138440174\x000\x000\x001\x00\x000\x00",
@@ -196,49 +184,37 @@ class TestInteractiveBrokersExecution:
             # b'3\x005\x00Filled\x001\x000\x0096.79\x002138440174\x000\x0096.79\x001\x00\x000\x00',
             b"59\x001\x000000e9b5.6555a859.01.01\x001.7\x00GBP\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00",
         ]
-
-        instrument_id = InstrumentId.from_str("R[Z23].ICEEU")
-
+        
+        # Arrange
+        instrument_id = InstrumentId.from_str("MES=MES=2023Z.CME")
         market_order = TestExecStubs.market_order(
             instrument_id=instrument_id,
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            client_order_id=ClientOrderId("5"),
-            trader_id=TestIdStubs.trader_id(),
-            strategy_id=TestIdStubs.strategy_id(),
         )
-        cache.add_order(market_order)
-
-        submit_order = SubmitOrder(
-            trader_id=market_order.trader_id,
-            strategy_id=market_order.strategy_id,
-            order=market_order,
-            command_id=UUID4(),
-            ts_init=0,
+        exec_client.cache.add_order(market_order)
+        exec_client.generate_order_filled = Mock()
+        
+        # Act
+        event: IBOpenOrderEvent = IBTestExecutionStubs.execution_event(
+            orderRef=TestIdStubs.client_order_id().value,
         )
-
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        await exec_client._submit_order(submit_order)
-
-        await asyncio.wait_for(
-            self._wait_for_order_status(market_order, OrderStatus.FILLED),
-            2,
-        )
-
-        cached_order = cache.order(market_order.client_order_id)
-
-        assert cached_order is not None
-        assert cached_order.status == OrderStatus.FILLED
-        assert cached_order.venue_order_id == VenueOrderId("5")
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x01P3\x005\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00MKT\x00\x00\x00GTC\x00\x00\x00\x000\x005\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
-        )
+        exec_client.open_order_callback(event)
+        
+        # Assert
+        filled_kwargs = exec_client.generate_order_filled.call_args_list[0][1]
+        assert filled_kwargs["strategy_id"] == TestIdStubs.strategy_id()
+        assert filled_kwargs["instrument_id"] == instrument_id
+        assert filled_kwargs["client_order_id"] == TestIdStubs.client_order_id()
+        assert filled_kwargs["venue_order_id"] == VenueOrderId("5")
+        assert filled_kwargs["venue_position_id"] is None
+        assert filled_kwargs["trade_id"] == TradeId("0000e9b5.6555a859.01.01")
+        assert filled_kwargs["order_side"] == OrderSide.BUY
+        assert filled_kwargs["order_type"] == OrderType.LIMIT
+        assert filled_kwargs["last_qty"] == Quantity.from_int(1)
+        assert filled_kwargs["last_px"] == Price.from_str("1.2345")
+        assert filled_kwargs["quote_currency"] == GBP
+        assert filled_kwargs["commission"] == Money(1.2, GBP)
+        assert filled_kwargs["liquidity_side"] == LiquiditySide.NO_LIQUIDITY_SIDE
+        assert filled_kwargs["ts_event"] == dt_to_unix_nanos(pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"))
 
     @pytest.mark.skip(reason="TODO")
     async def test_limit_order_filled(
@@ -720,7 +696,27 @@ class TestInteractiveBrokersExecution:
         print(f"Waiting for status {order_status_to_str(status)} for order {order.client_order_id}")
         while order.status != status:
             await asyncio.sleep(0)
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_generate_position_status_reports(self):
+        await self.client.connect()
+        reports = await self.exec_client.generate_position_status_reports()
+        print(reports)
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_generate_position_status_report(self):
+        await self.client.connect()
+        reports = await self.exec_client.generate_position_status_report()
+        print(reports)
 
+    @pytest.mark.skip(reason="TODO")
+    async def test_generate_order_status_reports(self):
+        await self.client.connect()
+        reports = await self.exec_client.generate_order_status_reports()
+        print(reports)
+        
     # @pytest.mark.skip(reason="not needed, fractional price reject at client level")
     # @pytest.mark.asyncio()
     # async def test_market_order_rejected_invalid_quantity(

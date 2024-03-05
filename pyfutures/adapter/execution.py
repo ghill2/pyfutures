@@ -20,6 +20,7 @@ from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
 from nautilus_trader.execution.messages import SubmitOrder
 from nautilus_trader.execution.reports import FillReport
+from nautilus_trader.model.instruments import Instrument
 from nautilus_trader.execution.reports import OrderStatusReport
 from nautilus_trader.execution.reports import PositionStatusReport
 from nautilus_trader.live.execution_client import LiveExecutionClient
@@ -94,7 +95,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         self._set_account_id(account_id)
         # self._account_summary_loaded: asyncio.Event = asyncio.Event()
 
-        self._client.order_status_events += self.order_status_callback
+        # self._client.order_status_events += self.order_status_callback
         self._client.error_events += self.error_callback
         self._client.execution_events += self.execution_callback
         self._client.open_order_events += self.open_order_callback
@@ -117,33 +118,38 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         if self._client.connection.is_connected:
             await self._client.connect()
-
-    async def order_status_callback(self, event: IBOrderStatusEvent) -> None:
-
-        self._log.info(f"OrderStatusEvent received: {event}")
-
-        client_order_id = ClientOrderId(str(event.order_id))
-
-        self._log.info(f"client_order_id: {client_order_id}")
-
+    
+    def open_order_callback(self, event: IBOpenOrderEvent):
+        """
+        order modify:
+        need access to quantity and price to compare the new order with the previous order
+        can only access the order's price and quantity from openOrder
+        """
+        client_order_id = ClientOrderId(str(event.execution.orderRef))
+        order, instrument = self._find_order_and_instrument(client_order_id)
+        if (order, instrument) == (None, None):
+            return # nothing to do
+        self._log.debug(f"Received {event}")
+        self._open_order_callback(event) # events related to orders that have been modified
+        
+        # is_modified_event = event.status not in ["PreSubmitted", "Submitted"] or event.orderType != "LMT"
+        # if is_modified_event:
+        #     self._open_order_modified_callback(event) # events related to orders that have been modified
+        # else:
+    
+    def _open_order_callback(self, event: IBOpenOrderEvent) -> None:
+        
+        venue_order_id = VenueOrderId(str(event.orderId))
+        client_order_id = ClientOrderId(str(event.orderRef))
         order = self._cache.order(client_order_id)
-
-        if order is None:
-            self._log.info(f"No order found for client_order_id: {event.order_id}")
-            return
-
-        self._log.info(f"order: {order}")
-
-        venue_order_id = VenueOrderId(str(event.order_id))
-        self._log.info(repr(venue_order_id))
-        self._log.info(event.status)
-
-        self._log.debug(str(event.status == "Submitted"))
-        if event.status == "Submitted" \
-            or event.status == "PreSubmitted" \
-            or event.status == "ApiPending" \
-            or event.status == "PendingSubmit":
-
+        
+        """
+        TODO: do these need to be matched?
+        event.status == "PreSubmitted"
+        event.status == "ApiPending"
+        event.status == "PendingSubmit"
+        """
+        if event.status == "Submitted":
             self._log.debug("generate_order_accepted")
             self.generate_order_accepted(
                 strategy_id=order.strategy_id,
@@ -152,54 +158,18 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 venue_order_id=venue_order_id,
                 ts_event=self._clock.timestamp_ns(),
             )
-
-        # elif event.status == "ApiCancelled" or event.status == "Cancelled":
-
-        #     self._log.debug("generate_order_canceled")
-        #     self.generate_order_canceled(
-        #         strategy_id=order.strategy_id,
-        #         instrument_id=order.instrument_id,
-        #         client_order_id=order.client_order_id,
-        #         venue_order_id=order.venue_order_id,
-        #         ts_event=self._clock.timestamp_ns(),
-        #     )
-
-    async def open_order_callback(self, event: IBOpenOrderEvent):
-        """
-        order modify:
-        need access to quantity and price to compare the new order with the previous order
-        can only access the order's price and quantity from openOrder
-        """
-        if event.status not in ["PreSubmitted", "Submitted"] or event.orderType != "LMT":
-            return # only interested in orders that have been modified
-
-        client_order_id = ClientOrderId(str(event.orderId))
-
+        
+    def _open_order_modified_callback(self, event: IBOpenOrderEvent) -> None:
+        
         order = self._cache.order(client_order_id)
-
-        if order is None:
-            self._log.debug(f"No order found for client_order_id {order.client_order_id}")
-            return
-
+        
         instrument = self.instrument_provider.find(order.instrument_id)
-        if instrument is None:
-            self._log.debug(f"No instrument found for instrument_id {order.instruent_id}")
-            return
-
-        self._log.debug(f"Received {event}")
-
-        # generate modify
-        # total_qty = (
-        #     Quantity.from_int(0)
-        #     if event.totalQuantity == UNSET_DECIMAL
-        #     else Quantity.from_str(str(event.totalQuantity))
-        # )
+        
         total_qty = Quantity.from_str(str(event.totalQuantity))
-
-
-        # price = (
-        #     None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
-        # )
+        
+        venue_order_id = VenueOrderId(str(event.orderId))
+        client_order_id = ClientOrderId(str(event.orderRef))
+        
         price = instrument.make_price(event.lmtPrice)
 
         if total_qty == order.quantity and price == order.price:
@@ -223,8 +193,6 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             ts_event=self._clock.timestamp_ns(),
             venue_order_id_modified=venue_order_id_modified,
         )
-
-        await asyncio.sleep(0)
 
     async def _submit_order(self, command: SubmitOrder) -> None:
         PyCondition.type(command, SubmitOrder, "command")
@@ -331,29 +299,27 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         self._client.cancel_order(int(command.client_order_id.value))
 
-    async def execution_callback(self, event: IBExecutionEvent):
+    def execution_callback(self, event: IBExecutionEvent):
 
         self._log.debug(f"IBExecutionEvent received: {event}")
 
-        client_order_id = ClientOrderId(str(event.orderId))
-
-        self._log.debug(f"IBExecutionEvent received: {client_order_id}")
-
+        client_order_id = ClientOrderId(str(event.execution.orderId))
+        client_order_id = ClientOrderId(str(event.orderRef))
+        
+        order, instrument = self._find_order_and_instrument(client_order_id)
+        if (order, instrument) == (None, None):
+            return # nothing to do
+        
+        self._execution_callback(event)
+        
+    def _execution_callback(self, event: IBExecutionEvent):
+        
+        client_order_id = ClientOrderId(str(event.execution.orderId))
+        
         order = self._cache.order(client_order_id)
-
-        if order is None:
-            self._log.error(f"Order not found in cache with client_order_id: {event.orderId}")
-            return
-        else:
-            self._log.debug("found order")
-
+        
         instrument = self._instrument_provider.find(order.instrument_id)
-        if instrument is None:
-            self._log.error(f"Instrument not found in instrument provider {order.instrument_id}")
-            return
-        else:
-            self._log.debug("found instrument")
-
+        
         self._log.debug("generate_order_filled")
         self.generate_order_filled(
             strategy_id=order.strategy_id,
@@ -361,28 +327,43 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             client_order_id=order.client_order_id,
             venue_order_id=VenueOrderId(str(event.orderId)),
             venue_position_id=None,
-            trade_id=TradeId(event.execId),
-            order_side=OrderSide[order_side_to_order_action[event.side]],
+            trade_id=TradeId(event.execution.execId),
+            order_side=OrderSide[order_side_to_order_action[event.execution.side]],
             order_type=order.order_type,
-            last_qty=Quantity(event.shares, precision=instrument.size_precision),
-            last_px=Price(event.price, precision=instrument.price_precision),
+            last_qty=Quantity(event.execution.shares, precision=instrument.size_precision),
+            last_px=Price(event.execution.price, precision=instrument.price_precision),
             quote_currency=instrument.quote_currency,
             commission=Money(
-                event.commission,
-                Currency.from_str(event.commissionCurrency),
+                event.commissionReport.commission,
+                Currency.from_str(event.commissionReport.currency),
             ),
-            liquidity_side=LiquiditySide.NO_LIQUIDITY_SIDE,
+            liquidity_side=LiquiditySide.NO_LIQUIDITY_SIDE,  # TODO: LIQUIDITY_SIDE.TAKER?
             ts_event=dt_to_unix_nanos(event.timestamp),
         )
-
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
 
         # self._log.debug(f"OrderStatus is {order.status!r}")
         # assert order.status == OrderStatus.FILLED
 
+    def _find_order_and_instrument(self, client_order_id: ClientOrderId) -> tuple[Order, Instrument] | tuple[None]:
+        
+        # client_order_id = self._cache.client_order_id(venue_order_id)
+        # if order is None:
+        #     self._log.error(f"ClientOrderId not found for : {venue_order_id}")
+        #     return (None, None)
+        
+        order = self._cache.order(client_order_id)
+        if order is None:
+            self._log.error(f"Order not found in cache with: {client_order_id}")
+            return (None, None)
 
-    async def error_callback(self, event: IBErrorEvent) -> None:
+        instrument = self._instrument_provider.find(order.instrument_id)
+        if instrument is None:
+            self._log.error(f"Instrument not found in instrument provider {order.instrument_id}")
+            return (None, None)
+        
+        return (order, instrument)
+            
+    def error_callback(self, event: IBErrorEvent) -> None:
 
         self._log.error(f"{event.request_id} {event!r}")
 
@@ -396,9 +377,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         if event.request_id <= 0:
             self._log.debug(f"Error with code {event.code} was an error related to an order")
             return
-
-
-
+        
         client_order_id = ClientOrderId(str(event.request_id))
 
         self._log.debug(f"client_order_id: {client_order_id}")
@@ -588,3 +567,60 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         last_quote = await self._client.request_last_quote_tick(contract=contract)
 
         return historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
+
+
+# generate modify
+        # total_qty = (
+        #     Quantity.from_int(0)
+        #     if event.totalQuantity == UNSET_DECIMAL
+        #     else Quantity.from_str(str(event.totalQuantity))
+        # )
+        # price = (
+        #     None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
+        # )
+        
+    # def order_status_callback(self, event: IBOrderStatusEvent) -> None:
+
+    #     self._log.info(f"OrderStatusEvent received: {event}")
+
+    #     client_order_id = ClientOrderId(str(event.order_id))
+
+    #     self._log.info(f"client_order_id: {client_order_id}")
+
+    #     order = self._cache.order(client_order_id)
+
+    #     if order is None:
+    #         self._log.info(f"No order found for client_order_id: {event.order_id}")
+    #         return
+
+    #     self._log.info(f"order: {order}")
+
+    #     venue_order_id = VenueOrderId(str(event.order_id))
+    #     self._log.info(repr(venue_order_id))
+    #     self._log.info(event.status)
+
+    #     self._log.debug(str(event.status == "Submitted"))
+    #     if event.status == "Submitted" \
+    #         or event.status == "PreSubmitted" \
+    #         or event.status == "ApiPending" \
+    #         or event.status == "PendingSubmit":
+
+    #         self._log.debug("generate_order_accepted")
+    #         self.generate_order_accepted(
+    #             strategy_id=order.strategy_id,
+    #             instrument_id=order.instrument_id,
+    #             client_order_id=order.client_order_id,
+    #             venue_order_id=venue_order_id,
+    #             ts_event=self._clock.timestamp_ns(),
+    #         )
+
+        # elif event.status == "ApiCancelled" or event.status == "Cancelled":
+
+        #     self._log.debug("generate_order_canceled")
+        #     self.generate_order_canceled(
+        #         strategy_id=order.strategy_id,
+        #         instrument_id=order.instrument_id,
+        #         client_order_id=order.client_order_id,
+        #         venue_order_id=order.venue_order_id,
+        #         ts_event=self._clock.timestamp_ns(),
+        #     )

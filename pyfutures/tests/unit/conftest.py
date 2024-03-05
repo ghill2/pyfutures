@@ -25,14 +25,6 @@ from pyfutures.tests.demo.adapter.factories import InteractiveBrokersExecEngineF
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-
-@pytest.fixture
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest.fixture
 def client(event_loop) -> InteractiveBrokersClient:
     client = InteractiveBrokersClient(

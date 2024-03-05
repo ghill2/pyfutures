@@ -534,7 +534,7 @@ class IBTestProviderStubs:
             instrument_class=InstrumentClass.SPOT,
             quote_currency=Currency.from_str("GBP"),
             is_inverse=False,
-            price_precision=1,
+            price_precision=4,
             size_precision=0,
             size_increment=Quantity.from_int(1),
             multiplier=Quantity.from_int(1),
