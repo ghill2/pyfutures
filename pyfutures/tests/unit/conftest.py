@@ -12,6 +12,8 @@ import pytest
 import sys
 
 from pyfutures.adapter.client.client import InteractiveBrokersClient
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 from pyfutures.tests.unit.client.mock_socket import MockSocket
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.adapter.client.connection import Connection
@@ -52,6 +54,9 @@ def connection(event_loop) -> Connection:
 
 @pytest.fixture()
 def exec_client(event_loop) -> InteractiveBrokersExecutionClient:
+    
+    init_logging(level_stdout=LogLevel.DEBUG)
+    
     clock = LiveClock()
 
     msgbus = MessageBus(

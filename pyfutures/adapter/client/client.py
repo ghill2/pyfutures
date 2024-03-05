@@ -267,8 +267,8 @@ class InteractiveBrokersClient(EWrapper):
     def place_order(self, order: IBOrder) -> None:
         self._eclient.placeOrder(order.orderId, order.contract, order)
 
-    def cancel_order(self, order_id: int, manual_cancel_order_time: str = "") -> None:
-        self._eclient.cancelOrder(order_id, manual_cancel_order_time)
+    def cancel_order(self, order_id: int) -> None:
+        self._eclient.cancelOrder(orderId=order_id, manualCancelOrderTime="")
 
     ################################################################################################
     # Contract Details
