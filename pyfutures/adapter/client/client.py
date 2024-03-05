@@ -678,7 +678,7 @@ class InteractiveBrokersClient(EWrapper):
         self._log.info(f"execDetails reqId={reqId} {execution}")
 
         event = IBExecutionEvent(
-            timestamp=parse_datetime(self.execution.time),
+            timestamp=parse_datetime(execution.time),
             reqId=reqId,
             contract=contract,
             execution=execution,

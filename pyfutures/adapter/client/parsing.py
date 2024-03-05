@@ -3,6 +3,7 @@ from ibapi.common import HistoricalTickBidAsk
 import pandas as pd
 
 def parse_datetime(value: str) -> pd.Timestamp:
+
     if isinstance(value, int):
         # historical ticks int: DDDDDDDDDD
         return pd.to_datetime(value, unit='s', utc=True)

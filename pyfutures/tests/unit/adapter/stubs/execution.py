@@ -1,4 +1,5 @@
 from decimal import Decimal
+import pandas as pd
 
 from pyfutures.adapter.client.objects import IBOrderStatusEvent
 from pyfutures.adapter.client.objects import IBOpenOrderEvent

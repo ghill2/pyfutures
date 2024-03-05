@@ -289,12 +289,14 @@ class TestInteractiveBrokersClient:
         send_mock.assert_called_once()
         
     @pytest.mark.asyncio()
-    async def test_request_executions(self, client):
+    async def test_request_executions_returns_expected(self, client):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
             execution = IBExecution()
             execution.execId = 1
+            execution.time = "20231116-12:07:51"
+            
             report = IBCommissionReport()
             report.execId = execution.execId
             client.execDetails(-10, IBContract(), execution)
@@ -302,6 +304,8 @@ class TestInteractiveBrokersClient:
             
             execution = IBExecution()
             execution.execId = 2
+            execution.time = "20231116-12:07:51"
+            
             report = IBCommissionReport()
             report.execId = execution.execId
             client.execDetails(-10, IBContract(), execution)
@@ -327,6 +331,8 @@ class TestInteractiveBrokersClient:
         def send_mocked_response(*args, **kwargs):
             execution = IBExecution()
             execution.execId = 1
+            execution.time = "20231116-12:07:51"
+            
             report = IBCommissionReport()
             report.execId = execution.execId
             client.execDetails(-10, IBContract(), execution)
@@ -334,6 +340,8 @@ class TestInteractiveBrokersClient:
             
             execution = IBExecution()
             execution.execId = 2
+            execution.time = "20231116-12:07:51"
+            
             report = IBCommissionReport()
             report.execId = execution.execId
             client.execDetails(-10, IBContract(), execution)
@@ -869,6 +877,8 @@ class TestInteractiveBrokersClient:
         # Act
         execution = IBExecution()
         execution.execId = "0000e1a7.65e1df89.01.01"
+        execution.time = "20231116-12:07:51"
+        
         client.execDetails(-1, Contract(), execution)
         
         report = IBCommissionReport()
