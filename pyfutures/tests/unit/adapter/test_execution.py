@@ -354,13 +354,53 @@ class TestInteractiveBrokersExecution:
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()
         assert cancel_kwargs["venue_order_id"] == venue_order_id
     
-    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_modify_order_rejected_response(
         self,
         exec_client,
     ):
-        pass
+        # Arrange
+        limit_order = TestExecStubs.limit_order()
+        exec_client.cache.add_order(limit_order)
+        
+        venue_order_id = VenueOrderId(str(IBTestIdStubs.orderId()))
+        
+        # accept
+        order_accepted = TestEventStubs.order_accepted(
+            order=limit_order,
+            venue_order_id=venue_order_id,
+        )
+        limit_order.apply(order_accepted)
+        exec_client.cache.update_order(limit_order)
+        assert limit_order.venue_order_id == venue_order_id
+        
+        # modify
+        
+        order_pending_update = TestEventStubs.order_pending_update(
+            order=limit_order,
+        )
+        limit_order.apply(order_pending_update)
+        exec_client.cache.update_order(limit_order)
+        
+        exec_client.generate_order_modify_rejected = Mock()
+        
+        # Act
+        error_event = IBErrorEvent(
+            reqId=IBTestIdStubs.orderId(),
+            errorCode=201,
+            errorString="Order rejected - reason:YOUR ORDER IS NOT ACCEPTED",
+            advancedOrderRejectJson="",
+        )
+        exec_client.error_callback(error_event)
+        
+        # Assert
+        exec_client.generate_order_modify_rejected.assert_called_once()
+        cancel_kwargs = exec_client.generate_order_modify_rejected.call_args_list[0][1]
+        assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
+        assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
+        assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()
+        assert cancel_kwargs["venue_order_id"] == venue_order_id
+        assert cancel_kwargs["reason"] == error_event.errorString
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()

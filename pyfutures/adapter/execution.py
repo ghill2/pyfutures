@@ -378,7 +378,6 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         IBErrorEvent(request_id=5905, code=2161, message="BUY 1 MDAX DEC'23 @ 26439.00  In accordance with our regulatory obligations as a broker, we will initially cap (or limit) the price of your Limit Order to 26270.00 or a more aggressive price still within your specified limit price.  If your order is not immediately executable, our systems may, depending on market conditions, cap your order to a limit price that is no more than the allowed amount away from the reference price at that time. If this happens, you will not receive a fill. This is a control designed to ensure that we comply with our regulatory obligations to avoid submitting disruptive orders to the marketplace. Please note that in some circumstances this may result in you receiving a less favorable fill or not receiving a fill.  In the future, please submit your order using a limit price that is closer to the current market price or submit an algorithmic Market Order (IBALGO).  If you would like to cancel your order, please use cancel order action.", advanced_order_reject_json='')
         """
         self._log.error(f"{event.reqId} {event!r}")
-    
         # error_codes = [201, 202, 203, 10318]
         # if event.code not in error_codes:
         #     self._log.debug(f"Error code {event.code} was not in error codes, returning.")
@@ -409,10 +408,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 venue_order_id=order.venue_order_id,
                 ts_event=self._clock.timestamp_ns(),
             )
-            return
-
-        # if event.code in [201, 203, 10318]:
-        if event.code in [201, 10318, 110, 161, 2161]:
+        elif event.errorCode in [201, 10318, 110, 161, 2161]:
             if order.status == OrderStatus.PENDING_UPDATE:
                 self._log.debug("generate_modify_rejected")
                 self.generate_order_modify_rejected(
