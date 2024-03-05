@@ -69,19 +69,6 @@ class IBOrderStatusEvent:
     mktCapPrice: float
 
 @dataclass
-class IBOpenOrderEvent:
-    conId: int
-    totalQuantity: Decimal
-    filledQuantity: Decimal
-    status: str
-    lmtPrice: Decimal
-    action: str
-    orderId: int
-    orderType: str
-    tif: str
-    orderRef: str
-    
-@dataclass
 class ClientRequest(asyncio.Future):
     id: int | str
     data: list | dict | None = None

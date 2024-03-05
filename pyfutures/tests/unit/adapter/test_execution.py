@@ -145,7 +145,6 @@ class TestInteractiveBrokersExecution:
         assert submitted_kwargs["instrument_id"] == instrument_id
         assert submitted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
     
-    
     def test_order_accepted(
         self,
         exec_client,
@@ -168,6 +167,7 @@ class TestInteractiveBrokersExecution:
         assert accepted_kwargs["instrument_id"] == instrument_id
         assert accepted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
         assert accepted_kwargs["venue_order_id"] == VenueOrderId("5")
+        
     @pytest.mark.skip(reason="TODO")
     def test_order_filled(
         self,
@@ -194,7 +194,7 @@ class TestInteractiveBrokersExecution:
         exec_client.generate_order_filled = Mock()
         
         # Act
-        event: IBOpenOrderEvent = IBTestExecutionStubs.execution_event(
+        event: IBExecutionEvent = IBTestExecutionStubs.execution_event(
             orderRef=TestIdStubs.client_order_id().value,
         )
         exec_client.open_order_callback(event)

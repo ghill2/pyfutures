@@ -125,22 +125,24 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         need access to quantity and price to compare the new order with the previous order
         can only access the order's price and quantity from openOrder
         """
-        client_order_id = ClientOrderId(str(event.execution.orderRef))
+        client_order_id = ClientOrderId(str(event.order.orderRef))
         order, instrument = self._find_order_and_instrument(client_order_id)
-        if (order, instrument) == (None, None):
+        if order is None and instrument is None:
             return # nothing to do
+        
         self._log.debug(f"Received {event}")
-        self._open_order_callback(event) # events related to orders that have been modified
+        
+        self._handle_open_order(event) # events related to orders that have been modified
         
         # is_modified_event = event.status not in ["PreSubmitted", "Submitted"] or event.orderType != "LMT"
         # if is_modified_event:
         #     self._open_order_modified_callback(event) # events related to orders that have been modified
         # else:
     
-    def _open_order_callback(self, event: IBOpenOrderEvent) -> None:
+    def _handle_open_order(self, event: IBOpenOrderEvent) -> None:
         
-        venue_order_id = VenueOrderId(str(event.orderId))
-        client_order_id = ClientOrderId(str(event.orderRef))
+        venue_order_id = VenueOrderId(str(event.order.orderId))
+        client_order_id = ClientOrderId(str(event.order.orderRef))
         order = self._cache.order(client_order_id)
         
         """
@@ -149,7 +151,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         event.status == "ApiPending"
         event.status == "PendingSubmit"
         """
-        if event.status == "Submitted":
+        if event.orderState.status == "Submitted":
             self._log.debug("generate_order_accepted")
             self.generate_order_accepted(
                 strategy_id=order.strategy_id,
@@ -159,7 +161,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 ts_event=self._clock.timestamp_ns(),
             )
         
-    def _open_order_modified_callback(self, event: IBOpenOrderEvent) -> None:
+    def _handle_open_order_modified(self, event: IBOpenOrderEvent) -> None:
         
         order = self._cache.order(client_order_id)
         
@@ -307,7 +309,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         client_order_id = ClientOrderId(str(event.orderRef))
         
         order, instrument = self._find_order_and_instrument(client_order_id)
-        if (order, instrument) == (None, None):
+        if order is None and instrument is None:
             return # nothing to do
         
         self._execution_callback(event)

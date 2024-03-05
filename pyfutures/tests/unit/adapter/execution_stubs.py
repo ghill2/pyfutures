@@ -3,6 +3,9 @@ from decimal import Decimal
 from pyfutures.adapter.client.objects import IBOrderStatusEvent
 from pyfutures.adapter.client.objects import IBOpenOrderEvent
 from pyfutures.adapter.client.objects import IBExecutionEvent
+from ibapi.contract import Contract as IBContract
+from ibapi.order import Order as IBOrder
+from ibapi.order_state import OrderState as IBOrderState
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from ibapi.contract import Contract as IBContract
@@ -29,17 +32,28 @@ class IBTestExecutionStubs:
         
     @staticmethod
     def open_order_event() -> IBOpenOrderEvent:
+        
+        contract = IBContract()
+        contract.conId = 1
+        contract.exchange = "CME"
+        
+        order = IBOrder()
+        order.orderRef = TestIdStubs.client_order_id().value
+        order.lmtPrice = Decimal("1.2345")
+        order.action = "BUY"
+        order.orderId = 5
+        order.orderType = "MKT"
+        order.tif = "GTC"
+        order.totalQuantity=Decimal("1")
+        order.filledQuantity=Decimal("0")
+            
+        order_state = IBOrderState()
+        order_state.status = "Submitted"
+        
         return IBOpenOrderEvent(
-            conId=1,
-            totalQuantity=Decimal("1"),
-            filledQuantity=Decimal("0"),
-            status="Submitted",
-            lmtPrice=Decimal("1.2345"),
-            action="BUY",
-            orderId=5,
-            orderType="MKT",
-            tif="GTC",
-            orderRef=TestIdStubs.client_order_id().value,
+            contract=contract,
+            order=order,
+            orderState=order_state,
         )
         
     @staticmethod
