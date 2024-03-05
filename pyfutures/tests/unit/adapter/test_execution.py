@@ -1,48 +1,165 @@
 import asyncio
 from unittest.mock import Mock
+import pandas as pd
 
+from decimal import Decimal
 import pytest
 from nautilus_trader.core.uuid import UUID4
+from ibapi.order import Order as IBOrder
+
+from ibapi.common import UNSET_DOUBLE
 from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
 from nautilus_trader.execution.messages import SubmitOrder
 from nautilus_trader.model.enums import OrderSide
+from nautilus_trader.model.orders import LimitOrder
 from nautilus_trader.model.enums import OrderStatus
 from nautilus_trader.model.enums import order_status_to_str
 from nautilus_trader.model.identifiers import ClientOrderId
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import VenueOrderId
 from nautilus_trader.model.objects import Price
+from nautilus_trader.model.enums import TimeInForce
 from nautilus_trader.model.objects import Quantity
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 
-pytestmark = pytest.mark.skip
-
 class TestInteractiveBrokersExecution:
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_generate_position_status_reports(self):
         await self.client.connect()
         reports = await self.exec_client.generate_position_status_reports()
         print(reports)
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_generate_position_status_report(self):
         await self.client.connect()
         reports = await self.exec_client.generate_position_status_report()
         print(reports)
 
-    @pytest.mark.asyncio()
+    @pytest.mark.skip(reason="TODO")
     async def test_generate_order_status_reports(self):
         await self.client.connect()
         reports = await self.exec_client.generate_order_status_reports()
         print(reports)
-
+    
     @pytest.mark.asyncio()
-    async def test_market_order_submitted(
+    async def test_submit_market_order_sends_expected(
         self,
-        client,
+        exec_client,
+    ):
+        
+        # Arrange
+        market_order = TestExecStubs.market_order(
+            instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
+        )
+
+        submit_order = SubmitOrder(
+            trader_id=TestIdStubs.trader_id(),
+            strategy_id=TestIdStubs.strategy_id(),
+            order=market_order,
+            command_id=UUID4(),
+            ts_init=0,
+        )
+        
+        exec_client._client.place_order = Mock()
+        
+        # Act
+        await exec_client._submit_order(submit_order)
+        
+        # Assert
+        
+        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == 5
+        assert sent_order.orderRef == TestIdStubs.client_order_id().value
+        assert sent_order.orderType == "MKT"
+        assert sent_order.totalQuantity == Decimal("100")
+        assert sent_order.action == "BUY"
+        assert sent_order.tif == "GTC"
+        assert sent_order.contract.conId == 1
+        assert sent_order.contract.exchange == "CME"
+        assert sent_order.lmtPrice == UNSET_DOUBLE  # unset
+    
+    @pytest.mark.asyncio()
+    async def test_submit_limit_order_sends_expected(
+        self,
+        exec_client,
+    ):
+        limit_order = TestExecStubs.limit_order(
+            instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
+        )
+        
+        # Arrange
+        submit_order = SubmitOrder(
+            trader_id=TestIdStubs.trader_id(),
+            strategy_id=TestIdStubs.strategy_id(),
+            order=limit_order,
+            command_id=UUID4(),
+            ts_init=0,
+        )
+        
+        exec_client._client.place_order = Mock()
+        
+        # Act
+        await exec_client._submit_order(submit_order)
+        
+        # Assert
+        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == 5
+        assert sent_order.orderRef == TestIdStubs.client_order_id().value
+        assert sent_order.orderType == "LMT"
+        assert sent_order.totalQuantity == Decimal("100")
+        assert sent_order.action == "BUY"
+        assert sent_order.tif == "GTC"
+        assert sent_order.contract.conId == 1
+        assert sent_order.contract.exchange == "CME"
+        assert sent_order.lmtPrice == 55.0
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_modify_order_sends_expected(
+        self,
+        exec_client,
+    ):
+        pass
+        
+    @pytest.mark.asyncio()
+    async def test_order_submitted(
+        self,
+        exec_client,
+    ):
+        
+        # Arrange
+        instrument_id = InstrumentId.from_str("MES=MES=2023Z.CME")
+        market_order = TestExecStubs.market_order(
+            instrument_id=instrument_id,
+        )
+
+        submit_order = SubmitOrder(
+            trader_id=TestIdStubs.trader_id(),
+            strategy_id=TestIdStubs.strategy_id(),
+            order=market_order,
+            command_id=UUID4(),
+            ts_init=0,
+        )
+        exec_client.generate_order_submitted = Mock()
+        
+        # Act
+        await exec_client._submit_order(submit_order)
+        
+        submitted_kwargs = exec_client.generate_order_submitted.call_args_list[0][1]
+        assert submitted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
+        assert submitted_kwargs["instrument_id"] == instrument_id
+        assert submitted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
+    
+    @pytest.mark.skip(reason="TODO")
+    async def test_market_order_accepted(
+        self,
         exec_client,
         cache,
     ):
@@ -50,50 +167,19 @@ class TestInteractiveBrokersExecution:
             b"5\x005\x00623496135\x00R\x00FUT\x0020231227\x000\x00?\x001000\x00ICEEU\x00GBP\x00RZ3\x00R\x00BUY\x001\x00MKT\x0096.79\x000.0\x00GTC\x00\x00DU1234567\x00\x000\x005\x001\x002138440174\x000\x000\x000\x00\x002138440174.0/DU1234567/100\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x00\x00\x00\x002147483647\x000\x000\x000\x00\x003\x000\x000\x00\x000\x000\x00\x000\x00None\x00\x000\x00\x00\x00\x00?\x000\x000\x00\x000\x000\x00\x00\x00\x00\x00\x000\x000\x000\x002147483647\x002147483647\x00\x00\x000\x00\x00IB\x000\x000\x00\x000\x000\x00Submitted\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x00\x00\x00\x00\x00\x000\x000\x000\x00None\x001.7976931348623157E308\x0097.79\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x001.7976931348623157E308\x000\x00\x00\x00\x000\x001\x000\x000\x000\x00\x00\x000\x00\x00\x00\x00\x00\x00",
             b"3\x005\x00Submitted\x000\x001\x000\x002138440174\x000\x000\x001\x00\x000\x00",
         ]
+        # def send_mocked_response(*args, **kwargs):
+        #     while len(messages) > 0:
+        #         client._handle_msg(messages.pop(0))
 
-        instrument_id = InstrumentId.from_str("R[Z23].ICEEU")
-
-        market_order = TestExecStubs.market_order(
-            instrument_id=instrument_id,
-            order_side=OrderSide.BUY,
-            quantity=Quantity.from_int(1),
-            client_order_id=ClientOrderId("5"),
-            trader_id=TestIdStubs.trader_id(),
-            strategy_id=TestIdStubs.strategy_id(),
-        )
-        cache.add_order(market_order)
-
-        submit_order = SubmitOrder(
-            trader_id=market_order.trader_id,
-            strategy_id=market_order.strategy_id,
-            order=market_order,
-            command_id=UUID4(),
-            ts_init=0,
-        )
-
-        def send_messages(_):
-            while len(messages) > 0:
-                client._handle_msg(messages.pop(0))
-
-        send_mock = Mock(side_effect=send_messages)
-        client._conn.sendMsg = send_mock
-
-        await exec_client._submit_order(submit_order)
-
-        await asyncio.wait_for(
-            self._wait_for_order_status(market_order, OrderStatus.ACCEPTED),
-            2,
-        )
-
-        cached_order = cache.order(market_order.client_order_id)
-
-        assert cached_order is not None
-        assert cached_order.status == OrderStatus.ACCEPTED
-        assert cached_order.venue_order_id == VenueOrderId("5")
-        send_mock.assert_called_once_with(
-            b"\x00\x00\x01P3\x005\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00MKT\x00\x00\x00GTC\x00\x00\x00\x000\x005\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
-        )
-
+        # send_mock = Mock(side_effect=send_mocked_response)
+        # client._conn.sendMsg = send_mock
+        
+        # await asyncio.wait_for(
+        #     self._wait_for_order_status(market_order, OrderStatus.ACCEPTED),
+        #     2,
+        # )
+        
+    @pytest.mark.skip(reason="TODO")
     async def test_market_order_filled(
         self,
         client,
@@ -154,7 +240,7 @@ class TestInteractiveBrokersExecution:
             b"\x00\x00\x01P3\x005\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00MKT\x00\x00\x00GTC\x00\x00\x00\x000\x005\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
         )
 
-    @pytest.mark.asyncio()
+    @pytest.mark.skip(reason="TODO")
     async def test_limit_order_filled(
         self,
         client,
@@ -199,6 +285,7 @@ class TestInteractiveBrokersExecution:
         assert cached_order is not None
         assert cached_order.status == OrderStatus.FILLED
 
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_accepted(
         self,
@@ -253,7 +340,8 @@ class TestInteractiveBrokersExecution:
         expected = b"\x00\x00\x01W3\x0029\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x0087.16\x00\x00GTC\x00\x00\x00\x000\x0029\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00"
         send_mock.assert_called_once_with(expected)
         # actual = send_mock.call_args_list[0][0][0]
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_filled(
         self,
@@ -310,7 +398,8 @@ class TestInteractiveBrokersExecution:
 
         expected = b"\x00\x00\x01W3\x0032\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x0096.84\x00\x00GTC\x00\x00\x00\x000\x0032\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00"
         send_mock.assert_called_once_with(expected)
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_cancel(
         self,
@@ -382,7 +471,8 @@ class TestInteractiveBrokersExecution:
         assert cached_order.status == OrderStatus.CANCELED
 
         send_mock.assert_called_with(b"\x00\x00\x00\x084\x001\x0036\x00\x00")
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_modify_quantity(
         self,
@@ -463,6 +553,7 @@ class TestInteractiveBrokersExecution:
             b"\x00\x00\x01W3\x0059\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x002.0\x00LMT\x0086.95\x00\x00GTC\x00\x00\x00\x000\x00\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
         )
 
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_modify_price(
         self,
@@ -542,7 +633,8 @@ class TestInteractiveBrokersExecution:
         send_mock.assert_called_with(
             b"\x00\x00\x01U3\x0061\x00623496135\x00\x00\x00\x000.0\x00\x00\x00ICEEU\x00\x00\x00\x00\x00\x00\x00BUY\x001\x00LMT\x0087.95\x00\x00GTC\x00\x00\x00\x000\x00\x001\x000\x000\x000\x000\x000\x000\x000\x00\x000\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00-1\x000\x00\x00\x000\x00\x00\x000\x000\x00\x000\x00\x00\x00\x00\x00\x000\x00\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00\x00\x000\x000\x00\x00\x000\x00\x000\x000\x000\x000\x00\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x001.7976931348623157e+308\x000\x00\x00\x00\x001.7976931348623157e+308\x00\x00\x00\x00\x000\x000\x000\x00\x002147483647\x002147483647\x000\x00\x00\x00",
         )
-
+    
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_limit_order_modify_price_and_quantity(
         self,

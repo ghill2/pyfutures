@@ -7,6 +7,10 @@ from pathlib import Path
 import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
+
+from decimal import Decimal
+from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.enums import BarAggregation
@@ -249,13 +253,11 @@ class UniverseRow:
         )
         instruments.append(self.quote_home_instrument)
         instruments.append(self.instrument)
-        from decimal import Decimal
-        from nautilus_trader.model.enums import AssetClass
-        from nautilus_trader.model.enums import InstrumentClass
+        
         instruments.append(
             Instrument(
-                instrument_id=InstrumentId.from_str("EXECUTION.SIM"),
-                raw_symbol=Symbol("EXECUTION"),
+                instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
+                raw_symbol=Symbol("MES=MES=2023Z"),
                 asset_class=AssetClass.COMMODITY,
                 instrument_class=InstrumentClass.SPOT,
                 quote_currency=Currency.from_str("GBP"),
@@ -522,7 +524,33 @@ class IBTestProviderStubs:
         assert len(rows) > 0
 
         return rows
-
+    
+    @staticmethod
+    def mes_contract() -> FuturesContract:
+        return Instrument(
+            instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
+            raw_symbol=Symbol("MES=MES=2023Z"),
+            asset_class=AssetClass.COMMODITY,
+            instrument_class=InstrumentClass.SPOT,
+            quote_currency=Currency.from_str("GBP"),
+            is_inverse=False,
+            price_precision=1,
+            size_precision=0,
+            size_increment=Quantity.from_int(1),
+            multiplier=Quantity.from_int(1),
+            margin_init=Decimal("1"),
+            margin_maint=Decimal("1"),
+            maker_fee=Decimal("1"),
+            taker_fee=Decimal("1"),
+            ts_event=0,
+            ts_init=0,
+            info=dict(
+                contract=dict(
+                    conId=1,
+                    exchange="CME",
+                ),
+            ),
+        )
     # @classmethod
     # def multiple_files(
     #     cls,

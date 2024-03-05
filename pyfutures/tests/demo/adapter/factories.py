@@ -10,12 +10,7 @@ from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
 
-
-from typing import Optional, Tuple
-
-from pyfutures.adapter.client.client import (
-    InteractiveBrokersClient,
-)
+from pyfutures.adapter.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import (
     InteractiveBrokersDataClientConfig,
     InteractiveBrokersExecClientConfig,
@@ -80,14 +75,15 @@ class InteractiveBrokersExecEngineFactory:
         msgbus,
         cache,
         clock,
-        provider_config: Optional[InteractiveBrokersInstrumentProviderConfig] = None,
-        exec_client_config: Optional[InteractiveBrokersExecClientConfig] = None,
-    ) -> Tuple[
+        provider_config: InteractiveBrokersInstrumentProviderConfig | None = None,
+        exec_client_config: InteractiveBrokersExecClientConfig | None = None,
+    ) -> tuple[
         LiveExecutionEngine,
         InteractiveBrokersExecutionClient,
         InteractiveBrokersInstrumentProvider,
         InteractiveBrokersClient,
     ]:
+        
         if provider_config is None:
             provider_config = InteractiveBrokersInstrumentProviderConfig()
 
@@ -96,12 +92,8 @@ class InteractiveBrokersExecEngineFactory:
 
         client = InteractiveBrokersClient(
             loop=loop,
-            msgbus=msgbus,
-            cache=cache,
-            clock=clock,
             host="127.0.0.1",
             port=4002,
-            client_id=1,
         )
 
         provider = InteractiveBrokersInstrumentProvider(

@@ -410,14 +410,14 @@ def nautilus_order_to_ib_order(
     if getattr(order, "price", None) is not None:
         ib_order.lmtPrice = order.price.as_double()
 
-    if getattr(order, "display_qty", None) is not None:
-        ib_order.displaySize = order.display_qty.as_double()
+    # if getattr(order, "display_qty", None) is not None:
+    #     ib_order.displaySize = order.display_qty.as_double()
 
-    if getattr(order, "expire_time", None) is not None:
-        ib_order.goodTillDate = order.expire_time.strftime("%Y%m%d %H:%M:%S %Z")
+    # if getattr(order, "expire_time", None) is not None:
+    #     ib_order.goodTillDate = order.expire_time.strftime("%Y%m%d %H:%M:%S %Z")
 
-    if getattr(order, "parent_order_id", None) is not None:
-        ib_order.parentId = order.parent_order_id.value
+    # if getattr(order, "parent_order_id", None) is not None:
+    #     ib_order.parentId = order.parent_order_id.value
 
     contract = IBContract()
     contract.conId = instrument.info["contract"]["conId"]

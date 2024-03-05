@@ -100,12 +100,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         self._client.open_order_events += self.open_order_callback
 
         # self._log._is_bypassed = True
-
-    async def _connect(self):
-
-        if self._client.connection.is_connected:
-            await self._client.connect()
-
+    
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
         return self._instrument_provider
@@ -113,6 +108,15 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
     @property
     def client(self) -> InteractiveBrokersClient:
         return self._client
+    
+    @property
+    def cache(self) -> Cache:
+        return self._cache
+    
+    async def _connect(self):
+
+        if self._client.connection.is_connected:
+            await self._client.connect()
 
     async def order_status_callback(self, event: IBOrderStatusEvent) -> None:
 
@@ -222,8 +226,6 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         await asyncio.sleep(0)
 
-    
-
     async def _submit_order(self, command: SubmitOrder) -> None:
         PyCondition.type(command, SubmitOrder, "command")
 
@@ -257,14 +259,14 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
         self._log.info(f"Submitting order {ib_order}...")
 
+        self._client.place_order(ib_order)
+        
         self.generate_order_submitted(
             strategy_id=order.strategy_id,
             instrument_id=order.instrument_id,
             client_order_id=order.client_order_id,
             ts_event=self._clock.timestamp_ns(),
         )
-
-        self._client.place_order(ib_order)
 
     async def _modify_order(self, command: ModifyOrder) -> None:
 
