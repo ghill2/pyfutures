@@ -125,8 +125,8 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         can only access the order's price and quantity from openOrder
         """
         
-        if event.orderState.status == "Filled":
-            self._log.debug(f"Ignoring open order filled event, order filled handled by executioin {event}")
+        if event.orderState.status == "Filled" and event.order.orderType == "MKT":
+            self._log.debug(f"Ignoring open order filled event for MKT, order filled handled by executioin {event}")
             return  # nothing to do
         
         client_order_id = ClientOrderId(str(event.order.orderRef))
@@ -138,7 +138,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
         self._log.debug(f"Received {event}")
         
-        is_modified_event = event.orderState.status not in self.SUBMITTED_STATUSES and event.orderType == "LMT"
+        is_modified_event = event.orderState.status not in self.SUBMITTED_STATUSES and event.order.orderType == "LMT"
         if is_modified_event:
             # events related to orders that have been modified
             self._handle_open_order_modified(event)
@@ -148,6 +148,11 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
     
     def _handle_open_order(self, event: IBOpenOrderEvent) -> None:
         
+        self._log.debug("Handling open order event")
+        
+        if event.orderState.status not in self.SUBMITTED_STATUSES:
+            return  # nothing to do
+            
         venue_order_id = VenueOrderId(str(event.order.orderId))
         client_order_id = ClientOrderId(str(event.order.orderRef))
         order = self._cache.order(client_order_id)
@@ -158,36 +163,35 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         event.status == "ApiPending"
         event.status == "PendingSubmit"
         """
-        if event.orderState.status in self.SUBMITTED_STATUSES:
-            self._log.debug("generate_order_accepted")
-            self.generate_order_accepted(
-                strategy_id=order.strategy_id,
-                instrument_id=order.instrument_id,
-                client_order_id=order.client_order_id,
-                venue_order_id=venue_order_id,
-                ts_event=self._clock.timestamp_ns(),
-            )
+        
+        self._log.debug("generate_order_accepted")
+        self.generate_order_accepted(
+            strategy_id=order.strategy_id,
+            instrument_id=order.instrument_id,
+            client_order_id=order.client_order_id,
+            venue_order_id=venue_order_id,
+            ts_event=self._clock.timestamp_ns(),
+        )
         
     def _handle_open_order_modified(self, event: IBOpenOrderEvent) -> None:
         
+        self._log.debug("Handling open order event")
+        
+        client_order_id = ClientOrderId(str(event.order.orderRef))
+        
         order = self._cache.order(client_order_id)
         
+        total_qty = Quantity.from_str(str(event.order.totalQuantity))
+        
         instrument = self.instrument_provider.find(order.instrument_id)
-        
-        total_qty = Quantity.from_str(str(event.totalQuantity))
-        
-        venue_order_id = VenueOrderId(str(event.orderId))
-        client_order_id = ClientOrderId(str(event.orderRef))
-        
-        price = instrument.make_price(event.lmtPrice)
+        price = instrument.make_price(event.order.lmtPrice)
 
         if total_qty == order.quantity and price == order.price:
             return # no change
 
-        venue_order_id_modified = bool(
-            order.venue_order_id is None
-            or order.venue_order_id != VenueOrderId(str(event.orderId)),
-        )
+        venue_order_id = VenueOrderId(str(event.order.orderId))
+        venue_order_id_modified = \
+            order.venue_order_id is None or order.venue_order_id != venue_order_id
 
         self._log.debug("generate_order_updated")
 
@@ -195,7 +199,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             strategy_id=order.strategy_id,
             instrument_id=order.instrument_id,
             client_order_id=order.client_order_id,
-            venue_order_id=VenueOrderId(str(event.orderId)),
+            venue_order_id=venue_order_id,
             quantity=total_qty,
             price=price,
             trigger_price=None,

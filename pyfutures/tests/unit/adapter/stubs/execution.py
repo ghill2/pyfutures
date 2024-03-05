@@ -33,7 +33,13 @@ class IBTestExecutionStubs:
         )
         
     @staticmethod
-    def open_order_event() -> IBOpenOrderEvent:
+    def open_order_event(
+        status: str = "Submitted",
+        totalQuantity: Decimal | None = None,
+        lmtPrice: Decimal | None = None,
+        orderId: int | None = None,
+        orderType: str | None = None,
+    ) -> IBOpenOrderEvent:
         
         contract = IBContract()
         contract.conId = IBTestIdStubs.conId()
@@ -41,16 +47,16 @@ class IBTestExecutionStubs:
         
         order = IBOrder()
         order.orderRef = TestIdStubs.client_order_id().value
-        order.lmtPrice = Decimal("1.2345")
+        order.lmtPrice = lmtPrice or Decimal("1.2345")
         order.action = "BUY"
-        order.orderId = IBTestIdStubs.orderId()
-        order.orderType = "MKT"
+        order.orderId = orderId or IBTestIdStubs.orderId()
+        order.orderType = orderType or "MKT"
         order.tif = "GTC"
-        order.totalQuantity = Decimal("1")
+        order.totalQuantity = totalQuantity or Decimal("1")
         order.filledQuantity = Decimal("0")
             
         order_state = IBOrderState()
-        order_state.status = "Submitted"
+        order_state.status = status
         
         return IBOpenOrderEvent(
             contract=contract,

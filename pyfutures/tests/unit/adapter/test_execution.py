@@ -247,6 +247,79 @@ class TestInteractiveBrokersExecution:
         )
         
     @pytest.mark.asyncio()
+    async def test_modify_order_sends_expected(
+        self,
+        exec_client,
+    ):
+            
+        # Arrange
+        instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
+        exec_client.instrument_provider.add(instrument)
+            
+        
+        limit_order = TestExecStubs.limit_order(
+            instrument_id=self.instrument_id,
+        )
+        
+        exec_client.cache.add_order(limit_order)
+        modify_order = TestCommandStubs.modify_order_command(
+            order=limit_order,
+            price=Price.from_int(2),
+            quantity=Quantity.from_int(1),
+        )
+        
+        exec_client._client.place_order = Mock()
+        
+        # Act
+        await exec_client._modify_order(modify_order)
+        
+        # Assert
+        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == IBTestIdStubs.orderId()
+        assert sent_order.orderRef == TestIdStubs.client_order_id().value
+        assert sent_order.orderType == "LMT"
+        assert sent_order.totalQuantity == Decimal("1")
+        assert sent_order.action == "BUY"
+        assert sent_order.tif == "GTC"
+        assert sent_order.contract.conId == IBTestIdStubs.conId()
+        assert sent_order.contract.exchange == "CME"
+        assert sent_order.lmtPrice == 2.0
+    
+    @pytest.mark.asyncio()
+    async def test_modify_order_response(
+        self,
+        exec_client,
+    ):
+        # Arrange
+        instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
+        exec_client.instrument_provider.add(instrument)
+        limit_order = TestExecStubs.limit_order()
+        exec_client.cache.add_order(limit_order)
+        exec_client.generate_order_updated = Mock()
+        
+        # Act
+        event = IBTestExecutionStubs.open_order_event(
+            status="Filled",
+            totalQuantity=Decimal("2"),
+            lmtPrice=Decimal("1"),
+            orderId=400,
+            orderType="LMT",
+        )
+        
+        exec_client.open_order_callback(event)
+        
+        # Assert
+        exec_client.generate_order_updated.assert_called_once()
+        updated_kwargs = exec_client.generate_order_updated.call_args_list[0][1]
+        assert updated_kwargs["strategy_id"] == TestIdStubs.strategy_id()
+        assert updated_kwargs["instrument_id"] == TestIdStubs.audusd_id()
+        assert updated_kwargs["client_order_id"] == TestIdStubs.client_order_id()
+        assert updated_kwargs["venue_order_id"] == VenueOrderId("400")
+        assert updated_kwargs["quantity"] == Decimal("2")
+        assert updated_kwargs["price"] == Decimal("1")
+        assert updated_kwargs["venue_order_id_modified"] == True
+        
+    @pytest.mark.asyncio()
     async def test_cancel_order_response(
         self,
         exec_client,
@@ -274,69 +347,12 @@ class TestInteractiveBrokersExecution:
         exec_client.error_callback(error_event)
         
         # Assert
-        print(exec_client.generate_order_canceled.call_args_list)
         exec_client.generate_order_canceled.assert_called_once()
         cancel_kwargs = exec_client.generate_order_canceled.call_args_list[0][1]
         assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()
         assert cancel_kwargs["venue_order_id"] == venue_order_id
-        
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_modify_order_rejects(
-        self,
-        exec_client,
-    ):
-        pass
-        
-    @pytest.mark.asyncio()
-    async def test_modify_order_sends_expected(
-        self,
-        exec_client,
-    ):
-            
-        # Arrange
-        instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
-        exec_client.instrument_provider.add(instrument)
-            
-        
-        limit_order = TestExecStubs.limit_order(
-            instrument_id=self.instrument_id,
-        )
-        
-        exec_client.cache.add_order(limit_order)
-        modify_order = TestCommandStubs.modify_order_command(
-            order=limit_order,
-            price=Price.from_int(2),
-            quantity=Quantity.from_int(1),
-        )
-        assert modify_order.client_order_id == limit_order.client_order_id
-        
-        exec_client._client.place_order = Mock()
-        
-        # Act
-        await exec_client._modify_order(modify_order)
-        
-        # Assert
-        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == IBTestIdStubs.orderId()
-        assert sent_order.orderRef == TestIdStubs.client_order_id().value
-        assert sent_order.orderType == "LMT"
-        assert sent_order.totalQuantity == Decimal("1")
-        assert sent_order.action == "BUY"
-        assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == IBTestIdStubs.conId()
-        assert sent_order.contract.exchange == "CME"
-        assert sent_order.lmtPrice == 2.0
-
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_modify_order_response(
-        self,
-        exec_client,
-    ):
-        pass
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
@@ -353,8 +369,6 @@ class TestInteractiveBrokersExecution:
         exec_client,
     ):
         pass
-        
-    
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
