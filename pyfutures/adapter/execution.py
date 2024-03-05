@@ -401,6 +401,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         if event.errorCode == 202:
             self._log.error(f"Order with id {event.reqId} was canceled: {event.errorString}")
             self._log.debug("generate_order_canceled")
+            # TODO: check for order.status == OrderStatus.PENDING_CANCEL?
             self.generate_order_canceled(
                 strategy_id=order.strategy_id,
                 instrument_id=order.instrument_id,
@@ -421,6 +422,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                 )
             else:
                 self._log.debug("generate_order_rejected")
+                # TODO: check for order.status == OrderStatus.SUBMITTED?
                 self.generate_order_rejected(
                     strategy_id=order.strategy_id,
                     instrument_id=order.instrument_id,
