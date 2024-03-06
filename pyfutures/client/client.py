@@ -68,6 +68,7 @@ class InteractiveBrokersClient(EWrapper):
         loop: asyncio.AbstractEventLoop,
         host: str = "127.0.0.1",
         port: int = 7497,
+        client_id: int = 1,
         log_level: int = logging.ERROR,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
@@ -110,6 +111,7 @@ class InteractiveBrokersClient(EWrapper):
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
         self._eclient.conn = self._conn
+        self._eclient.clientId = client_id
 
         self._request_id_seq = -10
         self._decoder = Decoder(wrapper=self, serverVersion=176)
@@ -371,7 +373,7 @@ class InteractiveBrokersClient(EWrapper):
         """
             formatDate=1, returns bars as a timestamp in the exchange timezone
         """
-        await self._conn._is_connected.wait()
+        # await self._conn._is_connected.wait()
 
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
