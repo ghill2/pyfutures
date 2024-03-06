@@ -3,11 +3,11 @@ import pytest
 class TestInteractiveBrokersDataClient:
     
     @pytest.mark.skip(reason="TODO")
-    def test_instruments_on_load(self):
+    def test_instruments_on_load(self, data_client):
         pass
     
     @pytest.mark.skip(reason="TODO")
-    def test_subscribe_bars(self):
+    def test_subscribe_bars(self, data_client):
         pass
     
     

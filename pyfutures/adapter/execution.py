@@ -2,13 +2,10 @@ import asyncio
 
 import pandas as pd
 
-# from ibapi.common import UNSET_DECIMAL
-# from ibapi.common import UNSET_DOUBLE
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 from ibapi.common import HistoricalTickBidAsk
 
-# fmt: off
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus

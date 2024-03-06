@@ -1,10 +1,7 @@
 import asyncio
 import functools
-
-
 from ibapi.common import BarData
 
-# fmt: off
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
@@ -12,7 +9,6 @@ from nautilus_trader.live.data_client import LiveMarketDataClient
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.model.instruments.base import Instrument
-
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
@@ -21,10 +17,6 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.adapter.parsing import dict_to_contract
 from pyfutures.adapter.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
-
-
-# fmt: on
-#
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
