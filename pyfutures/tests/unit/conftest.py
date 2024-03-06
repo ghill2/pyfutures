@@ -29,7 +29,7 @@ from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
 from pyfutures.adapter.factories import PROVIDER_CONFIG
 from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
 from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
-from pyfutures.adapter.data import InteractiveBrokersLiveDataClient
+from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
@@ -117,7 +117,7 @@ def exec_client(event_loop, client) -> InteractiveBrokersExecClient:
     yield exec_client
     
 @pytest.fixture()
-def data_client(event_loop) -> InteractiveBrokersLiveDataClient:
+def data_client(event_loop, client) -> InteractiveBrokersDataClient:
     
     init_logging(level_stdout=LogLevel.DEBUG)
     
@@ -130,11 +130,16 @@ def data_client(event_loop) -> InteractiveBrokersLiveDataClient:
     
     cache = TestComponentStubs.cache()
     
-    data_client = InteractiveBrokersLiveDataClientFactory.create(
+    data_client = InteractiveBrokersDataClient(
         loop=event_loop,
+        client=client,
         msgbus=msgbus,
         cache=cache,
         clock=clock,
+        instrument_provider=InteractiveBrokersInstrumentProvider(
+            client=client,
+            config=PROVIDER_CONFIG,
+        ),
         config=InteractiveBrokersDataClientConfig(),
     )
     

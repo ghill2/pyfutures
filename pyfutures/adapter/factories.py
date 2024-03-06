@@ -15,7 +15,7 @@ from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.data import InteractiveBrokersLiveDataClient
+from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
@@ -72,14 +72,14 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-    ) -> InteractiveBrokersLiveDataClient:
+    ) -> InteractiveBrokersDataClient:
         
         client = get_client(loop, msgbus, clock, cache)
         provider = get_provider_cached()
 
         global DATA_CLIENT
         if DATA_CLIENT is None:
-            DATA_CLIENT = InteractiveBrokersLiveDataClient(
+            DATA_CLIENT = InteractiveBrokersDataClient(
                 loop=loop,
                 client=client,
                 msgbus=msgbus,

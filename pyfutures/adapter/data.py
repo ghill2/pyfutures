@@ -26,7 +26,7 @@ from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 # fmt: on
 #
 
-class InteractiveBrokersLiveDataClient(LiveMarketDataClient):
+class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
     Provides a data client for the InteractiveBrokers exchange.
     """
