@@ -220,7 +220,6 @@ class Connection:
         id = int(fields[0])
         self._handshake_message_ids.append(id)
         
-        print(self._handshake_message_ids)
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
