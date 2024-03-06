@@ -76,9 +76,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
     def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
         nautilus_bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
         self._handle_data(nautilus_bar)
-
-
-
+        
     async def _subscribe_bars(self, bar_type: BarType):
         instrument = self._cache.instrument(bar_type.instrument_id)
 
