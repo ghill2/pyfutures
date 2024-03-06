@@ -30,12 +30,14 @@ async def test_export_spread(event_loop):
         log_level=logging.INFO,
         api_log_level=logging.INFO,
     )
-
+    
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
     historic = InteractiveBrokersHistoric(
-        client=client, log_level=logging.DEBUG, delay=1.5
+        client=client,
+        log_level=logging.DEBUG,
+        delay=1.5,
     )
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     await client.connect()

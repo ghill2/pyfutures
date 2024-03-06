@@ -58,22 +58,6 @@ def instrument_id(request) -> InstrumentId:
     value = request.config.getoption('--instrument-id')
     return InstrumentId.from_str(value)
 
-# @pytest.fixture(scope="session")
-# def instrument(event_loop, cache, instrument_provider, instrument_id) -> FuturesContract:
-#
-#     instrument = event_loop.run_until_complete(
-#         instrument_provider.load_async(instrument_id),
-#     )
-#
-#     if instrument is None:
-#         for instrument in instrument_provider.list_all():
-#             print(instrument)
-#         raise RuntimeError(f"Instrument not found: {instrument_id}")
-#
-#     cache.add_instrument(instrument)
-#
-#     return instrument
-
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -113,10 +97,6 @@ def client(event_loop) -> InteractiveBrokersClient:
     init_logging(level_stdout=LogLevel.DEBUG)
     
     return client
-
-
-
-
 
 @pytest.fixture(scope="session")
 @pytest.mark.asyncio
@@ -325,3 +305,20 @@ async def order_setup(exec_client) -> OrderSetup:
 # @pytest.fixture(scope="session")
 # def log(logger) -> Logger:
 #     return Logger("pytest")
+
+# @pytest.fixture(scope="session")
+# def instrument(event_loop, cache, instrument_provider, instrument_id) -> FuturesContract:
+#
+#     instrument = event_loop.run_until_complete(
+#         instrument_provider.load_async(instrument_id),
+#     )
+#
+#     if instrument is None:
+#         for instrument in instrument_provider.list_all():
+#             print(instrument)
+#         raise RuntimeError(f"Instrument not found: {instrument_id}")
+#
+#     cache.add_instrument(instrument)
+#
+#     return instrument
+
