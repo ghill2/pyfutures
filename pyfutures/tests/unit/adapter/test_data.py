@@ -1,46 +1,90 @@
+import pandas as pd
 import pytest
 from unittest.mock import Mock
 
+from decimal import Decimal
+
 from nautilus_trader.model.data import BarType
+from ibapi.common import BarData
 from pyfutures.adapter.enums import BarSize
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 from pyfutures.adapter.enums import WhatToShow
+from ibapi.contract import Contract as IBContract
 import functools
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
+from pyfutures.adapter.parsing import instrument_id_to_contract
+from nautilus_trader.model.data import Bar
 
 class TestInteractiveBrokersDataClient:
     
+    def setup_method(self):
+        self.instrument_id = InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
+        self.bar_type = BarType.from_str(f"{self.instrument_id}-1-DAY-MID-EXTERNAL")
+        
     @pytest.mark.skip(reason="TODO")
     def test_instruments_on_load(self, data_client):
         pass
     
-    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_subscribe_bars(self, data_client):
         
-        self._client.subscribe_bars = Mock()
-        callback = Mock()
+        # Arrange
+        data_client._client.subscribe_bars = Mock()
         
-        bar_type = BarType.from_str("MES=MES=2023Z.CME.1-DAY-MID-EXTERNAL")
-        await data_client._subscribe_bars(bar_type)
+        # Act
+        await data_client._subscribe_bars(self.bar_type)
         
-        contract = IBContract()
-        contract.secType = "FUT"
-        contract.conId = 1
-        contract.exchange = "CME"
+        # Assert
+        data_client._client.subscribe_bars.assert_called_once()
+        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
+        sent_kwargs["contract"] == instrument_id_to_contract(self.instrument_id)
+        sent_kwargs["what_to_show"] == WhatToShow.BID_ASK
+        sent_kwargs["bar_size"] == BarSize._1_DAY
+        sent_kwargs["callback"] == functools.partial(
+            data_client._bar_callback,
+            bar_type=self.bar_type,
+            instrument=data_client.cache.instrument(self.instrument_id),
+        )
+            
+    @pytest.mark.asyncio()
+    async def test_bar_callback(self, data_client):
         
-        self._client.subscribe_bars.assert_called_once_with(
-            contract=contract,
-            what_to_show=WhatToShow.BID_ASK,
-            bar_size=BarSize._1_DAY,
-            callback=functools.partial(
-                self._client._bar_callback,
-                bar_type=bar_type,
-                instrument=instrument,
-            ),
+        bar = BarData()
+        timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        bar.timestamp = timestamp
+        bar.date = 1700069390
+        bar.open = 1.1
+        bar.high = 1.2
+        bar.low = 1.0
+        bar.close = 1.1
+        bar.volume = Decimal("1")
+        bar.wap = Decimal("1")
+        bar.barCount = 1
+        instrument = data_client.cache.instrument(self.instrument_id)
+        data_client._handle_data = Mock()
+        
+        data_client._bar_callback(
+            bar_type=self.bar_type,
+            bar=bar,
+            instrument=instrument,
+        )
+        
+        data_client._handle_data.assert_called_once_with(
+            Bar(
+                bar_type=self.bar_type,
+                open=Price(1.1, instrument.price_precision),
+                high=Price(1.2, instrument.price_precision),
+                low=Price(1.0, instrument.price_precision),
+                close=Price(1.1, instrument.price_precision),
+                volume=Quantity(1, instrument.size_precision),
+                ts_init=dt_to_unix_nanos(timestamp),
+                ts_event=dt_to_unix_nanos(timestamp),
+            )
         )
         
         
-        
-            
         
 
 

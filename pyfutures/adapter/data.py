@@ -10,11 +10,12 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.model.instruments.base import Instrument
 from pyfutures.adapter import IB_VENUE
+from nautilus_trader.model.data import Bar
 from pyfutures.adapter.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.parsing import dict_to_contract
+from pyfutures.adapter.parsing import instrument_id_to_contract
 from pyfutures.adapter.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
@@ -47,14 +48,19 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             # ),
         )
         self._client = client
-        self._handle_revised_bars = config.handle_revised_bars
-        self._use_regular_trading_hours = config.use_regular_trading_hours
-        self._market_data_type = config.market_data_type
 
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
         return self._instrument_provider  # type: ignore
-
+    
+    @property
+    def client(self) -> InteractiveBrokersClient:
+        return self._client
+    
+    @property
+    def cache(self) -> Cache:
+        return self._cache
+    
     async def _connect(self):
         if not self._client.connection.is_connected:
             await self._client.connect()
@@ -64,9 +70,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         for instrument in self._instrument_provider.list_all():
             self._handle_data(instrument)  # add to cache
 
-    def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
-        nautilus_bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
-        self._handle_data(nautilus_bar)
+    
         
     async def _subscribe_bars(self, bar_type: BarType):
         
@@ -84,13 +88,16 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         )
         
         self._client.subscribe_bars(
-            contract=dict_to_contract(instrument.info["contract"]),
+            contract=instrument_id_to_contract(bar_type.instrument_id),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
             bar_size=BarSize.from_bar_spec(bar_type.spec),
             callback=callback
         )
     
-
+    def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
+        nautilus_bar: Bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+        self._handle_data(nautilus_bar)
+        
     async def _subscribe_quote_ticks(self, bar_type: BarType):
         pass
             

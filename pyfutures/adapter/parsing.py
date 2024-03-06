@@ -54,12 +54,7 @@ def bar_data_to_nautilus_bar(
     bar_type: BarType,
     bar: BarData,
     instrument: Instrument,
-    is_revision: bool = False,
 ) -> Bar:
-    ts_init = (
-        pd.Timestamp.fromtimestamp(int(bar.date), tz=pytz.utc).value
-        + pd.Timedelta(bar_type.spec.timedelta).value
-    )
     bar = Bar(
         bar_type=bar_type,
         open=instrument.make_price(bar.open),
@@ -67,9 +62,8 @@ def bar_data_to_nautilus_bar(
         low=instrument.make_price(bar.low),
         close=instrument.make_price(bar.close),
         volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
-        ts_event=dt_to_unix_nanos(bar.date),
-        ts_init=ts_init,
-        is_revision=is_revision,
+        ts_event=dt_to_unix_nanos(bar.timestamp),
+        ts_init=dt_to_unix_nanos(bar.timestamp),
     )
     return bar
 
