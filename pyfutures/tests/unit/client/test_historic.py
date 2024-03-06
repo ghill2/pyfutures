@@ -64,8 +64,8 @@ class TestHistoric:
         
         send_mock = AsyncMock(side_effect=self.request_bars)
         historic._client.request_bars = send_mock
-        historic.request_bars_cache = send_mock
-        historic.request_bars_cache.is_cached = Mock(return_value=False)
+        historic.request_bars_cached = send_mock
+        historic.request_bars_cached.is_cached = Mock(return_value=False)
         
         await historic.request_bars(
             contract=self.contract,
@@ -88,8 +88,8 @@ class TestHistoric:
         # do not cache the first request
         
         historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache.is_cached = Mock(return_value=True)
+        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        historic.request_bars_cached.is_cached = Mock(return_value=True)
         
         await historic.request_bars(
             contract=self.contract,
@@ -101,15 +101,15 @@ class TestHistoric:
         )
         
         historic._client.request_bars.assert_called_once()
-        historic.request_bars_cache.assert_called_once()
+        historic.request_bars_cached.assert_called_once()
     
     @pytest.mark.asyncio()
     async def test_historic_delay_if_not_cached(self, historic):
         
         historic._delay = 1
         historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache.is_cached = Mock(return_value=False)
+        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        historic.request_bars_cached.is_cached = Mock(return_value=False)
         asyncio.sleep = AsyncMock()
                
         await historic.request_bars(
@@ -122,7 +122,7 @@ class TestHistoric:
         )
         
         historic._client.request_bars.assert_called_once()
-        historic.request_bars_cache.assert_called_once()
+        historic.request_bars_cached.assert_called_once()
         asyncio.sleep.call_count == 2  # first and second request
     
     @pytest.mark.asyncio()
@@ -130,8 +130,8 @@ class TestHistoric:
         
         historic._delay = 1
         historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cache.is_cached = Mock(return_value=True)
+        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        historic.request_bars_cached.is_cached = Mock(return_value=True)
         asyncio.sleep = AsyncMock()
         
         await historic.request_bars(
@@ -144,7 +144,7 @@ class TestHistoric:
         )
         
         historic._client.request_bars.assert_called_once()
-        historic.request_bars_cache.assert_called_once()
+        historic.request_bars_cached.assert_called_once()
         asyncio.sleep.assert_called_once()  # first request only
     
     async def request_bars(
@@ -153,17 +153,14 @@ class TestHistoric:
     ) -> list[BarData]:
         end_time = kwargs["end_time"]
         start_time = end_time - pd.Timedelta(hours=24)
-        time_range = ((end_time - start_time).total_seconds() / 60) - 1
         
-        random_times = set()
-        while len(random_times) != 30:
-            random_minute = random.randint(0, time_range)
-            random_time = start_time + pd.Timedelta(minutes=random_minute)
-            assert random_time >= start_time and random_time < end_time
-            random_times.add(random_time)
+        times = [
+            start_time + pd.Timedelta(minutes=i)
+            for i in range(60)
+        ]
         
-        bars = [BarData() for _ in range(30)]
-        for i, time in enumerate(random_times):
+        bars = [BarData() for _ in range(60)]
+        for i, time in enumerate(times):
             bars[i].timestamp = time
             bars[i].date = int(time.timestamp())
             bars[i].open = 1.1

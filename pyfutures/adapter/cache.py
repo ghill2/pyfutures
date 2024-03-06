@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 import pandas as pd
 from typing import Callable
+from typing import Coroutine
 from nautilus_trader.common.component import Logger
 
 from pyfutures.client.objects import ClientException
@@ -18,76 +19,11 @@ from pyfutures.client.parsing import bar_data_from_dict
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.core.rust.common import LogColor
 
-class CachedFunc:
-    """
-    Creates a cache
-    name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
-    """
-
-    def __init__(
-        self,
-        func: Callable,
-        cachedir: Path | None = None
-    ):
-        self._func = func
-        self._cachedir = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
-        self._log = Logger(f"{func.__name__}Cache")
+class HistoricCache:
+    def __init__(self, path: Path):
+        self.path = Path(path)  # directory
     
-    @property
-    def cachedir(self):
-        return self._cache_dir
-    
-    async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
-        
-        assert args == (), "Keywords arguments only"
-        
-        self._cachedir.mkdir(parents=True, exist_ok=True)
-        
-        key = self._build_key(*args, **kwargs)
-        
-        cached = self._get(key)
-        if cached is not None:
-            
-            self._log.debug(f"Returning cached {key}={self._value_to_str(cached)}", LogColor.BLUE)
-            if isinstance(cached, Exception):
-                raise cached
-            else:
-                return cached
-        
-        self._log.debug(f"No cached {key}", LogColor.BLUE)
-        
-        try:
-            result = await self._func(**kwargs)
-            self._set(key, result)
-            self._log.debug(f"Saved {self._value_to_str(result)} items...", LogColor.BLUE)
-            return result
-        except ClientException as e:
-            self._log.error(str(e))
-            self._set(key, e)
-            self._log.debug(f"Saved {e} items...", LogColor.BLUE)
-            raise
-        except asyncio.TimeoutError as e:
-            self._log.error(str(e.__class__.__name__))
-            self._set(key, e)
-            raise
-        
-        raise NotImplementedError()
-    
-    @staticmethod
-    def _value_to_str(value: Exception | list) -> str:
-        return repr(value) if isinstance(value, Exception) else f"{len(value)} items"
-    
-    def __len__(self) -> int:
-        return len(list(self._cachedir.rglob("*.pkl")))
-    
-    def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
-        for path in self._cachedir.rglob("*.pkl"):
-            with open(path, "rb") as f:
-                cached = pickle.load(f)
-            if isinstance(cached, cls):
-                path.unlink()
-    
-    def _get(
+    def get(
         self,
         key: str,
     ) -> list[Any] | Exception | None:
@@ -106,7 +42,7 @@ class CachedFunc:
             
         return cached
     
-    def _set(
+    def set(
         self,
         key: str,
         value: list[Any] | Exception,
@@ -123,19 +59,77 @@ class CachedFunc:
         with open(self._pickle_path(key), "wb") as f:
             pickle.dump(value, f)
     
-    def is_cached(self, *args, **kwargs) -> bool:
-        assert args == (), "Keywords arguments only"
-        return self.get_cached_path(*args, **kwargs).exists()
-    
-    def get_cached_path(self, *args, **kwargs) -> Path:
-        assert args == (), "Keywords arguments only"
-        return self._pickle_path(self._build_key(**kwargs))
+    def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
+        for path in self.path.glob("*.pkl"):
+            with open(path, "rb") as f:
+                cached = pickle.load(f)
+            if isinstance(cached, cls):
+                path.unlink()
     
     def _pickle_path(self, key: str) -> Path:
-        return self._cachedir / f"{key}.pkl"
+        return self.path / f"{key}.pkl"
+    
+    def __len__(self) -> int:
+        return len(list(self.path.rglob("*.pkl")))
+    
+    # def is_cached(self, *args, **kwargs) -> bool:
+    #     assert args == (), "Keywords arguments only"
+    #     return self._get_path(*args, **kwargs).exists()
+    
+    # def _get_path(self, *args, **kwargs) -> Path:
+    #     assert args == (), "Keywords arguments only"
+    #     return self._pickle_path(self._build_key(**kwargs))
+    
+    
+                
+class CachedFunc:
+    """
+    Creates a cache
+    name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
+    """
+
+    def __init__(
+        self,
+        func: Coroutine,
+        cachedir: Path | None = None
+    ):
+        path = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
+        self.cache = HistoricCache(path)
+        
+        self._func = func
+        self._log = Logger(f"{func.__name__}Cache")
+    
+    async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
+        
+        assert args == (), "Keywords arguments only"
+        
+        self.cache.path.mkdir(parents=True, exist_ok=True)
+        
+        key = self.build_key(*args, **kwargs)
+        
+        cached = self.cache.get(key)
+        if cached is not None:
+            
+            self._log.debug(f"Returning cached {key}={self._value_to_str(cached)}", LogColor.BLUE)
+            if isinstance(cached, Exception):
+                raise cached
+            else:
+                return cached
+        
+        self._log.debug(f"No cached {key}", LogColor.BLUE)
+        
+        try:
+            result = await self._func(**kwargs)
+            self.cache.set(key, result)
+            self._log.debug(f"Saved {self._value_to_str(result)} items...", LogColor.BLUE)
+            return result
+        except Exception as e:
+            self._log.error(str(e))
+            self.cache.set(key, e)
+            raise
     
     @classmethod
-    def _build_key(
+    def build_key(
         cls,
         **kwargs
     ):
@@ -161,6 +155,22 @@ class CachedFunc:
         key = "-".join(parts)
         
         return cls._sanitize_filename(key)
+    
+    def is_cached(self, *args, **kwargs) -> bool:
+        assert args == (), "Keywords arguments only"
+        key = self.build_key(**kwargs)
+        cached = self.cache.get(key)
+        return cached is not None
+    
+    @staticmethod
+    def _value_to_str(value: Exception | list) -> str:
+        
+        if isinstance(value, Exception):
+            return repr(value)
+        elif isinstance(value, list):
+            return f"{len(value)} items"
+        
+        raise NotImplementedError()
     
     @staticmethod
     def _sanitize_filename(filename):

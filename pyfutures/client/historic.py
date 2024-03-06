@@ -33,7 +33,7 @@ class InteractiveBrokersHistoric:
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(log_level)
 
-        self.request_bars_cache = CachedFunc(self._client.request_bars)
+        self.request_bars_cached = CachedFunc(self._client.request_bars)
 
     async def request_bars(
         self,
@@ -79,13 +79,7 @@ class InteractiveBrokersHistoric:
                 self._log.info(
                     f"{contract} | use_cache={use_cache} | {end_time - interval} -> {end_time}"
                 )
-                if use_cache:
-                    is_cached = self.request_bars_cache.is_cached(**kwargs)
-                    func = self.request_bars_cache
-                else:
-                    func = self._client.request_bars
-                    is_cached = False
-
+                
                 kwargs = dict(
                     contract=contract,
                     bar_size=bar_size,
@@ -93,6 +87,14 @@ class InteractiveBrokersHistoric:
                     duration=duration,
                     end_time=end_time,
                 )
+                
+                if use_cache:
+                    key = self.request_bars_cached.build_key(**kwargs)
+                    is_cached = self.request_bars_cached.cache.get(key) is not None
+                    func = self.request_bars_cached
+                else:
+                    func = self._client.request_bars
+                    is_cached = False
 
                 bars: list[BarData] = await func(**kwargs)
 
