@@ -1,4 +1,7 @@
+import os
+import shutil
 import asyncio
+import tempfile
 import json
 from pathlib import Path
 
@@ -12,6 +15,7 @@ import pytest
 import sys
 
 from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from pyfutures.tests.unit.client.mock_socket import MockSocket
@@ -40,6 +44,27 @@ def client(event_loop) -> InteractiveBrokersClient:
         override_timeout=True,  # use timeout for all requests even if timeout is given
     )
     return client
+
+@pytest.fixture
+def historic(event_loop) -> InteractiveBrokersHistoric:
+    client = InteractiveBrokersClient(
+        loop=event_loop,
+        host="127.0.0.1",
+        port=4002,
+        log_level=logging.DEBUG,
+        api_log_level=logging.DEBUG,
+        request_timeout_seconds=0.5,  # requests should fail immediately for unit tests
+        override_timeout=True,  # use timeout for all requests even if timeout is given
+    )
+    # cache_dir = Path(tempfile.mkdtemp())
+    historic = InteractiveBrokersHistoric(
+        client=client,
+        cachedir=tempfile.gettempdir(),
+    )
+    init_logging(level_stdout=LogLevel.DEBUG)
+    
+    yield historic
+    # shutil.deletecache_dir.unlink()
 
 
 @pytest.fixture

@@ -25,10 +25,15 @@ class CachedFunc:
     def __init__(
         self,
         func: Callable,
+        cachedir: Path | None = None
     ):
         self._func = func
-        self._cachedir = Path.home() / "Desktop" / "download_cache" / func.__name__
+        self._cachedir = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
         self._log = Logger(f"{func.__name__}Cache")
+    
+    @property
+    def cachedir(self):
+        return self._cache_dir
     
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
         
@@ -69,6 +74,9 @@ class CachedFunc:
     @staticmethod
     def _value_to_str(value: Exception | list) -> str:
         return repr(value) if isinstance(value, Exception) else f"{len(value)} items"
+    
+    def __len__(self) -> int:
+        return len(list(self._cachedir.rglob("*.pkl")))
     
     def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
         for path in self._cachedir.rglob("*.pkl"):

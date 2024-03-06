@@ -1,3 +1,4 @@
+from pathlib import Path
 import asyncio
 from collections import deque
 import logging
@@ -25,13 +26,16 @@ class InteractiveBrokersHistoric:
         client: InteractiveBrokersClient,
         delay: float = 0,
         logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
+        cachedir: Path | None = None,
     ):
         self._client = client
         self._delay = delay
         self._log = logger
         if self._log is None:
             self._log = logging.getLogger()
-    
+        
+        self.request_bars_cache = CachedFunc(self._client.request_bars)
+        
     async def request_bars(
         self,
         contract: IBContract,
@@ -43,7 +47,7 @@ class InteractiveBrokersHistoric:
         limit: int | None = None,
         cache: bool | None = True,
     ):
-        assert is_unqualified_contract(contract)
+        # assert is_unqualified_contract(contract)
         
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
@@ -66,26 +70,25 @@ class InteractiveBrokersHistoric:
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
         end_time = end_time.ceil(interval)
-        cached_request_bars = CachedFunc(self._client.request_bars)
         
         total_bars = deque()
         i = 0
-        while end_time >= start_time:
-            
-            self._log.info(
-                f"{contract.symbol}.{contract.exchange} | {end_time - interval} -> {end_time}"
-            )
+        while end_time > start_time:
 
             bars = []
             start = time.perf_counter()
             try:
                 
                 use_cache = cache and i > 0
-                
+                self._log.info(
+                    f"{contract} | use_cache={use_cache} | {end_time - interval} -> {end_time}"
+                )
                 if use_cache:
-                    func = cached_request_bars
+                    is_cached = self.request_bars_cache.is_cached(**kwargs)
+                    func = self.request_bars_cache
                 else:
                     func = self._client.request_bars
+                    is_cached = False
                 
                 kwargs = dict(
                     contract=contract,
@@ -95,13 +98,10 @@ class InteractiveBrokersHistoric:
                     end_time=end_time,
                 )
                 
-                if use_cache:
-                    is_cached = cached_request_bars.is_cached(**kwargs)
-                
                 bars: list[BarData] = await func(**kwargs)
                 
                 # delay if not cached
-                if self._delay > 0 and use_cache and not is_cached:
+                if self._delay > 0 and not is_cached:
                     self._log.debug(f"Waiting for {self._delay} seconds...")
                     await asyncio.sleep(self._delay)
                     
