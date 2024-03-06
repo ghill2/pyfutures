@@ -69,27 +69,32 @@ class TestConnection:
             
     
     @pytest.mark.asyncio()
-    async def test_connect(self, connection, mocker):
+    async def test_connect(self, connection, mock_socket):
         
         # Arrange
-        mock_reader = mocker.MagicMock()
-        async def mocked_read(_):
-            return b"nothing"  # do nothing
-        mock_reader.read = mocked_read
-        mock_writer = mocker.MagicMock()
+        # mock_reader = mocker.MagicMock()
+        # async def mocked_read(_):
+        #     return b"nothing"  # do nothing
+        # mock_reader.read = mocked_read
+        # mock_writer = mocker.MagicMock()
         
-        mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        # mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+        ) as _:
+            
         
-        # Act
-        await connection._connect()
-        
-        # Assert
-        assert connection._reader == mock_reader
-        assert connection._writer == mock_writer
-        assert isinstance(connection._listen_task, asyncio.Task)
-        assert not connection._listen_task.done() and not connection._listen_task.cancelled()
-        assert connection._listen_task in asyncio.all_tasks(connection._loop)
-        asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
+            # Act
+            await connection._connect()
+            
+            # Assert
+            assert connection._reader == mock_socket.mock_reader
+            assert connection._writer == mock_socket.mock_writer
+            assert isinstance(connection._listen_task, asyncio.Task)
+            assert not connection._listen_task.done() and not connection._listen_task.cancelled()
+            assert connection._listen_task in asyncio.all_tasks(connection._loop)
+            asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
 
     @pytest.mark.asyncio()
     async def test_handshake(self, connection):

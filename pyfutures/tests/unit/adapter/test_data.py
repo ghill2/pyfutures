@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 from unittest.mock import Mock
 
+import random
 from decimal import Decimal
 
 from nautilus_trader.model.data import BarType
@@ -92,14 +93,17 @@ class TestInteractiveBrokersDataClient:
         )
         
     @pytest.mark.asyncio()
-    async def test_request_bars(self, data_client):
+    async def test_request_bars_handles_expected(self, data_client):
         
         # Arrange
-        self._historic.request_bars = Mock(side_effect=TestHistoric.request_bars)
+        request_mock = Mock(side_effect=self.request_bars)
+        data_client._historic.request_bars = request_mock
         start = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
         now = pd.Timestamp("2023-11-16", tz="UTC")
         pd.Timestamp.utcnow = Mock(return_value=now)
         correlation_id = UUID4()
+        handle_mock = Mock()
+        data_client._handle_bars = handle_mock
         
         # Act
         await data_client._request_bars(
@@ -110,24 +114,54 @@ class TestInteractiveBrokersDataClient:
         )
         
         # Assert
-        data_client._client.subscribe_bars.assert_called_once()
-        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
-        assert sent_kwargs["contract"] == instrument_id_to_contract(self.bar_type.instrument_id)
-        assert sent_kwargs["what_to_show"] == WhatToShow.BID_ASK
+        request_mock.assert_called_once()
+        sent_kwargs = request_mock.call_args_list[0][1]
+        assert sent_kwargs["contract"].secType == "FUT"
+        assert sent_kwargs["contract"].tradingClass == "MES"
+        assert sent_kwargs["contract"].symbol == "MES"
+        assert sent_kwargs["contract"].exchange == "CME"
+        assert sent_kwargs["contract"].lastTradeDateOrContractMonth == "202312"
+        assert sent_kwargs["what_to_show"] == WhatToShow.MIDPOINT
         assert sent_kwargs["bar_size"] == BarSize._1_DAY
         assert sent_kwargs["start_time"] == start
         assert sent_kwargs["end_time"] == now
         assert sent_kwargs["limit"] is None
 
-        data_client._handle_bars.assert_called_once()
-        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
+        handle_mock.assert_called_once()
+        sent_kwargs = handle_mock.call_args_list[0][1]
         assert sent_kwargs["bar_type"] == self.bar_type
         assert len(sent_kwargs["bars"]) == 30
-        assert all(isinstance(b, Bar) for b in sent_kwargs["bars"]) == 30
+        assert all(isinstance(b, Bar) for b in sent_kwargs["bars"])
         assert sent_kwargs["partial"] is None
         assert sent_kwargs["correlation_id"] == correlation_id
         
+    async def request_bars(
+        self,
+        **kwargs
+    ) -> list[BarData]:
+        end_time = kwargs["end_time"]
+        start_time = end_time - pd.Timedelta(hours=24)
+        time_range = ((end_time - start_time).total_seconds() / 60) - 1
         
+        random_times = set()
+        while len(random_times) != 30:
+            random_minute = random.randint(0, time_range)
+            random_time = start_time + pd.Timedelta(minutes=random_minute)
+            assert random_time >= start_time and random_time < end_time
+            random_times.add(random_time)
+        
+        bars = [BarData() for _ in range(30)]
+        for i, time in enumerate(random_times):
+            bars[i].timestamp = time
+            bars[i].date = int(time.timestamp())
+            bars[i].open = 1.1
+            bars[i].high = 1.2
+            bars[i].low = 1.0
+            bars[i].close = 1.1
+            bars[i].volume = Decimal("1")
+            bars[i].wap = Decimal("1")
+            bars[i].barCount = 1
+        return bars
 
 
 

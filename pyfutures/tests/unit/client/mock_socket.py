@@ -30,7 +30,7 @@ class MockSocket:
         self.mock_writer = mock_writer
 
         self._log = logging.getLogger("MockSocket")
-
+        
     async def _read_generator(self, _):
         """
         do not yield, otherwise the function is not executed
