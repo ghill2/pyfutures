@@ -7,22 +7,36 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersHistoric
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
-from nautilus_trader.common.component import init_logging
+
+# from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 
-init_logging(
-    level_stdout=LogLevel.DEBUG,
-    level_file=LogLevel.DEBUG,
-)
+import logging
+from pyfutures.tests.demo.adapter.factories import InteractiveBrokersClientFactory
+
+# init_logging(
+#     level_stdout=LogLevel.DEBUG,
+#     level_file=LogLevel.DEBUG,
+# )
 
 
 @pytest.mark.asyncio()
-async def test_export_spread(client):
-    
+async def test_export_spread(event_loop):
+    client = InteractiveBrokersClientFactory.create(
+        loop=event_loop,
+        host="127.0.0.1",
+        port=4002,
+        client_id=2,
+        log_level=logging.INFO,
+        api_log_level=logging.INFO,
+    )
+
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(client=client, delay=1.5)
+    historic = InteractiveBrokersHistoric(
+        client=client, log_level=logging.DEBUG, delay=1.5
+    )
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     await client.connect()
     await client.request_market_data_type(4)
@@ -35,36 +49,37 @@ async def test_export_spread(client):
             start_time=start_time,
             as_dataframe=True,
         )
-        bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
+        # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
 
-@pytest.mark.asyncio()
-async def test_export_spread_daily(client):
-    """
-    Export tick history for every instrument of hte universe
-    Make one of the markets a liquid one like ZN
-    And an illiquid one like Aluminium
-    """
-    rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
-    )
-    historic = InteractiveBrokersHistoric(client=client, delay=2)
-    # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
-    end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
 
-    await client.connect()
-    # await client.request_market_data_type(1)
-    for row in rows[30:]:
-        print(f"Processing {row}")
-        bars = await historic.request_bars(
-            contract=row.contract_cont,
-            bar_size=BarSize._1_DAY,
-            what_to_show=WhatToShow.BID_ASK,
-            end_time=end_time,
-            as_dataframe=True,
-            cache=True,
-        )
-        print(bars)
-        break
+# @pytest.mark.asyncio()
+# async def test_export_spread_daily(client):
+#     """
+#     Export tick history for every instrument of hte universe
+#     Make one of the markets a liquid one like ZN
+#     And an illiquid one like Aluminium
+#     """
+#     rows = IBTestProviderStubs.universe_rows(
+#         # filter=["ECO"],
+#     )
+#     historic = InteractiveBrokersHistoric(client=client, delay=2)
+#     # start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+#     end_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=1)).floor("1D")
+#
+#     await client.connect()
+#     # await client.request_market_data_type(1)
+#     for row in rows[30:]:
+#         print(f"Processing {row}")
+#         bars = await historic.request_bars(
+#             contract=row.contract_cont,
+#             bar_size=BarSize._1_DAY,
+#             what_to_show=WhatToShow.BID_ASK,
+#             end_time=end_time,
+#             as_dataframe=True,
+#             cache=True,
+#         )
+#         print(bars)
+#         break
 
 
 @pytest.mark.asyncio()

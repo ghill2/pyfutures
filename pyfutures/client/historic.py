@@ -19,23 +19,22 @@ from pyfutures.client.parsing import parse_datetime
 from pyfutures.adapter.parsing import is_unqualified_contract
 from pyfutures.adapter.cache import CachedFunc
 
+
 class InteractiveBrokersHistoric:
-    
     def __init__(
         self,
         client: InteractiveBrokersClient,
         delay: float = 0,
-        logger: logging.Logger = None,  # logging.getLogger(), Logger(type(self).__name__)
+        log_level: int = logging.INFO,
         cachedir: Path | None = None,
     ):
         self._client = client
         self._delay = delay
-        self._log = logger
-        if self._log is None:
-            self._log = logging.getLogger()
-        
+        self._log = logging.getLogger(self.__class__.__name__)
+        self._log.setLevel(log_level)
+
         self.request_bars_cache = CachedFunc(self._client.request_bars)
-        
+
     async def request_bars(
         self,
         contract: IBContract,
@@ -48,7 +47,7 @@ class InteractiveBrokersHistoric:
         cache: bool | None = True,
     ):
         # assert is_unqualified_contract(contract)
-        
+
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
@@ -63,21 +62,19 @@ class InteractiveBrokersHistoric:
                 what_to_show=what_to_show,
             )
             self._log.info(f"head_timestamp: {start_time}")
-            
+
         assert start_time < end_time
-        
+
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
         end_time = end_time.ceil(interval)
-        
+
         total_bars = deque()
         i = 0
         while end_time > start_time:
-
             bars = []
             start = time.perf_counter()
             try:
-                
                 use_cache = cache and i > 0
                 self._log.info(
                     f"{contract} | use_cache={use_cache} | {end_time - interval} -> {end_time}"
@@ -88,7 +85,7 @@ class InteractiveBrokersHistoric:
                 else:
                     func = self._client.request_bars
                     is_cached = False
-                
+
                 kwargs = dict(
                     contract=contract,
                     bar_size=bar_size,
@@ -96,23 +93,25 @@ class InteractiveBrokersHistoric:
                     duration=duration,
                     end_time=end_time,
                 )
-                
+
                 bars: list[BarData] = await func(**kwargs)
-                
+
                 # delay if not cached
                 if self._delay > 0 and not is_cached:
                     self._log.debug(f"Waiting for {self._delay} seconds...")
                     await asyncio.sleep(self._delay)
-                    
+
             except ClientException as e:
                 self._log.error(str(e))
             except asyncio.TimeoutError as e:
                 self._log.error(str(e.__class__.__name__))
-            
+
             total_bars.extendleft(bars)
-            
+
             if len(bars) > 0:
-                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
+                self._log.debug(
+                    f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}"
+                )
             else:
                 self._log.debug("---> Downloaded 0 bars.")
 
@@ -120,21 +119,23 @@ class InteractiveBrokersHistoric:
             stop = time.perf_counter()
             elapsed = stop - start
             self._log.debug(f"Elapsed time: {elapsed:.2f}")
-                
+
             i += 1
-            
+
             total_bars = deque([b for b in total_bars if b.timestamp >= start_time])
-            
+
             if limit and len(total_bars) >= limit:
-                total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
+                total_bars = list(total_bars)[
+                    -limit:
+                ]  # last x number of bars in the list
                 break
-            
+
         if as_dataframe:
             df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
             return df
 
         return total_bars
-    
+
     @staticmethod
     def _get_appropriate_duration(bar_size: BarSize) -> Duration:
         """
@@ -153,7 +154,7 @@ class InteractiveBrokersHistoric:
         1 W	3 mins - 1 week
         1 M	30 mins - 1 month
         1 Y	1 day - 1 month
-       """
+        """
         if bar_size == BarSize._1_DAY:
             return Duration(step=365, freq=Frequency.DAY)
         elif bar_size == BarSize._1_HOUR:
@@ -164,7 +165,7 @@ class InteractiveBrokersHistoric:
             return Duration(step=3600, freq=Frequency.SECOND)
         else:
             raise ValueError("TODO: Unsupported duration")
-        
+
     async def request_quote_ticks(
         self,
         contract: IBContract,

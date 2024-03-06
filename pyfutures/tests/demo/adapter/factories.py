@@ -25,12 +25,33 @@ from pyfutures.adapter.factories import (
 from pyfutures.adapter.providers import (
     InteractiveBrokersInstrumentProvider,
 )
+import logging
 
 # Why not use fixtures?
 # Some tests require an engine with a custom instrument provider or data_client / exec_client config
 # This testing workflows means we can move away from pytest fixtures that don't allow modifying the configs of the classes that need to be instantiated before the fixture runs
 # # WIP
 # session=True or session=False for testing is decided in the fixtures
+
+
+class InteractiveBrokersClientFactory:
+    @staticmethod
+    def create(
+        loop: asyncio.AbstractEventLoop,
+        host: str = "127.0.0.1",
+        port: int = 4002,
+        client_id: int = 1,
+        log_level: int = logging.DEBUG,
+        api_log_level: int = logging.INFO,
+    ) -> InteractiveBrokersClient:
+        return InteractiveBrokersClient(
+            loop=loop,
+            host=host,
+            port=port,
+            client_id=client_id,
+            log_level=log_level,
+            api_log_level=api_log_level,
+        )
 
 
 class InteractiveBrokersDataEngineFactory:
@@ -83,7 +104,6 @@ class InteractiveBrokersExecEngineFactory:
         InteractiveBrokersInstrumentProvider,
         InteractiveBrokersClient,
     ]:
-        
         if provider_config is None:
             provider_config = InteractiveBrokersInstrumentProviderConfig()
 

@@ -48,7 +48,7 @@ def get_provider_cached():
 
 
 
-def get_client(loop, msgbus, clock, cache):
+def get_client_cached(loop, msgbus, clock, cache):
     global CLIENT
     if CLIENT is None:
         CLIENT = InteractiveBrokersClient(
@@ -73,8 +73,7 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersDataClient:
-        
-        client = get_client(loop, msgbus, clock, cache)
+        client = get_client_cached(loop, msgbus, clock, cache)
         provider = get_provider_cached()
 
         global DATA_CLIENT
@@ -106,8 +105,7 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersExecClient:
-        
-        client = get_client(loop, msgbus, clock, cache)
+        client = get_client_cached(loop, msgbus, clock, cache)
         provider = get_provider_cached()
 
         global EXEC_CLIENT
