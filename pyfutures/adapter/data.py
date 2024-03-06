@@ -69,6 +69,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         self._handle_data(nautilus_bar)
         
     async def _subscribe_bars(self, bar_type: BarType):
+        
         instrument = self._cache.instrument(bar_type.instrument_id)
 
         if instrument is None:
@@ -81,6 +82,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             bar_type=bar_type,
             instrument=instrument
         )
+        
         self._client.subscribe_bars(
             contract=dict_to_contract(instrument.info["contract"]),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),

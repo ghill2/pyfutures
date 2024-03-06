@@ -525,32 +525,7 @@ class IBTestProviderStubs:
 
         return rows
     
-    @staticmethod
-    def mes_contract() -> FuturesContract:
-        return Instrument(
-            instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
-            raw_symbol=Symbol("MES=MES=2023Z"),
-            asset_class=AssetClass.COMMODITY,
-            instrument_class=InstrumentClass.SPOT,
-            quote_currency=Currency.from_str("GBP"),
-            is_inverse=False,
-            price_precision=4,
-            size_precision=0,
-            size_increment=Quantity.from_int(1),
-            multiplier=Quantity.from_int(1),
-            margin_init=Decimal("1"),
-            margin_maint=Decimal("1"),
-            maker_fee=Decimal("1"),
-            taker_fee=Decimal("1"),
-            ts_event=0,
-            ts_init=0,
-            info=dict(
-                contract=dict(
-                    conId=1,
-                    exchange="CME",
-                ),
-            ),
-        )
+    
     # @classmethod
     # def multiple_files(
     #     cls,

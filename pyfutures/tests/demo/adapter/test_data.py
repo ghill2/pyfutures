@@ -1,4 +1,10 @@
 import pytest
+from unittest.mock import Mock
+
+from nautilus_trader.model.data import BarType
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import WhatToShow
+import functools
 
 class TestInteractiveBrokersDataClient:
     
@@ -7,10 +13,35 @@ class TestInteractiveBrokersDataClient:
         pass
     
     @pytest.mark.skip(reason="TODO")
-    def test_subscribe_bars(self, data_client):
-        pass
-    
-    
+    @pytest.mark.asyncio()
+    async def test_subscribe_bars(self, data_client):
+        
+        self._client.subscribe_bars = Mock()
+        callback = Mock()
+        
+        bar_type = BarType.from_str("MES=MES=2023Z.CME.1-DAY-MID-EXTERNAL")
+        await data_client._subscribe_bars(bar_type)
+        
+        contract = IBContract()
+        contract.secType = "FUT"
+        contract.conId = 1
+        contract.exchange = "CME"
+        
+        self._client.subscribe_bars.assert_called_once_with(
+            contract=contract,
+            what_to_show=WhatToShow.BID_ASK,
+            bar_size=BarSize._1_DAY,
+            callback=functools.partial(
+                self._client._bar_callback,
+                bar_type=bar_type,
+                instrument=instrument,
+            ),
+        )
+        
+        
+        
+            
+        
 
 
 

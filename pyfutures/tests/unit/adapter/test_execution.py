@@ -46,7 +46,7 @@ from pyfutures.adapter.client.client import IBExecutionEvent
 class TestInteractiveBrokersExecution:
     
     def setup_method(self):
-        self.instrument_id = InstrumentId.from_str("MES=MES=2023Z.CME")
+        self.instrument_id = InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
         
     @pytest.mark.asyncio()
     async def test_submit_market_order_sends_expected(

@@ -1,9 +1,6 @@
-import os
-import shutil
-import asyncio
 import tempfile
-import json
-from pathlib import Path
+from unittest.mock import AsyncMock
+from decimal import Decimal
 
 import pytest
 
@@ -17,10 +14,9 @@ from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from pyfutures.tests.unit.client.mock_socket import MockSocket
-from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.adapter.client.connection import Connection
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from unittest.mock import AsyncMock
+
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.model.identifiers import AccountId
@@ -34,6 +30,16 @@ from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+
+from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.enums import InstrumentClass
+from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.instruments.base import Instrument
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from nautilus_trader.model.objects import Currency
+from nautilus_trader.model.objects import Quantity
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -99,7 +105,7 @@ def exec_client(event_loop, client) -> InteractiveBrokersExecClient:
     exec_client = InteractiveBrokersExecClient(
         loop=event_loop,
         client=client,
-        account_id=AccountId(f"IB-1234567"),
+        account_id=AccountId("IB-1234567"),
         msgbus=msgbus,
         cache=cache,
         clock=clock,
@@ -109,7 +115,7 @@ def exec_client(event_loop, client) -> InteractiveBrokersExecClient:
         ),
     )
     
-    contract = IBTestProviderStubs.mes_contract()
+    contract = _mes_contract()
     cache.add_instrument(contract)
     
     exec_client.client.request_next_order_id = AsyncMock(return_value=IBTestIdStubs.orderId())
@@ -143,7 +149,7 @@ def data_client(event_loop, client) -> InteractiveBrokersDataClient:
         config=InteractiveBrokersDataClientConfig(),
     )
     
-    contract = IBTestProviderStubs.mes_contract()
+    contract = _mes_contract()
     # provider.add(contract)
     cache.add_instrument(contract)
     
@@ -152,6 +158,32 @@ def data_client(event_loop, client) -> InteractiveBrokersDataClient:
 @pytest.fixture
 def mock_socket() -> MockSocket:
     return MockSocket()
+
+def _mes_contract() -> FuturesContract:
+    return Instrument(
+        instrument_id=InstrumentId.from_str("MES=MES=FUT=2023Z.CME"),
+        raw_symbol=Symbol("MES"),
+        asset_class=AssetClass.COMMODITY,
+        instrument_class=InstrumentClass.SPOT,
+        quote_currency=Currency.from_str("GBP"),
+        is_inverse=False,
+        price_precision=4,
+        size_precision=0,
+        size_increment=Quantity.from_int(1),
+        multiplier=Quantity.from_int(1),
+        margin_init=Decimal("1"),
+        margin_maint=Decimal("1"),
+        maker_fee=Decimal("1"),
+        taker_fee=Decimal("1"),
+        ts_event=0,
+        ts_init=0,
+        info=dict(
+            contract=dict(
+                conId=1,
+                exchange="CME",
+            ),
+        ),
+    )
 
 
 # def _load_contracts(instrument_provider):
