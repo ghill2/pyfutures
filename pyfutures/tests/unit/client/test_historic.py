@@ -22,10 +22,24 @@ class TestHistoric:
         self.contract.symbol == "DA"
         self.contract.exchange == "CME"
     
-    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_request_bars_limit(self, historic):
-        pass
+        
+        send_mock = AsyncMock(side_effect=self.request_bars)
+        historic._client.request_bars = send_mock
+        historic.request_bars_cache = send_mock
+        historic.request_bars_cache.is_cached = Mock(return_value=False)
+        
+        bars = await historic.request_bars(
+            contract=self.contract,
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.BID_ASK,
+            start_time=pd.Timestamp("2023-01-03 00:00:00", tz="UTC"),
+            end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
+            cache=True,
+            limit=60,
+        )
+        assert len(bars) == 60
         
     @pytest.mark.asyncio()
     async def test_request_bars_returns_expected_dataframe(self, historic):

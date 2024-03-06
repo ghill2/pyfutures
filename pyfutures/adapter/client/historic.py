@@ -52,7 +52,6 @@ class InteractiveBrokersHistoric:
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
-        assert limit is None  # TODO
 
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
@@ -123,12 +122,13 @@ class InteractiveBrokersHistoric:
             self._log.debug(f"Elapsed time: {elapsed:.2f}")
                 
             i += 1
-        
-        total_bars = [
-            b for b in total_bars
-            if b.timestamp >= start_time
-        ]
-        
+            
+            total_bars = deque([b for b in total_bars if b.timestamp >= start_time])
+            
+            if limit and len(total_bars) >= limit:
+                total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
+                break
+            
         if as_dataframe:
             df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
             return df
