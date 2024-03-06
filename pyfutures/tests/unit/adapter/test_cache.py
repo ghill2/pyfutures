@@ -15,15 +15,16 @@ class TestCachedFunc:
     
     def setup_method(self):
         bar = BarData()
-        bar.timestamp = pd.Timestamp("2023-01-01", tz="UTC")
-        self.open = 0.
-        self.high = 0.
-        self.low = 0.
-        self.close = 0.
-        self.volume = Decimal("1")
-        self.wap = Decimal("1")
-        self.barCount = 0
-        self._bar = bar
+        bar.timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        bar.date = 1700069390
+        bar.open = 0.
+        bar.high = 0.
+        bar.low = 0.
+        bar.close = 0.
+        bar.volume = Decimal("1")
+        bar.wap = Decimal("1")
+        bar.barCount = 0
+        self.bar = bar
         
         
         contract = IBContract()
@@ -40,54 +41,51 @@ class TestCachedFunc:
         )
         
     @pytest.mark.asyncio()
-    async def test_call_writes_bar_data(self):
+    async def test_bar_data_round_trip(self):
         cached_func = CachedFunc(func=self.request_bars)
-        await cached_func(**self._cached_func_kwargs)
-        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+        cached_func._set(key="test", value=[self.bar])
+        bars = cached_func._get(key="test")
+        assert bars[0].timestamp == self.bar.timestamp
+        assert bars[0].date == self.bar.date
+        assert bars[0].open == self.bar.open
+        assert bars[0].high == self.bar.high
+        assert bars[0].low == self.bar.low
+        assert bars[0].close == self.bar.close
+        assert bars[0].volume == self.bar.volume
+        assert bars[0].wap == self.bar.wap
+        assert bars[0].barCount == self.bar.barCount
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_call_writes_client_exception(self):
-        cached_func = CachedFunc(func=self.request_bars_with_client_exception)
-        await cached_func(**self._cached_func_kwargs)
-        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
+    async def test_call_writes_expected_key(self):
     
     @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_is_cached(self):
+        pass
+        
+    @pytest.mark.asyncio()
+    async def test_client_exception_round_trip(self):
+        cached_func = CachedFunc(func=self.request_bars)
+        exception = ClientException(code=123, message="test")
+        cached_func._set(key="test", value=exception)
+        cached = cached_func._get(key="test")
+        assert cached == exception
+        
+    @pytest.mark.asyncio()
+    async def test_client_exception_round_trip(self):
+        cached_func = CachedFunc(func=self.request_bars)
+        exception = asyncio.TimeoutError()
+        cached_func._set(key="test", value=exception)
+        cached = cached_func._get(key="test")
+        assert isinstance(cached, asyncio.TimeoutError)
+    
     @pytest.mark.asyncio()
     async def test_call_writes_timeout_error(self):
         cached_func = CachedFunc(func=self.request_bars_with_timeout_error)
         await cached_func(**self._cached_func_kwargs)
         assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
         
-    @pytest.mark.asyncio()
-    async def test_call_reads_bar_data(self):
-        cached_func = CachedFunc(func=self.request_bars)
-        await cached_func(**self._cached_func_kwargs)
-        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
-        bars = await cached_func(**self._cached_func_kwargs)
-        assert str(bars[0]) == str(self._bar)  # no equality implemented on BarData
-        assert bars[0].timestamp == self._bar.timestamp
-    
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_call_reads_client_exception(self):
-        cached_func = CachedFunc(func=self.request_bars_with_client_exception)
-        await cached_func(**self._cached_func_kwargs)
-        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
-        exception = await cached_func(**self._cached_func_kwargs)
-        assert isinstance(exception, ClientException)
-        assert exception.code == 123
-        assert exception.message == "Error 123: test"
-    
-    @pytest.mark.skip(reason="TODO")
-    @pytest.mark.asyncio()
-    async def test_call_reads_client_exception(self):
-        cached_func = CachedFunc(func=self.request_bars_with_timeout_error)
-        await cached_func(**self._cached_func_kwargs)
-        assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
-        exception = await cached_func(**self._cached_func_kwargs)
-        assert isinstance(exception, asyncio.TimeoutError)
-    
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_purge_errors(self):
@@ -96,7 +94,6 @@ class TestCachedFunc:
         assert cached_func.get_cached_path(**self._cached_func_kwargs).exists()
         cached_func.purge_errors(asyncio.TimeoutError)
         assert not cached_func.get_cached_path(**self._cached_func_kwargs).exists()
-        
     
     async def request_bars(
         self,
@@ -106,7 +103,7 @@ class TestCachedFunc:
         start_time: pd.Timestamp,
         end_time: pd.Timestamp,
     ) -> list[BarData]:
-        return [self._bar]
+        return [self.bar]
     
     async def request_bars_with_client_exception(
         self,

@@ -39,6 +39,19 @@ def bar_data_to_dict(obj: BarData) -> dict:
         "barCount": obj.barCount,
     }
     
+def bar_data_from_dict(obj: dict) -> dict:
+    bar = BarData()
+    bar.timestamp = obj["timestamp"]
+    bar.date = obj["date"]
+    bar.open = obj["open"]
+    bar.high = obj["high"]
+    bar.low = obj["low"]
+    bar.close = obj["close"]
+    bar.volume = obj["volume"]
+    bar.wap = obj["wap"]
+    bar.barCount = obj["barCount"]
+    return bar
+    
 def historical_tick_bid_ask_to_dict(obj: HistoricalTickBidAsk) -> dict:
     return {
         "timestamp": parse_datetime(obj.time),

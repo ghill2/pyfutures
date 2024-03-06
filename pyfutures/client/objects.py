@@ -90,7 +90,7 @@ class ClientException(Exception):
     def __init__(self, code: int, message: str):
         
         self.code = code
-        self.message = f"Error {code}: {message}"
+        self.message = message
         super().__init__(code, message)  # Pass code and message as separate arguments
 
     def __str__(self):
@@ -105,7 +105,24 @@ class ClientException(Exception):
     def __setstate__(self, state):
         self.code = state['code']
         self.message = state['message']
-
+        
+    def to_dict(self):
+        return self.__getstate__()
+    
+    @classmethod
+    def from_dict(cls, obj: dict) -> ClientException:
+        return cls(
+            code=obj['code'],
+            message=obj['message']
+        )
+    
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ClientException):
+            return False
+        return self.code == other.code \
+                and self.message == other.message
+        
+    
 class ClientDisconnected(Exception):
     def __init__(self, message: str = None):
         super().__init__(message)

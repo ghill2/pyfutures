@@ -13,6 +13,8 @@ from pyfutures.adapter.parsing import unqualified_contract_to_instrument_id
 from nautilus_trader.common.component import Logger
 import pickle
 import json
+from pyfutures.client.parsing import bar_data_to_dict
+from pyfutures.client.parsing import bar_data_from_dict
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.core.rust.common import LogColor
 
@@ -96,7 +98,13 @@ class CachedFunc:
         
         with open(path, "rb") as f:
             cached = pickle.load(f)
-            return cached
+        
+        if isinstance(cached, list):
+            cached = [bar_data_from_dict(b) for b in cached]
+        elif isinstance(cached, dict):
+            cached = ClientException.from_dict(cached)
+            
+        return cached
     
     def _set(
         self,
@@ -107,6 +115,11 @@ class CachedFunc:
         if not isinstance(value, (list, Exception)):
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
         
+        if isinstance(value, list):
+            value = [bar_data_to_dict(b) for b in value]
+        elif isinstance(value, ClientException):
+            value = value.to_dict()
+            
         with open(self._pickle_path(key), "wb") as f:
             pickle.dump(value, f)
     

@@ -103,7 +103,7 @@ def cache():
 
 
 @pytest.fixture(scope="session")
-def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
+def client(event_loop) -> InteractiveBrokersClient:
     client = InteractiveBrokersClient(
         loop=event_loop,
         host="127.0.0.1",
@@ -111,7 +111,7 @@ def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
     )
 
     init_logging(level_stdout=LogLevel.DEBUG)
-
+    
     return client
 
 
