@@ -9,6 +9,7 @@ from ibapi import comm
 # this bug is still present on the gnznz fork:
 # https://github.com/UnusualAlpha/ib-gateway-docker/issues/88
 
+
 class Connection:
     def __init__(
         self,
@@ -20,32 +21,30 @@ class Connection:
         self._loop = loop
         self._host = host
         self._port = port
-        
 
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
         self._watch_dog_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
-        
+
         self._log = logging.getLogger(self.__class__.__name__)
         # FIX THIS - log_level does not work with pytest tests
-        self._log.setLevel(level=logging.DEBUG)
-        
+        self._log.setLevel(level=log_level)
+
         self._handlers = set()
 
         self._handshake_message_ids = []
         self._reader, self._writer = (None, None)
-    
+
     def register_handler(self, handler: Coroutine) -> None:
         self._handlers.add(handler)
-        
+
     async def _listen(self) -> None:
         assert self._reader is not None
 
         buf = b""
 
         while True:
-            
             try:
                 data = await self._reader.read(4096)
                 # self._log.debug(f"<-data: {data}")
@@ -55,7 +54,9 @@ class Connection:
                 return
 
             if data == b"":
-                self._log.debug("0 bytes received from server, connect has been dropped")
+                self._log.debug(
+                    "0 bytes received from server, connect has been dropped"
+                )
                 self._is_connected.clear()
                 return
 
@@ -66,7 +67,7 @@ class Connection:
 
                 if msg:
                     self._log.debug(f"<-- {msg!r}")
-                    
+
                     self._handle_msg(msg)
                     await asyncio.sleep(0)
 
@@ -82,7 +83,7 @@ class Connection:
                 handler(msg)
         else:
             self._process_handshake(msg)
-            
+
     async def _run_watch_dog(self):
         """
         Monitors the socket connection for disconnections.
@@ -94,10 +95,11 @@ class Connection:
                 if self.is_connected:
                     continue
 
-                self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
+                self._log.debug(
+                    "Watchdog: connection has been disconnected. Reconnecting..."
+                )
 
                 await self.connect()
-
 
         except Exception as e:
             self._log.error(repr(e))
@@ -126,17 +128,17 @@ class Connection:
                 raise
 
         self._log.debug("Successfully Initialized...")
-    
+
     @property
     def is_connected(self) -> bool:
         return self._is_connected.is_set()
-    
+
     async def start(self) -> bool:
         self._log.debug("Starting...")
 
     async def connect(self, timeout_seconds: int = 5) -> None:
         """
-            Called by the user
+        Called by the user
         """
         if self._watch_dog_task is None:
             self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
@@ -144,11 +146,11 @@ class Connection:
         async with self._is_connecting_lock:
             await self._connect(timeout_seconds=timeout_seconds)
             await self._handshake(timeout_seconds=timeout_seconds)
-            
+
     async def _connect(self, timeout_seconds: int = 5) -> None:
         """
-            Called by watch_dog and manually with connect() by the user
-            NOTE: do not call handshake here so we can test connect and handshake separately
+        Called by watch_dog and manually with connect() by the user
+        NOTE: do not call handshake here so we can test connect and handshake separately
         """
         self._log.debug("Connecting...")
 
@@ -157,7 +159,9 @@ class Connection:
         # connect socket
         self._log.debug("Connecting socket...")
         try:
-            self._reader, self._writer = await asyncio.open_connection(self._host, self._port)
+            self._reader, self._writer = await asyncio.open_connection(
+                self._host, self._port
+            )
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
             return
@@ -168,10 +172,7 @@ class Connection:
         self._listen_task = self._loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
 
-        
-    
     async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
-        
         self._log.debug("Performing handshake...")
         try:
             self._log.debug("Sending handshake message...")
@@ -216,10 +217,10 @@ class Connection:
         msg = msg.decode(errors="backslashreplace")
         fields = msg.split("\0")
         fields.pop()
-        
+
         id = int(fields[0])
         self._handshake_message_ids.append(id)
-        
+
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
@@ -227,7 +228,7 @@ class Connection:
             self._sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
         elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
             self._is_connected.set()
-        
+
     def _prefix(self, msg):
         # prefix a message with its length
         return struct.pack(">I", len(msg)) + msg
