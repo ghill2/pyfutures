@@ -17,7 +17,7 @@ from pyfutures.adapter.config import (
     InteractiveBrokersInstrumentProviderConfig,
 )
 from pyfutures.adapter.execution import (
-    InteractiveBrokersExecutionClient,
+    InteractiveBrokersExecClient,
 )
 from pyfutures.adapter.factories import (
     InteractiveBrokersLiveDataClientFactory,
@@ -46,7 +46,7 @@ class InteractiveBrokersDataEngineFactory:
             data_client_config = InteractiveBrokersDataClientConfig()
 
         data_client = InteractiveBrokersLiveDataClientFactory.create(
-            loop=asyncio.get_event_loop(),
+            loop=loop,
             name="TESTER",
             config=data_client_config,
             msgbus=msgbus,
@@ -54,7 +54,7 @@ class InteractiveBrokersDataEngineFactory:
             clock=clock,
         )
         data_engine = LiveDataEngine(
-            loop=asyncio.get_event_loop(),
+            loop=loop,
             msgbus=msgbus,
             cache=cache,
             clock=clock,
@@ -79,7 +79,7 @@ class InteractiveBrokersExecEngineFactory:
         exec_client_config: InteractiveBrokersExecClientConfig | None = None,
     ) -> tuple[
         LiveExecutionEngine,
-        InteractiveBrokersExecutionClient,
+        InteractiveBrokersExecClient,
         InteractiveBrokersInstrumentProvider,
         InteractiveBrokersClient,
     ]:
@@ -102,7 +102,7 @@ class InteractiveBrokersExecEngineFactory:
 
         account_id = AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}")
 
-        exec_client = InteractiveBrokersExecutionClient(
+        exec_client = InteractiveBrokersExecClient(
             loop=loop,
             client=client,
             account_id=account_id,

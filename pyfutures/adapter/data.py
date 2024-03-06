@@ -26,7 +26,7 @@ from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 # fmt: on
 #
 
-class InteractiveBrokersDataClient(LiveMarketDataClient):
+class InteractiveBrokersLiveDataClient(LiveMarketDataClient):
     """
     Provides a data client for the InteractiveBrokers exchange.
     """
@@ -39,12 +39,11 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         cache: Cache,
         clock: LiveClock,
         instrument_provider: InteractiveBrokersInstrumentProvider,
-        ibg_client_id: int,
         config: InteractiveBrokersDataClientConfig,
     ):
         super().__init__(
             loop=loop,
-            client_id=ClientId(f"{IB_VENUE.value}-{ibg_client_id:03d}"),
+            client_id=ClientId(f"{IB_VENUE.value}"),
             venue=None,
             instrument_provider=instrument_provider,
             msgbus=msgbus,
@@ -83,7 +82,6 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         if instrument is None:
             self._log.error(f"Cannot subscribe to {bar_type}, Instrument not found.")
             return
-
 
         # parse bar_type.spec to bar_size
         callback = functools.partial(

@@ -29,9 +29,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     ):
 
         config = config or InteractiveBrokersInstrumentProviderConfig()
-        super().__init__(
-            config=config,
-        )
+        super().__init__(config=config)
 
         self.client = client
         self.config = config

@@ -254,7 +254,7 @@ class TestInteractiveBrokersExecution:
             
         # Arrange
         instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
-        exec_client.instrument_provider.add(instrument)
+        exec_client.cache.add_instrument(instrument)
             
         
         limit_order = TestExecStubs.limit_order(
@@ -292,7 +292,7 @@ class TestInteractiveBrokersExecution:
     ):
         # Arrange
         instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
-        exec_client.instrument_provider.add(instrument)
+        exec_client.cache.add_instrument(instrument)
         limit_order = TestExecStubs.limit_order()
         exec_client.cache.add_order(limit_order)
         exec_client.generate_order_updated = Mock()

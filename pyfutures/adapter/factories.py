@@ -1,21 +1,22 @@
 import asyncio
 
 # fmt: off
-from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersDataClientConfig
-from nautilus_trader.adapters.interactive_brokers.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.live.factories import LiveDataClientFactory
 from nautilus_trader.live.factories import LiveExecClientFactory
 from nautilus_trader.model.identifiers import AccountId
+from nautilus_trader.model.objects import Price
 
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.data import InteractiveBrokersDataClient
-from pyfutures.adapter.execution import InteractiveBrokersExecutionClient
+from pyfutures.adapter.data import InteractiveBrokersLiveDataClient
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
 
@@ -24,32 +25,37 @@ PROVIDER = None
 DATA_CLIENT = None
 EXEC_CLIENT = None
 
+PROVIDER_CONFIG = InteractiveBrokersInstrumentProviderConfig(
+    chain_filters={
+        'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+    },
+    parsing_overrides={
+        "MIX": {
+            "price_precision": 0,
+            "price_increment": Price(5, 0),
+        },
+    },
+)
 
-
-def get_provider(config: InteractiveBrokersInstrumentProviderConfig):
+def get_provider_cached():
     global PROVIDER
     if PROVIDER is None:
         PROVIDER = InteractiveBrokersInstrumentProvider(
-        client=CLIENT,
-        config=config,
-    )
+            client=CLIENT,
+            config=PROVIDER_CONFIG,
+        )
     return PROVIDER
 
 
 
 def get_client(loop, msgbus, clock, cache):
-    # COPIED FROM PYTEST TEST FIXTURES
     global CLIENT
     if CLIENT is None:
         CLIENT = InteractiveBrokersClient(
         loop=loop,
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
         host="127.0.0.1",
         port=4002,
-        client_id=1,
-        )
+    )
     return CLIENT
 
 # fmt: on
@@ -66,13 +72,14 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-    ) -> InteractiveBrokersDataClient:
+    ) -> InteractiveBrokersLiveDataClient:
+        
         client = get_client(loop, msgbus, clock, cache)
-        provider = get_provider(config=config.instrument_provider)
+        provider = get_provider_cached()
 
         global DATA_CLIENT
         if DATA_CLIENT is None:
-            DATA_CLIENT = InteractiveBrokersDataClient(
+            DATA_CLIENT = InteractiveBrokersLiveDataClient(
                 loop=loop,
                 client=client,
                 msgbus=msgbus,
@@ -98,13 +105,14 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         msgbus: MessageBus,
         cache: Cache,
         clock: LiveClock,
-    ) -> InteractiveBrokersExecutionClient:
+    ) -> InteractiveBrokersExecClient:
+        
         client = get_client(loop, msgbus, clock, cache)
-        provider = get_provider(config=config.instrument_provider)
+        provider = get_provider_cached()
 
         global EXEC_CLIENT
         if EXEC_CLIENT is None:
-            EXEC_CLIENT = InteractiveBrokersExecutionClient(
+            EXEC_CLIENT = InteractiveBrokersExecClient(
                 loop=loop,
                 client=client,
                 account_id=AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}"),
@@ -112,6 +120,5 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
                 cache=cache,
                 clock=clock,
                 instrument_provider=provider,
-                ibg_client_id=1,
             )
         return EXEC_CLIENT

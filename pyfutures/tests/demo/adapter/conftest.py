@@ -16,7 +16,7 @@ from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.execution import InteractiveBrokersExecutionClient
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
 from pyfutures.tests.demo.order_setup import OrderSetup
 import asyncio
@@ -118,43 +118,22 @@ def client(event_loop, msgbus, cache, clock) -> InteractiveBrokersClient:
 
 
 
-DEFAULT_PROVIDER_PARAMS = dict(
-        chain_filters={
-            'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
-        },
-        parsing_overrides={
-            "MIX": {
-                "price_precision": 0,
-                "price_increment": Price(5, 0),
-            },
-        },
-    )
-
-
 @pytest.fixture(scope="session")
 @pytest.mark.asyncio
-def exec_client(event_loop, msgbus, cache, clock, instrument_id) -> InteractiveBrokersExecutionClient:
-    print("INSTURMENT ID")
-    print(instrument_id.value)
-    provider_params = dict(load_ids=[instrument_id.value], **DEFAULT_PROVIDER_PARAMS)
+def exec_client(event_loop, msgbus, cache, clock, instrument_id) -> InteractiveBrokersExecClient:
+    # provider_params = dict(load_ids=[instrument_id.value], **DEFAULT_PROVIDER_PARAMS)
     exec_engine, exec_client, provider, client  = InteractiveBrokersExecEngineFactory.create(
-        loop=event_loop, 
-        msgbus=msgbus, 
-        cache=cache, 
+        loop=event_loop,
+        msgbus=msgbus,
+        cache=cache,
         clock=clock,
-        provider_config=InteractiveBrokersInstrumentProviderConfig(**provider_params)
     )
 
     event_loop.run_until_complete(client.connect())
     yield exec_client
 
-
-
-
-
 @pytest_asyncio.fixture(scope="session")
 async def order_setup(exec_client) -> OrderSetup:
-    print("ORDER SETUP")
     order_setup = OrderSetup(
         exec_client=exec_client,
         data_client=None,

@@ -56,7 +56,7 @@ from pyfutures.adapter.parsing import order_event_to_order_status_report
 from pyfutures.adapter.parsing import order_side_to_order_action
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
-class InteractiveBrokersExecutionClient(LiveExecutionClient):
+class InteractiveBrokersExecClient(LiveExecutionClient):
     
     SUBMITTED_STATUSES = ("Submitted")
          
@@ -69,7 +69,6 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         cache: Cache,
         clock: LiveClock,
         instrument_provider: InteractiveBrokersInstrumentProvider,
-        ibg_client_id: int,
     ):
 
         super().__init__(
@@ -183,7 +182,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
         total_qty = Quantity.from_str(str(event.order.totalQuantity))
         
-        instrument = self.instrument_provider.find(order.instrument_id)
+        instrument = self._cache.instrument(order.instrument_id)
         price = instrument.make_price(event.order.lmtPrice)
 
         if total_qty == order.quantity and price == order.price:
@@ -324,7 +323,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
         order = self._cache.order(client_order_id)
         
-        instrument = self._instrument_provider.find(order.instrument_id)
+        instrument = self._cache.instrument(order.instrument_id)
         
         self._log.debug("generate_order_filled")
         self.generate_order_filled(
@@ -352,7 +351,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         
     
     def _find_instrument(self, instrument_id: InstrumentId) -> Instrument | None:
-        instrument = self._instrument_provider.find(instrument_id)
+        instrument = self._cache.instrument(instrument_id)
         if instrument is None:
             self._log.error(f"Instrument not found in instrument provider {instrument_id}")
         return instrument
@@ -464,7 +463,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
             else:
                 continue  # Skip, IB may continue to display closed positions
 
-            instrument = await self._instrument_provider.find_with_contract_id(
+            instrument = await self._cache.instrument_with_contract_id(
                 position.conId,
             )
 
@@ -496,7 +495,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
         events: list[IBOpenOrderEvent] = await self._client.request_open_orders()
         for event in events:
 
-            instrument = await self._instrument_provider.find_with_contract_id(
+            instrument = await self._cache.instrument_with_contract_id(
                 event.conId,
             )
 
@@ -535,7 +534,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
                     venue_order_id is not None and venue_order_id.value == str(event.orderId)
                 ):
 
-                instrument = await self._instrument_provider.find_with_contract_id(event.conId)
+                instrument = await self._cache.instrument_with_contract_id(event.conId)
 
                 report = order_event_to_order_status_report(
                     instrument=instrument,
@@ -550,7 +549,7 @@ class InteractiveBrokersExecutionClient(LiveExecutionClient):
 
         self._log.debug(f"Requesting last quote tick for {instrument_id}")
 
-        instrument = self._instrument_provider.find(instrument_id)
+        instrument = self._cache.instrument(instrument_id)
         if instrument is None:
             self._log.error(f"No instrument found for {instrument_id}")
             return

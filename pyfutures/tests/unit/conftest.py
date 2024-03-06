@@ -7,9 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pyfutures.adapter.execution import InteractiveBrokersExecutionClient
-from pyfutures.adapter.parsing import dict_to_contract_details
-from pyfutures.tests.demo.adapter.factories import InteractiveBrokersExecEngineFactory
+
 import logging
 import pytest
 import sys
@@ -23,12 +21,19 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.adapter.client.connection import Connection
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from unittest.mock import AsyncMock
-from nautilus_trader.adapters.interactive_brokers.execution import InteractiveBrokersExecutionClient
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
+from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.tests.demo.adapter.factories import InteractiveBrokersExecEngineFactory
 from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
+from pyfutures.adapter.factories import PROVIDER_CONFIG
+from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
+from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
+from pyfutures.adapter.data import InteractiveBrokersLiveDataClient
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -78,7 +83,7 @@ def connection(event_loop) -> Connection:
     )
 
 @pytest.fixture()
-def exec_client(event_loop) -> InteractiveBrokersExecutionClient:
+def exec_client(event_loop, client) -> InteractiveBrokersExecClient:
     
     init_logging(level_stdout=LogLevel.DEBUG)
     
@@ -91,21 +96,53 @@ def exec_client(event_loop) -> InteractiveBrokersExecutionClient:
     
     cache = TestComponentStubs.cache()
     
-    exec_engine, exec_client, provider, client  = InteractiveBrokersExecEngineFactory.create(
+    exec_client = InteractiveBrokersExecClient(
+        loop=event_loop,
+        client=client,
+        account_id=AccountId(f"IB-1234567"),
+        msgbus=msgbus,
+        cache=cache,
+        clock=clock,
+        instrument_provider=InteractiveBrokersInstrumentProvider(
+            client=client,
+            config=PROVIDER_CONFIG,
+        ),
+    )
+    
+    contract = IBTestProviderStubs.mes_contract()
+    cache.add_instrument(contract)
+    
+    exec_client.client.request_next_order_id = AsyncMock(return_value=IBTestIdStubs.orderId())
+    
+    yield exec_client
+    
+@pytest.fixture()
+def data_client(event_loop) -> InteractiveBrokersLiveDataClient:
+    
+    init_logging(level_stdout=LogLevel.DEBUG)
+    
+    clock = LiveClock()
+
+    msgbus = MessageBus(
+        trader_id=TestIdStubs.trader_id(),
+        clock=clock,
+    )
+    
+    cache = TestComponentStubs.cache()
+    
+    data_client = InteractiveBrokersLiveDataClientFactory.create(
         loop=event_loop,
         msgbus=msgbus,
         cache=cache,
         clock=clock,
+        config=InteractiveBrokersDataClientConfig(),
     )
     
     contract = IBTestProviderStubs.mes_contract()
-    provider.add(contract)
+    # provider.add(contract)
     cache.add_instrument(contract)
     
-    client.request_next_order_id = AsyncMock(return_value=IBTestIdStubs.orderId())
-    
-    yield exec_client
-    
+    yield data_client
         
 @pytest.fixture
 def mock_socket() -> MockSocket:
