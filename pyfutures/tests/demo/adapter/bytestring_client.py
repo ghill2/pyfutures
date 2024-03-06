@@ -9,7 +9,7 @@ from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 
 
 init_logging(level_stdout=LogLevel.DEBUG)

@@ -9,12 +9,12 @@ import logging
 import pytest
 import sys
 
-from pyfutures.adapter.client.client import InteractiveBrokersClient
-from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.client.historic import InteractiveBrokersHistoric
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from pyfutures.tests.unit.client.mock_socket import MockSocket
-from pyfutures.adapter.client.connection import Connection
+from pyfutures.client.connection import Connection
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 
 from nautilus_trader.common.component import LiveClock

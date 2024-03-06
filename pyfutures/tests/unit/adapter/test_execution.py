@@ -13,7 +13,7 @@ from nautilus_trader.execution.messages import ModifyOrder
 from nautilus_trader.model.events.order import OrderAccepted
 from nautilus_trader.execution.messages import SubmitOrder
 from nautilus_trader.model.enums import OrderSide
-from pyfutures.adapter.client.client import IBErrorEvent
+from pyfutures.client.client import IBErrorEvent
 from nautilus_trader.model.enums import OrderType
 from nautilus_trader.model.enums import LiquiditySide
 from nautilus_trader.model.orders import LimitOrder
@@ -36,12 +36,12 @@ from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
 
-from pyfutures.adapter.client.objects import IBOrderStatusEvent
-from pyfutures.adapter.client.objects import IBOpenOrderEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+from pyfutures.client.objects import IBOpenOrderEvent
 from pyfutures.tests.unit.adapter.stubs.execution import IBTestExecutionStubs
 
 from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
-from pyfutures.adapter.client.client import IBExecutionEvent
+from pyfutures.client.client import IBExecutionEvent
 
 class TestInteractiveBrokersExecution:
     

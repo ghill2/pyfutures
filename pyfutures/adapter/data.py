@@ -1,3 +1,4 @@
+import pandas as pd
 import asyncio
 import functools
 from ibapi.common import BarData
@@ -11,13 +12,15 @@ from nautilus_trader.model.identifiers import ClientId
 from nautilus_trader.model.instruments.base import Instrument
 from pyfutures.adapter import IB_VENUE
 from nautilus_trader.model.data import Bar
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.adapter.parsing import instrument_id_to_contract
 from pyfutures.adapter.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from nautilus_trader.core.uuid import UUID4
+from pyfutures.client.historic import InteractiveBrokersHistoric
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
@@ -48,6 +51,10 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             # ),
         )
         self._client = client
+        
+        self._historic = InteractiveBrokersHistoric(
+            client=client,
+        )
 
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
@@ -70,13 +77,9 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         for instrument in self._instrument_provider.list_all():
             self._handle_data(instrument)  # add to cache
 
-    
-        
     async def _subscribe_bars(self, bar_type: BarType):
         
-        instrument = self._cache.instrument(bar_type.instrument_id)
-
-        if instrument is None:
+        if not (instrument := self._cache.instrument(bar_type.instrument_id)):
             self._log.error(f"Cannot subscribe to {bar_type}, Instrument not found.")
             return
 
@@ -98,7 +101,50 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         nautilus_bar: Bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
         self._handle_data(nautilus_bar)
         
-    async def _subscribe_quote_ticks(self, bar_type: BarType):
-        pass
+    async def _request_bars(
+        self,
+        bar_type: BarType,
+        limit: int,
+        correlation_id: UUID4,
+        start: pd.Timestamp | None = None,
+        end: pd.Timestamp | None = None,
+    ) -> None:
+        
+        if not (instrument := self._cache.instrument(bar_type.instrument_id)):
+            self._log.error(
+                f"Cannot request {bar_type}, Instrument not found.",
+            )
+            return
+        
+        if not bar_type.spec.is_time_aggregated():
+            self._log.error(
+                f"Cannot request {bar_type}: only time bars are aggregated by InteractiveBrokers.",
+            )
+            return
+        
+        bars: list[BarData] = await self._historic.request_bars(
+            contract=instrument_id_to_contract(bar_type.instrument_id),
+            bar_size=BarSize.from_bar_spec(bar_type.spec),
+            what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
+            start_time=start,
+            end_time=end or pd.Timestamp.utcnow(),
+            limit=None if limit == 0 else limit,
+        )
+        
+        bars: list[Bar] = [
+            bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+            for bar in bars
+        ]
+        
+        self._handle_bars(
+            bar_type=bar_type,
+            bars=bars,
+            partial=None,  # bars[0]
+            correlation_id=correlation_id,
+        )
+        
+        
+        
+    
             
 

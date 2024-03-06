@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pyfutures.adapter.enums import BarSize, Duration, Frequency
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersHistoric
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from nautilus_trader.common.component import init_logging

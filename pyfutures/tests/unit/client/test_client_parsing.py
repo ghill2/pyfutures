@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from pyfutures.adapter.client.parsing import parse_datetime
+from pyfutures.client.parsing import parse_datetime
 
 @pytest.mark.parametrize(
     ("value", "expected"),

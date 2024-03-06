@@ -8,8 +8,8 @@ import sys
 
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.client.historic import InteractiveBrokersHistoric
-from pyfutures.adapter.client.parsing import parse_datetime
+from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.parsing import parse_datetime
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)

@@ -7,7 +7,7 @@ from pyfutures.adapter.cache import CachedFunc
 from ibapi.contract import Contract as IBContract
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import WhatToShow
 import pandas as pd
 from ibapi.common import BarData

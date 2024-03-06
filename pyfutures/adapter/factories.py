@@ -13,7 +13,7 @@ from nautilus_trader.model.objects import Price
 
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient

@@ -6,7 +6,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.parsing import contract_details_to_futures_instrument
 from pyfutures.adapter.parsing import contract_details_to_forex_instrument

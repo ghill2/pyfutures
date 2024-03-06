@@ -14,7 +14,7 @@ from ibapi.contract import Contract as IBContract
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 from nautilus_trader.common.component import Logger
 import logging
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import (
     BarSize,
     Duration,

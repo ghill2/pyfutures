@@ -18,17 +18,17 @@ from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 from ibapi.common import TickAttribBidAsk
 from ibapi.order_state import OrderState as IBOrderState
-from pyfutures.adapter.client.objects import ClientSubscription
+from pyfutures.client.objects import ClientSubscription
 from ibapi.execution import Execution as IBExecution
 from ibapi.commission_report import CommissionReport as IBCommissionReport
-from pyfutures.adapter.client.objects import ClientException
-from pyfutures.adapter.client.client import IBOpenOrderEvent
-from pyfutures.adapter.client.objects import IBExecutionEvent
-from pyfutures.adapter.client.objects import IBOrderStatusEvent
-from pyfutures.adapter.client.objects import IBErrorEvent
-from pyfutures.adapter.client.objects import IBExecutionEvent
-from pyfutures.adapter.client.objects import IBPositionEvent
-from pyfutures.adapter.client.objects import IBPortfolioEvent
+from pyfutures.client.objects import ClientException
+from pyfutures.client.client import IBOpenOrderEvent
+from pyfutures.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+from pyfutures.client.objects import IBErrorEvent
+from pyfutures.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBPositionEvent
+from pyfutures.client.objects import IBPortfolioEvent
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import Frequency

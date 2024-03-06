@@ -5,7 +5,7 @@ from datetime import timezone
 import pandas as pd
 import pytest
 
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 
 
 def future_for_timestamp(timestamp):

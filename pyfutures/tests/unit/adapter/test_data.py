@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from nautilus_trader.model.data import BarType
 from ibapi.common import BarData
+from nautilus_trader.core.uuid import UUID4
 from pyfutures.adapter.enums import BarSize
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from pyfutures.adapter.enums import WhatToShow
@@ -13,6 +14,7 @@ from ibapi.contract import Contract as IBContract
 import functools
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
+from pyfutures.tests.unit.client.test_historic import TestHistoric
 from nautilus_trader.model.objects import Quantity
 from pyfutures.adapter.parsing import instrument_id_to_contract
 from nautilus_trader.model.data import Bar
@@ -39,18 +41,21 @@ class TestInteractiveBrokersDataClient:
         # Assert
         data_client._client.subscribe_bars.assert_called_once()
         sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
-        sent_kwargs["contract"] == instrument_id_to_contract(self.instrument_id)
-        sent_kwargs["what_to_show"] == WhatToShow.BID_ASK
-        sent_kwargs["bar_size"] == BarSize._1_DAY
-        sent_kwargs["callback"] == functools.partial(
-            data_client._bar_callback,
-            bar_type=self.bar_type,
-            instrument=data_client.cache.instrument(self.instrument_id),
-        )
+        assert sent_kwargs["contract"].secType == "FUT"
+        assert sent_kwargs["contract"].tradingClass == "MES"
+        assert sent_kwargs["contract"].symbol == "MES"
+        assert sent_kwargs["contract"].exchange == "CME"
+        assert sent_kwargs["contract"].lastTradeDateOrContractMonth == "202312"
+        assert sent_kwargs["what_to_show"] == WhatToShow.MIDPOINT
+        assert sent_kwargs["bar_size"] == BarSize._1_DAY
+        assert sent_kwargs["callback"].func == data_client._bar_callback
+        assert sent_kwargs["callback"].keywords["bar_type"] == self.bar_type
+        assert sent_kwargs["callback"].keywords["instrument"] == data_client.cache.instrument(self.instrument_id)
             
     @pytest.mark.asyncio()
     async def test_bar_callback(self, data_client):
         
+        # Arrange
         bar = BarData()
         timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
         bar.timestamp = timestamp
@@ -65,12 +70,14 @@ class TestInteractiveBrokersDataClient:
         instrument = data_client.cache.instrument(self.instrument_id)
         data_client._handle_data = Mock()
         
+        # Act
         data_client._bar_callback(
             bar_type=self.bar_type,
             bar=bar,
             instrument=instrument,
         )
         
+        # Assert
         data_client._handle_data.assert_called_once_with(
             Bar(
                 bar_type=self.bar_type,
@@ -84,10 +91,43 @@ class TestInteractiveBrokersDataClient:
             )
         )
         
+    @pytest.mark.asyncio()
+    async def test_request_bars(self, data_client):
+        
+        # Arrange
+        self._historic.request_bars = Mock(side_effect=TestHistoric.request_bars)
+        start = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        now = pd.Timestamp("2023-11-16", tz="UTC")
+        pd.Timestamp.utcnow = Mock(return_value=now)
+        correlation_id = UUID4()
+        
+        # Act
+        await data_client._request_bars(
+            bar_type=self.bar_type,
+            limit=0,
+            correlation_id=correlation_id,
+            start=start,
+        )
+        
+        # Assert
+        data_client._client.subscribe_bars.assert_called_once()
+        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
+        assert sent_kwargs["contract"] == instrument_id_to_contract(self.bar_type.instrument_id)
+        assert sent_kwargs["what_to_show"] == WhatToShow.BID_ASK
+        assert sent_kwargs["bar_size"] == BarSize._1_DAY
+        assert sent_kwargs["start_time"] == start
+        assert sent_kwargs["end_time"] == now
+        assert sent_kwargs["limit"] is None
+
+        data_client._handle_bars.assert_called_once()
+        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
+        assert sent_kwargs["bar_type"] == self.bar_type
+        assert len(sent_kwargs["bars"]) == 30
+        assert all(isinstance(b, Bar) for b in sent_kwargs["bars"]) == 30
+        assert sent_kwargs["partial"] is None
+        assert sent_kwargs["correlation_id"] == correlation_id
         
         
-
-
 
 
 

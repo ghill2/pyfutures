@@ -34,20 +34,20 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from pyfutures.adapter.client.connection import Connection
-from pyfutures.adapter.client.objects import ClientException
-from pyfutures.adapter.client.objects import ClientRequest
-from pyfutures.adapter.client.objects import ClientSubscription
-from pyfutures.adapter.client.objects import IBErrorEvent
-from pyfutures.adapter.client.objects import IBExecutionEvent
-from pyfutures.adapter.client.objects import IBOpenOrderEvent
-from pyfutures.adapter.client.objects import IBOrderStatusEvent
-from pyfutures.adapter.client.objects import IBPortfolioEvent
-from pyfutures.adapter.client.objects import IBPositionEvent
+from pyfutures.client.connection import Connection
+from pyfutures.client.objects import ClientException
+from pyfutures.client.objects import ClientRequest
+from pyfutures.client.objects import ClientSubscription
+from pyfutures.client.objects import IBErrorEvent
+from pyfutures.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBOpenOrderEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+from pyfutures.client.objects import IBPortfolioEvent
+from pyfutures.client.objects import IBPositionEvent
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.client.parsing import parse_datetime
+from pyfutures.client.parsing import parse_datetime
 
 
 class InteractiveBrokersClient(EWrapper):

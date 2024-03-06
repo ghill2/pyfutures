@@ -10,7 +10,7 @@ from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
 
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import (
     InteractiveBrokersDataClientConfig,
     InteractiveBrokersExecClientConfig,

@@ -3,10 +3,10 @@ import logging
 import pytest
 import sys
 
-from pyfutures.adapter.client.client import (
+from pyfutures.client.client import (
     InteractiveBrokersClient,
 )
-from pyfutures.adapter.client.connection import Connection
+from pyfutures.client.connection import Connection
 
 @pytest.fixture(scope="session")
 def event_loop():

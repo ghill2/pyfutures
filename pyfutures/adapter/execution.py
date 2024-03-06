@@ -41,12 +41,12 @@ from nautilus_trader.model.objects import Quantity
 from nautilus_trader.model.orders.base import Order
 
 from pyfutures.adapter import IB_VENUE
-from pyfutures.adapter.client.client import IBErrorEvent
-from pyfutures.adapter.client.client import IBExecutionEvent
-from pyfutures.adapter.client.client import IBOpenOrderEvent
-from pyfutures.adapter.client.client import IBOrderStatusEvent
-from pyfutures.adapter.client.client import IBPositionEvent
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.client import IBErrorEvent
+from pyfutures.client.client import IBExecutionEvent
+from pyfutures.client.client import IBOpenOrderEvent
+from pyfutures.client.client import IBOrderStatusEvent
+from pyfutures.client.client import IBPositionEvent
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.parsing import historical_tick_to_nautilus_quote_tick
 from pyfutures.adapter.parsing import nautilus_order_to_ib_order
 from pyfutures.adapter.parsing import order_event_to_order_status_report

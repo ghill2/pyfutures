@@ -2,7 +2,7 @@ import time
 from decimal import Decimal
 
 import pandas as pd
-from pyfutures.adapter.client.parsing import parse_datetime
+from pyfutures.client.parsing import parse_datetime
 import pytz
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk

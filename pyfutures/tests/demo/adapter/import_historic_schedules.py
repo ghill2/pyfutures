@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from ibapi.contract import Contract
 
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 from nautilus_trader.common.component import init_logging

@@ -8,14 +8,14 @@ import pandas as pd
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
-from pyfutures.adapter.client.objects import ClientException
-from pyfutures.adapter.client.client import InteractiveBrokersClient
+from pyfutures.client.objects import ClientException
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.client.parsing import bar_data_to_dict
-from pyfutures.adapter.client.parsing import historical_tick_bid_ask_to_dict
-from pyfutures.adapter.client.parsing import parse_datetime
+from pyfutures.client.parsing import bar_data_to_dict
+from pyfutures.client.parsing import historical_tick_bid_ask_to_dict
+from pyfutures.client.parsing import parse_datetime
 from pyfutures.adapter.parsing import is_unqualified_contract
 from pyfutures.adapter.cache import CachedFunc
 

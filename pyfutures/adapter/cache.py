@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Callable
 from nautilus_trader.common.component import Logger
 
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow

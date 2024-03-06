@@ -1,9 +1,9 @@
 from decimal import Decimal
 import pandas as pd
 
-from pyfutures.adapter.client.objects import IBOrderStatusEvent
-from pyfutures.adapter.client.objects import IBOpenOrderEvent
-from pyfutures.adapter.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+from pyfutures.client.objects import IBOpenOrderEvent
+from pyfutures.client.objects import IBExecutionEvent
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState

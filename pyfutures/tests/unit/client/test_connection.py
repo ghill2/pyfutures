@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from pyfutures.adapter.client.connection import Connection
+from pyfutures.client.connection import Connection
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import MagicMock

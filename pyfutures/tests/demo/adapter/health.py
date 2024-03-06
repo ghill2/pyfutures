@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
 from pytower import PACKAGE_ROOT
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.tests.test_kit import IBTestProviderStubs
 

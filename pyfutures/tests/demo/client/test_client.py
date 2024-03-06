@@ -8,7 +8,7 @@ from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
 from nautilus_trader.core.uuid import UUID4
 
-from pyfutures.adapter.client.objects import ClientException
+from pyfutures.client.objects import ClientException
 
 import logging
 import sys
