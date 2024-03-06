@@ -33,7 +33,10 @@ class InteractiveBrokersHistoric:
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(log_level)
 
-        self.request_bars_cached = CachedFunc(self._client.request_bars)
+        self.request_bars_cached = CachedFunc(
+            self._client.request_bars,
+            cachedir=cachedir,
+        )
 
     async def request_bars(
         self,
