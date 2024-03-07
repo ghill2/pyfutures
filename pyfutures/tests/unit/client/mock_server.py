@@ -19,16 +19,7 @@ class MockServer:
 
         self._log = logging.getLogger("MockSocket")
         
-        self._responses = {
-            b"API\x00\x00\x00\x00\nv176..176 ": [
-                b'\x00\x00\x00*176\x0020240307 13:56:35 Greenwich Mean Time\x00',
-            ],
-            b"\x00\x00\x00\x0871\x002\x001\x00\x00": [
-                b'\x00\x00\x00\x0f15\x001\x00DU7855823\x00',
-                b"\x00\x00\x00\x089\x001\x00530\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00\x00\x00\x0044\x002\x00-1\x002106\x00HMDS data farm connection is OK:ushmds\x00\x00",
-                b'\x00\x00\x00\x069\x001\x006\x00',
-            ]
-        }
+        
         self._to_send = deque()
         
     async def _handle_read(self, _):
@@ -51,10 +42,20 @@ class MockServer:
         do not yield, otherwise the function is not executed
         """
         print(f"write: {msg}")
-        responses = self._responses.get(msg)
-        print(len(responses))
-        if responses is not None:
-            self._to_send.extend(responses)
+        
+        responses = []
+        if msg == b"API\x00\x00\x00\x00\nv176..176 ":
+            responses = [
+                b'\x00\x00\x00*176\x0020240307 13:56:35 Greenwich Mean Time\x00'
+            ]
+        elif msg.startswith(b"\x00\x00\x00\x0871\x002\x00"):
+            responses = [
+                b'\x00\x00\x00\x0f15\x001\x00DU7855823\x00',
+                b"\x00\x00\x00\x089\x001\x00530\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00\x00\x00\x0044\x002\x00-1\x002106\x00HMDS data farm connection is OK:ushmds\x00\x00",
+                b'\x00\x00\x00\x069\x001\x006\x00',
+            ]
+        
+        self._to_send.extend(responses)
             
     async def disconnect(self):
         # mock a disconnect by sending send an empty byte string to the client

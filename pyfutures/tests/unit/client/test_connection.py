@@ -62,10 +62,9 @@ class TestConnection:
         ):
             
             await self.connection._connect()
-            await self.connection._handshake(timeout_seconds=0.5)
+            await self.connection._handshake(timeout_seconds=0.1)
             assert self.connection.is_connected
     
-    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
     async def test_handshake_client_id_2(self):
         self.connection = Connection(
@@ -82,7 +81,7 @@ class TestConnection:
         ):
             
             await self.connection._connect()
-            await self.connection._handshake(timeout_seconds=0.5)
+            await self.connection._handshake(timeout_seconds=0.1)
             assert self.connection.is_connected
         
     @pytest.mark.asyncio()
