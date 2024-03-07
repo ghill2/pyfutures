@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import Mock
 import pandas as pd
-
+from unittest.mock import AsyncMock
 from decimal import Decimal
 import pytest
 from nautilus_trader.core.uuid import UUID4
@@ -30,33 +30,68 @@ from nautilus_trader.model.identifiers import TradeId
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.enums import TimeInForce
-from nautilus_trader.model.objects import Quantity
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
-
-from pyfutures.client.objects import IBOrderStatusEvent
 from pyfutures.client.objects import IBOpenOrderEvent
-from pyfutures.tests.unit.adapter.stubs.execution import IBTestExecutionStubs
-
-from pyfutures.tests.unit.adapter.stubs.identifiers import IBTestIdStubs
 from pyfutures.client.client import IBExecutionEvent
+from pyfutures.tests.unit.client.stubs import ClientStubs
+
+from decimal import Decimal
+
+from nautilus_trader.model.objects import Quantity
+from nautilus_trader.model.identifiers import AccountId
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
+from nautilus_trader.model.identifiers import InstrumentId
+from pyfutures.adapter.factories import PROVIDER_CONFIG
+from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from nautilus_trader.adapters.interactive_brokers.client import InteractiveBrokersClient
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 
 class TestInteractiveBrokersExecution:
     
     def setup_method(self):
-        self.instrument_id = InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
+        clock = LiveClock()
+
+        msgbus = MessageBus(
+            trader_id=TestIdStubs.trader_id(),
+            clock=clock,
+        )
+        
+        cache = TestComponentStubs.cache()
+        
+        client: InteractiveBrokersClient = ClientStubs.client()
+        self.exec_client = InteractiveBrokersExecClient(
+            loop=asyncio.get_event_loop(),
+            client=client,
+            account_id=AccountId("IB-1234567"),
+            msgbus=msgbus,
+            cache=cache,
+            clock=clock,
+            instrument_provider=InteractiveBrokersInstrumentProvider(
+                client=client,
+                config=PROVIDER_CONFIG,
+            ),
+        )
+        
+        self.contract = AdapterStubs.mes_contract()
+        
+        cache.add_instrument(self.contract)
+        
+        self.exec_client.client.request_next_order_id = \
+            AsyncMock(return_value=AdapterStubs.orderId())
+        
         
     @pytest.mark.asyncio()
-    async def test_submit_market_order_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_submit_market_order_sends_expected(self):
         
         # Arrange
         market_order = TestExecStubs.market_order(
-            instrument_id=self.instrument_id,
+            instrument=self.contract,
         )
 
         submit_order = SubmitOrder(
@@ -67,31 +102,29 @@ class TestInteractiveBrokersExecution:
             ts_init=0,
         )
         
-        exec_client._client.place_order = Mock()
+        self.exec_client._client.place_order = Mock()
         
         # Act
-        await exec_client._submit_order(submit_order)
+        await self.exec_client._submit_order(submit_order)
         
         # Assert
-        exec_client._client.place_order.assert_called_once()
-        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == IBTestIdStubs.orderId()
+        self.exec_client._client.place_order.assert_called_once()
+        sent_order = self.exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == AdapterStubs.orderId()
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
         assert sent_order.orderType == "MKT"
         assert sent_order.totalQuantity == Decimal("100")
         assert sent_order.action == "BUY"
         assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == IBTestIdStubs.conId()
+        assert sent_order.contract.conId == AdapterStubs.conId()
         assert sent_order.contract.exchange == "CME"
         assert sent_order.lmtPrice == UNSET_DOUBLE  # unset
     
     @pytest.mark.asyncio()
-    async def test_submit_limit_order_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_submit_limit_order_sends_expected(self):
+    
         limit_order = TestExecStubs.limit_order(
-            instrument_id=self.instrument_id,
+            instrument=self.contract,
         )
         
         # Arrange
@@ -103,42 +136,35 @@ class TestInteractiveBrokersExecution:
             ts_init=0,
         )
         
-        exec_client._client.place_order = Mock()
+        self.exec_client._client.place_order = Mock()
         
         # Act
-        await exec_client._submit_order(submit_order)
+        await self.exec_client._submit_order(submit_order)
         
         # Assert
-        exec_client._client.place_order.assert_called_once()
-        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == IBTestIdStubs.orderId()
+        self.exec_client._client.place_order.assert_called_once()
+        sent_order = self.exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == AdapterStubs.orderId()
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
         assert sent_order.orderType == "LMT"
         assert sent_order.totalQuantity == Decimal("100")
         assert sent_order.action == "BUY"
         assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == IBTestIdStubs.conId()
+        assert sent_order.contract.conId == AdapterStubs.conId()
         assert sent_order.contract.exchange == "CME"
         assert sent_order.lmtPrice == 55.0
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_modify_order_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_modify_order_sends_expected(self):
         pass
         
     @pytest.mark.asyncio()
-    async def test_order_submitted_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_order_submitted_sends_expected(self):
         
         # Arrange
-        instrument_id = self.instrument_id
         market_order = TestExecStubs.market_order(
-            instrument_id=instrument_id,
+            instrument=self.contract,
         )
 
         submit_order = SubmitOrder(
@@ -148,66 +174,59 @@ class TestInteractiveBrokersExecution:
             command_id=UUID4(),
             ts_init=0,
         )
-        exec_client.generate_order_submitted = Mock()
+        self.exec_client.generate_order_submitted = Mock()
         
         # Act
-        await exec_client._submit_order(submit_order)
+        await self.exec_client._submit_order(submit_order)
         
         # Assert
-        exec_client.generate_order_submitted.assert_called_once()
-        submitted_kwargs = exec_client.generate_order_submitted.call_args_list[0][1]
+        self.exec_client.generate_order_submitted.assert_called_once()
+        submitted_kwargs = self.exec_client.generate_order_submitted.call_args_list[0][1]
         assert submitted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
-        assert submitted_kwargs["instrument_id"] == instrument_id
+        assert submitted_kwargs["instrument_id"] == self.contract.id
         assert submitted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
     
-    def test_order_accepted_response(
-        self,
-        exec_client,
-    ):
+    def test_order_accepted_response(self):
+    
         # Arrange
-        instrument_id = self.instrument_id
         market_order = TestExecStubs.market_order(
-            instrument_id=instrument_id,
+            instrument=self.contract,
         )
-        exec_client.cache.add_order(market_order)
-        exec_client.generate_order_accepted = Mock()
+        self.exec_client.cache.add_order(market_order)
+        self.exec_client.generate_order_accepted = Mock()
         
         # Act
-        event: IBOpenOrderEvent = IBTestExecutionStubs.open_order_event()
-        exec_client.open_order_callback(event)
+        event: IBOpenOrderEvent = AdapterStubs.open_order_event()
+        self.exec_client.open_order_callback(event)
         
         # Assert
-        exec_client.generate_order_accepted.assert_called_once()
-        accepted_kwargs = exec_client.generate_order_accepted.call_args_list[0][1]
+        self.exec_client.generate_order_accepted.assert_called_once()
+        accepted_kwargs = self.exec_client.generate_order_accepted.call_args_list[0][1]
         assert accepted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
-        assert accepted_kwargs["instrument_id"] == instrument_id
+        assert accepted_kwargs["instrument_id"] == self.contract.id
         assert accepted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert accepted_kwargs["venue_order_id"] == VenueOrderId(str(IBTestIdStubs.orderId()))
+        assert accepted_kwargs["venue_order_id"] == VenueOrderId(str(AdapterStubs.orderId()))
         
-    def test_order_filled_response(
-        self,
-        exec_client,
-    ):
+    def test_order_filled_response(self):
         
         # Arrange
-        instrument_id = self.instrument_id
         market_order = TestExecStubs.market_order(
-            instrument_id=instrument_id,
+            instrument=self.contract,
         )
-        exec_client.cache.add_order(market_order)
-        exec_client.generate_order_filled = Mock()
+        self.exec_client.cache.add_order(market_order)
+        self.exec_client.generate_order_filled = Mock()
         
         # Act
-        event: IBExecutionEvent = IBTestExecutionStubs.execution_event()
-        exec_client.execution_callback(event)
+        event: IBExecutionEvent = AdapterStubs.execution_event()
+        self.exec_client.execution_callback(event)
         
         # Assert
-        exec_client.generate_order_filled.assert_called_once()
-        filled_kwargs = exec_client.generate_order_filled.call_args_list[0][1]
+        self.exec_client.generate_order_filled.assert_called_once()
+        filled_kwargs = self.exec_client.generate_order_filled.call_args_list[0][1]
         assert filled_kwargs["strategy_id"] == TestIdStubs.strategy_id()
-        assert filled_kwargs["instrument_id"] == instrument_id
+        assert filled_kwargs["instrument_id"] == self.contract.id
         assert filled_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert filled_kwargs["venue_order_id"] == VenueOrderId(str(IBTestIdStubs.orderId()))
+        assert filled_kwargs["venue_order_id"] == VenueOrderId(str(AdapterStubs.orderId()))
         assert filled_kwargs["venue_position_id"] is None
         assert filled_kwargs["trade_id"] == TradeId("0000e9b5.6555a859.01.01")
         assert filled_kwargs["order_side"] == OrderSide.BUY
@@ -220,10 +239,7 @@ class TestInteractiveBrokersExecution:
         assert filled_kwargs["ts_event"] == dt_to_unix_nanos(pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"))
     
     @pytest.mark.asyncio()
-    async def test_cancel_order_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_cancel_order_sends_expected(self):
         
         # Arrange
         cancel_order = CancelOrder(
@@ -231,74 +247,69 @@ class TestInteractiveBrokersExecution:
             strategy_id=TestIdStubs.strategy_id(),
             instrument_id=TestIdStubs.audusd_idealpro_id(),
             client_order_id=TestIdStubs.client_order_id(),
-            venue_order_id=VenueOrderId(str(IBTestIdStubs.orderId())),
+            venue_order_id=VenueOrderId(str(AdapterStubs.orderId())),
             command_id=UUID4(),
             ts_init=0,
         )
         
-        exec_client._client.cancel_order = Mock()
+        self.exec_client._client.cancel_order = Mock()
         
         # Act
-        await exec_client._cancel_order(cancel_order)
+        await self.exec_client._cancel_order(cancel_order)
         
         # Assert
-        exec_client._client.cancel_order.assert_called_once_with(
-            IBTestIdStubs.orderId(),
+        self.exec_client._client.cancel_order.assert_called_once_with(
+            AdapterStubs.orderId(),
         )
         
     @pytest.mark.asyncio()
-    async def test_modify_order_sends_expected(
-        self,
-        exec_client,
-    ):
+    async def test_modify_order_sends_expected(self):
             
         # Arrange
         instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
-        exec_client.cache.add_instrument(instrument)
+        self.exec_client.cache.add_instrument(instrument)
             
         
         limit_order = TestExecStubs.limit_order(
-            instrument_id=self.instrument_id,
+            instrument=self.contract,
         )
         
-        exec_client.cache.add_order(limit_order)
+        self.exec_client.cache.add_order(limit_order)
         modify_order = TestCommandStubs.modify_order_command(
             order=limit_order,
             price=Price.from_int(2),
             quantity=Quantity.from_int(1),
         )
         
-        exec_client._client.place_order = Mock()
+        self.exec_client._client.place_order = Mock()
         
         # Act
-        await exec_client._modify_order(modify_order)
+        await self.exec_client._modify_order(modify_order)
         
         # Assert
-        sent_order = exec_client._client.place_order.call_args_list[0][0][0]
-        assert sent_order.orderId == IBTestIdStubs.orderId()
+        sent_order = self.exec_client._client.place_order.call_args_list[0][0][0]
+        assert sent_order.orderId == AdapterStubs.orderId()
         assert sent_order.orderRef == TestIdStubs.client_order_id().value
         assert sent_order.orderType == "LMT"
         assert sent_order.totalQuantity == Decimal("1")
         assert sent_order.action == "BUY"
         assert sent_order.tif == "GTC"
-        assert sent_order.contract.conId == IBTestIdStubs.conId()
+        assert sent_order.contract.conId == AdapterStubs.conId()
         assert sent_order.contract.exchange == "CME"
         assert sent_order.lmtPrice == 2.0
     
     @pytest.mark.asyncio()
-    async def test_modify_order_response(
-        self,
-        exec_client,
-    ):
+    async def test_modify_order_response(self):
+    
         # Arrange
         instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
-        exec_client.cache.add_instrument(instrument)
+        self.exec_client.cache.add_instrument(instrument)
         limit_order = TestExecStubs.limit_order()
-        exec_client.cache.add_order(limit_order)
-        exec_client.generate_order_updated = Mock()
+        self.exec_client.cache.add_order(limit_order)
+        self.exec_client.generate_order_updated = Mock()
         
         # Act
-        event = IBTestExecutionStubs.open_order_event(
+        event = AdapterStubs.open_order_event(
             status="Filled",
             totalQuantity=Decimal("2"),
             lmtPrice=Decimal("1"),
@@ -306,11 +317,11 @@ class TestInteractiveBrokersExecution:
             orderType="LMT",
         )
         
-        exec_client.open_order_callback(event)
+        self.exec_client.open_order_callback(event)
         
         # Assert
-        exec_client.generate_order_updated.assert_called_once()
-        updated_kwargs = exec_client.generate_order_updated.call_args_list[0][1]
+        self.exec_client.generate_order_updated.assert_called_once()
+        updated_kwargs = self.exec_client.generate_order_updated.call_args_list[0][1]
         assert updated_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert updated_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert updated_kwargs["client_order_id"] == TestIdStubs.client_order_id()
@@ -320,50 +331,46 @@ class TestInteractiveBrokersExecution:
         assert updated_kwargs["venue_order_id_modified"] == True
         
     @pytest.mark.asyncio()
-    async def test_cancel_order_response(
-        self,
-        exec_client,
-    ):
+    async def test_cancel_order_response(self):
+    
         # Arrange
         limit_order = TestExecStubs.limit_order()
-        venue_order_id = VenueOrderId(str(IBTestIdStubs.orderId()))
+        venue_order_id = VenueOrderId(str(AdapterStubs.orderId()))
         order_accepted = TestEventStubs.order_accepted(
             order=limit_order,
             venue_order_id=venue_order_id,
         )
         limit_order.apply(order_accepted)
         
-        exec_client.cache.add_order(limit_order)
-        exec_client.cache.update_order(limit_order)
-        exec_client.generate_order_canceled = Mock()
+        self.exec_client.cache.add_order(limit_order)
+        self.exec_client.cache.update_order(limit_order)
+        self.exec_client.generate_order_canceled = Mock()
         
         # Act
         error_event = IBErrorEvent(
-            reqId=IBTestIdStubs.orderId(),
+            reqId=AdapterStubs.orderId(),
             errorCode=202,
             errorString="Order Canceled - reason",
             advancedOrderRejectJson="",
         )
-        exec_client.error_callback(error_event)
+        self.exec_client.error_callback(error_event)
         
         # Assert
-        exec_client.generate_order_canceled.assert_called_once()
-        cancel_kwargs = exec_client.generate_order_canceled.call_args_list[0][1]
+        self.exec_client.generate_order_canceled.assert_called_once()
+        cancel_kwargs = self.exec_client.generate_order_canceled.call_args_list[0][1]
         assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()
         assert cancel_kwargs["venue_order_id"] == venue_order_id
     
     @pytest.mark.asyncio()
-    async def test_modify_order_rejected_response(
-        self,
-        exec_client,
-    ):
+    async def test_modify_order_rejected_response(self):
+    
         # Arrange
         limit_order = TestExecStubs.limit_order()
-        exec_client.cache.add_order(limit_order)
+        self.exec_client.cache.add_order(limit_order)
         
-        venue_order_id = VenueOrderId(str(IBTestIdStubs.orderId()))
+        venue_order_id = VenueOrderId(str(AdapterStubs.orderId()))
         
         # accept
         order_accepted = TestEventStubs.order_accepted(
@@ -371,7 +378,7 @@ class TestInteractiveBrokersExecution:
             venue_order_id=venue_order_id,
         )
         limit_order.apply(order_accepted)
-        exec_client.cache.update_order(limit_order)
+        self.exec_client.cache.update_order(limit_order)
         assert limit_order.venue_order_id == venue_order_id
         
         # modify
@@ -380,22 +387,22 @@ class TestInteractiveBrokersExecution:
             order=limit_order,
         )
         limit_order.apply(order_pending_update)
-        exec_client.cache.update_order(limit_order)
+        self.exec_client.cache.update_order(limit_order)
         
-        exec_client.generate_order_modify_rejected = Mock()
+        self.exec_client.generate_order_modify_rejected = Mock()
         
         # Act
         error_event = IBErrorEvent(
-            reqId=IBTestIdStubs.orderId(),
+            reqId=AdapterStubs.orderId(),
             errorCode=201,
             errorString="Order rejected - reason:YOUR ORDER IS NOT ACCEPTED",
             advancedOrderRejectJson="",
         )
-        exec_client.error_callback(error_event)
+        self.exec_client.error_callback(error_event)
         
         # Assert
-        exec_client.generate_order_modify_rejected.assert_called_once()
-        cancel_kwargs = exec_client.generate_order_modify_rejected.call_args_list[0][1]
+        self.exec_client.generate_order_modify_rejected.assert_called_once()
+        cancel_kwargs = self.exec_client.generate_order_modify_rejected.call_args_list[0][1]
         assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()
@@ -403,14 +410,13 @@ class TestInteractiveBrokersExecution:
         assert cancel_kwargs["reason"] == error_event.errorString
     
     @pytest.mark.asyncio()
-    async def test_order_rejected_response(
-        self,
-        exec_client,
-    ):
-        limit_order = TestExecStubs.limit_order()
-        exec_client.cache.add_order(limit_order)
+    async def test_order_rejected_response(self):
         
-        venue_order_id = VenueOrderId(str(IBTestIdStubs.orderId()))
+        # Arrange
+        limit_order = TestExecStubs.limit_order()
+        self.exec_client.cache.add_order(limit_order)
+        
+        venue_order_id = VenueOrderId(str(AdapterStubs.orderId()))
         
         # accept
         order_accepted = TestEventStubs.order_accepted(
@@ -418,23 +424,23 @@ class TestInteractiveBrokersExecution:
             venue_order_id=venue_order_id,
         )
         limit_order.apply(order_accepted)
-        exec_client.cache.update_order(limit_order)
+        self.exec_client.cache.update_order(limit_order)
         assert limit_order.venue_order_id == venue_order_id
         
-        exec_client.generate_order_rejected = Mock()
+        self.exec_client.generate_order_rejected = Mock()
         
         # Act
         error_event = IBErrorEvent(
-            reqId=IBTestIdStubs.orderId(),
+            reqId=AdapterStubs.orderId(),
             errorCode=201,
             errorString="Order rejected - reason:YOUR ORDER IS NOT ACCEPTED",
             advancedOrderRejectJson="",
         )
-        exec_client.error_callback(error_event)
+        self.exec_client.error_callback(error_event)
         
         # Assert
-        exec_client.generate_order_rejected.assert_called_once()
-        cancel_kwargs = exec_client.generate_order_rejected.call_args_list[0][1]
+        self.exec_client.generate_order_rejected.assert_called_once()
+        cancel_kwargs = self.exec_client.generate_order_rejected.call_args_list[0][1]
         assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()

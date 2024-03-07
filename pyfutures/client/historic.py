@@ -92,8 +92,7 @@ class InteractiveBrokersHistoric:
                 )
                 
                 if use_cache:
-                    key = self.request_bars_cached.build_key(**kwargs)
-                    is_cached = self.request_bars_cached.cache.get(key) is not None
+                    is_cached = self.request_bars_cached.is_cached(**kwargs)
                     func = self.request_bars_cached
                 else:
                     func = self._client.request_bars

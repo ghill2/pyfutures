@@ -1,8 +1,8 @@
 import asyncio
 
-# fmt: off
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
+from pyfutures.client.client import InteractiveBrokersClient
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
@@ -13,7 +13,7 @@ from nautilus_trader.model.objects import Price
 
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
-from pyfutures.client.client import InteractiveBrokersClient
+
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient

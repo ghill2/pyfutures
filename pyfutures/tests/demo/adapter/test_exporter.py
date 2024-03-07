@@ -7,6 +7,8 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersHistoric
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
+from nautilus_trader.adapters.interactive_brokers.client import InteractiveBrokersClient
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 # from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
@@ -21,15 +23,8 @@ from pyfutures.tests.demo.adapter.factories import InteractiveBrokersClientFacto
 
 
 @pytest.mark.asyncio()
-async def test_export_spread(event_loop):
-    client = InteractiveBrokersClientFactory.create(
-        loop=event_loop,
-        host="127.0.0.1",
-        port=4002,
-        client_id=2,
-        log_level=logging.INFO,
-        api_log_level=logging.INFO,
-    )
+async def test_export_spread():
+    client: InteractiveBrokersClient = ClientStubs.client()
     
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],

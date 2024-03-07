@@ -1,10 +1,20 @@
 from __future__ import annotations
+import datetime
 import pandas as pd
 import sys
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.common.enums import LogColor
 import traceback
 
+LOG_COLOR_TO_COLOR = {
+    LogColor.NORMAL: "",
+    LogColor.GREEN: "\x1b[92m",
+    LogColor.BLUE: "\x1b[94m",
+    LogColor.MAGENTA: "\x1b[35m",
+    LogColor.CYAN: "\x1b[36m",
+    LogColor.YELLOW: "\x1b[1;33m",
+    LogColor.RED: "\x1b[1;31m",
+}
 class LoggerAttributes:
     pass
 
@@ -28,7 +38,7 @@ class LoggerAdapter:
     def from_name(cls, name: str) -> LoggerAdapter:
         return cls(
             name=name,
-            trading_class=LoggerAttributes.trading_class,
+            trading_class=getattr(LoggerAttributes, "trading_class", "N/A"),
         )
         
     @property
@@ -44,28 +54,32 @@ class LoggerAdapter:
         message: str,
         color: LogColor = LogColor.NORMAL,
     ):
-        print(f"{self.timestamp} DEBUG {self._trading_class} {message}")
+        msg = self._format_line(message=message, level="DBG", color=color)
+        print(msg)
 
     def info(
         self,
         message: str,
         color: LogColor = LogColor.NORMAL,
     ):
-        print(f"{self.timestamp} INFO {self._trading_class} {message}")
+        msg = self._format_line(message=message, level="INF", color=color)
+        print(msg)
 
     def warning(
         self,
         message,
         color: LogColor = LogColor.YELLOW,
     ):
-        print(f"{self.timestamp} WARNING {self._trading_class} {message}")
+        msg = self._format_line(message=message, level="WRN", color=color)
+        print(msg)
 
     def error(
         self,
         message: str,
         color: LogColor = LogColor.RED,
     ):
-        print(f"{self.timestamp} ERROR {self._trading_class} {message}")
+        msg = self._format_line(message=message, level="ERR", color=color)
+        print(msg)
 
     def exception(
         self,
@@ -83,3 +97,48 @@ class LoggerAdapter:
             stack_trace_lines += line
 
         self.error(f"{message}\n{ex_string}\n{stack_trace_lines}")
+    
+    def _format_line(
+        self,
+        message: str,
+        level: str,
+        color: LogColor,
+    ) -> str:
+        """
+        pub fn get_colored(&mut self) -> &str {
+            self.colored.get_or_insert_with(|| {
+                format!(
+                    "\x1b[1m{}\x1b[0m {}[{}] {}.{}: {}\x1b[0m\n",
+                    self.timestamp,
+                    &self.line.color.to_string(),
+                    self.line.level,
+                    self.trader_id,
+                    &self.line.component,
+                    &self.line.message
+                )
+            })
+        }
+        """
+        
+        t = self._unix_nano_to_iso8601(self._timestamp_ns)
+        c = LOG_COLOR_TO_COLOR[color]
+        l = level
+        id = "TRADER-001"
+        comp = "TRADER-001"
+        msg = message
+        return f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"  # \n
+        
+        # return f"{self.timestamp} WARNING {self._trading_class} {message}"
+        
+    @staticmethod
+    def _unix_nano_to_iso8601(nanoseconds):
+        # Convert nanoseconds to seconds
+        seconds = nanoseconds / 1e9
+
+        # Create a datetime object from the seconds
+        dt = datetime.datetime.utcfromtimestamp(seconds)
+
+        # Format the datetime object as an ISO 8601 string
+        iso8601_str = dt.isoformat()
+
+        return iso8601_str

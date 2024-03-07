@@ -34,29 +34,30 @@ from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import Frequency
 from pyfutures.adapter.enums import WhatToShow
 from ibapi.common import HistoricalTickBidAsk
-
-
-RESPONSES_FOLDER = Path(__file__).parent / "responses"
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 pytestmark = pytest.mark.unit
 
 class TestInteractiveBrokersClient:
-
+    
+    def setup_method(self):
+        self.client = ClientStubs.client()
+        
     @pytest.mark.asyncio()
-    async def test_request_contract_details_returns_expected(self, client):
+    async def test_request_contract_details_returns_expected(self):
         
         # Arrange
         contract = Contract()
         
         def send_mocked_response(*args, **kwargs):
-            client.contractDetails(-10, IBContractDetails())
-            client.contractDetailsEnd(-10)
+            self.client.contractDetails(-10, IBContractDetails())
+            self.client.contractDetailsEnd(-10)
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqContractDetails = send_mock
+        self.client._eclient.reqContractDetails = send_mock
         
         # Act
-        results = await client.request_contract_details(contract)
+        results = await self.client.request_contract_details(contract)
         
         # Assert
         assert isinstance(results, list)
@@ -67,20 +68,20 @@ class TestInteractiveBrokersClient:
         }
         
     @pytest.mark.asyncio()
-    async def test_request_contract_details_raises_exception(self, client):
+    async def test_request_contract_details_raises_exception(self):
         
         # Arrange
         contract = Contract()
         
         def send_mocked_response(*args, **kwargs):
-            client.error(-10, 321, "test")
+            self.client.error(-10, 321, "test")
         send_mock = Mock(side_effect=send_mocked_response)
         
-        client._eclient.reqContractDetails = send_mock
+        self.client._eclient.reqContractDetails = send_mock
         
         # Act & Assert
         with pytest.raises(ClientException) as e:
-            await client.request_contract_details(contract)
+            await self.client.request_contract_details(contract)
             assert e.code == 321
     
     @pytest.mark.skip(reason="TODO")
@@ -99,41 +100,41 @@ class TestInteractiveBrokersClient:
         pass
     
     @pytest.mark.asyncio()
-    async def test_request_account_summary(self, client):
+    async def test_request_account_summary(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.accountSummary(-10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP")
-            client.accountSummary(-10, "DU1234567", "Cushion", "0.452835", "GBP")
-            client.accountSummary(-10, "DU1234567", "DayTradesRemaining", "-1", "GBP")
-            client.accountSummary(-10, "DU1234567", "LookAheadNextChange", "1700073900", "GBP")
-            client.accountSummary(-10, "DU1234567", "AccruedCash", "-16475.82", "GBP")
-            client.accountSummary(-10, "DU1234567", "AvailableFunds", "549199.02", "GBP")
-            client.accountSummary(-10, "DU1234567", "BuyingPower", "2327966.81", "GBP")
-            client.accountSummary(-10, "DU1234567", "EquityWithLoanValue", "1160657.83", "GBP")
-            client.accountSummary(-10, "DU1234567", "ExcessLiquidity", "582033.62", "GBP")
-            client.accountSummary(-10, "DU1234567", "FullAvailableFunds", "548302.62", "GBP")
-            client.accountSummary(-10, "DU1234567", "FullExcessLiquidity", "581218.71", "GBP")
-            client.accountSummary(-10, "DU1234567", "FullInitMarginReq", "711135.25", "GBP")
-            client.accountSummary(-10, "DU1234567", "FullMaintMarginReq", "678261.07", "GBP")
-            client.accountSummary(-10, "DU1234567", "GrossPositionValue", "0.00", "GBP")
-            client.accountSummary(-10, "DU1234567", "InitMarginReq", "710238.85", "GBP")
-            client.accountSummary(-10, "DU1234567", "LookAheadAvailableFunds", "549199.02", "GBP")
-            client.accountSummary(-10, "DU1234567", "LookAheadExcessLiquidity", "582033.62", "GBP")
-            client.accountSummary(-10, "DU1234567", "LookAheadInitMarginReq", "710238.85", "GBP")
-            client.accountSummary(-10, "DU1234567", "LookAheadMaintMarginReq", "677446.17", "GBP")
-            client.accountSummary(-10, "DU1234567", "MaintMarginReq", "677446.17", "GBP")
-            client.accountSummary(-10, "DU1234567", "NetLiquidation", "1285310.14", "GBP")
-            client.accountSummary(-10, "DU1234567", "PreviousDayEquityWithLoanValue", "1208301.71", "GBP")
-            client.accountSummary(-10, "DU1234567", "SMA", "1228550.96", "GBP")
-            client.accountSummary(-10, "DU1234567", "TotalCashValue", "1301785.97", "GBP")
-            client.accountSummaryEnd(-10)
+            self.client.accountSummary(-10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "Cushion", "0.452835", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "DayTradesRemaining", "-1", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "LookAheadNextChange", "1700073900", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "AccruedCash", "-16475.82", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "AvailableFunds", "549199.02", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "BuyingPower", "2327966.81", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "EquityWithLoanValue", "1160657.83", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "ExcessLiquidity", "582033.62", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "FullAvailableFunds", "548302.62", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "FullExcessLiquidity", "581218.71", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "FullInitMarginReq", "711135.25", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "FullMaintMarginReq", "678261.07", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "GrossPositionValue", "0.00", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "InitMarginReq", "710238.85", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "LookAheadAvailableFunds", "549199.02", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "LookAheadExcessLiquidity", "582033.62", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "LookAheadInitMarginReq", "710238.85", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "LookAheadMaintMarginReq", "677446.17", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "MaintMarginReq", "677446.17", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "NetLiquidation", "1285310.14", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "PreviousDayEquityWithLoanValue", "1208301.71", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "SMA", "1228550.96", "GBP")
+            self.client.accountSummary(-10, "DU1234567", "TotalCashValue", "1301785.97", "GBP")
+            self.client.accountSummaryEnd(-10)
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqAccountSummary = send_mock
+        self.client._eclient.reqAccountSummary = send_mock
         
         # Act
-        summary = await client.request_account_summary()
+        summary = await self.client.request_account_summary()
         
         # Assert
         assert isinstance(summary, dict)
@@ -172,22 +173,22 @@ class TestInteractiveBrokersClient:
         )
 
     @pytest.mark.asyncio()
-    async def test_request_next_order_id(self, client):
+    async def test_request_next_order_id(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.nextValidId(4)
+            self.client.nextValidId(4)
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqIds = send_mock
+        self.client._eclient.reqIds = send_mock
         
         # Act
-        next_id = await client.request_next_order_id()
+        next_id = await self.client.request_next_order_id()
 
         assert next_id == 4
         send_mock.assert_called_once_with(1)
 
     @pytest.mark.asyncio()
-    async def test_place_market_order(self, client):
+    async def test_place_market_order(self):
         
         # Arrange
         order = Order()
@@ -195,10 +196,10 @@ class TestInteractiveBrokersClient:
         order.contract = Contract()
         
         send_mock = Mock()
-        client._eclient.placeOrder = send_mock
+        self.client._eclient.placeOrder = send_mock
         
         # Act
-        client.place_order(order)
+        self.client.place_order(order)
         
         # Assert
         send_mock.assert_called_once_with(
@@ -209,23 +210,23 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_cancel_order(self, client):
+    async def test_cancel_order(self):
         pass
         
     @pytest.mark.asyncio()
-    async def test_request_open_orders(self, client):
+    async def test_request_open_orders(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
-            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
-            client.openOrderEnd()
+            self.client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            self.client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            self.client.openOrderEnd()
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqOpenOrders = send_mock
+        self.client._eclient.reqOpenOrders = send_mock
         
         # Act
-        orders = await client.request_open_orders()
+        orders = await self.client.request_open_orders()
         
         # Assert
         assert len(orders) == 2
@@ -233,15 +234,15 @@ class TestInteractiveBrokersClient:
         send_mock.assert_called_once()
     
     @pytest.mark.asyncio()
-    async def test_request_open_orders_no_event_emit(self, client):
+    async def test_request_open_orders_no_event_emit(self):
         
         """
         when there is an active open orders request an event should not be emitted
         """
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
-            client.orderStatus(
+            self.client.openOrder(4, IBContract(), IBOrder(), IBOrderState())
+            self.client.orderStatus(
                 orderId=4,
                 status="FILLED",
                 filled=Decimal("1"),
@@ -254,19 +255,19 @@ class TestInteractiveBrokersClient:
                 whyHeld="reason",
                 mktCapPrice=1.76,
             )
-            client.openOrderEnd()
+            self.client.openOrderEnd()
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqOpenOrders = send_mock
+        self.client._eclient.reqOpenOrders = send_mock
         
         open_order_callback_mock = AsyncMock()
-        client.open_order_events += open_order_callback_mock
+        self.client.open_order_events += open_order_callback_mock
         
         order_status_callback_mock = AsyncMock()
-        client.order_status_events += order_status_callback_mock
+        self.client.order_status_events += order_status_callback_mock
         
         # Act
-        await client.request_open_orders()
+        await self.client.request_open_orders()
         
         # Assert
         order_status_callback_mock.assert_not_called()
@@ -274,19 +275,19 @@ class TestInteractiveBrokersClient:
         
         
     @pytest.mark.asyncio()
-    async def test_request_positions(self, client):
+    async def test_request_positions(self):
 
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
-            client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
-            client.positionEnd()
+            self.client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
+            self.client.position("DU1234567", IBContract(), Decimal("1"), 1.0)
+            self.client.positionEnd()
 
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqPositions = send_mock
+        self.client._eclient.reqPositions = send_mock
         
         # Act
-        positions = await client.request_positions()
+        positions = await self.client.request_positions()
         
         # Assert
         assert len(positions) == 2
@@ -294,7 +295,7 @@ class TestInteractiveBrokersClient:
         send_mock.assert_called_once()
         
     @pytest.mark.asyncio()
-    async def test_request_executions_returns_expected(self, client):
+    async def test_request_executions_returns_expected(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
@@ -304,8 +305,8 @@ class TestInteractiveBrokersClient:
             
             report = IBCommissionReport()
             report.execId = execution.execId
-            client.execDetails(-10, IBContract(), execution)
-            client.commissionReport(report)
+            self.client.execDetails(-10, IBContract(), execution)
+            self.client.commissionReport(report)
             
             execution = IBExecution()
             execution.execId = 2
@@ -313,16 +314,16 @@ class TestInteractiveBrokersClient:
             
             report = IBCommissionReport()
             report.execId = execution.execId
-            client.execDetails(-10, IBContract(), execution)
-            client.commissionReport(report)
+            self.client.execDetails(-10, IBContract(), execution)
+            self.client.commissionReport(report)
             
-            client.execDetailsEnd(-10)
+            self.client.execDetailsEnd(-10)
 
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqExecutions = send_mock
+        self.client._eclient.reqExecutions = send_mock
         
         # Act
-        executions = await client.request_executions(client_id=1)
+        executions = await self.client.request_executions(client_id=1)
         
         # Assert
         assert len(executions) == 2
@@ -330,7 +331,7 @@ class TestInteractiveBrokersClient:
         send_mock.assert_called_once()
     
     @pytest.mark.asyncio()
-    async def test_request_executions_no_event_emit(self, client):
+    async def test_request_executions_no_event_emit(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
@@ -340,8 +341,8 @@ class TestInteractiveBrokersClient:
             
             report = IBCommissionReport()
             report.execId = execution.execId
-            client.execDetails(-10, IBContract(), execution)
-            client.commissionReport(report)
+            self.client.execDetails(-10, IBContract(), execution)
+            self.client.commissionReport(report)
             
             execution = IBExecution()
             execution.execId = 2
@@ -349,38 +350,38 @@ class TestInteractiveBrokersClient:
             
             report = IBCommissionReport()
             report.execId = execution.execId
-            client.execDetails(-10, IBContract(), execution)
-            client.commissionReport(report)
+            self.client.execDetails(-10, IBContract(), execution)
+            self.client.commissionReport(report)
             
-            client.execDetailsEnd(-10)
+            self.client.execDetailsEnd(-10)
 
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqExecutions = send_mock
+        self.client._eclient.reqExecutions = send_mock
         
         callback_mock = AsyncMock()
-        client.execution_events += callback_mock
+        self.client.execution_events += callback_mock
         
         # Act
-        await client.request_executions(client_id=1)
+        await self.client.request_executions(client_id=1)
         
         # Assert
         callback_mock.assert_not_called()
         
     @pytest.mark.asyncio()
-    async def test_request_head_timestamp(self, client):
+    async def test_request_head_timestamp(self):
         
         # Arrange
         contract = Contract()
         what_to_show = WhatToShow.BID
         
         def send_mocked_response(*args, **kwargs):
-            client.headTimestamp(-10, "20220329-08:00:00")
+            self.client.headTimestamp(-10, "20220329-08:00:00")
         send_mock = Mock(side_effect=send_mocked_response)
         
-        client._eclient.reqHeadTimeStamp = send_mock
+        self.client._eclient.reqHeadTimeStamp = send_mock
         
         # Act
-        timestamp = await client.request_head_timestamp(
+        timestamp = await self.client.request_head_timestamp(
             contract=contract,
             what_to_show=what_to_show,
         )
@@ -397,16 +398,16 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_request_first_quote_tick(self, client):
+    async def test_request_first_quote_tick(self):
         pass
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_request_last_quote_tick(self, client):
+    async def test_request_last_quote_tick(self):
         pass
         
     @pytest.mark.asyncio()
-    async def test_request_quote_ticks(self, client):
+    async def test_request_quote_ticks(self):
         
         # Act
         contract = Contract()
@@ -418,14 +419,14 @@ class TestInteractiveBrokersClient:
         
         def send_mocked_response(*args, **kwargs):
             
-            client.historicalTicksBidAsk(-10, [tick], False)
-            client.historicalTicksBidAsk(-10, [tick], True)
+            self.client.historicalTicksBidAsk(-10, [tick], False)
+            self.client.historicalTicksBidAsk(-10, [tick], True)
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqHistoricalTicks = send_mock
+        self.client._eclient.reqHistoricalTicks = send_mock
         
         # Act
-        quotes = await client.request_quote_ticks(
+        quotes = await self.client.request_quote_ticks(
             contract=contract,
             start_time=start_time,
             end_time=end_time,
@@ -450,7 +451,7 @@ class TestInteractiveBrokersClient:
         )
 
     @pytest.mark.asyncio()
-    async def test_request_trade_ticks(self, client):
+    async def test_request_trade_ticks(self):
         
         # Arrange
         contract = Contract()
@@ -461,14 +462,14 @@ class TestInteractiveBrokersClient:
         end_time = pd.Timestamp("2023-01-01 12:00:00", tz="UTC")
         
         def send_mocked_response(*args, **kwargs):
-            client.historicalTicksLast(-10, [tick], False)
-            client.historicalTicksLast(-10, [tick], True)
+            self.client.historicalTicksLast(-10, [tick], False)
+            self.client.historicalTicksLast(-10, [tick], True)
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqHistoricalTicks = send_mock
+        self.client._eclient.reqHistoricalTicks = send_mock
         
         # Act
-        trades = await client.request_trade_ticks(
+        trades = await self.client.request_trade_ticks(
             contract=contract,
             start_time=start_time,
             end_time=end_time,
@@ -493,15 +494,15 @@ class TestInteractiveBrokersClient:
         )
 
     @pytest.mark.asyncio()
-    async def test_subscribe_quote_ticks_sends_expected(self, client):
+    async def test_subscribe_quote_ticks_sends_expected(self):
         
         # Arrange
         contract = Contract()
         send_mock = Mock()
-        client._eclient.reqTickByTickData = send_mock
+        self.client._eclient.reqTickByTickData = send_mock
         
         # Act
-        subscription = client.subscribe_quote_ticks(
+        subscription = self.client.subscribe_quote_ticks(
             contract=contract,
             callback=Mock(),
         )
@@ -519,12 +520,12 @@ class TestInteractiveBrokersClient:
         
     
     @pytest.mark.asyncio()
-    async def test_subscribe_quote_ticks_returns_expected(self, client):
+    async def test_subscribe_quote_ticks_returns_expected(self):
         
         tickAttribBidAsk = TickAttribBidAsk()
         
         def send_mocked_response(*args, **kwargs):
-            client.tickByTickBidAsk(
+            self.client.tickByTickBidAsk(
                 reqId=-10,
                 time=1700069390,
                 bidPrice=1.1,
@@ -535,12 +536,12 @@ class TestInteractiveBrokersClient:
             )
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqTickByTickData = send_mock
+        self.client._eclient.reqTickByTickData = send_mock
         
         callback_mock = Mock()
         
         # Act
-        client.subscribe_quote_ticks(
+        self.client.subscribe_quote_ticks(
             contract=Contract(),
             callback=callback_mock,
         )
@@ -559,16 +560,16 @@ class TestInteractiveBrokersClient:
         assert tick_response.__dict__ == expected
         
     @pytest.mark.asyncio()
-    async def test_unsubscribe_quote_ticks(self, client):
+    async def test_unsubscribe_quote_ticks(self):
         
         # Arrange
-        client._eclient.reqTickByTickData = Mock()
+        self.client._eclient.reqTickByTickData = Mock()
         
         cancel_mock = Mock()
-        client._eclient.cancelTickByTickData = cancel_mock
+        self.client._eclient.cancelTickByTickData = cancel_mock
         
         # Act
-        subscription = client.subscribe_quote_ticks(
+        subscription = self.client.subscribe_quote_ticks(
             contract=Contract(),
             callback=Mock(),
         )
@@ -576,7 +577,7 @@ class TestInteractiveBrokersClient:
         
         # Assert
         cancel_mock.assert_called_once_with(reqId=-10)
-        assert subscription not in client.subscriptions
+        assert subscription not in self.client.subscriptions
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
@@ -590,7 +591,7 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.skip(reason="broken after re-connect changes")
     @pytest.mark.asyncio()
-    async def test_request_bars_daily(self, client):
+    async def test_request_bars_daily(self):
 
         # Arrange
         contract = Contract()
@@ -602,12 +603,12 @@ class TestInteractiveBrokersClient:
             bar1.date = 1700069390  # TODO: find correct timestamp format
             bar2 = BarData()
             bar2.date = 1700069390  # TODO: find correct timestamp format
-            client.historicalData(-10, bar2)
-            client.historicalData(-10, bar1)
-            client.historicalDataEnd(-10, "", "")
+            self.client.historicalData(-10, bar2)
+            self.client.historicalData(-10, bar1)
+            self.client.historicalDataEnd(-10, "", "")
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqHistoricalData = send_mock
+        self.client._eclient.reqHistoricalData = send_mock
         
         # Act
         bars = await client.request_bars(
@@ -641,19 +642,19 @@ class TestInteractiveBrokersClient:
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_request_bars_minute(self, client):
+    async def test_request_bars_minute(self):
         pass
 
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_5_seconds_sends_expected(self, client):
+    async def test_subscribe_bars_5_seconds_sends_expected(self):
         
         # Arrange
         contract = Contract()
         send_mock = Mock()
-        client._eclient.reqRealTimeBars = send_mock
+        self.client._eclient.reqRealTimeBars = send_mock
         
         # Act
-        subscription = client.subscribe_bars(
+        subscription = self.client.subscribe_bars(
             contract=contract,
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._5_SECOND,
@@ -673,10 +674,10 @@ class TestInteractiveBrokersClient:
         )
 
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_5_seconds_returns_expected(self, client):
+    async def test_subscribe_bars_5_seconds_returns_expected(self):
         
         def send_mocked_response(*args, **kwargs):
-            client.realtimeBar(
+            self.client.realtimeBar(
                 reqId=-10,
                 time=1700069390,
                 open_=1.1,
@@ -689,12 +690,12 @@ class TestInteractiveBrokersClient:
             )
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqRealTimeBars = send_mock
+        self.client._eclient.reqRealTimeBars = send_mock
         
         callback_mock = Mock()
         
         # Act
-        client.subscribe_bars(
+        self.client.subscribe_bars(
             contract=Contract(),
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._5_SECOND,
@@ -718,16 +719,16 @@ class TestInteractiveBrokersClient:
         assert bar_response.__dict__ == expected
         
     @pytest.mark.asyncio()
-    async def test_unsubscribe_5_second_bars(self, client):
+    async def test_unsubscribe_5_second_bars(self):
         
         # Arrange
-        client._eclient.reqRealTimeBars = Mock()
+        self.client._eclient.reqRealTimeBars = Mock()
         
         cancel_mock = Mock()
-        client._eclient.cancelRealTimeBars = cancel_mock
+        self.client._eclient.cancelRealTimeBars = cancel_mock
         
         # Act
-        subscription = client.subscribe_bars(
+        subscription = self.client.subscribe_bars(
             contract=Contract(),
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._5_SECOND,
@@ -737,18 +738,18 @@ class TestInteractiveBrokersClient:
         
         # Assert
         cancel_mock.assert_called_once_with(reqId=-10)
-        assert subscription not in client.subscriptions
+        assert subscription not in self.client.subscriptions
     
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_historical_sends_expected(self, client):
+    async def test_subscribe_bars_historical_sends_expected(self):
         
         # Arrange
         contract = Contract()
         send_mock = Mock()
-        client._eclient.reqHistoricalData = send_mock
+        self.client._eclient.reqHistoricalData = send_mock
         
         # Act
-        subscription = client.subscribe_bars(
+        subscription = self.client.subscribe_bars(
             contract=contract,
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._1_MINUTE,
@@ -772,20 +773,20 @@ class TestInteractiveBrokersClient:
         )
 
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_historical_returns_expected(self, client):
+    async def test_subscribe_bars_historical_returns_expected(self):
         
         def send_mocked_response(*args, **kwargs):
             bar = BarData()
             bar.date = 1700069390
-            client.historicalDataUpdate(-10, bar)
+            self.client.historicalDataUpdate(-10, bar)
             
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqHistoricalData = send_mock
+        self.client._eclient.reqHistoricalData = send_mock
         
         callback_mock = Mock()
         
         # Act
-        client.subscribe_bars(
+        self.client.subscribe_bars(
             contract=Contract(),
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._1_MINUTE,
@@ -798,16 +799,16 @@ class TestInteractiveBrokersClient:
         assert bar.timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
         
     @pytest.mark.asyncio()
-    async def test_unsubscribe_historical_second_bars(self, client):
+    async def test_unsubscribe_historical_second_bars(self):
         
         # Arrange
-        client._eclient.reqHistoricalData = Mock()
+        self.client._eclient.reqHistoricalData = Mock()
         
         cancel_mock = Mock()
-        client._eclient.cancelHistoricalData = cancel_mock
+        self.client._eclient.cancelHistoricalData = cancel_mock
         
         # Act
-        subscription = client.subscribe_bars(
+        subscription = self.client.subscribe_bars(
             contract=Contract(),
             what_to_show=WhatToShow.BID,
             bar_size=BarSize._1_MINUTE,
@@ -817,27 +818,27 @@ class TestInteractiveBrokersClient:
         
         # Assert
         cancel_mock.assert_called_once_with(reqId=-10)
-        assert subscription not in client.subscriptions
+        assert subscription not in self.client.subscriptions
     
     @pytest.mark.asyncio()
-    async def test_request_accounts(self, client):
+    async def test_request_accounts(self):
         
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            client.managedAccounts("DU1234567,DU1234568")
+            self.client.managedAccounts("DU1234567,DU1234568")
         
         send_mock = Mock(side_effect=send_mocked_response)
-        client._eclient.reqManagedAccts = send_mock
+        self.client._eclient.reqManagedAccts = send_mock
         
         # Act
-        accounts = await client.request_accounts()
+        accounts = await self.client.request_accounts()
         
         # Assert
         assert accounts == ["DU1234567", "DU1234568"]
         send_mock.assert_called_once()
             
     @pytest.mark.asyncio()
-    async def test_subscribe_order_status_events(self, client):
+    async def test_subscribe_order_status_events(self):
         
         # Arrange
         expected = dict(
@@ -854,10 +855,10 @@ class TestInteractiveBrokersClient:
             mktCapPrice=1.32,
         )
         callback_mock = AsyncMock()
-        client.order_status_events += callback_mock
+        self.client.order_status_events += callback_mock
         
         # Act
-        client.orderStatus(**expected)
+        self.client.orderStatus(**expected)
         
         # Assert
         event_response = callback_mock.call_args_list[0][0][0]
@@ -865,7 +866,7 @@ class TestInteractiveBrokersClient:
         assert dataclasses.asdict(event_response) == expected
     
     @pytest.mark.asyncio()
-    async def test_subscribe_execution_events(self, client):
+    async def test_subscribe_execution_events(self):
         
         """
         INFO:InteractiveBrokersClient:openOrder 7, orderStatus PreSubmitted, commission: 1.7976931348623157e+308, completedStatus: 
@@ -877,32 +878,32 @@ class TestInteractiveBrokersClient:
         
         # Arrange
         callback_mock = AsyncMock()
-        client.execution_events += callback_mock
+        self.client.execution_events += callback_mock
         
         # Act
         execution = IBExecution()
         execution.execId = "0000e1a7.65e1df89.01.01"
         execution.time = "20231116-12:07:51"
         
-        client.execDetails(-1, Contract(), execution)
+        self.client.execDetails(-1, Contract(), execution)
         
         report = IBCommissionReport()
         report.execId = execution.execId
-        client.commissionReport(report)
+        self.client.commissionReport(report)
         
         # Assert
         event_response = callback_mock.call_args_list[0][0][0]
         assert isinstance(event_response, IBExecutionEvent)
         
     @pytest.mark.asyncio()
-    async def test_subscribe_error_events(self, client):
+    async def test_subscribe_error_events(self):
         
         # Arrange
         callback_mock = AsyncMock()
-        client.error_events += callback_mock
+        self.client.error_events += callback_mock
         
         # Act
-        client.error(
+        self.client.error(
             reqId=4,
             errorCode=5,
             errorString="error message",

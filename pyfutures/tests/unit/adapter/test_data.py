@@ -1,3 +1,4 @@
+import asyncio
 import pandas as pd
 import pytest
 from unittest.mock import Mock
@@ -19,29 +20,70 @@ from pyfutures.tests.unit.client.test_historic import TestHistoric
 from nautilus_trader.model.objects import Quantity
 from pyfutures.adapter.parsing import instrument_id_to_contract
 from nautilus_trader.model.data import Bar
+from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
+from pyfutures.adapter.factories import PROVIDER_CONFIG
+from pyfutures.adapter.data import InteractiveBrokersDataClient
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
+
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
+from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
 class TestInteractiveBrokersDataClient:
     
     def setup_method(self):
+        
+        
+        clock = LiveClock()
+
+        msgbus = MessageBus(
+            trader_id=TestIdStubs.trader_id(),
+            clock=clock,
+        )
+        
+        cache = TestComponentStubs.cache()
+        self.contract = AdapterStubs.mes_contract()
+        cache.add_instrument(self.contract)
+        
+        client: InteractiveBrokersClient = ClientStubs.client()
+        
+        self.data_client = InteractiveBrokersDataClient(
+            loop=asyncio.get_event_loop(),
+            client=client,
+            msgbus=msgbus,
+            cache=cache,
+            clock=clock,
+            instrument_provider=InteractiveBrokersInstrumentProvider(
+                client=client,
+                config=PROVIDER_CONFIG,
+            ),
+            config=InteractiveBrokersDataClientConfig(),
+        )
+        
         self.instrument_id = InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
         self.bar_type = BarType.from_str(f"{self.instrument_id}-1-DAY-MID-EXTERNAL")
         
     @pytest.mark.skip(reason="TODO")
-    def test_instruments_on_load(self, data_client):
+    def test_instruments_on_load(self):
         pass
     
     @pytest.mark.asyncio()
-    async def test_subscribe_bars(self, data_client):
+    async def test_subscribe_bars(self):
         
         # Arrange
-        data_client._client.subscribe_bars = Mock()
+        self.data_client._client.subscribe_bars = Mock()
         
         # Act
-        await data_client._subscribe_bars(self.bar_type)
+        await self.data_client._subscribe_bars(self.bar_type)
         
         # Assert
-        data_client._client.subscribe_bars.assert_called_once()
-        sent_kwargs = data_client._client.subscribe_bars.call_args_list[0][1]
+        self.data_client._client.subscribe_bars.assert_called_once()
+        sent_kwargs = self.data_client._client.subscribe_bars.call_args_list[0][1]
         assert sent_kwargs["contract"].secType == "FUT"
         assert sent_kwargs["contract"].tradingClass == "MES"
         assert sent_kwargs["contract"].symbol == "MES"
@@ -49,12 +91,12 @@ class TestInteractiveBrokersDataClient:
         assert sent_kwargs["contract"].lastTradeDateOrContractMonth == "202312"
         assert sent_kwargs["what_to_show"] == WhatToShow.MIDPOINT
         assert sent_kwargs["bar_size"] == BarSize._1_DAY
-        assert sent_kwargs["callback"].func == data_client._bar_callback
+        assert sent_kwargs["callback"].func == self.data_client._bar_callback
         assert sent_kwargs["callback"].keywords["bar_type"] == self.bar_type
-        assert sent_kwargs["callback"].keywords["instrument"] == data_client.cache.instrument(self.instrument_id)
+        assert sent_kwargs["callback"].keywords["instrument"] == self.data_client.cache.instrument(self.instrument_id)
             
     @pytest.mark.asyncio()
-    async def test_bar_callback(self, data_client):
+    async def test_bar_callback(self):
         
         # Arrange
         bar = BarData()
@@ -68,18 +110,18 @@ class TestInteractiveBrokersDataClient:
         bar.volume = Decimal("1")
         bar.wap = Decimal("1")
         bar.barCount = 1
-        instrument = data_client.cache.instrument(self.instrument_id)
-        data_client._handle_data = Mock()
+        instrument = self.data_client.cache.instrument(self.instrument_id)
+        self.data_client._handle_data = Mock()
         
         # Act
-        data_client._bar_callback(
+        self.data_client._bar_callback(
             bar_type=self.bar_type,
             bar=bar,
             instrument=instrument,
         )
         
         # Assert
-        data_client._handle_data.assert_called_once_with(
+        self.data_client._handle_data.assert_called_once_with(
             Bar(
                 bar_type=self.bar_type,
                 open=Price(1.1, instrument.price_precision),
@@ -93,20 +135,20 @@ class TestInteractiveBrokersDataClient:
         )
         
     @pytest.mark.asyncio()
-    async def test_request_bars_handles_expected(self, data_client):
+    async def test_request_bars_handles_expected(self):
         
         # Arrange
         request_mock = Mock(side_effect=self.request_bars)
-        data_client._historic.request_bars = request_mock
+        self.data_client._historic.request_bars = request_mock
         start = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
         now = pd.Timestamp("2023-11-16", tz="UTC")
         pd.Timestamp.utcnow = Mock(return_value=now)
         correlation_id = UUID4()
         handle_mock = Mock()
-        data_client._handle_bars = handle_mock
+        self.data_client._handle_bars = handle_mock
         
         # Act
-        await data_client._request_bars(
+        await self.data_client._request_bars(
             bar_type=self.bar_type,
             limit=0,
             correlation_id=correlation_id,

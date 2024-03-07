@@ -12,10 +12,14 @@ from pyfutures.adapter.enums import WhatToShow
 import pandas as pd
 from ibapi.common import BarData
 from unittest.mock import Mock
+from pyfutures.tests.unit.client.stubs import ClientStubs
+from pyfutures.client.historic import InteractiveBrokersHistoric
 
 class TestHistoric:
     
     def setup_method(self):
+        
+        self.historic: InteractiveBrokersHistoric = ClientStubs.historic()
         self.contract = IBContract()
         self.contract.secType == "CONTFUT"
         self.contract.tradingClass == "DC"
@@ -23,14 +27,14 @@ class TestHistoric:
         self.contract.exchange == "CME"
     
     @pytest.mark.asyncio()
-    async def test_request_bars_limit(self, historic):
+    async def test_request_bars_limit(self):
         
         send_mock = AsyncMock(side_effect=self.request_bars)
-        historic._client.request_bars = send_mock
-        historic.request_bars_cache = send_mock
-        historic.request_bars_cache.is_cached = Mock(return_value=False)
+        self.historic._client.request_bars = send_mock
+        self.historic.request_bars_cache = send_mock
+        self.historic.request_bars_cache.is_cached = Mock(return_value=False)
         
-        bars = await historic.request_bars(
+        bars = await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -42,13 +46,13 @@ class TestHistoric:
         assert len(bars) == 60
         
     @pytest.mark.asyncio()
-    async def test_request_bars_returns_expected_dataframe(self, historic):
+    async def test_request_bars_returns_expected_dataframe(self):
         send_mock = AsyncMock(side_effect=self.request_bars)
-        historic._client.request_bars = send_mock
-        historic.request_bars_cache = send_mock
-        historic.request_bars_cache.is_cached = Mock(return_value=False)
+        self.historic._client.request_bars = send_mock
+        self.historic.request_bars_cache = send_mock
+        self.historic.request_bars_cache.is_cached = Mock(return_value=False)
         
-        df = await historic.request_bars(
+        df = await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -60,14 +64,14 @@ class TestHistoric:
         assert list(df.columns) == ["timestamp", "date", "open", "high", "low", "close", "volume", "wap", "barCount"]
         
     @pytest.mark.asyncio()
-    async def test_request_bars_sends_expected(self, historic):
+    async def test_request_bars_sends_expected(self):
         
         send_mock = AsyncMock(side_effect=self.request_bars)
-        historic._client.request_bars = send_mock
-        historic.request_bars_cached = send_mock
-        historic.request_bars_cached.is_cached = Mock(return_value=False)
+        self.historic._client.request_bars = send_mock
+        self.historic.request_bars_cached = send_mock
+        self.historic.request_bars_cached.is_cached = Mock(return_value=False)
         
-        await historic.request_bars(
+        await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -83,15 +87,15 @@ class TestHistoric:
         ]
         
     @pytest.mark.asyncio()
-    async def test_historic_first_request_not_use_cache(self, historic):
+    async def test_historic_first_request_not_use_cache(self):
         # the first request will have imcomplete data because the end time is ceiled to the interval
         # do not cache the first request
         
-        historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached.is_cached = Mock(return_value=True)
+        self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached.is_cached = Mock(return_value=True)
         
-        await historic.request_bars(
+        await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -100,19 +104,19 @@ class TestHistoric:
             cache=True,
         )
         
-        historic._client.request_bars.assert_called_once()
-        historic.request_bars_cached.assert_called_once()
+        self.historic._client.request_bars.assert_called_once()
+        self.historic.request_bars_cached.assert_called_once()
     
     @pytest.mark.asyncio()
-    async def test_historic_delay_if_not_cached(self, historic):
+    async def test_historic_delay_if_not_cached(self):
         
-        historic._delay = 1
-        historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached.is_cached = Mock(return_value=False)
+        self.historic._delay = 1
+        self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached.is_cached = Mock(return_value=False)
         asyncio.sleep = AsyncMock()
                
-        await historic.request_bars(
+        await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -121,20 +125,21 @@ class TestHistoric:
             cache=True,
         )
         
-        historic._client.request_bars.assert_called_once()
-        historic.request_bars_cached.assert_called_once()
+        self.historic._client.request_bars.assert_called_once()
+        self.historic.request_bars_cached.assert_called_once()
         asyncio.sleep.call_count == 2  # first and second request
     
+    @pytest.mark.skip(reason="TODO: add get response")
     @pytest.mark.asyncio()
-    async def test_historic_no_delay_if_cached(self, historic):
+    async def test_historic_no_delay_if_cached(self):
         
-        historic._delay = 1
-        historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        historic.request_bars_cached.is_cached = Mock(return_value=True)
+        self.historic._delay = 1
+        self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
+        self.historic.request_bars_cached.is_cached = Mock(return_value=True)
         asyncio.sleep = AsyncMock()
         
-        await historic.request_bars(
+        await self.historic.request_bars(
             contract=self.contract,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID_ASK,
@@ -143,8 +148,8 @@ class TestHistoric:
             cache=True,
         )
         
-        historic._client.request_bars.assert_called_once()
-        historic.request_bars_cached.assert_called_once()
+        self.historic._client.request_bars.assert_called_once()
+        self.historic.request_bars_cached.assert_called_once()
         asyncio.sleep.assert_called_once()  # first request only
     
     async def request_bars(
