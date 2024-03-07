@@ -1,5 +1,6 @@
-import gc
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
+import sys
+import asyncio
+import logging
 import pandas as pd
 import pytest
 from pyfutures.adapter.enums import BarSize, Duration, Frequency
@@ -7,24 +8,21 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersHistoric
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
-from nautilus_trader.adapters.interactive_brokers.client import InteractiveBrokersClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
-
-# from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
-import logging
-from pyfutures.tests.demo.adapter.factories import InteractiveBrokersClientFactory
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-# init_logging(
-#     level_stdout=LogLevel.DEBUG,
-#     level_file=LogLevel.DEBUG,
-# )
-
-
-@pytest.mark.asyncio()
-async def test_export_spread():
-    client: InteractiveBrokersClient = ClientStubs.client()
+async def main():
+    
+    
+        
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+    )
     
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
@@ -48,6 +46,8 @@ async def test_export_spread():
         )
         # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
 
+if __name__ == "__main__":
+    asyncio.get_event_loop().run_until_complete(main())
 
 # @pytest.mark.asyncio()
 # async def test_export_spread_daily(client):

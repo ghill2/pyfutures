@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import datetime
 import pandas as pd
 import sys
@@ -18,6 +19,14 @@ LOG_COLOR_TO_COLOR = {
 class LoggerAttributes:
     pass
 
+def init_logging(log_level: int = logging.DEBUG):
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Example log format
+    formatter = logging.Formatter(log_format)
+    handler = logging.StreamHandler()  # Output to console
+    handler.setFormatter(formatter)
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(log_level)
+    
 class LoggerAdapter:
     
     _timestamp_ns = 0

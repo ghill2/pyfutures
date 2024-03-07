@@ -23,21 +23,21 @@ from pyfutures.adapter.parsing import unqualified_contract_to_instrument_id
 from pyfutures.client.objects import ClientException
 import colorlog
 
-# Create a color formatter with blue for INFO messages
-formatter = colorlog.ColoredFormatter(
-    "%(log_color)s%(levelname)s:%(name)s:%(message)s %(reset)s",
-    log_colors={
-        'DEBUG': 'blue',
-        'INFO': 'blue',  # Set blue for INFO messages
-        'WARNING': 'blue',
-        'ERROR': 'blue',
-        'CRITICAL': 'blue,blue'
-    }
-)
+# # Create a color formatter with blue for INFO messages
+# formatter = colorlog.ColoredFormatter(
+#     "%(log_color)s%(levelname)s:%(name)s:%(message)s %(reset)s",
+#     log_colors={
+#         'DEBUG': 'blue',
+#         'INFO': 'blue',  # Set blue for INFO messages
+#         'WARNING': 'blue',
+#         'ERROR': 'blue',
+#         'CRITICAL': 'blue,blue'
+#     }
+# )
 
-# Create a stream handler and set the formatter
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
+# # Create a stream handler and set the formatter
+# handler = logging.StreamHandler()
+# handler.setFormatter(formatter)
 
 class HistoricCache:
     def __init__(self, path: Path):
@@ -110,7 +110,7 @@ class CachedFunc:
         self._func = func
         self._cachedir = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
         self._log = colorlog.getLogger(self.__class__.__name__)
-        self._log.addHandler(handler)
+        # self._log.addHandler(handler)
         self._log.setLevel(log_level)
     
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:

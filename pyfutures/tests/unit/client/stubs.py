@@ -9,15 +9,18 @@ from pyfutures.client.connection import Connection
 class ClientStubs:
     
     @staticmethod
-    def client() -> InteractiveBrokersClient:
+    def client(
+        request_timeout_seconds: float = 0.5,   # requests should fail immediately for unit tests
+        override_timeout: bool = True,  # use timeout for all requests even if timeout is given
+    ) -> InteractiveBrokersClient:
         return InteractiveBrokersClient(
             loop=asyncio.get_event_loop(),
             host="127.0.0.1",
             port=4002,
             log_level=logging.DEBUG,
             api_log_level=logging.DEBUG,
-            request_timeout_seconds=0.5,  # requests should fail immediately for unit tests
-            override_timeout=True,  # use timeout for all requests even if timeout is given
+            request_timeout_seconds=request_timeout_seconds,
+            override_timeout=override_timeout,
         )
     
     @staticmethod

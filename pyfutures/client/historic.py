@@ -54,7 +54,6 @@ class InteractiveBrokersHistoric:
         # assert start_time is not None and end_time is not None  # TODO
         # TODO: floor start_time and end_time to second
         # TODO: check start_time is >= head_timestamp
-
         if end_time is None:
             end_time = pd.Timestamp.utcnow()
 
