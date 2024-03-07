@@ -85,7 +85,7 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
                 cache=cache,
                 clock=clock,
                 instrument_provider=provider,
-                ibg_client_id=1,
+                # ibg_client_id=1,
                 config=config,
             )
         return DATA_CLIENT

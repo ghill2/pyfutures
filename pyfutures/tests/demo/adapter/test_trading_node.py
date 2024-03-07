@@ -1,10 +1,14 @@
 import asyncio
 
+import threading
+
 from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
 from nautilus_trader.common import Environment
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.config import LiveExecEngineConfig
+from nautilus_trader.logger import Logger
+from pyfutures.logger import LoggerAttributes
 from nautilus_trader.config import TradingNodeConfig
 from nautilus_trader.live.config import RoutingConfig
 from nautilus_trader.live.node import TradingNode
@@ -12,26 +16,15 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.objects import Price
 from nautilus_trader.config import LoggingConfig
+from nautilus_trader.model.identifiers import TraderId
 
-#
 from pytower.tests.stubs.strategies import BuyOnBarX
 
-from pyfutures.adapter.config import (
-    InteractiveBrokersDataClientConfig,
-)
-from pyfutures.adapter.config import (
-    InteractiveBrokersExecClientConfig,
-)
-from pyfutures.adapter.config import (
-    InteractiveBrokersInstrumentProviderConfig,
-)
-from pyfutures.adapter.factories import (
-    InteractiveBrokersLiveDataClientFactory,
-)
-from pyfutures.adapter.factories import (
-    InteractiveBrokersLiveExecClientFactory,
-)
-
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
+from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
 
 # init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -40,13 +33,15 @@ import logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
-init_logging(level_stdout=LogLevel.DEBUG)
+# init_logging(level_stdout=LogLevel.DEBUG)
 
 
-def create_trading_node():
+def create_trading_node(
+    trader_id: TraderId
+):
     # Arrange
     loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # asyncio.set_event_loop(loop)
 
     # monkeypatch.setenv("BINANCE_API_KEY", "SOME_API_KEY")
     # monkeypatch.setenv("BINANCE_API_SECRET", "SOME_API_SECRET")
@@ -68,6 +63,7 @@ def create_trading_node():
 
     config = TradingNodeConfig(
         # logging=LoggingConfig(bypass_logging=True),
+        trader_id=trader_id,
         environment=Environment.LIVE,
         # logging=LoggingConfig(
             # log_level="debug",
@@ -126,10 +122,34 @@ def create_trading_node():
     node.portfolio.set_specific_venue(IB_VENUE)
     
     return node
-
     
-    # node.run()
+async def main():
+    
+    LoggerAttributes.trading_class = "TradingClass1"
+    node = create_trading_node(TraderId("TRADER-001"))
+    node.get_event_loop().create_task(node.run_async())
+    
+    LoggerAttributes.trading_class = "TradingClass2"
+    node = create_trading_node(TraderId("TRADER-002"))
+    node.get_event_loop().create_task(node.run_async())
+    # nodes[0].get_event_loop().run_forever()
+    # nodes[1].get_event_loop().run_forever()
 
 if __name__ == "__main__":
-    node = create_trading_node()
-    node = create_trading_node()
+    asyncio.get_event_loop().run_until_complete(main())
+    
+    # loop = asyncio.get_event_loop()
+    
+    # Create threads for each method
+    # thread1 = threading.Thread(target=node.run)
+    # thread2 = threading.Thread(target=node.run)
+
+    # Start the threads
+    # thread1.start()
+    # thread2.start()
+
+    # Wait for both threads to finish
+    # thread1.join()
+    # thread2.join()
+    
+    
