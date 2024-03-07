@@ -86,7 +86,6 @@ class Connection:
                 return
             
             if len(data) == 0:
-                print("0 bytes received from server, connect has been dropped")
                 self._log.debug("0 bytes received from server, connect has been dropped")
                 await self._handle_disconnect()
                 return
@@ -113,7 +112,6 @@ class Connection:
         Called when the socket has been disconnected for some reason, for example,
         due to a schedule restart or during IB nightly reset.
         """
-        print("GOT TO HERE")
         self._log.debug("Handling disconnect.")
         await self._reset()
         
@@ -215,7 +213,6 @@ class Connection:
 
     def _sendMsg(self, msg: bytes) -> None:
         self._log.debug(f"--> {msg}")
-        print(f"--> {msg}")
         self._writer.write(msg)
         self._loop.create_task(self._writer.drain())
 
@@ -226,7 +223,6 @@ class Connection:
         self._sendMsg(msg)
 
     def _process_handshake(self, msg: bytes):
-        print(f"Processing handshake message {msg}")
         self._log.debug(f"Processing handshake message {msg}")
 
         msg = msg.decode(errors="backslashreplace")
