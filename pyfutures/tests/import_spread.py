@@ -1,6 +1,7 @@
 import sys
 import asyncio
 import logging
+import logging
 import pandas as pd
 import pytest
 from pyfutures.adapter.enums import BarSize, Duration, Frequency
@@ -12,16 +13,17 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
 from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
+from pyfutures.logger import init_logging
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 async def main():
     
-    
+    init_logging()
         
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
         override_timeout=False,
+        api_log_level=logging.ERROR,
     )
     
     rows = IBTestProviderStubs.universe_rows(
@@ -29,7 +31,6 @@ async def main():
     )
     historic = InteractiveBrokersHistoric(
         client=client,
-        log_level=logging.DEBUG,
         delay=1.5,
     )
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")

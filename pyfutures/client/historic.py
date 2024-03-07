@@ -25,13 +25,11 @@ class InteractiveBrokersHistoric:
         self,
         client: InteractiveBrokersClient,
         delay: float = 0,
-        log_level: int = logging.INFO,
         cachedir: Path | None = None,
     ):
         self._client = client
         self._delay = delay
         self._log = logging.getLogger(self.__class__.__name__)
-        self._log.setLevel(log_level)
 
         self.request_bars_cached = CachedFunc(
             self._client.request_bars,

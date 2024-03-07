@@ -17,7 +17,6 @@ class Connection:
         host: str,
         port: int,
         client_id: int,
-        log_level: int = logging.WARN,
     ):
         self.loop = loop
         self.host = host
@@ -27,8 +26,6 @@ class Connection:
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
         self._log = logging.getLogger(self.__class__.__name__)
-        # FIX THIS - log_level does not work with pytest tests
-        self._log.setLevel(level=log_level)
         self._handlers = set()
         
         # attributes that reset

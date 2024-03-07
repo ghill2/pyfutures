@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 import logging
 import datetime
 import pandas as pd
@@ -16,16 +17,20 @@ LOG_COLOR_TO_COLOR = {
     LogColor.YELLOW: "\x1b[1;33m",
     LogColor.RED: "\x1b[1;31m",
 }
-class LoggerAttributes:
-    pass
 
 def init_logging(log_level: int = logging.DEBUG):
+    # initializes all loggers with specified custom format and log level 
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Example log format
     formatter = logging.Formatter(log_format)
     handler = logging.StreamHandler()  # Output to console
     handler.setFormatter(formatter)
     logging.getLogger().addHandler(handler)
     logging.getLogger().setLevel(log_level)
+
+class LoggerAttributes:
+    trading_class = "N/A"
+    log_file: bool = False
+    log_path: Path | None = None
     
 class LoggerAdapter:
     
@@ -36,9 +41,36 @@ class LoggerAdapter:
         name: str,
         trading_class: str,
     ) -> None:
+        
         self._name = name
         self._trading_class = trading_class
+        self._log = logging.Logger
         
+        self._log = logging.getLogger(self.__class__.__name__)
+        self._log.setLevel(logging.DEBUG)  # Set the logging level
+        
+        
+        # Create a formatter
+        # %(custom_attribute)s
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
+        # Create a handler for console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)  # Set the logging level for console
+        console_handler.setFormatter(formatter)
+        
+        # Add the console handler to the logger
+        self._log.addHandler(console_handler)
+        
+        self._log.trading_class = LoggerAttributes.trading_class
+        
+        # If log file is specified, configure a handler for file logging
+        if LoggerAttributes.log_file:
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setLevel(logging.DEBUG)  # Set the logging level for file
+            file_handler.setFormatter(formatter)
+            self._log.addHandler(file_handler)
+    
     @classmethod
     def set_time(cls, time_ns: int):
         cls._timestamp_ns = time_ns
@@ -53,10 +85,6 @@ class LoggerAdapter:
     @property
     def name(self) -> str:
         return self._name
-    
-    @property
-    def timestamp(self) -> pd.Timestamp:
-        return unix_nanos_to_dt(self._timestamp_ns)
     
     def debug(
         self,

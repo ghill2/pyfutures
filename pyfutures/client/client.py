@@ -69,7 +69,6 @@ class InteractiveBrokersClient(EWrapper):
         host: str = "127.0.0.1",
         port: int = 7497,
         client_id: int = 1,
-        log_level: int = logging.ERROR,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
         override_timeout: bool = False,  # overrides timeout for all request even if given, useful for testing
@@ -81,7 +80,6 @@ class InteractiveBrokersClient(EWrapper):
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
         self._log = logging.getLogger(self.__class__.__name__)
-        self._log.setLevel(log_level)
         
         # Config
         self._loop = loop
@@ -103,7 +101,6 @@ class InteractiveBrokersClient(EWrapper):
             loop=loop,
             host=host,
             port=port,
-            log_level=log_level,
             client_id=client_id,
         )
         self._conn.register_handler(self._handle_msg)
