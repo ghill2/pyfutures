@@ -16,6 +16,7 @@ class Connection:
         loop: asyncio.AbstractEventLoop,
         host: str,
         port: int,
+        client_id: int,
         log_level: int = logging.WARN,
     ):
         self._loop = loop
@@ -24,90 +25,27 @@ class Connection:
 
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
-        self._watch_dog_task: asyncio.Task | None = None
-        self._listen_task: asyncio.Task | None = None
+        
 
         self._log = logging.getLogger(self.__class__.__name__)
         # FIX THIS - log_level does not work with pytest tests
         self._log.setLevel(level=log_level)
 
         self._handlers = set()
-
         self._handshake_message_ids = []
+        self._client_id = client_id
+        
+        # attributes that reset
+        self._monitor_task: asyncio.Task | None = None
+        self._listen_task: asyncio.Task | None = None
         self._reader, self._writer = (None, None)
-
-    def register_handler(self, handler: Coroutine) -> None:
-        self._handlers.add(handler)
-
-    async def _listen(self) -> None:
-        assert self._reader is not None
-
-        buf = b""
-
-        while True:
-            try:
-                data = await self._reader.read(4096)
-                # self._log.debug(f"<-data: {data}")
-            except ConnectionResetError as e:
-                self._log.error(f"listen: TWS closed the connection {e!r}...")
-                self._is_connected.clear()
-                return
-
-            if data == b"":
-                self._log.debug(
-                    "0 bytes received from server, connect has been dropped"
-                )
-                self._is_connected.clear()
-                return
-
-            buf += data
-
-            while len(buf) > 0:
-                (size, msg, buf) = comm.read_msg(buf)
-
-                if msg:
-                    self._log.debug(f"<-- {msg!r}")
-
-                    self._handle_msg(msg)
-                    await asyncio.sleep(0)
-
-                else:
-                    self._log.debug("more incoming packet(s) are needed ")
-                    break
-
-            await asyncio.sleep(0)
-
-    def _handle_msg(self, msg: bytes) -> None:
-        if self.is_connected:
-            for handler in self._handlers:
-                handler(msg)
-        else:
-            self._process_handshake(msg)
-
-    async def _run_watch_dog(self):
-        """
-        Monitors the socket connection for disconnections.
-        """
-        try:
-            while True:
-                await asyncio.sleep(5)
-
-                if self.is_connected:
-                    continue
-
-                self._log.debug(
-                    "Watchdog: connection has been disconnected. Reconnecting..."
-                )
-
-                await self.connect()
-
-        except Exception as e:
-            self._log.error(repr(e))
-
-    async def _initialize(self) -> bool:
-        self._log.debug("Initializing...")
-
         self._handshake_message_ids = []
+        
+    async def _reset(self) -> bool:
+        self._log.debug("Initializing...")
+        
+        self._is_connected.clear()
+        self._handshake_message_ids.clear()
         self._reader, self._writer = (None, None)
 
         self._log.debug("Initializing listen task...")
@@ -128,6 +66,90 @@ class Connection:
                 raise
 
         self._log.debug("Successfully Initialized...")
+        
+    def register_handler(self, handler: Coroutine) -> None:
+        self._handlers.add(handler)
+
+    async def _listen(self) -> None:
+        
+        assert self._reader is not None
+
+        buf = b""
+
+        while True:
+            try:
+                data = await self._reader.read(4096)
+                # self._log.debug(f"<-data: {data}")
+            except ConnectionResetError as e:
+                self._log.error(f"listen: TWS closed the connection {e!r}...")
+                await self._handle_disconnect()
+                return
+            
+            if len(data) == 0:
+                print("0 bytes received from server, connect has been dropped")
+                self._log.debug("0 bytes received from server, connect has been dropped")
+                await self._handle_disconnect()
+                return
+
+            buf += data
+
+            while len(buf) > 0:
+                (size, msg, buf) = comm.read_msg(buf)
+
+                if msg:
+                    self._log.debug(f"<-- {msg!r}")
+
+                    self._handle_msg(msg)
+                    await asyncio.sleep(0)
+
+                else:
+                    self._log.debug("more incoming packet(s) are needed ")
+                    break
+
+            await asyncio.sleep(0)
+
+    async def _handle_disconnect(self) -> None:
+        """
+        Called when the socket has been disconnected for some reason, for example,
+        due to a schedule restart or during IB nightly reset.
+        """
+        print("GOT TO HERE")
+        self._log.debug("Handling disconnect.")
+        await self._reset()
+        
+
+        # await self.connect()
+        # reconnect subscriptions
+        # for sub in self._subscriptions:
+        #     sub.cancel()
+        
+    def _handle_msg(self, msg: bytes) -> None:
+        
+        if self.is_connected:
+            for handler in self._handlers:
+                handler(msg)
+        else:
+            self._process_handshake(msg)
+
+    async def _run_watch_dog(self) -> None:
+        """
+        Monitors the socket connection for disconnections.
+        """
+        try:
+            while True:
+                await asyncio.sleep(5)
+
+                if self.is_connected:
+                    continue
+
+                self._log.debug(
+                    "Watchdog: connection has been disconnected. Reconnecting..."
+                )
+
+                await self.connect()
+
+        except Exception as e:
+            self._log.error(repr(e))
 
     @property
     def is_connected(self) -> bool:
@@ -140,21 +162,21 @@ class Connection:
         """
         Called by the user
         """
-        if self._watch_dog_task is None:
-            self._watch_dog_task = self._loop.create_task(self._run_watch_dog())
+        if self._monitor_task is None:
+            self._monitor_task = self._loop.create_task(self._run_watch_dog())
 
         async with self._is_connecting_lock:
-            await self._connect(timeout_seconds=timeout_seconds)
+            await self._connect()
             await self._handshake(timeout_seconds=timeout_seconds)
 
-    async def _connect(self, timeout_seconds: int = 5) -> None:
+    async def _connect(self) -> None:
         """
         Called by watch_dog and manually with connect() by the user
         NOTE: do not call handshake here so we can test connect and handshake separately
         """
         self._log.debug("Connecting...")
 
-        await self._initialize()
+        await self._reset()
 
         # connect socket
         self._log.debug("Connecting socket...")
@@ -164,6 +186,7 @@ class Connection:
             )
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
+            await self._reset()
             return
         self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 
@@ -192,26 +215,18 @@ class Connection:
 
     def _sendMsg(self, msg: bytes) -> None:
         self._log.debug(f"--> {msg}")
+        print(f"--> {msg}")
         self._writer.write(msg)
         self._loop.create_task(self._writer.drain())
 
-    async def _handle_disconnect(self):
-        """
-        Called when the socket has been disconnected for some reason, for example,
-        due to a schedule restart or during IB nightly reset.
-        """
-        self._log.debug("Handling disconnect.")
-
-        # await self.connect()
-        # reconnect subscriptions
-        # for sub in self._subscriptions:
-        #     sub.cancel()
+    
 
     async def _send_handshake(self) -> None:
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
         self._sendMsg(msg)
 
     def _process_handshake(self, msg: bytes):
+        print(f"Processing handshake message {msg}")
         self._log.debug(f"Processing handshake message {msg}")
 
         msg = msg.decode(errors="backslashreplace")
@@ -225,7 +240,9 @@ class Connection:
             version, _ = fields
             assert int(version) == 176
             self._log.debug("Sending startApi message...")
-            self._sendMsg(b"\x00\x00\x00\x0871\x002\x001\x00\x00")
+            # msg = b"\x00\x00\x00\x0871\x002\x00" + str(self._client_id).encode() + b"\x00\x00"
+            msg = b"\x00\x00\x00\x0871\x002\x001\x00\x00"
+            self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
             self._is_connected.set()
 

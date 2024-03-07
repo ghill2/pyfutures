@@ -104,6 +104,7 @@ class InteractiveBrokersClient(EWrapper):
             host=host,
             port=port,
             log_level=log_level,
+            client_id=client_id,
         )
         self._conn.register_handler(self._handle_msg)
 

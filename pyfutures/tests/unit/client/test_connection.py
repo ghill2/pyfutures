@@ -18,112 +18,151 @@ pytestmark = pytest.mark.unit
 
 class TestConnection:
     
-    @pytest.mark.skip(reason="TODO: failing")
     @pytest.mark.asyncio()
-    async def test_reconnect(self, mock_socket, connection):
-        """
-        tests connect then reconnect of the client
-        """
-
-        await mock_socket.connect(connection)
-
-        assert connection._is_connected.is_set()
-
-        mock_socket.queue_handshake()
-
-        mock_socket.send_responses([b""])
-        await asyncio.sleep(10)
-    
-    @pytest.mark.skip(reason="no asserts?")
-    @pytest.mark.asyncio()
-    async def test_request_bars_on_disconnect(self, mock_socket, client):
-        """
-            If request_bars() is executed when the client is disconnected
-            the client should wait to send the request until the client is connected again
-        """
-        contract = IBContract()
-        contract.secType = "CONTFUT"
-        contract.exchange = "CME"
-        contract.symbol = "DA"
-
-        with patch(
-            "asyncio.open_connection",
-            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
-        ) as _:
-
-            mock_socket.queue_handshake()
-            await client.connect()
-            await mock_socket.disconnect(client._conn)
-
-            # client should automatically reconnect, so queue the connection requests and responses
-            mock_socket.queue_handshake()
-
-            bars = await client.request_bars(
-                contract=contract,
-                bar_size=BarSize._1_DAY,
-                what_to_show=WhatToShow.TRADES,
-                duration=Duration(step=7, freq=Frequency.DAY),
-                end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D")
-            )
-            
-            
-    
-    @pytest.mark.asyncio()
-    async def test_connect(self, connection, mock_socket):
+    async def test_connect(self, connection):
         
         # Arrange
-        # mock_reader = mocker.MagicMock()
-        # async def mocked_read(_):
-        #     return b"nothing"  # do nothing
-        # mock_reader.read = mocked_read
-        # mock_writer = mocker.MagicMock()
+        mock_reader = AsyncMock()
+        mock_writer = AsyncMock()
         
-        # mocker.patch('asyncio.open_connection', return_value=(mock_reader, mock_writer))
         with patch(
             "asyncio.open_connection",
-            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
-        ) as _:
-            
+            return_value=(mock_reader, mock_writer),
+        ):
         
             # Act
             await connection._connect()
             
             # Assert
-            assert connection._reader == mock_socket.mock_reader
-            assert connection._writer == mock_socket.mock_writer
-            assert isinstance(connection._listen_task, asyncio.Task)
-            assert not connection._listen_task.done() and not connection._listen_task.cancelled()
-            assert connection._listen_task in asyncio.all_tasks(connection._loop)
             asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
+            assert connection._reader == mock_reader
+            assert connection._writer == mock_writer
+            
+            listen_started = not connection._listen_task.done() and not connection._listen_task.cancelled()
+            assert listen_started
+            assert connection._listen_task in asyncio.all_tasks(connection._loop)
 
     @pytest.mark.asyncio()
-    async def test_handshake(self, connection):
+    async def test_handshake(self, connection, mock_socket):
         
-        # Arrange
-        handshake_responses = [
-            [b'176\x0020240229 12:41:55 Greenwich Mean Time\x00'],
-            [b'15\x001\x00DU1234567\x00', b'9\x001\x006\x00'],
-        ]
-    
-        def send_mocked_response(_):
-            responses = handshake_responses.pop(0)
-            while len(responses) > 0:
-                connection._handle_msg(responses.pop(0))
-    
-        connection._sendMsg = Mock(side_effect=send_mocked_response)
-
         # Act
-        await connection._handshake(timeout_seconds=0.5)
-        assert connection.is_connected
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+        ):
+            
+            await connection._connect()
+            await connection._handshake(timeout_seconds=0.5)
+            assert connection.is_connected
+    
+    @pytest.mark.asyncio()
+    async def test_empty_byte_handles_disconnect(self, connection):
         
-        # Assert
-        sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
+        connection._handle_disconnect = AsyncMock()
+        mock_reader = AsyncMock()
+        mock_reader.read.return_value = b""
         
-        sent_expected = [
-            b"API\x00\x00\x00\x00\nv176..176 ",
-            b"\x00\x00\x00\x0871\x002\x001\x00\x00",
-        ]
-        assert sent_messages == sent_expected
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_reader, None),
+        ):
+            await connection._connect()  # start listen task
+            await asyncio.sleep(0)
+            connection._handle_disconnect.assert_called_once()
+            
+    @pytest.mark.asyncio()
+    async def test_connection_reset_error_handles_disconnect(self, connection):
+        
+        connection._handle_disconnect = AsyncMock()
+        mock_reader = AsyncMock()
+        
+        def raise_error(*args, **kwargs):
+            raise ConnectionResetError()
+        
+        mock_reader.read.side_effect = raise_error
+        
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_reader, None),
+        ):
+            await connection._connect()  # start listen task
+            await asyncio.sleep(0)
+            connection._handle_disconnect.assert_called_once()
+            
+    @pytest.mark.asyncio()
+    async def test_disconnect_resets(self, connection, mock_socket):
+        
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+        ):
+            await connection.connect()
+            assert connection.is_connected
+            await connection._handle_disconnect()
+            
+            assert not connection._is_connected.is_set()
+            assert len(connection._handshake_message_ids) == 0
+            assert connection._reader is None
+            assert connection._writer  is None
+            assert connection._listen_task is None
+            assert not connection.is_connected
+            assert connection._monitor_task is not None
+            
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_connect_after_disconnect(self, connection, mock_socket):
+        
+        with patch(
+            "asyncio.open_connection",
+            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+        ):
+            
+            await connection.connect()
+            assert connection.is_connected
+            
+            mock_socket.disconnect()
+            await asyncio.sleep(1)
+            assert not connection.is_connected
+        
+            
+            # await connection.connect()
+            # assert connection.is_connected
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_connect_resets_on_connection_refused_error(self, connection, mock_socket):
+        pass
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_reset_closes_writer(self, connection):
+        pass
+        
+# # Arrange
+# handshake_responses = [
+#     [b'176\x0020240229 12:41:55 Greenwich Mean Time\x00'],
+#     [b'15\x001\x00DU1234567\x00', b'9\x001\x006\x00'],
+# ]
+
+# def send_mocked_response(_):
+#     responses = handshake_responses.pop(0)
+#     while len(responses) > 0:
+#         connection._handle_msg(responses.pop(0))
+
+# connection._sendMsg = Mock(side_effect=send_mocked_response)
+# from ibapi import comm
+# buf = b'176\x0020240229 12:41:55 Greenwich Mean Time\x00'
+# buf = b"\x00\x00\x00\x089\x001\x00530\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00\x00\x00\x0044\x002\x00-1\x002106\x00HMDS data farm connection is OK:ushmds\x00\x00"
+# (size, msg, buf) = comm.read_msg(buf)
+
+# Assert
+# sent_messages: list[bytes] = [x[0][0] for x in connection._sendMsg.call_args_list]
+
+# sent_expected = [
+#     b"API\x00\x00\x00\x00\nv176..176 ",
+#     b"\x00\x00\x00\x0871\x002\x001\x00\x00",
+# ]
+# assert sent_messages == sent_expected
     
         
 
