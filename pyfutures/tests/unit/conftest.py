@@ -13,7 +13,7 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.historic import InteractiveBrokersHistoric
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
-from pyfutures.tests.unit.client.mock_socket import MockSocket
+from pyfutures.tests.unit.client.mock_server import MockServer
 from pyfutures.client.connection import Connection
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 
@@ -78,16 +78,16 @@ def historic(event_loop) -> InteractiveBrokersHistoric:
     # shutil.deletecache_dir.unlink()
 
 
-@pytest.fixture
-def connection(event_loop) -> Connection:
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    return Connection(
-        loop=event_loop,
-        host="127.0.0.1",
-        port=4002,
-        client_id=1,
-    )
+# @pytest.fixture
+# def connection(event_loop) -> Connection:
+#     logger = logging.getLogger()
+#     logger.setLevel(logging.DEBUG)
+#     return Connection(
+#         loop=event_loop,
+#         host="127.0.0.1",
+#         port=4002,
+#         client_id=1,
+#     )
 
 @pytest.fixture()
 def exec_client(event_loop, client) -> InteractiveBrokersExecClient:
@@ -156,9 +156,9 @@ def data_client(event_loop, client) -> InteractiveBrokersDataClient:
     
     yield data_client
         
-@pytest.fixture
-def mock_socket() -> MockSocket:
-    return MockSocket()
+# @pytest.fixture
+# def mock_socket() -> MockServer:
+#     return MockServer()
 
 def _mes_contract() -> FuturesContract:
     return Instrument(

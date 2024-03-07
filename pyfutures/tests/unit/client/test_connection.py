@@ -1,25 +1,32 @@
 import asyncio
-
+import logging
 import pytest
 
 from pyfutures.client.connection import Connection
 from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from unittest.mock import MagicMock
 from unittest.mock import patch
-import pandas as pd
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import Frequency
-from pyfutures.adapter.enums import WhatToShow
-from ibapi.contract import Contract as IBContract
+from pyfutures.tests.unit.client.mock_server import MockServer
 
 pytestmark = pytest.mark.unit
 
 class TestConnection:
     
+    def setup_method(self):
+        
+        logger = logging.getLogger()
+        logger.setLevel(logging.DEBUG)
+        
+        self.connection = Connection(
+            loop=asyncio.get_event_loop(),
+            host="127.0.0.1",
+            port=4002,
+            client_id=1,
+        )
+        
+        self.mock_server = MockServer()
+    
     @pytest.mark.asyncio()
-    async def test_connect(self, connection):
+    async def test_connect(self):
         
         # Arrange
         mock_reader = AsyncMock()
@@ -31,34 +38,57 @@ class TestConnection:
         ):
         
             # Act
-            await connection._connect()
+            await self.connection._connect()
             
             # Assert
-            asyncio.open_connection.assert_called_once_with(connection._host, connection._port)
-            assert connection._reader == mock_reader
-            assert connection._writer == mock_writer
+            asyncio.open_connection.assert_called_once_with(
+                self.connection.host,
+                self.connection.port,
+            )
+            assert self.connection._reader == mock_reader
+            assert self.connection._writer == mock_writer
             
-            listen_started = not connection._listen_task.done() and not connection._listen_task.cancelled()
+            listen_started = not self.connection._listen_task.done() and not self.connection._listen_task.cancelled()
             assert listen_started
-            assert connection._listen_task in asyncio.all_tasks(connection._loop)
+            assert self.connection._listen_task in asyncio.all_tasks(self.connection.loop)
 
     @pytest.mark.asyncio()
-    async def test_handshake(self, connection, mock_socket):
+    async def test_handshake_client_id_1(self):
         
         # Act
         with patch(
             "asyncio.open_connection",
-            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
+            return_value=(self.mock_server.reader, self.mock_server.writer),
         ):
             
-            await connection._connect()
-            await connection._handshake(timeout_seconds=0.5)
-            assert connection.is_connected
+            await self.connection._connect()
+            await self.connection._handshake(timeout_seconds=0.5)
+            assert self.connection.is_connected
     
+    @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_empty_byte_handles_disconnect(self, connection):
+    async def test_handshake_client_id_2(self):
+        self.connection = Connection(
+            loop=asyncio.get_event_loop(),
+            host=self.connection.host,
+            port=self.connection.port,
+            client_id=2,
+        )
         
-        connection._handle_disconnect = AsyncMock()
+        # Act
+        with patch(
+            "asyncio.open_connection",
+            return_value=(self.mock_server.reader, self.mock_server.writer),
+        ):
+            
+            await self.connection._connect()
+            await self.connection._handshake(timeout_seconds=0.5)
+            assert self.connection.is_connected
+        
+    @pytest.mark.asyncio()
+    async def test_empty_byte_handles_disconnect(self):
+        
+        self.connection._handle_disconnect = AsyncMock()
         mock_reader = AsyncMock()
         mock_reader.read.return_value = b""
         
@@ -66,47 +96,47 @@ class TestConnection:
             "asyncio.open_connection",
             return_value=(mock_reader, None),
         ):
-            await connection._connect()  # start listen task
+            await self.connection._connect()  # start listen task
             await asyncio.sleep(0)
-            connection._handle_disconnect.assert_called_once()
+            self.connection._handle_disconnect.assert_called_once()
             
     @pytest.mark.asyncio()
-    async def test_connection_reset_error_handles_disconnect(self, connection):
+    async def test_connection_reset_error_handles_disconnect(self):
         
-        connection._handle_disconnect = AsyncMock()
-        mock_reader = AsyncMock()
+        self.connection._handle_disconnect = AsyncMock()
         
         def raise_error(*args, **kwargs):
             raise ConnectionResetError()
         
-        mock_reader.read.side_effect = raise_error
+        self.mock_server.reader.read.side_effect = raise_error
         
         with patch(
             "asyncio.open_connection",
-            return_value=(mock_reader, None),
+            return_value=(AsyncMock(), None),
         ):
-            await connection._connect()  # start listen task
+            await self.connection._connect()  # start listen task
             await asyncio.sleep(0)
-            connection._handle_disconnect.assert_called_once()
+            self.connection._handle_disconnect.assert_called_once()
             
     @pytest.mark.asyncio()
-    async def test_disconnect_resets(self, connection, mock_socket):
+    async def test_disconnect_resets(self):
         
         with patch(
             "asyncio.open_connection",
-            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
-        ):
-            await connection.connect()
-            assert connection.is_connected
-            await connection._handle_disconnect()
+            return_value=(self.mock_server.reader, self.mock_server.writer),
             
-            assert not connection._is_connected.is_set()
-            assert len(connection._handshake_message_ids) == 0
-            assert connection._reader is None
-            assert connection._writer  is None
-            assert connection._listen_task is None
-            assert not connection.is_connected
-            assert connection._monitor_task is not None
+        ):
+            await self.connection.connect()
+            assert self.connection.is_connected
+            await self.connection._handle_disconnect()
+            
+            assert not self.connection._is_connected.is_set()
+            assert len(self.connection._handshake_message_ids) == 0
+            assert self.connection._reader is None
+            assert self.connection._writer  is None
+            assert self.connection._listen_task is None
+            assert not self.connection.is_connected
+            assert self.connection._monitor_task is not None
             
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()

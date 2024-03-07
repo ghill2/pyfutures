@@ -3,26 +3,19 @@ from unittest.mock import MagicMock
 import asyncio
 from collections import deque
 import logging
-from unittest.mock import patch
 
-
-class MockSocket:
+class MockServer:
 
     def __init__(self):
         # append to this queue to receive msg at self._reader.read()
         self._mocked_responses = deque()
 
-        mock_reader = AsyncMock()
-        mock_reader.read.side_effect = self._handle_read
+        self.reader = AsyncMock()
+        self.reader.read.side_effect = self._handle_read
 
-        self.respond = asyncio.Event()
-
-        mock_writer = MagicMock()
-        mock_writer.drain = AsyncMock()
-        mock_writer.write.side_effect = self._handle_write
-
-        self.mock_reader = mock_reader
-        self.mock_writer = mock_writer
+        self.writer = MagicMock()
+        self.writer.drain = AsyncMock()
+        self.writer.write.side_effect = self._handle_write
 
         self._log = logging.getLogger("MockSocket")
         

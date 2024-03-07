@@ -19,21 +19,17 @@ class Connection:
         client_id: int,
         log_level: int = logging.WARN,
     ):
-        self._loop = loop
-        self._host = host
-        self._port = port
-
+        self.loop = loop
+        self.host = host
+        self.port = port
+        self.client_id = client_id
+        
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
-        
-
         self._log = logging.getLogger(self.__class__.__name__)
         # FIX THIS - log_level does not work with pytest tests
         self._log.setLevel(level=log_level)
-
         self._handlers = set()
-        self._handshake_message_ids = []
-        self._client_id = client_id
         
         # attributes that reset
         self._monitor_task: asyncio.Task | None = None
@@ -161,7 +157,7 @@ class Connection:
         Called by the user
         """
         if self._monitor_task is None:
-            self._monitor_task = self._loop.create_task(self._run_watch_dog())
+            self._monitor_task = self.loop.create_task(self._run_watch_dog())
 
         async with self._is_connecting_lock:
             await self._connect()
@@ -180,7 +176,7 @@ class Connection:
         self._log.debug("Connecting socket...")
         try:
             self._reader, self._writer = await asyncio.open_connection(
-                self._host, self._port
+                self.host, self.port
             )
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
@@ -190,7 +186,7 @@ class Connection:
 
         # start listen task
         self._log.debug("Starting listen task...")
-        self._listen_task = self._loop.create_task(self._listen(), name="listen")
+        self._listen_task = self.loop.create_task(self._listen(), name="listen")
         self._log.info("Listen task started")
 
     async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
@@ -214,7 +210,7 @@ class Connection:
     def _sendMsg(self, msg: bytes) -> None:
         self._log.debug(f"--> {msg}")
         self._writer.write(msg)
-        self._loop.create_task(self._writer.drain())
+        self.loop.create_task(self._writer.drain())
 
     
 
