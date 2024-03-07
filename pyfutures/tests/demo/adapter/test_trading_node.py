@@ -43,7 +43,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 init_logging(level_stdout=LogLevel.DEBUG)
 
 
-def test_trading_node():
+def create_trading_node():
     # Arrange
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -106,6 +106,7 @@ def test_trading_node():
 
 
     node.build()
+    
     strategy = BuyOnBarX(
         index=1,
         bar_type=bar_type,
@@ -122,10 +123,13 @@ def test_trading_node():
     # exec_client_id = ClientId("IB")
     node.trader.add_strategy(strategy)
     node.trader.add_strategy(strategytwo)
-
     node.portfolio.set_specific_venue(IB_VENUE)
+    
+    return node
 
-    node.run()
+    
+    # node.run()
 
-
-test_trading_node()
+if __name__ == "__main__":
+    node = create_trading_node()
+    node = create_trading_node()

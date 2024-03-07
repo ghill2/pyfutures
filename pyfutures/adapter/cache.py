@@ -1,3 +1,4 @@
+import logging
 import asyncio
 from typing import Any
 import pandas as pd
@@ -18,10 +19,9 @@ from pyfutures.client.parsing import bar_data_from_dict
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.common.component import Logger
 from nautilus_trader.core.rust.common import LogColor
-
-from pyfutures.adapter.enums import BarSize, Duration, WhatToShow
 from pyfutures.adapter.parsing import unqualified_contract_to_instrument_id
 from pyfutures.client.objects import ClientException
+import colorlog
 
 # Create a color formatter with blue for INFO messages
 formatter = colorlog.ColoredFormatter(
@@ -39,6 +39,59 @@ formatter = colorlog.ColoredFormatter(
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 
+class HistoricCache:
+    def __init__(self, path: Path):
+        self.path = Path(path)  # directory
+    
+    def get(
+        self,
+        key: str,
+    ) -> list[Any] | Exception | None:
+        
+        path = self._pickle_path(key)
+        if not path.exists():
+            return None
+        
+        with open(path, "rb") as f:
+            cached = pickle.load(f)
+        
+        if isinstance(cached, list):
+            cached = [bar_data_from_dict(b) for b in cached]
+        elif isinstance(cached, dict):
+            cached = ClientException.from_dict(cached)
+            
+        return cached
+    
+    def set(
+        self,
+        key: str,
+        value: list[Any] | Exception,
+    ) -> None:
+        
+        if not isinstance(value, (list, Exception)):
+            raise RuntimeError(f"Unsupported type {type(value).__name__}")
+        
+        if isinstance(value, list):
+            value = [bar_data_to_dict(b) for b in value]
+        elif isinstance(value, ClientException):
+            value = value.to_dict()
+            
+        with open(self._pickle_path(key), "wb") as f:
+            pickle.dump(value, f)
+    
+    def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
+        for path in self.path.glob("*.pkl"):
+            with open(path, "rb") as f:
+                cached = pickle.load(f)
+            if isinstance(cached, cls):
+                path.unlink()
+    
+    def _pickle_path(self, key: str) -> Path:
+        return self.path / f"{key}.pkl"
+    
+    def __len__(self) -> int:
+        return len(list(self.path.rglob("*.pkl")))
+    
 class CachedFunc:
     """
     Creates a cache
@@ -81,12 +134,12 @@ class CachedFunc:
         
         try:
             result = await self._func(**kwargs)
-            self._set(key, result)
+            self.cache.set(key, result)
             self._log.debug(f"Saved {self._value_to_str(result)} items...")
             return result
         except Exception as e:
             self._log.error(str(e))
-            self._set(key, e)
+            self.cache.set(key, e)
             self._log.debug(f"Saved {e} items...")
             raise
     
