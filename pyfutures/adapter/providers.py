@@ -9,8 +9,7 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.parsing import contract_details_to_futures_instrument
-from pyfutures.adapter.parsing import contract_details_to_forex_instrument
+from pyfutures.adapter.parsing import contract_details_to_instrument
 from pyfutures.adapter.parsing import instrument_id_to_contract
 from pyfutures.continuous.chain import ContractChain
 
@@ -34,7 +33,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
         self.client = client
         self.config = config
-        self.contract_details: dict[str, IBContractDetails] = {}
+        self.contract_details: dict[InstrumentId, IBContractDetails] = {}
         self.contract_id_to_instrument_id: dict[int, InstrumentId] = {}
 
         self._chain_filters = config.chain_filters or {}
@@ -66,26 +65,24 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         if len(details_list) == 0:
             self._log.error("No contracts found")
             return None
-
-        if contract.secType == "FUT":
+        elif len(details_list) > 0 and contract.secType == "FUT":
             details_list = self._filter_monthly_contracts(details_list)
-
+        
         self.add_contract_details(details_list[0])
 
     def add_contract_details(self, details: IBContractDetails) -> Instrument:
 
-        sec_type = details.contract.secType
-        if sec_type == "FUT":
-            overrides: dict = self._parsing_overrides.get(details.contract.tradingClass, {})
-            instrument = contract_details_to_futures_instrument(details, overrides=overrides)
-        elif sec_type == "CASH":
-            instrument = contract_details_to_forex_instrument(details) 
-        else:
-            raise ValueError(f"Contract SecType {sec_type} not supported") 
-
+        instrument: Instrument = contract_details_to_instrument(
+            details=details,
+            overrides=self._parsing_overrides.get(details.contract.tradingClass, {}),
+        )
+        
         self.add(instrument)
-        self.contract_details[instrument.id.value] = details
-        self.contract_id_to_instrument_id[details.contract.conId] = instrument.id
+        
+        self.contract_details[instrument.id] = details
+        
+        conId = instrument.info["contract"]["conId"]
+        self.contract_id_to_instrument_id[conId] = instrument.id
         return instrument
 
     async def load_futures_chain(

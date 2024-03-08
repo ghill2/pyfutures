@@ -15,30 +15,35 @@ from pyfutures.tests.unit.client.stubs import ClientStubs
 
 from ibapi.contract import ContractDetails as IBContractDetails
 
-@pytest.mark.skip()
 class TestInteractiveBrokersInstrumentProvider:
     
     def setup_method(self):
         client: InteractiveBrokersClient = ClientStubs.client()
         self.provider = AdapterStubs.instrument_provider(client=client)
-        
+    
     @pytest.mark.asyncio()
-    async def test_load_async(self):
+    async def test_load_async(self, mocker):
         
         # Arrange
+        mock_contract = AdapterStubs.mes_contract()
+        
+        mocker.patch(
+            "pyfutures.adapter.providers.contract_details_to_instrument",
+            return_value=mock_contract
+        )
+        
         details = IBContractDetails()
-        self.provider.client.request_contract_details = AsyncMock(return_value=details)
-
-        instrument_id = InstrumentId.from_str("ZC-ZC=FUT=H24.CBOT")
+        self.provider.client.request_contract_details = AsyncMock(return_value=[details])
 
         # Act
-        await self.provider.load_contract(instrument_id)
+        await self.provider.load_async(mock_contract.id)
         
         # Assert
-        assert self.provider.find(instrument_id) is not None
-        
-
-
+        assert self.provider.find(mock_contract.id) is not None
+        assert self.provider.find(mock_contract.id) == mock_contract
+        assert self.provider.contract_id_to_instrument_id[1] == mock_contract.id
+        assert self.provider.contract_details[mock_contract.id] == details
+    
     @pytest.mark.asyncio()
     async def test_load_with_safe_instrument_id(instrument_provider):
         # Arrange
@@ -48,7 +53,7 @@ class TestInteractiveBrokersInstrumentProvider:
         instrument = await instrument_provider.load_contract(instrument_id)
         assert instrument is not None
 
-
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_load_uses_chain_filter(instrument_provider):
         # Arrange
@@ -63,7 +68,7 @@ class TestInteractiveBrokersInstrumentProvider:
         # Assert
         assert details is not None
 
-
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_load_parsing_overrides_sets_expected(instrument_provider):
         # Arrange
@@ -82,7 +87,7 @@ class TestInteractiveBrokersInstrumentProvider:
         assert instrument.price_precision == 0
         assert instrument.price_increment == 5
 
-
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_request_future_chain_details_returns_expected(instrument_provider):
         config = FuturesChainConfig(
@@ -99,7 +104,7 @@ class TestInteractiveBrokersInstrumentProvider:
         for details in details_list:
             assert ContractMonth.from_int(details.contractMonth) in chain.hold_cycle
 
-
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_find_with_contract_id_requests_instrument(instrument_provider):
         await instrument_provider.client.connect()

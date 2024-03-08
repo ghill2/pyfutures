@@ -172,6 +172,17 @@ def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
     return contract
 
 
+def contract_details_to_instrument(
+    details: IBContractDetails,
+    overrides: dict | None = None,
+) -> Instrument:
+    sec_type = details.contract.secType
+    if sec_type == "FUT":
+        return contract_details_to_futures_instrument(details, overrides=overrides)
+    elif sec_type == "CASH":
+        return contract_details_to_forex_instrument(details)
+    else:
+        raise ValueError(f"Contract SecType {sec_type} not supported") 
 def contract_details_to_futures_instrument(
     details: IBContractDetails,
     overrides: dict | None = None,
