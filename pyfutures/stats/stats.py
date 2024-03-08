@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from dotenv import dotenv_values
 from ibapi.common import Contract as IBContract
 from nautilus_trader.common.component import Logger
 
@@ -15,11 +14,10 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
 
+from pyfutures.stats.fx_rates import FxRates
+
 
 logger = Logger(name="stats")
-
-
-TRADERMADE_KEY = dotenv_values()["tradermade_key"]
 
 
 class Stats:
@@ -65,13 +63,7 @@ class Stats:
                 pickle.dump(detail, f)
             return detail
 
-    def _fx_rates(self, rows):
-        outpath = Path(self.parent_out / "fx_rates.json")
-
-        if outpath.exists():
-            print("-----> Getting FX Rates from file...")
-            with open(outpath) as f:
-                return json.load(f)
+    def _fx_rates(self):
         # get for the quote_home_xrate value of the stats
         currencies = list(set([f"{r.contract.currency}GBP" for r in rows]))
 
@@ -80,15 +72,7 @@ class Stats:
             for fee_type, fee_value, fee_currency, is_percent in row.fees:
                 if fee_currency != row.contract.currency:
                     currencies.append(f"{fee_currency}{row.contract.currency}")
-
-        print("-----> Getting FX Rates from API...")
-        url = f"https://marketdata.tradermade.com/api/v1/live?currency={','.join(currencies)}&api_key={TRADERMADE_KEY}"
-        resp = requests.get(url)
-        data = resp.json()
-        with open(outpath, "w") as f:
-            json.dump(data, f, indent=4)
-
-        return data
+        return self.fx_rates.get(currencies)
 
     def _contract_prices(self, rows, details):
         """
