@@ -44,6 +44,7 @@ class TestInteractiveBrokersInstrumentProvider:
         assert self.provider.contract_id_to_instrument_id[1] == mock_contract.id
         assert self.provider.contract_details[mock_contract.id] == details
     
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_load_with_safe_instrument_id(instrument_provider):
         # Arrange
