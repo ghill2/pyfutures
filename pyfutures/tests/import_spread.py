@@ -38,10 +38,8 @@ async def main():
     )
     
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
-    cache = Cache(
-        path=CACHE_DIR,
-    )
-    cache.purge_errors(asyncio.TimeoutError)
+    
+    historic.cache.purge_errors(asyncio.TimeoutError)
     
     exit()
     await client.connect()
