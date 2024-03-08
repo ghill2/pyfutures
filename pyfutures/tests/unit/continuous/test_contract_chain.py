@@ -431,7 +431,6 @@ class TestContractChain:
 
         #     if i == 633:  # before first roll
         #         print(bar.bar_type)
-        #         exit()
         #         list(self.chain.adjusted)[-3:] == [4699.0, 4667.0, 4711.0]
 
         #     if i == 634:  # after first roll on 2021-12-15

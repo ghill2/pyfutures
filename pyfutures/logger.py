@@ -1,25 +1,42 @@
 from __future__ import annotations
+import re
 from pathlib import Path
 import logging
 import datetime
+from io import StringIO
 import pandas as pd
 import sys
 from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.common.enums import LogColor
 import traceback
 
+NORMAL = 0
+GREEN = 1
+BLUE = 2
+MAGENTA = 3
+CYAN = 4
+YELLOW = 5
+RED = 6
+    
 LOG_COLOR_TO_COLOR = {
-    LogColor.NORMAL: "",
-    LogColor.GREEN: "\x1b[92m",
-    LogColor.BLUE: "\x1b[94m",
-    LogColor.MAGENTA: "\x1b[35m",
-    LogColor.CYAN: "\x1b[36m",
-    LogColor.YELLOW: "\x1b[1;33m",
-    LogColor.RED: "\x1b[1;31m",
+    NORMAL: "",
+    GREEN: "\x1b[92m",
+    BLUE: "\x1b[94m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    YELLOW: "\x1b[1;33m",
+    RED: "\x1b[1;31m",
+}
+
+LEVEL_TO_STR = {
+    logging.INFO: "INF",
+    logging.DEBUG: "DBG",
+    logging.WARNING: "WRN",
+    logging.ERROR: "ERR",
+    logging.CRITICAL: "CRT",
 }
 
 def init_logging(log_level: int = logging.DEBUG):
-    # initializes all loggers with specified custom format and log level 
+    # initializes all loggers with specified custom format and log level
     log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'  # Example log format
     formatter = logging.Formatter(log_format)
     handler = logging.StreamHandler()  # Output to console
@@ -28,102 +45,109 @@ def init_logging(log_level: int = logging.DEBUG):
     logging.getLogger().setLevel(log_level)
 
 class LoggerAttributes:
-    trading_class = "N/A"
-    log_file: bool = False
-    log_path: Path | None = None
+    id: str = ""
+    level: int = logging.DEBUG
+    path: Path | None = None
+
+class StripANSIFileHandler(logging.FileHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def emit(self, record):
+        record.msg = self._strip_ansi(record.msg)
+        super().emit(record)
+
+    @staticmethod
+    def _strip_ansi(text):
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return ansi_escape.sub('', text)
     
 class LoggerAdapter:
     
-    _timestamp_ns = 0
+    _timestamp_ns: int = 0
     
     def __init__(
         self,
         name: str,
-        trading_class: str,
+        id: str = "N/A",
+        level: int = logging.DEBUG,
+        path: Path | None = None,
     ) -> None:
         
-        self._name = name
-        self._trading_class = trading_class
-        self._log = logging.Logger
+        self.id = id
+        self.name = name
+        self.level = level
+        self.path = path
         
-        self._log = logging.getLogger(self.__class__.__name__)
-        self._log.setLevel(logging.DEBUG)  # Set the logging level
+        self.logger = logging.Logger(name=name)
+        # super().__init__(name=name)
         
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(self.level)
+        handler.setFormatter(
+            logging.Formatter('%(message)s'),
+        )
+        self.logger.addHandler(handler)
         
-        # Create a formatter
-        # %(custom_attribute)s
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        
-        # Create a handler for console logging
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)  # Set the logging level for console
-        console_handler.setFormatter(formatter)
-        
-        # Add the console handler to the logger
-        self._log.addHandler(console_handler)
-        
-        self._log.trading_class = LoggerAttributes.trading_class
-        
-        # If log file is specified, configure a handler for file logging
-        if LoggerAttributes.log_file:
-            file_handler = logging.FileHandler(log_file)
-            file_handler.setLevel(logging.DEBUG)  # Set the logging level for file
-            file_handler.setFormatter(formatter)
-            self._log.addHandler(file_handler)
+        if self.path is not None:
+            handler = StripANSIFileHandler(self.path)
+            handler.setLevel(self.level)
+            handler.setFormatter(
+                logging.Formatter('%(message)s'),
+            )
+            self.logger.addHandler(handler)
     
     @classmethod
-    def set_time(cls, time_ns: int):
-        cls._timestamp_ns = time_ns
+    def set_timestamp_ns(cls, timestamp_ns: int) -> None:
+        cls._timestamp_ns = timestamp_ns
         
     @classmethod
     def from_name(cls, name: str) -> LoggerAdapter:
         return cls(
             name=name,
-            trading_class=getattr(LoggerAttributes, "trading_class", "N/A"),
+            id=getattr(LoggerAttributes, "id"),
+            level=getattr(LoggerAttributes, "level"),
+            path=getattr(LoggerAttributes, "path"),
         )
         
-    @property
-    def name(self) -> str:
-        return self._name
-    
     def debug(
         self,
         message: str,
-        color: LogColor = LogColor.NORMAL,
+        color: int = NORMAL,
     ):
-        msg = self._format_line(message=message, level="DBG", color=color)
-        print(msg)
+        message = self._format_line(message=message, level=logging.DEBUG, color=color)
+        self.logger.debug(message)
+        
 
     def info(
         self,
         message: str,
-        color: LogColor = LogColor.NORMAL,
+        color: int = NORMAL,
     ):
-        msg = self._format_line(message=message, level="INF", color=color)
-        print(msg)
+        message: str = self._format_line(message=message, level=logging.INFO, color=color)
+        self.logger.info(message)
 
     def warning(
         self,
         message,
-        color: LogColor = LogColor.YELLOW,
+        color: int = YELLOW,
     ):
-        msg = self._format_line(message=message, level="WRN", color=color)
-        print(msg)
+        message: str = self._format_line(message=message, level=logging.WARNING, color=color)
+        self.logger.warning(message)
 
     def error(
         self,
         message: str,
-        color: LogColor = LogColor.RED,
+        color: int = RED,
     ):
-        msg = self._format_line(message=message, level="ERR", color=color)
-        print(msg)
+        message: str = self._format_line(message=message, level=logging.ERROR, color=color)
+        self.logger.error(message)
 
     def exception(
         self,
         message: str,
         ex,
     ):
-        Condition.not_none(ex, "ex")
 
         ex_string = f"{type(ex).__name__}({ex})"
         ex_type, ex_value, ex_traceback = sys.exc_info()
@@ -138,8 +162,8 @@ class LoggerAdapter:
     def _format_line(
         self,
         message: str,
-        level: str,
-        color: LogColor,
+        level: int,
+        color: int | None,
     ) -> str:
         """
         pub fn get_colored(&mut self) -> &str {
@@ -157,18 +181,20 @@ class LoggerAdapter:
         }
         """
         
-        t = self._unix_nano_to_iso8601(self._timestamp_ns)
-        c = LOG_COLOR_TO_COLOR[color]
-        l = level
-        id = "TRADER-001"
-        comp = "TRADER-001"
+        t = self._unix_nanos_to_iso8601(self._timestamp_ns)
+        l = LEVEL_TO_STR[level]
         msg = message
-        return f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"  # \n
+        
+        if color is None:
+            return f"{t} {c}[{l}] {self.name} {self.id}: {msg}"
+        else:
+            c = LOG_COLOR_TO_COLOR[color]
+            return f"\x1b[1m{t}\x1b[0m {c}[{l}] {self.name} {self.id}: {msg}\x1b[0m"
         
         # return f"{self.timestamp} WARNING {self._trading_class} {message}"
         
     @staticmethod
-    def _unix_nano_to_iso8601(nanoseconds):
+    def _unix_nanos_to_iso8601(nanoseconds):
         # Convert nanoseconds to seconds
         seconds = nanoseconds / 1e9
 
@@ -179,3 +205,68 @@ class LoggerAdapter:
         iso8601_str = dt.isoformat()
 
         return iso8601_str
+    
+    
+# class DynamicAttributeFormatter(logging.Formatter):
+    
+#     timestamp_ns = 0
+#     log_: str
+    
+#     def __init__(
+#         self,
+#         trading_class: str,
+#     ):
+#         super().__init__(
+#             fmt=f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"
+#         )
+#         self.trading_class = trading_class
+
+#     def format(self, record):
+#         setattr(record, self.custom_attribute, self.get_custom_attribute_value())
+#         return super().format(record)
+    
+#     def _format_line(
+#         self,
+#         message: str,
+#         level: str,
+#         color: LogColor,
+#     ) -> str:
+#         """
+#         pub fn get_colored(&mut self) -> &str {
+#             self.colored.get_or_insert_with(|| {
+#                 format!(
+#                     "\x1b[1m{}\x1b[0m {}[{}] {}.{}: {}\x1b[0m\n",
+#                     self.timestamp,
+#                     &self.line.color.to_string(),
+#                     self.line.level,
+#                     self.trader_id,
+#                     &self.line.component,
+#                     &self.line.message
+#                 )
+#             })
+#         }
+#         """
+        
+#         t = self._unix_nano_to_iso8601(self._timestamp_ns)
+#         c = LOG_COLOR_TO_COLOR[color]
+#         l = level
+#         id = "TRADER-001"
+#         comp = "TRADER-001"
+#         msg = message
+#         return f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"  # \n
+        
+#         # return f"{self.timestamp} WARNING {self._trading_class} {message}"
+        
+#     @staticmethod
+#     def _unix_nano_to_iso8601(nanoseconds):
+#         # Convert nanoseconds to seconds
+#         seconds = nanoseconds / 1e9
+
+#         # Create a datetime object from the seconds
+#         dt = datetime.datetime.utcfromtimestamp(seconds)
+
+#         # Format the datetime object as an ISO 8601 string
+#         iso8601_str = dt.isoformat()
+
+#         return iso8601_str
+    

@@ -349,12 +349,7 @@ class TestParquetWriter:
             assert len(chunk) == 3
 
     def test_write_continuous_price_dataframe_writes_expected(self, tmpdir):
-        print(
-            pd.read_parquet(
-                "/Users/g1/BU/projects/pytower_develop/pytower/tests/data/roll/continuous_prices/data/genericdata_continuous_price/MES/MES.IB-1-DAY-MID-EXTERNAL.parquet",
-            ),
-        )
-        # exit()
+        
         # Arrange
         df = pd.DataFrame.from_dict(
             {
