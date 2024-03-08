@@ -34,7 +34,7 @@ class Connection:
         self._reader, self._writer = (None, None)
         self._handshake_message_ids = []
         
-    async def _reset(self) -> bool:
+    def _reset(self) -> bool:
         self._log.debug("Initializing...")
         
         self._is_connected.clear()
@@ -51,7 +51,7 @@ class Connection:
             if self._writer is not None and not self._writer.is_closing():
                 self._writer.write_eof()
                 self._writer.close()
-                await self._writer.wait_closed()
+                # await self._writer.wait_closed()
         except RuntimeError as e:
             if "unable to perform operation on" in str(e) and "closed=True" in str(e):
                 pass
@@ -106,7 +106,7 @@ class Connection:
         due to a schedule restart or during IB nightly reset.
         """
         self._log.debug("Handling disconnect.")
-        await self._reset()
+        self._reset()
         
 
         # await self.connect()
@@ -167,7 +167,7 @@ class Connection:
         """
         self._log.debug("Connecting...")
 
-        await self._reset()
+        self._reset()
 
         # connect socket
         self._log.debug("Connecting socket...")
@@ -177,7 +177,7 @@ class Connection:
             )
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
-            await self._reset()
+            self._reset()
             raise
         self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 

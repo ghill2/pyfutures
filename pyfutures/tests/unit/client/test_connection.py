@@ -283,7 +283,6 @@ class TestConnection:
 
     #     await asyncio.sleep(5)
 
-    # @pytest.mark.skip(reason="research")
     # @pytest.mark.asyncio()
     # async def test_reconnect_after_restart(self, client):
     #     """

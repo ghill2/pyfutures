@@ -1,4 +1,5 @@
 import asyncio
+import queue
 import functools
 
 # fmt: on
@@ -97,23 +98,28 @@ class InteractiveBrokersClient(EWrapper):
         if override_timeout:
             assert isinstance(self._request_timeout_seconds, (float, int))
             
-        self._conn = Connection(
+        self._connection = Connection(
             loop=loop,
             host=host,
             port=port,
             client_id=client_id,
         )
-        self._conn.register_handler(self._handle_msg)
+        self._connection.register_handler(self._handle_msg)
 
         self._eclient = EClient(wrapper=None)
+        # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
-        self._eclient.conn = self._conn
+        self._eclient.conn = self  # where to send the messages: eclient -> sendMsg
         self._eclient.clientId = client_id
-
-        self._request_id_seq = -10
+        
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-
+        
+        self._outgoing_msg_task: asyncio.Task | None = None
+        self._outgoing_msg_queue = queue.Queue()
+        
+        self._reset()
+        
     @property
     def subscriptions(self) -> list[ClientSubscription]:
         return self._subscriptions.values()
@@ -124,20 +130,55 @@ class InteractiveBrokersClient(EWrapper):
 
     @property
     def connection(self) -> Connection:
-        return self._conn
+        return self._connection
 
     ################################################################################################
     # Connection
 
-    # async def reset(self) -> None:
-    #     self._conn._reset()
-    #
     async def connect(self) -> None:
-        await self._conn.connect()
-
+        
+        self._outgoing_msg_task = self._loop.create_task(
+            coro=self._process_outgoing_msg_queue(),
+            name="outgoing_message_queue",
+        )
+        
+        await self._connection.connect()
+    
+    def sendMsg(self, msg: bytes) -> None:
+        # messages output from self.eclient are sent here
+        self._outgoing_msg_queue.put(msg)
+        
+    async def _process_outgoing_msg_queue(self) -> None:
+        
+        while True:
+            if self.connection.is_connected:
+                while not self._outgoing_msg_queue.empty():
+                    msg: bytes = self._outgoing_msg_queue.get()
+                    self._connection.sendMsg(msg)
+                await asyncio.sleep(0)
+            else:
+                self._log.debug(
+                    f"Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds..."
+                )
+                await asyncio.sleep(5)
+            
+        
     def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
         self._decoder.interpret(fields)
+    
+    def _reset(self) -> None:
+        
+        self._request_id_seq = -10
+        
+        if self._outgoing_msg_task is not None:
+            self._outgoing_msg_task.cancel()
+        self._outgoing_msg_task = None
+                
+        self._connection._reset()
+        
+    def _stop(self) -> None:
+        self._reset()
 
     ################################################################################################
     # Responses

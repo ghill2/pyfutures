@@ -7,6 +7,7 @@ from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 
 from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.continuous.cycle import RollCycle
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.parsing import contract_details_to_futures_instrument
 from pyfutures.adapter.parsing import contract_details_to_forex_instrument
@@ -38,23 +39,28 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
         self._chain_filters = config.chain_filters or {}
         self._parsing_overrides = config.parsing_overrides or {}
+    
+    async def load_ids_async(
+        self,
+        instrument_ids: list[InstrumentId],
+        filters: dict | None = None,
+    ) -> None:
+
+        for instrument_id in instrument_ids:
+            await self.load_async(instrument_id)
+            
+    async def load_async(self, instrument_id: InstrumentId | IBContract) -> None:
+        
+        if isinstance(instrument_id, InstrumentId):
+            contract: IBContract = instrument_id_to_contract(instrument_id)
+
+        await self.load_contract(contract)
 
     async def load_contract(
         self,
-        contract_id: InstrumentId,
-    ) -> FuturesContract | None:
-        """
-        Expects InstrumentId to be in the format TradingClass-Symbol=ContractMonth.Exchange
-        """
-        if isinstance(contract_id, InstrumentId):
-            contract: IBContract = instrument_id_to_contract(contract_id)
-
-        return await self._load_contract(contract)
-
-    async def _load_contract(
-        self,
         contract: IBContract,
-        ) -> Instrument | None:
+    ) -> None:
+        
         details_list = await self.client.request_contract_details(contract)
 
         if len(details_list) == 0:
@@ -64,9 +70,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         if contract.secType == "FUT":
             details_list = self._filter_monthly_contracts(details_list)
 
-        instrument: Instrument = self.add_contract_details(details_list[0])
-
-        return instrument
+        self.add_contract_details(details_list[0])
 
     def add_contract_details(self, details: IBContractDetails) -> Instrument:
 
@@ -99,15 +103,10 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
     async def request_future_chain_details(
         self,
-        chain: ContractChain,
+        contract: IBContract,
+        cycle: RollCycle | None = None,
     ) -> list[IBContractDetails]:
-        """
-        Excepts a contract with TradingClass and Symbol properties set
-        """
-        contract: IBContract = instrument_id_to_contract(chain.instrument_id)
-
-        contract.secType = "FUT"
-
+        
         details_list = await self.client.request_contract_details(contract)
 
         if len(details_list) == 0:
@@ -118,7 +117,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
         return [
             details for details in details_list
-            if ContractMonth.from_int(details.contractMonth) in chain.hold_cycle
+            if ContractMonth.from_int(details.contractMonth) in cycle
         ]
 
     def _filter_monthly_contracts(
@@ -160,18 +159,11 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         if instrument_id is None:
             contract = IBContract()
             contract.conId = contract_id
-            await self._load_contract(contract)
+            await self.load_contract(contract)
             instrument_id = self.contract_id_to_instrument_id.get(contract_id)
         instrument = self.find(instrument_id)
         return instrument
 
 
 
-    async def load_ids_async(
-        self,
-        instrument_ids: list[InstrumentId],
-        filters: dict | None = None,
-    ) -> None:
-
-        for instrument_id in instrument_ids:
-            await self.load_contract(contract_id=instrument_id)
+    

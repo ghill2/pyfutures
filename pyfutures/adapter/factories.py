@@ -14,39 +14,24 @@ from nautilus_trader.model.objects import Price
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
 
-from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
+
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
-
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 
 CLIENT = None
 PROVIDER = None
 DATA_CLIENT = None
 EXEC_CLIENT = None
 
-PROVIDER_CONFIG = InteractiveBrokersInstrumentProviderConfig(
-    chain_filters={
-        'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
-    },
-    parsing_overrides={
-        "MIX": {
-            "price_precision": 0,
-            "price_increment": Price(5, 0),
-        },
-    },
-)
+
 
 def get_provider_cached():
     global PROVIDER
     if PROVIDER is None:
-        PROVIDER = InteractiveBrokersInstrumentProvider(
-            client=CLIENT,
-            config=PROVIDER_CONFIG,
-        )
+        PROVIDER = AdapterStubs.instrument_provider(clien=CLIENT)
     return PROVIDER
-
-
 
 def get_client_cached(loop, msgbus, clock, cache):
     global CLIENT

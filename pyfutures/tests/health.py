@@ -1,4 +1,5 @@
 from pathlib import Path
+import asyncio
 
 import pandas as pd
 import pytest
@@ -11,9 +12,14 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 
-init_logging(level_stdout=LogLevel.DEBUG)
-
-
+@pytest.mark.skip(reason="universe")
+@pytest.mark.asyncio()
+async def test_load_future_chain_details_universe(instrument_provider):
+    for chain in IBTestProviderStubs.universe_future_chains():
+        details_list = await instrument_provider.load_future_chain_details(chain)
+        assert len(details_list) > 0
+        await asyncio.sleep(1)
+    
 @pytest.mark.asyncio()
 async def test_request_head_timestamp_contfut(client):
     contract = IBContract()
@@ -231,7 +237,50 @@ def test_exchange_timezone_map(self):
             exchanges.remove(exchange)
 
     print(f"Unrequired: {exchanges}")
-            
+
+@pytest.mark.skip(reason="research")
+@pytest.mark.asyncio()
+async def test_get_trading_class(client):
+    df = IBTestProviderStubs.universe_dataframe()
+
+    data = []
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        for i in range(len(df)):
+            if str(df.iloc[i].trading_class) == "nan":
+                symbol = df.iloc[i].symbol
+                exchange = df.iloc[i].exchange
+                contract = IBContract()
+                contract.secType = "FUT"
+                contract.symbol = symbol.replace("_", ".")
+                contract.exchange = exchange.replace("_", ".")
+                contract.includeExpired = False
+                await asyncio.sleep(0.4)
+                details_list = await client.request_contract_details(contract)
+                details_list = sorted(details_list, key=lambda x: x.contractMonth)
+                trading_classes = {x.contract.tradingClass for x in details_list}
+                if len(trading_classes) > 1:
+                    print(len(trading_classes), len(set(trading_classes)))
+                    print(trading_classes)
+                    print(contract)
+                    exit()
+                data.append(next(iter(trading_classes)))
+            else:
+                data.append(df.iloc[i].trading_class)
+
+        df["trading_class"] = data
+        print(df)
+    from pytower import PACKAGE_ROOT
+
+    path = PACKAGE_ROOT / "instruments/universe2.csv"
+    df.to_csv(path, index=False)
+                
 if __name__ == "__main__":
     test_historic_schedules_with_sessions_out_of_day()
 

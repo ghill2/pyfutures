@@ -45,7 +45,6 @@ from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.model.identifiers import InstrumentId
-from pyfutures.adapter.factories import PROVIDER_CONFIG
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
@@ -72,10 +71,7 @@ class TestInteractiveBrokersExecution:
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            instrument_provider=InteractiveBrokersInstrumentProvider(
-                client=client,
-                config=PROVIDER_CONFIG,
-            ),
+            instrument_provider=AdapterStubs.instrument_provider(client),
         )
         
         self.contract = AdapterStubs.mes_contract()

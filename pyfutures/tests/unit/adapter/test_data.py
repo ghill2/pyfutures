@@ -24,7 +24,6 @@ from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.adapter.factories import PROVIDER_CONFIG
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
@@ -58,10 +57,7 @@ class TestInteractiveBrokersDataClient:
             msgbus=msgbus,
             cache=cache,
             clock=clock,
-            instrument_provider=InteractiveBrokersInstrumentProvider(
-                client=client,
-                config=PROVIDER_CONFIG,
-            ),
+            instrument_provider=AdapterStubs.instrument_provider(client),
             config=InteractiveBrokersDataClientConfig(),
         )
         

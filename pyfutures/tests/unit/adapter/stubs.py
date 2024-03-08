@@ -14,11 +14,30 @@ from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.client.client import InteractiveBrokersClient
         
 from decimal import Decimal
 
 class AdapterStubs:
     
+    @staticmethod
+    def instrument_provider(client: InteractiveBrokersClient) -> InteractiveBrokersInstrumentProvider:
+        config = InteractiveBrokersInstrumentProviderConfig(
+            chain_filters={
+                'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+            },
+            parsing_overrides={
+                "MIX": {
+                    "price_precision": 0,
+                    "price_increment": Price(5, 0),
+                },
+            },
+        )
+        provider = InteractiveBrokersInstrumentProvider(client=client, config=config)
+        return provider
+        
     @staticmethod
     def conId() -> int:
         return 1

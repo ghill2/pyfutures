@@ -1,5 +1,6 @@
-import asyncio
+# import asyncio
 import time
+import asyncio
 from decimal import Decimal
 from pathlib import Path
 import dataclasses
@@ -42,7 +43,47 @@ class TestInteractiveBrokersClient:
     
     def setup_method(self):
         self.client = ClientStubs.client()
+    
+    @pytest.mark.asyncio()
+    async def test_eclient_sends_to_client(self):
         
+        # Arrange
+        self.client.sendMsg = Mock()
+        
+        # Act
+        self.client._eclient.reqManagedAccts()
+        
+        # Assert
+        self.client.sendMsg.assert_called_once_with(b'\x00\x00\x00\x0517\x001\x00')
+    
+    @pytest.mark.skip(reason="TODO")
+    @pytest.mark.asyncio()
+    async def test_reset(self):
+        pass
+        
+    
+    @pytest.mark.skip(reason="hangs when running entire test suite")
+    @pytest.mark.asyncio()
+    async def test_queue_processes_messages(self):
+        
+        # Arrange
+        mock_connection = Mock()
+        mock_connection.connect = AsyncMock()
+        mock_connection.is_connected = lambda _: True
+        mock_connection.sendMsg = Mock()
+        self.client._connection = mock_connection
+        await self.client.connect()
+        
+        # Act
+        self.client.sendMsg(b"message1")
+        self.client.sendMsg(b"message2")
+        await asyncio.sleep(0)
+        
+        # Assert
+        calls = mock_connection.sendMsg.call_args_list
+        assert calls[0][0][0] == b"message1"
+        assert calls[1][0][0] == b"message2"
+            
     @pytest.mark.asyncio()
     async def test_request_contract_details_returns_expected(self):
         
