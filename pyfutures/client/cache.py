@@ -39,7 +39,7 @@ import colorlog
 # handler = logging.StreamHandler()
 # handler.setFormatter(formatter)
 
-class HistoricCache:
+class Cache:
     def __init__(self, path: Path):
         self.path = Path(path)  # directory
     
@@ -92,7 +92,7 @@ class HistoricCache:
     def __len__(self) -> int:
         return len(list(self.path.rglob("*.pkl")))
     
-class CachedFunc:
+class CachedFunc(Cache):
     """
     Creates a cache
     name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
@@ -105,7 +105,7 @@ class CachedFunc:
         log_level: int = logging.INFO
     ):
         
-        self.cache = HistoricCache(cache_dir / func.__name__)
+        super().__init__(cache_dir)
         
         self._func = func
         self._log = colorlog.getLogger(self.__class__.__name__)
@@ -115,11 +115,11 @@ class CachedFunc:
         
         assert args == (), "Keywords arguments only"
         
-        self.cache.path.mkdir(parents=True, exist_ok=True)
+        self.path.mkdir(parents=True, exist_ok=True)
         
         key = self.build_key(*args, **kwargs)
         
-        cached = self.cache.get(key)
+        cached = self.get(key)
         if cached is not None:
             
             self._log.debug(f"Returning cached {key}={self._value_to_str(cached)}")
@@ -132,12 +132,12 @@ class CachedFunc:
         
         try:
             result = await self._func(**kwargs)
-            self.cache.set(key, result)
+            self.set(key, result)
             self._log.debug(f"Saved {self._value_to_str(result)} items...")
             return result
         except Exception as e:
             self._log.error(str(e))
-            self.cache.set(key, e)
+            self.set(key, e)
             self._log.debug(f"Saved {e} items...")
             raise
     
@@ -172,7 +172,7 @@ class CachedFunc:
     def is_cached(self, *args, **kwargs) -> bool:
         assert args == (), "Keywords arguments only"
         key = self.build_key(**kwargs)
-        cached = self.cache.get(key)
+        cached = self.get(key)
         return cached is not None
     
     @staticmethod

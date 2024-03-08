@@ -7,14 +7,15 @@ from pathlib import Path
 import pytest
 from pyfutures.adapter.enums import BarSize, Duration, Frequency
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import SPREAD_FOLDER
+from pyfutures.tests.test_kit import CACHE_DIR
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 from pyfutures.logger import init_logging
-from pyfutures.client.cache import HistoricCache
+from pyfutures.client.cache import Cache
 
 async def main():
     
@@ -29,13 +30,16 @@ async def main():
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    historic = InteractiveBrokersHistoric(
+    historic = InteractiveBrokersBarClient(
         client=client,
         delay=1.5,
+        use_cache=True,
+        cache_dir=CACHE_DIR,
     )
+    
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
-    cache = HistoricCache(
-        path=Path("/Users/g1/Desktop/download_cache"),
+    cache = Cache(
+        path=CACHE_DIR,
     )
     cache.purge_errors(asyncio.TimeoutError)
     

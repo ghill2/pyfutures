@@ -13,7 +13,7 @@ from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import WhatToShow
 import pandas as pd
 from ibapi.common import BarData
-from pyfutures.client.cache import HistoricCache
+from pyfutures.client.cache import Cache
 
 class TestHistoricCache:
     def setup_method(self):
@@ -29,7 +29,7 @@ class TestHistoricCache:
         bar.barCount = 0
         self.bar = bar
         
-        self.cache = HistoricCache(path=tempfile.mkdtemp())
+        self.cache = Cache(path=tempfile.mkdtemp())
     
     @pytest.mark.asyncio()
     async def test_get_returns_none_if_not_cached(self):
@@ -115,7 +115,7 @@ class TestCachedFunc:
     @pytest.mark.asyncio()
     async def test_call_returns_expected_cached_bar_data(self):
         
-        self.cached_func.cache.get = Mock(return_value=[self.bar])
+        self.cached_func.get = Mock(return_value=[self.bar])
         
         bars = await self.cached_func(**self.cached_func_kwargs)
         
@@ -148,7 +148,7 @@ class TestCachedFunc:
     async def test_call_raises_cached_exception(self):
         
         exception = ClientException(code=123, message="test")
-        self.cached_func.cache.get = Mock(return_value=exception)
+        self.cached_func.get = Mock(return_value=exception)
         
         with pytest.raises(ClientException):
             await self.cached_func(**self.cached_func_kwargs)
@@ -157,7 +157,7 @@ class TestCachedFunc:
     async def test_call_writes_uncached_bar_data(self):
         await self.cached_func(**self.cached_func_kwargs)
         key = self.cached_func.build_key(**self.cached_func_kwargs)
-        assert self.cached_func.cache.get(key) is not None
+        assert self.cached_func.get(key) is not None
     
     @pytest.mark.asyncio()
     async def test_is_cached(self):

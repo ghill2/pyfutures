@@ -13,7 +13,7 @@ from pytower import PACKAGE_ROOT
 from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -83,7 +83,7 @@ async def test_request_last_quote_tick_universe(client):
 async def test_request_bars_universe(client):
     rows = IBTestProviderStubs.universe_rows()
 
-    historic = InteractiveBrokersHistoric(client=client)
+    historic = InteractiveBrokersBarClient(client=client)
     await client.connect()
     client._client.reqMarketDataType(2)
     await asyncio.sleep(2)

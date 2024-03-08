@@ -20,7 +20,7 @@ from pyfutures.adapter.parsing import instrument_id_to_contract
 from pyfutures.adapter.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from nautilus_trader.core.uuid import UUID4
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
@@ -52,7 +52,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         )
         self._client = client
         
-        self._historic = InteractiveBrokersHistoric(
+        self._historic = InteractiveBrokersBarClient(
             client=client,
             use_cache=False,  # TODO add config
         )

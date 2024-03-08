@@ -20,7 +20,7 @@ from pyfutures.adapter.parsing import is_unqualified_contract
 from pyfutures.client.cache import CachedFunc
 
 
-class InteractiveBrokersHistoric:
+class InteractiveBrokersBarClient:
     def __init__(
         self,
         client: InteractiveBrokersClient,
@@ -28,20 +28,25 @@ class InteractiveBrokersHistoric:
         cache_dir: Path | None = None,
         use_cache: bool = True,
     ):
+        
         self._client = client
         self._delay = delay
         self._log = logging.getLogger(self.__class__.__name__)
+        
         self._use_cache = use_cache
         
         if use_cache:
             assert cache_dir is not None
-            self.request_bars_cached = CachedFunc(
+            self.cache = CachedFunc(
                 self._client.request_bars,
                 cache_dir=cache_dir,
             )
         else:
-            self.request_bars_cached = None
-
+            self.cache = None
+            
+        
+        
+        
     async def request_bars(
         self,
         contract: IBContract,
@@ -94,8 +99,8 @@ class InteractiveBrokersHistoric:
                 )
                 
                 if self._use_cache and i > 0:
-                    is_cached = self.request_bars_cached.is_cached(**kwargs)
-                    func = self.request_bars_cached
+                    is_cached = self.cache.is_cached(**kwargs)
+                    func = self.cache
                 else:
                     func = self._client.request_bars
                     is_cached = False

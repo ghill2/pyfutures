@@ -12,7 +12,7 @@ from nautilus_trader.common.component import Logger
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
 
 
@@ -36,7 +36,7 @@ class Stats:
         self.parent_out = self.parent_out / yesterday
         self.parent_out.mkdir(parents=True, exist_ok=True)
         self.client = client
-        self.historic = InteractiveBrokersHistoric(client=client)
+        self.historic = InteractiveBrokersBarClient(client=client)
 
     async def _details(self, contract: IBContract):
         """

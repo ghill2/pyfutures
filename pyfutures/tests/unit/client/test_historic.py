@@ -13,13 +13,13 @@ import pandas as pd
 from ibapi.common import BarData
 from unittest.mock import Mock
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 
 class TestHistoric:
     
     def setup_method(self):
         
-        self.historic: InteractiveBrokersHistoric = ClientStubs.historic()
+        self.historic: InteractiveBrokersBarClient = ClientStubs.historic()
         self.contract = IBContract()
         self.contract.secType == "CONTFUT"
         self.contract.tradingClass == "DC"
@@ -48,8 +48,8 @@ class TestHistoric:
     async def test_request_bars_returns_expected_dataframe(self):
         send_mock = AsyncMock(side_effect=self.request_bars)
         self.historic._client.request_bars = send_mock
-        self.historic.request_bars_cache = send_mock
-        self.historic.request_bars_cache.is_cached = Mock(return_value=False)
+        self.historic.cache = send_mock
+        self.historic.cache.is_cached = Mock(return_value=False)
         
         df = await self.historic.request_bars(
             contract=self.contract,
@@ -66,8 +66,8 @@ class TestHistoric:
         
         send_mock = AsyncMock(side_effect=self.request_bars)
         self.historic._client.request_bars = send_mock
-        self.historic.request_bars_cached = send_mock
-        self.historic.request_bars_cached.is_cached = Mock(return_value=False)
+        self.historic.cache = send_mock
+        self.historic.cache.is_cached = Mock(return_value=False)
         
         await self.historic.request_bars(
             contract=self.contract,
@@ -89,8 +89,8 @@ class TestHistoric:
         # do not cache the first request
         
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached.is_cached = Mock(return_value=True)
+        self.historic.cache = AsyncMock(side_effect=self.request_bars)
+        self.historic.cache.is_cached = Mock(return_value=True)
         
         await self.historic.request_bars(
             contract=self.contract,
@@ -101,15 +101,15 @@ class TestHistoric:
         )
         
         self.historic._client.request_bars.assert_called_once()
-        self.historic.request_bars_cached.assert_called_once()
+        self.historic.cache.assert_called_once()
     
     @pytest.mark.asyncio()
     async def test_historic_delay_if_not_cached(self):
         
         self.historic._delay = 1
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached.is_cached = Mock(return_value=False)
+        self.historic.cache = AsyncMock(side_effect=self.request_bars)
+        self.historic.cache.is_cached = Mock(return_value=False)
         asyncio.sleep = AsyncMock()
                
         await self.historic.request_bars(
@@ -121,7 +121,7 @@ class TestHistoric:
         )
         
         self.historic._client.request_bars.assert_called_once()
-        self.historic.request_bars_cached.assert_called_once()
+        self.historic.cache.assert_called_once()
         asyncio.sleep.call_count == 2  # first and second request
     
     @pytest.mark.skip(reason="TODO: add get response")
@@ -130,8 +130,8 @@ class TestHistoric:
         
         self.historic._delay = 1
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached = AsyncMock(side_effect=self.request_bars)
-        self.historic.request_bars_cached.is_cached = Mock(return_value=True)
+        self.historic.cache = AsyncMock(side_effect=self.request_bars)
+        self.historic.cache.is_cached = Mock(return_value=True)
         asyncio.sleep = AsyncMock()
         
         await self.historic.request_bars(
@@ -143,7 +143,7 @@ class TestHistoric:
         )
         
         self.historic._client.request_bars.assert_called_once()
-        self.historic.request_bars_cached.assert_called_once()
+        self.historic.cache.assert_called_once()
         asyncio.sleep.assert_called_once()  # first request only
     
     async def request_bars(

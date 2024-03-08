@@ -4,7 +4,7 @@ from pathlib import Path
 import asyncio
 import logging
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.client.connection import Connection
 from pyfutures.logger import LoggerAdapter
 
@@ -53,8 +53,8 @@ class ClientStubs:
             
         )
     @classmethod
-    def historic(cls) -> InteractiveBrokersHistoric:
-        return InteractiveBrokersHistoric(
+    def historic(cls) -> InteractiveBrokersBarClient:
+        return InteractiveBrokersBarClient(
             client=cls.client(),
             use_cache=True,
             cache_dir=Path(tempfile.gettempdir()),

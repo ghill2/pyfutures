@@ -8,7 +8,7 @@ import sys
 
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersHistoric
+from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.client.parsing import parse_datetime
 
 
@@ -29,7 +29,7 @@ async def test_request_bars_downloads_expected(client):
 
     await client.connect()
 
-    historic = InteractiveBrokersHistoric(client=client, delay=3)
+    historic = InteractiveBrokersBarClient(client=client, delay=3)
 
     await client.request_market_data_type(4)
 
@@ -49,7 +49,7 @@ async def test_request_ticks_downloads_expected(client):
 
     await client.connect()
 
-    historic = InteractiveBrokersHistoric(client=client, delay=3)
+    historic = InteractiveBrokersBarClient(client=client, delay=3)
 
     await client.request_market_data_type(4)
 
@@ -119,7 +119,7 @@ async def test_daily_downloads_expected(client):
 
 @pytest.mark.asyncio()
 async def test_request_quote_ticks_dc(self, client):
-    historic = InteractiveBrokersHistoric(client=client)
+    historic = InteractiveBrokersBarClient(client=client)
 
 
     start_time = pd.Timestamp("2023-02-13 14:30:00+00:00")
@@ -144,7 +144,7 @@ async def test_request_quote_ticks_zn(self, client):
     contract.secType = "CONTFUT"
     start_time = pd.Timestamp("2024-01-18 17:50:00-00:00")
     end_time = pd.Timestamp("2024-01-18 18:00:00-00:00")
-    historic = InteractiveBrokersHistoric(client=client, delay=2)
+    historic = InteractiveBrokersBarClient(client=client, delay=2)
 
     await client.connect()
     quotes = await historic.request_quote_ticks(
