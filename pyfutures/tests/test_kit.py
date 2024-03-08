@@ -64,6 +64,7 @@ FX_RATES_FOLDER = PACKAGE_ROOT / "fx_rates"
 TRADERMADE_FOLDER = PACKAGE_ROOT / "tradermade"
 SPREAD_FOLDER = Path.home() / "Desktop" / "spread"
 UNIVERSE_END = pd.Timestamp("2030-01-01", tz="UTC")
+CACHE_DIR = Path.home() / "Desktop" / "download_cache"
 
 
 class Session:

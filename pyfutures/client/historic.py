@@ -17,7 +17,7 @@ from pyfutures.client.parsing import bar_data_to_dict
 from pyfutures.client.parsing import historical_tick_bid_ask_to_dict
 from pyfutures.client.parsing import parse_datetime
 from pyfutures.adapter.parsing import is_unqualified_contract
-from pyfutures.adapter.cache import CachedFunc
+from pyfutures.client.cache import CachedFunc
 
 
 class InteractiveBrokersHistoric:
@@ -25,16 +25,22 @@ class InteractiveBrokersHistoric:
         self,
         client: InteractiveBrokersClient,
         delay: float = 0,
-        cachedir: Path | None = None,
+        cache_dir: Path | None = None,
+        use_cache: bool = True,
     ):
         self._client = client
         self._delay = delay
         self._log = logging.getLogger(self.__class__.__name__)
-
-        self.request_bars_cached = CachedFunc(
-            self._client.request_bars,
-            cachedir=cachedir,
-        )
+        self._use_cache = use_cache
+        
+        if use_cache:
+            assert cache_dir is not None
+            self.request_bars_cached = CachedFunc(
+                self._client.request_bars,
+                cache_dir=cache_dir,
+            )
+        else:
+            self.request_bars_cached = None
 
     async def request_bars(
         self,
@@ -45,7 +51,6 @@ class InteractiveBrokersHistoric:
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
         limit: int | None = None,
-        cache: bool | None = True,
     ):
         # assert is_unqualified_contract(contract)
 
@@ -75,9 +80,9 @@ class InteractiveBrokersHistoric:
             bars = []
             start = time.perf_counter()
             try:
-                use_cache = cache and i > 0
+                
                 self._log.info(
-                    f"{contract} | use_cache={use_cache} | {end_time - interval} -> {end_time}"
+                    f"{contract} | {end_time - interval} -> {end_time}"
                 )
                 
                 kwargs = dict(
@@ -88,7 +93,7 @@ class InteractiveBrokersHistoric:
                     end_time=end_time,
                 )
                 
-                if use_cache:
+                if self._use_cache and i > 0:
                     is_cached = self.request_bars_cached.is_cached(**kwargs)
                     func = self.request_bars_cached
                 else:

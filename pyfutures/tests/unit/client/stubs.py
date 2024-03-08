@@ -56,5 +56,6 @@ class ClientStubs:
     def historic(cls) -> InteractiveBrokersHistoric:
         return InteractiveBrokersHistoric(
             client=cls.client(),
-            cachedir=Path(tempfile.gettempdir()),
+            use_cache=True,
+            cache_dir=Path(tempfile.gettempdir()),
         )

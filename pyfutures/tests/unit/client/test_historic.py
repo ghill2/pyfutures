@@ -3,7 +3,7 @@ import random
 import asyncio
 from decimal import Decimal
 from unittest.mock import AsyncMock
-from pyfutures.adapter.cache import CachedFunc
+from pyfutures.client.cache import CachedFunc
 from ibapi.contract import Contract as IBContract
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
@@ -40,7 +40,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-03 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
             limit=60,
         )
         assert len(bars) == 60
@@ -58,7 +57,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-03 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
             as_dataframe=True,
         )
         assert list(df.columns) == ["timestamp", "date", "open", "high", "low", "close", "volume", "wap", "barCount"]
@@ -77,7 +75,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-03 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
         )
         end_times = [call[1]["end_time"] for call in send_mock.call_args_list]
         assert end_times == [
@@ -101,7 +98,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-04 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
         )
         
         self.historic._client.request_bars.assert_called_once()
@@ -122,7 +118,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-04 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
         )
         
         self.historic._client.request_bars.assert_called_once()
@@ -145,7 +140,6 @@ class TestHistoric:
             what_to_show=WhatToShow.BID_ASK,
             start_time=pd.Timestamp("2023-01-04 00:00:00", tz="UTC"),
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
-            cache=True,
         )
         
         self.historic._client.request_bars.assert_called_once()

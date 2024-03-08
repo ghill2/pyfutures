@@ -3,6 +3,7 @@ import asyncio
 import logging
 import logging
 import pandas as pd
+from pathlib import Path
 import pytest
 from pyfutures.adapter.enums import BarSize, Duration, Frequency
 from pyfutures.adapter.enums import WhatToShow
@@ -11,10 +12,9 @@ from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 from pyfutures.logger import init_logging
-
+from pyfutures.client.cache import HistoricCache
 
 async def main():
     
@@ -34,6 +34,12 @@ async def main():
         delay=1.5,
     )
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+    cache = HistoricCache(
+        path=Path("/Users/g1/Desktop/download_cache"),
+    )
+    cache.purge_errors(asyncio.TimeoutError)
+    
+    exit()
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):

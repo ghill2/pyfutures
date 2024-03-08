@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import asyncio
 from decimal import Decimal
 from unittest.mock import AsyncMock
-from pyfutures.adapter.cache import CachedFunc
+from pyfutures.client.cache import CachedFunc
 from ibapi.contract import Contract as IBContract
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
@@ -13,7 +13,7 @@ from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import WhatToShow
 import pandas as pd
 from ibapi.common import BarData
-from pyfutures.adapter.cache import HistoricCache
+from pyfutures.client.cache import HistoricCache
 
 class TestHistoricCache:
     def setup_method(self):
@@ -103,7 +103,7 @@ class TestCachedFunc:
         
         self.cached_func = CachedFunc(
             func=self.request_bars,
-            cachedir=Path(tempfile.mkdtemp()),
+            cache_dir=Path(tempfile.mkdtemp()),
         )
     
     @pytest.mark.asyncio()

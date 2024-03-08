@@ -101,16 +101,14 @@ class CachedFunc:
     def __init__(
         self,
         func: Callable,
-        cachedir: Path | None = None,
+        cache_dir: Path,
         log_level: int = logging.INFO
     ):
-        path = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
-        self.cache = HistoricCache(path)
+        
+        self.cache = HistoricCache(cache_dir / func.__name__)
         
         self._func = func
-        self._cachedir = cachedir or (Path.home() / "Desktop" / "download_cache" / func.__name__)
         self._log = colorlog.getLogger(self.__class__.__name__)
-        # self._log.addHandler(handler)
         self._log.setLevel(log_level)
     
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
