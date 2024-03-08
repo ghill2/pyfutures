@@ -72,7 +72,7 @@ class Connection:
         while True:
             try:
                 data = await self._reader.read(4096)
-                # self._log.debug(f"<-data: {data}")
+                self._log.debug(f"<-- {data}")
             except ConnectionResetError as e:
                 self._log.error(f"listen: TWS closed the connection {e!r}...")
                 await self._handle_disconnect()
@@ -89,7 +89,7 @@ class Connection:
                 (size, msg, buf) = comm.read_msg(buf)
 
                 if msg:
-                    self._log.debug(f"<-- {msg!r}")
+                    # self._log.debug(f"<-- {msg!r}")
 
                     self._handle_msg(msg)
                     await asyncio.sleep(0)
@@ -122,7 +122,7 @@ class Connection:
         else:
             self._process_handshake(msg)
 
-    async def _run_watch_dog(self) -> None:
+    async def _monitor(self) -> None:
         """
         Monitors the socket connection for disconnections.
         """
@@ -153,8 +153,8 @@ class Connection:
         """
         Called by the user
         """
-        if self._monitor_task is None:
-            self._monitor_task = self.loop.create_task(self._run_watch_dog())
+        # if self._monitor_task is None:
+        #     self._monitor_task = self.loop.create_task(self._monitor())
 
         async with self._is_connecting_lock:
             await self._connect()
@@ -178,7 +178,7 @@ class Connection:
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
             await self._reset()
-            return
+            raise
         self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 
         # start listen task
@@ -188,6 +188,7 @@ class Connection:
 
     async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
         self._log.debug("Performing handshake...")
+        
         try:
             self._log.debug("Sending handshake message...")
             await self._send_handshake()
@@ -224,7 +225,13 @@ class Connection:
 
         id = int(fields[0])
         self._handshake_message_ids.append(id)
-
+        self._log.debug(
+            str(self._handshake_message_ids)
+        )
+        self._log.debug(
+            str(all(id in self._handshake_message_ids for id in (176, 15, 9)))
+        )
+        
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
@@ -236,6 +243,7 @@ class Connection:
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
             self._is_connected.set()
+            
 
     def _prefix(self, msg):
         # prefix a message with its length

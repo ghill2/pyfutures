@@ -27,7 +27,6 @@ class MockServer:
         do not yield, otherwise the function is not executed
         """
         self._log.debug("_read_generator")
-        
         while len(self._to_send) == 0:
             await asyncio.sleep(0)
             
@@ -46,13 +45,12 @@ class MockServer:
         responses = []
         if msg == b"API\x00\x00\x00\x00\nv176..176 ":
             responses = [
-                b'\x00\x00\x00*176\x0020240307 13:56:35 Greenwich Mean Time\x00'
+                b'\x00\x00\x00*176\x0020240308 13:30:34 Greenwich Mean Time\x00',
             ]
         elif msg.startswith(b"\x00\x00\x00\x0871\x002\x00"):
             responses = [
-                b'\x00\x00\x00\x0f15\x001\x00DU7855823\x00',
-                b"\x00\x00\x00\x089\x001\x00530\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00\x00\x00\x0044\x002\x00-1\x002106\x00HMDS data farm connection is OK:ushmds\x00\x00",
-                b'\x00\x00\x00\x069\x001\x006\x00',
+                b'\x00\x00\x00\x0f15\x001\x00DU1234567\x00',
+                b'\x00\x00\x00\x069\x001\x006\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00',
             ]
         
         self._to_send.extend(responses)

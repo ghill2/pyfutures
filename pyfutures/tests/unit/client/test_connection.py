@@ -21,79 +21,87 @@ class TestConnection:
         self.mock_server = MockServer()
     
     @pytest.mark.asyncio()
-    async def test_connect(self):
+    async def test_connect(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
         
         # Arrange
         mock_reader = AsyncMock()
         mock_writer = AsyncMock()
         
-        with patch(
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(mock_reader, mock_writer),
-        ):
-        
-            # Act
-            await self.connection._connect()
-            
-            # Assert
-            asyncio.open_connection.assert_called_once_with(
-                self.connection.host,
-                self.connection.port,
-            )
-            assert self.connection._reader == mock_reader
-            assert self.connection._writer == mock_writer
-            
-            listen_started = not self.connection._listen_task.done() and not self.connection._listen_task.cancelled()
-            assert listen_started
-            assert self.connection._listen_task in asyncio.all_tasks(self.connection.loop)
-
-    @pytest.mark.skip(reason="TODO: broken using make test")
-    @pytest.mark.asyncio()
-    async def test_handshake_client_id_1(self):
+        )
         
         # Act
-        with patch(
+        await self.connection._connect()
+        
+        # Assert
+        asyncio.open_connection.assert_called_once_with(
+            self.connection.host,
+            self.connection.port,
+        )
+        assert self.connection._reader == mock_reader
+        assert self.connection._writer == mock_writer
+        
+        listen_started = not self.connection._listen_task.done() and not self.connection._listen_task.cancelled()
+        assert listen_started
+        assert self.connection._listen_task in asyncio.all_tasks(self.connection.loop)
+    
+    @pytest.mark.skip(reason="hangs when running entire test suite")
+    @pytest.mark.asyncio()
+    async def test_handshake_client_id_1(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
+        
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(self.mock_server.reader, self.mock_server.writer),
-        ):
-            
-            await self.connection.connect(timeout_seconds=0.1)
-            assert self.connection.is_connected
+        )
+        
+        # await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
+        await self.connection.connect(timeout_seconds=1)
+        assert self.connection.is_connected
     
-    @pytest.mark.skip(reason="TODO: broken using make test")
+    @pytest.mark.skip(reason="hangs when running entire test suite")
     @pytest.mark.asyncio()
-    async def test_handshake_client_id_2(self):
+    async def test_handshake_client_id_2(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
         
         connection: Connection = ClientStubs.connection(client_id=2)
         
         # Act
-        with patch(
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(self.mock_server.reader, self.mock_server.writer),
-        ):
+        )
             
-            await connection.connect(timeout_seconds=0.1)
-            assert connection.is_connected
+        await self.connection.connect(timeout_seconds=1)
         
-    @pytest.mark.skip(reason="TODO: broken using make test")
+        print("FUCK", connection.is_connected)
+        assert connection.is_connected
+    
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
-    async def test_empty_byte_handles_disconnect(self):
+    async def test_empty_byte_handles_disconnect(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
         
         self.connection._handle_disconnect = AsyncMock()
         mock_reader = AsyncMock()
         mock_reader.read.return_value = b""
         
-        with patch(
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(mock_reader, None),
-        ):
-            await self.connection._connect()  # start listen task
-            await asyncio.sleep(0)
-            self.connection._handle_disconnect.assert_called_once()
+        )
+        
+        await self.connection._connect()  # start listen task
+        await asyncio.sleep(0)
+        self.connection._handle_disconnect.assert_called_once()
     
-    @pytest.mark.skip(reason="TODO: broken using make test")
+    @pytest.mark.skip()
     @pytest.mark.asyncio()
-    async def test_connection_reset_error_handles_disconnect(self):
+    async def test_connection_reset_error_handles_disconnect(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
         
         self.connection._handle_disconnect = AsyncMock()
         
@@ -102,54 +110,53 @@ class TestConnection:
         
         self.mock_server.reader.read.side_effect = raise_error
         
-        with patch(
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(AsyncMock(), None),
-        ):
-            await self.connection._connect()  # start listen task
-            await asyncio.sleep(0)
-            self.connection._handle_disconnect.assert_called_once()
-    
-    @pytest.mark.skip(reason="TODO: broken using make test")
-    @pytest.mark.asyncio()
-    async def test_disconnect_resets(self):
+        )
         
-        with patch(
+        await self.connection._connect()  # start listen task
+        await asyncio.sleep(0)
+        self.connection._handle_disconnect.assert_called_once()
+    
+    @pytest.mark.skip()
+    @pytest.mark.asyncio()
+    async def test_disconnect_resets(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
+        
+        mocker.patch(
             "asyncio.open_connection",
             return_value=(self.mock_server.reader, self.mock_server.writer),
-            
-        ):
-            await self.connection.connect()
-            assert self.connection.is_connected
-            await self.connection._handle_disconnect()
-            
-            assert not self.connection._is_connected.is_set()
-            assert len(self.connection._handshake_message_ids) == 0
-            assert self.connection._reader is None
-            assert self.connection._writer  is None
-            assert self.connection._listen_task is None
-            assert not self.connection.is_connected
-            assert self.connection._monitor_task is not None
+        )
+        
+        await self.connection.connect()
+        assert self.connection.is_connected
+        await self.connection._handle_disconnect()
+        
+        assert not self.connection._is_connected.is_set()
+        assert len(self.connection._handshake_message_ids) == 0
+        assert self.connection._reader is None
+        assert self.connection._writer  is None
+        assert self.connection._listen_task is None
+        assert not self.connection.is_connected
+        assert self.connection._monitor_task is not None
             
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
-    async def test_connect_after_disconnect(self, connection, mock_socket):
+    async def test_connect_after_disconnect(self, mocker):
         
-        with patch(
+        mocker.patch(
             "asyncio.open_connection",
-            return_value=(mock_socket.mock_reader, mock_socket.mock_writer),
-        ):
-            
-            await connection.connect()
-            assert connection.is_connected
-            
-            mock_socket.disconnect()
-            await asyncio.sleep(1)
-            assert not connection.is_connected
+            return_value=(self.mock_server.reader, self.mock_server.writer),
+        )
         
             
-            # await connection.connect()
-            # assert connection.is_connected
+        await self.connection.connect()
+        assert self.connection.is_connected
+        
+        self.mock_server.disconnect()
+        await asyncio.sleep(1)
+        assert not self.connection.is_connected
     
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
