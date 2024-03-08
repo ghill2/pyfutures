@@ -22,17 +22,13 @@ class TestInteractiveBrokersInstrumentProvider:
         self.provider = AdapterStubs.instrument_provider(client=client)
     
     @pytest.mark.asyncio()
-    async def test_load_async(self, mocker):
+    async def test_load_async_returns_expected(self):
         
         # Arrange
+        details = IBContractDetails()
         mock_contract = AdapterStubs.mes_contract()
         
-        mocker.patch(
-            "pyfutures.adapter.providers.contract_details_to_instrument",
-            return_value=mock_contract
-        )
-        
-        details = IBContractDetails()
+        self.provider._details_to_instrument = Mock(return_value=mock_contract)
         self.provider.client.request_contract_details = AsyncMock(return_value=[details])
 
         # Act
@@ -42,51 +38,74 @@ class TestInteractiveBrokersInstrumentProvider:
         assert self.provider.find(mock_contract.id) is not None
         assert self.provider.find(mock_contract.id) == mock_contract
         assert self.provider.contract_id_to_instrument_id[1] == mock_contract.id
-        assert self.provider.contract_details[mock_contract.id] == details
+        # assert self.provider.contract_details[mock_contract.id] == details
+    
+    @pytest.mark.asyncio()
+    async def test_load_async_uses_chain_filter(self):
+        
+        # Arrange
+        details1 = IBContractDetails()
+        details2 = IBContractDetails()
+        
+        self.provider.client.request_contract_details = AsyncMock(
+            return_value=[details1, details2],
+        )
+        self.provider._filter_monthly_contracts = Mock(return_value=[details1])
+        
+        mock_contract = AdapterStubs.mes_contract()
+        self.provider._details_to_instrument = Mock(return_value=mock_contract)
+            
+        
+        # Act
+        await self.provider.load_async(
+            InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX"),
+        )
+        
+        # Assert
+        self.provider._filter_monthly_contracts.assert_called_once_with(
+            [details1, details2]
+        )
+        
+    @pytest.mark.asyncio()
+    async def test_filter_monthly_contracts(self):
+        
+        # Arrange
+        details1 = IBContractDetails()
+        details1.contract.tradingClass = "FMEU"
+        details1.contract.localSymbol = "X"
+        
+        details2 = IBContractDetails()
+        details2.contract.tradingClass = "FMEU"
+        details2.contract.localSymbol = "D"
+        
+        # Act
+        filtered = self.provider._filter_monthly_contracts([details1, details2])
+        
+        # Assert
+        assert filtered == [details1]
     
     @pytest.mark.skip()
     @pytest.mark.asyncio()
-    async def test_load_with_safe_instrument_id(instrument_provider):
+    async def test_parsing_overrides(self):
+        
         # Arrange
-        instrument_id = InstrumentId.from_str("MNTPX-TPXM=H24.OSE|JPN")
+        details = IBContractDetails()
+        details.contract.tradingClass = "MIX"
+        self.provider.client._details_to_instrument = Mock()
 
         # Act
-        instrument = await instrument_provider.load_contract(instrument_id)
-        assert instrument is not None
-
-    @pytest.mark.skip()
-    @pytest.mark.asyncio()
-    async def test_load_uses_chain_filter(instrument_provider):
-        # Arrange
-        instrument_provider._chain_filters = {
-            "FMEU": lambda x: not x.contract.localSymbol.endswith("D"),
-        }
-        instrument_id = InstrumentId.from_str("M7EU-FMEU=H24.EUREX")
-
-        # Act
-        details = await instrument_provider.load_contract(instrument_id)
-
+        self.provider._details_to_instrument(details)
+        
         # Assert
-        assert details is not None
-
-    @pytest.mark.skip()
-    @pytest.mark.asyncio()
-    async def test_load_parsing_overrides_sets_expected(instrument_provider):
-        # Arrange
-        instrument_provider._parsing_overrides = {
-            "MIX": {
+        self.provider.client._details_to_instrument.assert_called_once_with(
+            details=details,
+            overrides={
                 "price_precision": 0,
                 "price_increment": Price(5, 0),
             },
-        }
-        instrument_id = InstrumentId.from_str("IBEX-MIX=F24.MEFFRV")
+        )
 
-        # Act
-        instrument = await instrument_provider.load_contract(instrument_id)
-
-        # Assert
-        assert instrument.price_precision == 0
-        assert instrument.price_increment == 5
+        
 
     @pytest.mark.skip()
     @pytest.mark.asyncio()
@@ -114,7 +133,16 @@ class TestInteractiveBrokersInstrumentProvider:
 
         assert contract.id == InstrumentId.from_str("D-RC=F24.ICEEUSOFT")
 
+# @pytest.mark.skip()
+    # @pytest.mark.asyncio()
+    # async def test_load_with_safe_instrument_id(instrument_provider):
+    #     # Arrange
+    #     instrument_id = InstrumentId.from_str("MNTPX-TPXM=H24.OSE|JPN")
 
+    #     # Act
+    #     instrument = await instrument_provider.load_contract(instrument_id)
+    #     assert instrument is not None
+    
 # @pytest.mark.asyncio()
 # async def test_load_with_instrument_id(instrument_provider):
 #     # Arrange

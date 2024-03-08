@@ -41,7 +41,6 @@ async def main():
     
     historic.cache.purge_errors(asyncio.TimeoutError)
     
-    exit()
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):
@@ -53,7 +52,7 @@ async def main():
             start_time=start_time,
             as_dataframe=True,
         )
-        # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
+        bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
