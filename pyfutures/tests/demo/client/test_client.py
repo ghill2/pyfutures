@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import sys
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -10,8 +12,6 @@ from nautilus_trader.core.uuid import UUID4
 
 from pyfutures.client.objects import ClientException
 
-import logging
-import sys
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 

@@ -10,10 +10,10 @@ from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from pytower import PACKAGE_ROOT
 
-from pyfutures.client.objects import ClientException
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -25,9 +25,9 @@ async def test_request_last_bar_universe(client):
     rows = IBTestProviderStubs.universe_rows()
 
     await client.connect()
-    
+
     await client.request_market_data_type(4)
-    
+
     asyncio.sleep(2)
 
     missing = []
@@ -75,8 +75,6 @@ async def test_request_last_quote_tick_universe(client):
 
     for row in missing:
         print(row.trading_class, row.exchange)
-
-
 
 
 @pytest.mark.asyncio()

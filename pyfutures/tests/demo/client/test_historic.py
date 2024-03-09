@@ -1,11 +1,12 @@
-import pandas as pd
 import logging
+import sys
+
+import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
-import sys
+
 # from nautilus_trader.core.datetime import secs_to_nanos
 # from nautilus_trader.core.datetime import unix_nanos_to_dt
-
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
@@ -26,7 +27,6 @@ def get_contract():
 
 @pytest.mark.asyncio()
 async def test_request_bars_downloads_expected(client):
-
     await client.connect()
 
     historic = InteractiveBrokersBarClient(client=client, delay=3)
@@ -41,12 +41,12 @@ async def test_request_bars_downloads_expected(client):
         what_to_show=WhatToShow.BID_ASK,
         start_time=pd.Timestamp("2024-01-10 00:00:00+00:00"),
         end_time=pd.Timestamp("2024-01-11 00:00:00+00:00"),
-        cache=False
+        cache=False,
     )
+
 
 @pytest.mark.asyncio()
 async def test_request_ticks_downloads_expected(client):
-
     await client.connect()
 
     historic = InteractiveBrokersBarClient(client=client, delay=3)
@@ -61,9 +61,6 @@ async def test_request_ticks_downloads_expected(client):
         end_time=pd.Timestamp("2024-01-11 00:00:00+00:00"),
     )
     print(ticks)
-
-
-
 
     # assert len(bars) == 34478
     # assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
@@ -91,11 +88,12 @@ async def test_request_ticks_downloads_expected(client):
 #         end_time=pd.Timestamp("2024-01-11 00:00:00+00:00"),
 #         cache=False
 #         )
-    # assert len(bars) == 34478
-    # assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
+# assert len(bars) == 34478
+# assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
 
 
 ######## TODO: Fix These Broken Tests #############
+
 
 @pytest.mark.asyncio()
 async def test_daily_downloads_expected(client):
@@ -104,7 +102,7 @@ async def test_daily_downloads_expected(client):
     contract = IBContract()
     contract.conId = 452341897
     contract.symbol = "ALI"
-    contract.exchange = "COMEX"             
+    contract.exchange = "COMEX"
 
     # for contract in IBTestProviderStubs.universe_contracts():
     df = await self.historic.download(
@@ -117,10 +115,10 @@ async def test_daily_downloads_expected(client):
     # assert len(bars) == 250
     # assert str(unix_nanos_to_dt(secs_to_nanos(int(bars[0].date)))) == "2023-07-17 20:59:00+00:00"
 
+
 @pytest.mark.asyncio()
 async def test_request_quote_ticks_dc(self, client):
     historic = InteractiveBrokersBarClient(client=client)
-
 
     start_time = pd.Timestamp("2023-02-13 14:30:00+00:00")
     end_time = pd.Timestamp("2023-02-13 22:00:00+00:00")
@@ -134,6 +132,7 @@ async def test_request_quote_ticks_dc(self, client):
     assert all([parse_datetime(q.time) >= start_time and parse_datetime(q.time) < end_time for q in quotes])
     assert parse_datetime(quotes[0].time) == pd.Timestamp("2023-02-13 14:34:11+00:00")
     assert parse_datetime(quotes[-1].time) == pd.Timestamp("2023-02-13 21:44:26+00:00")
+
 
 @pytest.mark.asyncio()
 async def test_request_quote_ticks_zn(self, client):

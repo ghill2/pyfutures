@@ -32,10 +32,7 @@ class FxRates:
         resp = requests.get(url)
         data = resp.json()
 
-        fx_rates = {
-            f"{d['base_currency']}{d['quote_currency']}": d["mid"]
-            for d in data["quotes"]
-        }
+        fx_rates = {f"{d['base_currency']}{d['quote_currency']}": d["mid"] for d in data["quotes"]}
 
         # with open(outpath, "w") as f:
         #     json.dump(data, f, indent=4)

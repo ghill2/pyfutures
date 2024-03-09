@@ -1,9 +1,8 @@
-from pathlib import Path
 import asyncio
+from pathlib import Path
 
-import pandas as pd
-import pytest
 from ibapi.contract import Contract as IBContract
+
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -64,7 +63,7 @@ async def find_universe_weekly_contracts(client):
                     ),
                 ),
             )
-            
+
 
 async def find_universe_price_parameters():
     folder = "/Users/g1/BU/projects/pytower_develop/pytower/tests/adapters/interactive_brokers/responses/universe_info"
@@ -80,8 +79,8 @@ async def find_universe_price_parameters():
             print(f"Missing {symbol}")
         elif len(params) > 1:
             print(symbol, exchange, params)
-            
-            
+
+
 async def find_universe_price_magnifiers():
     magnifiers = set()
     symbols = set()
@@ -94,5 +93,3 @@ async def find_universe_price_magnifiers():
     print(magnifiers)
     print(symbols)
     # {1, 100}
-    
-    

@@ -49,11 +49,11 @@
 
 #         self.values.append(float(bar.close))
 #         return value
-    
+
 #     def roll(self) -> None:
 #         value = float(bar.close) - float(self._last.close)
 #         self.adjust(value)
-        
+
 #     def adjust(self, value: float) -> None:
 #         value = float(bar.close) - float(self._last.bar.close)
 #         self.values = deque([x + value for x in self.values], maxlen=self.maxlen)

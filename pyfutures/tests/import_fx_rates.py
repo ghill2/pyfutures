@@ -3,18 +3,14 @@ from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
-from nautilus_trader.model.data import Bar
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.test_kit.providers import TestInstrumentProvider
-from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
-from pyfutures.data.files import ParquetFile
 from nautilus_trader.model.identifiers import Venue
-from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.tests.test_kit import CATALOG_FOLDER
+from nautilus_trader.model.instruments import CurrencyPair
+from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
+from nautilus_trader.test_kit.providers import TestInstrumentProvider
+
 from pyfutures.tests.import_tradermade import TRADERMADE_SYMBOLS
 from pyfutures.tests.test_kit import CATALOG
-from nautilus_trader.model.instruments import CurrencyPair
+
 
 PRICE_PRECISIONS = {
     "GBPCAD": 5,  # tradermade 1987
@@ -44,7 +40,7 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
     df.ask_price = df.ask_price.round(5)
     print(symbol, df)
     print(f"Writing {symbol!s}...")
-    
+
     wrangler = QuoteTickDataWrangler(
         instrument=instrument,
     )

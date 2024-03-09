@@ -1,15 +1,16 @@
-import pytest
 import datetime
 import pickle
 from datetime import time
 
 import pandas as pd
+import pytest
 import pytz
 
 from pyfutures.continuous.schedule import MarketSchedule
 
 
 pytestmark = pytest.mark.skip
+
 
 class TestMarketSchedule:
     def setup_method(self):
@@ -34,7 +35,7 @@ class TestMarketSchedule:
 
         # Saturday
         self.data.loc[len(self.data)] = {"dayofweek": 5, "open": time(17, 0), "close": time(23, 59)}
-    
+
     def test_schedule_previous_trading_day(self):
         calendar = MarketSchedule(name="test", data=self.data, timezone=pytz.UTC)
 

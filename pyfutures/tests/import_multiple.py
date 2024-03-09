@@ -61,13 +61,13 @@ def load_bars(row: dict) -> list[Bar]:
     assert len(bars) > 0
 
     bars = sorted(
-            bars,
-            key=lambda x: (
-                x.ts_init,
-                ContractMonth(x.bar_type.instrument_id.symbol.value.split("=")[-1]) in row.config.priced_cycle,  # carry bar first
-                MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,  # forward then current bar
-            ),
-        )
+        bars,
+        key=lambda x: (
+            x.ts_init,
+            ContractMonth(x.bar_type.instrument_id.symbol.value.split("=")[-1]) in row.config.priced_cycle,  # carry bar first
+            MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,  # forward then current bar
+        ),
+    )
 
     aggregations = {bar_aggregation_to_str(bar.bar_type.spec.aggregation) for bar in bars}
     # assert len(aggregations) == 3

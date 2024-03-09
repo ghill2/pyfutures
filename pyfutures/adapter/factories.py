@@ -1,30 +1,26 @@
 import asyncio
 
-from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
-from pyfutures.client.client import InteractiveBrokersClient
 from nautilus_trader.cache.cache import Cache
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.live.factories import LiveDataClientFactory
 from nautilus_trader.live.factories import LiveExecClientFactory
 from nautilus_trader.model.identifiers import AccountId
-from nautilus_trader.model.objects import Price
 
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
-
-
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
-from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
+
 
 CLIENT = None
 PROVIDER = None
 DATA_CLIENT = None
 EXEC_CLIENT = None
-
 
 
 def get_provider_cached():
@@ -33,15 +29,17 @@ def get_provider_cached():
         PROVIDER = AdapterStubs.instrument_provider(clien=CLIENT)
     return PROVIDER
 
+
 def get_client_cached(loop, msgbus, clock, cache):
     global CLIENT
     if CLIENT is None:
         CLIENT = InteractiveBrokersClient(
-        loop=loop,
-        host="127.0.0.1",
-        port=4002,
-    )
+            loop=loop,
+            host="127.0.0.1",
+            port=4002,
+        )
     return CLIENT
+
 
 # fmt: on
 class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):

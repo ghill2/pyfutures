@@ -1,17 +1,17 @@
-import os
 import random
-import sys
 from datetime import datetime
 
 import pandas as pd
 import pytest
 from nautilus_trader.core.datetime import dt_to_unix_nanos
+
 from pyfutures.core.datetime import dt_to_unix_nanos_vectorized
 
 
 UNIX_EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
 NOW = pd.Timestamp(datetime.now(), tz="UTC")
 random.seed(30)
+
 
 def _generate_seed_datetimes(seed) -> pd.Series:
     size = 1000

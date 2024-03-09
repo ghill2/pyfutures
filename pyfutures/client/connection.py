@@ -1,10 +1,12 @@
-import logging
 import asyncio
+import logging
 import os
 import struct
 from collections.abc import Coroutine
+
 import psutil
 from ibapi import comm
+
 
 # this bug is still present on the gnznz fork:
 # https://github.com/UnusualAlpha/ib-gateway-docker/issues/88
@@ -22,21 +24,21 @@ class Connection:
         self.host = host
         self.port = port
         self.client_id = client_id
-        
+
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
         self._log = logging.getLogger(self.__class__.__name__)
         self._handlers = set()
-        
+
         # attributes that reset
         self._monitor_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
         self._reader, self._writer = (None, None)
         self._handshake_message_ids = []
-        
+
     def _reset(self) -> bool:
         self._log.debug("Initializing...")
-        
+
         self._is_connected.clear()
         self._handshake_message_ids.clear()
         self._reader, self._writer = (None, None)
@@ -59,12 +61,11 @@ class Connection:
                 raise
 
         self._log.debug("Successfully Initialized...")
-        
+
     def register_handler(self, handler: Coroutine) -> None:
         self._handlers.add(handler)
 
     async def _listen(self) -> None:
-        
         assert self._reader is not None
 
         buf = b""
@@ -77,7 +78,7 @@ class Connection:
                 self._log.error(f"listen: TWS closed the connection {e!r}...")
                 await self._handle_disconnect()
                 return
-            
+
             if len(data) == 0:
                 self._log.debug("0 bytes received from server, connect has been dropped")
                 await self._handle_disconnect()
@@ -107,15 +108,13 @@ class Connection:
         """
         self._log.debug("Handling disconnect.")
         self._reset()
-        
 
         # await self.connect()
         # reconnect subscriptions
         # for sub in self._subscriptions:
         #     sub.cancel()
-        
+
     def _handle_msg(self, msg: bytes) -> None:
-        
         if self.is_connected:
             for handler in self._handlers:
                 handler(msg)
@@ -133,9 +132,7 @@ class Connection:
                 if self.is_connected:
                     continue
 
-                self._log.debug(
-                    "Watchdog: connection has been disconnected. Reconnecting..."
-                )
+                self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
 
                 await self.connect()
 
@@ -172,9 +169,7 @@ class Connection:
         # connect socket
         self._log.debug("Connecting socket...")
         try:
-            self._reader, self._writer = await asyncio.open_connection(
-                self.host, self.port
-            )
+            self._reader, self._writer = await asyncio.open_connection(self.host, self.port)
         except ConnectionRefusedError as e:
             self._log.error(f"Socket connection failed, check TWS is open {e!r}")
             self._reset()
@@ -188,7 +183,7 @@ class Connection:
 
     async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
         self._log.debug("Performing handshake...")
-        
+
         try:
             self._log.debug("Sending handshake message...")
             await self._send_handshake()
@@ -210,8 +205,6 @@ class Connection:
         self._writer.write(msg)
         self.loop.create_task(self._writer.drain())
 
-    
-
     async def _send_handshake(self) -> None:
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
         self._sendMsg(msg)
@@ -225,13 +218,9 @@ class Connection:
 
         id = int(fields[0])
         self._handshake_message_ids.append(id)
-        self._log.debug(
-            str(self._handshake_message_ids)
-        )
-        self._log.debug(
-            str(all(id in self._handshake_message_ids for id in (176, 15, 9)))
-        )
-        
+        self._log.debug(str(self._handshake_message_ids))
+        self._log.debug(str(all(id in self._handshake_message_ids for id in (176, 15, 9))))
+
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
@@ -239,11 +228,10 @@ class Connection:
             msg = b"\x00\x00\x00\x0871\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
             # assert msg == b"\x00\x00\x00\x0871\x002\x001\x00\x00"
             # msg = b"\x00\x00\x00\x0871\x002\x001\x00\x00"
-            
+
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
             self._is_connected.set()
-            
 
     def _prefix(self, msg):
         # prefix a message with its length

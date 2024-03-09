@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.live.data_engine import LiveDataEngine
@@ -7,25 +8,17 @@ from nautilus_trader.model.identifiers import AccountId
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
+
 from pyfutures import IB_ACCOUNT_ID
 from pyfutures.adapter import IB_VENUE
-
+from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
+from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
+from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.adapter.config import (
-    InteractiveBrokersDataClientConfig,
-    InteractiveBrokersExecClientConfig,
-    InteractiveBrokersInstrumentProviderConfig,
-)
-from pyfutures.adapter.execution import (
-    InteractiveBrokersExecClient,
-)
-from pyfutures.adapter.factories import (
-    InteractiveBrokersLiveDataClientFactory,
-)
-from pyfutures.adapter.providers import (
-    InteractiveBrokersInstrumentProvider,
-)
-import logging
+
 
 # Why not use fixtures?
 # Some tests require an engine with a custom instrument provider or data_client / exec_client config
@@ -116,9 +109,7 @@ class InteractiveBrokersExecEngineFactory:
             port=4002,
         )
 
-        provider = InteractiveBrokersInstrumentProvider(
-            client=client, config=provider_config
-        )
+        provider = InteractiveBrokersInstrumentProvider(client=client, config=provider_config)
 
         account_id = AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}")
 

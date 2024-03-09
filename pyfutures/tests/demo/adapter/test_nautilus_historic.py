@@ -1,14 +1,12 @@
+import pandas as pd
 import pytest
 from nautilus_trader.adapters.interactive_brokers.common import IBContract
-from nautilus_trader.adapters.interactive_brokers.historic.client import (
-    HistoricInteractiveBrokersClient,
-)
-import pandas as pd
+from nautilus_trader.adapters.interactive_brokers.historic.client import HistoricInteractiveBrokersClient
 
 
 @pytest.mark.asyncio()
 async def test_nautilus_historic():
-    """to compare functionality with pyfutures historic client"""
+    """To compare functionality with pyfutures historic client"""
     historic = HistoricInteractiveBrokersClient()
     await historic.request_bars(
         bar_specifications=["1-MINUTE-LAST"],

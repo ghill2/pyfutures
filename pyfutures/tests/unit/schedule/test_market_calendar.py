@@ -1,13 +1,14 @@
-import pytest
-
 from datetime import time
 
 import pandas as pd
+import pytest
 import pytz
 
 from pyfutures.schedule.market_calendar import MarketCalendar
 
+
 pytestmark = pytest.mark.skip
+
 
 class TestMarketCalendar:
     def setup(self):

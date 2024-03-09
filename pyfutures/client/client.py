@@ -1,16 +1,14 @@
 import asyncio
-import queue
 import functools
 
 # fmt: on
 import logging
+import queue
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
 import eventkit
-import traceback
-from datetime import timezone
 
 # fmt: off
 import pandas as pd
@@ -19,8 +17,8 @@ from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport as IBCommissionReport
 from ibapi.common import BarData
-from ibapi.common import HistoricalTickLast
 from ibapi.common import HistoricalTickBidAsk
+from ibapi.common import HistoricalTickLast
 from ibapi.common import ListOfHistoricalSessions
 from ibapi.common import ListOfHistoricalTickBidAsk
 from ibapi.common import ListOfHistoricalTickLast
@@ -35,6 +33,9 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import Duration
+from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.connection import Connection
 from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientRequest
@@ -45,9 +46,6 @@ from pyfutures.client.objects import IBOpenOrderEvent
 from pyfutures.client.objects import IBOrderStatusEvent
 from pyfutures.client.objects import IBPortfolioEvent
 from pyfutures.client.objects import IBPositionEvent
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.parsing import ClientParser
 
 
@@ -81,7 +79,7 @@ class InteractiveBrokersClient(EWrapper):
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
         self._log = logging.getLogger(self.__class__.__name__)
-        
+
         # Config
         self._loop = loop
         self._requests = {}
@@ -97,7 +95,7 @@ class InteractiveBrokersClient(EWrapper):
         self._override_timeout = override_timeout
         if override_timeout:
             assert isinstance(self._request_timeout_seconds, (float, int))
-            
+
         self._connection = Connection(
             loop=loop,
             host=host,
@@ -112,15 +110,15 @@ class InteractiveBrokersClient(EWrapper):
         self._eclient.serverVersion = lambda: 176
         self._eclient.conn = self  # where to send the messages: eclient -> sendMsg
         self._eclient.clientId = client_id
-        
+
         self._decoder = Decoder(wrapper=self, serverVersion=176)
-        
+
         self._outgoing_msg_task: asyncio.Task | None = None
         self._outgoing_msg_queue = queue.Queue()
-        
+
         self._reset()
         self._parser = ClientParser()
-        
+
     @property
     def subscriptions(self) -> list[ClientSubscription]:
         return self._subscriptions.values()
@@ -137,20 +135,20 @@ class InteractiveBrokersClient(EWrapper):
     # Connection
 
     async def connect(self) -> None:
-        
+
         self._outgoing_msg_task = self._loop.create_task(
             coro=self._process_outgoing_msg_queue(),
             name="outgoing_message_queue",
         )
-        
+
         await self._connection.connect()
-    
+
     def sendMsg(self, msg: bytes) -> None:
         # messages output from self.eclient are sent here
         self._outgoing_msg_queue.put(msg)
-        
+
     async def _process_outgoing_msg_queue(self) -> None:
-        
+
         while True:
             if self.connection.is_connected:
                 while not self._outgoing_msg_queue.empty():
@@ -159,25 +157,25 @@ class InteractiveBrokersClient(EWrapper):
                 await asyncio.sleep(0)
             else:
                 self._log.debug(
-                    f"Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds..."
+                    "Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds..."
                 )
                 await asyncio.sleep(5)
-            
-        
+
+
     def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
         self._decoder.interpret(fields)
-    
+
     def _reset(self) -> None:
-        
+
         self._request_id_seq = -10
-        
+
         if self._outgoing_msg_task is not None:
             self._outgoing_msg_task.cancel()
         self._outgoing_msg_task = None
-                
+
         self._connection._reset()
-        
+
     def _stop(self) -> None:
         self._reset()
 
@@ -195,14 +193,14 @@ class InteractiveBrokersClient(EWrapper):
         data: list | dict | None = None,
         timeout_seconds: int | None = None,
     ) -> ClientRequest:
-        
+
         assert isinstance(id, int)
-        
+
         if self._override_timeout:
             timeout_seconds = self._request_timeout_seconds
         else:
             timeout_seconds = timeout_seconds or self._request_timeout_seconds
-        
+
         request = ClientRequest(
             id=id,
             data=data,
@@ -241,7 +239,7 @@ class InteractiveBrokersClient(EWrapper):
         errorString: str,
         advancedOrderRejectJson="",
     ) -> None:  # : Override the EWrapper
-        
+
         # TODO: if reqId is negative, its part of a request
 
         event = IBErrorEvent(
@@ -251,7 +249,7 @@ class InteractiveBrokersClient(EWrapper):
             advancedOrderRejectJson=advancedOrderRejectJson,
         )
         self.error_events.emit(event)
-        
+
         # Note: -1 will indicate a notification and not true error condition
         if reqId == -1:
             # self._log.debug(f"Notification {errorCode}: {errorString}")
@@ -316,7 +314,7 @@ class InteractiveBrokersClient(EWrapper):
     # Contract Details
 
     async def request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
-        
+
         self._log.debug(f"Requesting contract details for {contract=}")
 
         request = self._create_request(
@@ -411,7 +409,7 @@ class InteractiveBrokersClient(EWrapper):
         end_time: pd.Timestamp,
     ) -> list[BarData]:
         """
-            formatDate=1, returns bars as a timestamp in the exchange timezone
+        formatDate=1, returns bars as a timestamp in the exchange timezone
         """
         # await self._conn._is_connected.wait()
 
@@ -420,13 +418,13 @@ class InteractiveBrokersClient(EWrapper):
             data=[],
             timeout_seconds=60 * 10,
         )
-        
+
         self._log.debug(
             f"reqHistoricalData: {request.id}, {contract}, "
             f"endDateTime={end_time}, durationStr={duration}, "
             f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}"
         )
-        
+
         try:
             self._eclient.reqHistoricalData(
                 reqId=request.id,
@@ -440,15 +438,15 @@ class InteractiveBrokersClient(EWrapper):
                 keepUpToDate=False,
                 chartOptions=[],
             )
-            
+
             bars = await self._wait_for_request(request)
         except ClientException:
             self._eclient.cancelHistoricalData(reqId=request.id)
             raise
-        
+
         # bars can be returned before the start time
         start_time = end_time - duration.to_timedelta()
-        
+
         bars = [
             b for b in bars
             if b.timestamp >= start_time and b.timestamp < end_time
@@ -475,7 +473,7 @@ class InteractiveBrokersClient(EWrapper):
     async def request_next_order_id(
         self,
     ) -> int:
-        
+
         request_id = self._request_id_map["next_order_id"]
         request = self._create_request(request_id)
 
@@ -504,20 +502,19 @@ class InteractiveBrokersClient(EWrapper):
         Each open order will be fed back through the openOrder() and orderStatus()
         functions on the EWrapper.
         """
-        
         request_id = self._request_id_map["orders"]
         request = self._create_request(id=request_id, data=[])
 
         self._eclient.reqOpenOrders()
 
         return await self._wait_for_request(request)
-    
+
     async def request_completed_orders(self) -> list[IBOpenOrderEvent]:
         """
         TODO: for trade reporting
         self._eclient.reqCompletedOrders
         """
-        
+
     def orderStatus(
         self,
         orderId: OrderId,
@@ -582,7 +579,7 @@ class InteractiveBrokersClient(EWrapper):
 
         The IBApi.EWrapper.openOrder method delivers an IBApi.Order object representing an
         open order within the system.
-        
+
         In addition, IBApi.EWrapper.openOrder returns an an IBApi.OrderState object that is used
         to return estimated pre-trade margin and commission information in response
         to invoking IBApi.EClient.placeOrderwith a IBApi.Order object that has the flag
@@ -607,7 +604,7 @@ class InteractiveBrokersClient(EWrapper):
         if request is None:
             self.open_order_events.emit(event)
             return
-        
+
         request.data.append(event)
 
     def openOrderEnd(self):
@@ -628,7 +625,7 @@ class InteractiveBrokersClient(EWrapper):
     # Positions query
 
     async def request_positions(self) -> list[IBPositionEvent]:
-        
+
         request_id = self._request_id_map["positions"]
         request = self._create_request(
             id=request_id,
@@ -685,7 +682,7 @@ class InteractiveBrokersClient(EWrapper):
     # Executions query
 
     async def request_executions(self, client_id: int):
-        
+
         request_id: int = self._next_request_id()
         request = self._create_request(
             id=request_id,
@@ -699,7 +696,7 @@ class InteractiveBrokersClient(EWrapper):
             reqId=request.id,
             execFilter=filter,
         )
-        
+
         return await self._wait_for_request(request)
 
     def execDetails(
@@ -711,10 +708,10 @@ class InteractiveBrokersClient(EWrapper):
         """
         This event is fired when the reqExecutions() functions is invoked, or when an
         order is filled.
-        
+
         NOTE: when an order is filled, the execDetails and commissionReport endpoint is called
         The order is execDetails -> commissionReport
-        
+
         NOTE: the reqId is -1 for events
         """
         self._log.info(f"execDetails reqId={reqId} {execution}")
@@ -726,7 +723,7 @@ class InteractiveBrokersClient(EWrapper):
             execution=execution,
             commissionReport=None,  # filled on commissionReport callback
         )
-        
+
         self._executions[execution.execId] = event  # hot cache
 
     def commissionReport(self, commissionReport: IBCommissionReport):  # : Override the EWrapper
@@ -735,53 +732,52 @@ class InteractiveBrokersClient(EWrapper):
 
         - immediately after a trade execution
         - by calling reqExecutions().
-        
+
         NOTE: when an order is filled, the execDetails and commissionReport endpoint is called
         The order is execDetails -> commissionReport
         """
-        
         self._log.info(f"commissionReport {commissionReport}")
-        
+
         # find execution from hot cache
         exec_id = commissionReport.execId
-        
+
         event = self._executions.get(exec_id)  # hot cache
-        
+
         if event is None:
             self._log.debug(f"No execution event found in hot cache for {exec_id}")
             return
-        
+
         del self._executions[exec_id]
-            
+
         event.commissionReport = commissionReport
-            
+
         # event based
         if event.reqId == -1:
             self.execution_events.emit(event)
             return
-        
+
         # request based
         request = self._requests.get(event.reqId)
         if request is None:
             self._log.debug(f"No request found for request_id {event.reqId}")
             return
-        
+
         request.data.append(event)
-        
+
     def execDetailsEnd(self, reqId: int):  # : Override the EWrapper
         """
         This function is called once all executions have been sent to a client in
         response to reqExecutions().
         """
         self._log.info("execDetailsEnd")
-        
+
         request = self._requests.get(reqId)
         if request is None:
             self._log.debug(f"No request found for request_id {reqId}")
             return
-        
+
         request.set_result(request.data)
-        
+
     ################################################################################################
     # Account and Portfolio
     async def request_account_summary(self) -> dict:
@@ -883,7 +879,7 @@ class InteractiveBrokersClient(EWrapper):
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
-        
+
         head_timestamp: pd.Timestamp = pd.to_datetime(headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True)
         request.set_result(head_timestamp)
 
@@ -940,7 +936,6 @@ class InteractiveBrokersClient(EWrapper):
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
         """
-        
         assert start_time.tz is not None, "Timestamp is not timezone aware"
         assert end_time.tz is not None, "Timestamp is not timezone aware"
         assert start_time < end_time
@@ -955,7 +950,7 @@ class InteractiveBrokersClient(EWrapper):
             f"startDateTime={start_time}, endDateTime={end_time}, "
             f"numberOfTicks={count}, whatToShow='BID_ASK', "
         )
- 
+
 
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
@@ -996,11 +991,11 @@ class InteractiveBrokersClient(EWrapper):
         end_time: pd.Timestamp,
         count: int = 1000,
     ) -> list[HistoricalTickLast]:
-        
+
         assert start_time.tz is not None, "Timestamp is not timezone aware"
         assert end_time.tz is not None, "Timestamp is not timezone aware"
         assert start_time < end_time
-        
+
         request = self._create_request(
             id=self._next_request_id(),
             data=[],
@@ -1037,7 +1032,7 @@ class InteractiveBrokersClient(EWrapper):
 
         if done:
             request.set_result(request.data)
-    
+
     ################################################################################################
     # Subscribe ticks
 
@@ -1046,7 +1041,7 @@ class InteractiveBrokersClient(EWrapper):
         contract: IBContract,
         callback: Callable,
     ) -> ClientSubscription:
-        
+
         request_id = self._next_request_id()
 
         subscribe = functools.partial(
@@ -1063,7 +1058,7 @@ class InteractiveBrokersClient(EWrapper):
             request_id=request_id,
             cancel_func=functools.partial(self._eclient.cancelTickByTickData, reqId=request_id),
         )
-        
+
 
         subscription = ClientSubscription(
             id=request_id,
@@ -1075,7 +1070,7 @@ class InteractiveBrokersClient(EWrapper):
         self._subscriptions[request_id] = subscription
 
         subscription.subscribe()
-        
+
         return subscription
 
     def tickByTickBidAsk(  # : Override the EWrapper
@@ -1101,7 +1096,7 @@ class InteractiveBrokersClient(EWrapper):
                 f"No subscription found for request_id {reqId}",
             )
             return  # no response found for request_id
-        
+
         tick = HistoricalTickBidAsk()
         tick.time = time
         tick.priceBid = bidPrice
@@ -1112,7 +1107,7 @@ class InteractiveBrokersClient(EWrapper):
         tick.tickAttribBidAsk = tickAttribBidAsk
 
         subscription.callback(tick)
-        
+
     ################################################################################################
     # Realtime bars
 
@@ -1138,7 +1133,7 @@ class InteractiveBrokersClient(EWrapper):
                 bar_size=bar_size,
                 callback=callback,
             )
-    
+
     def _subscribe_realtime_bars(
         self,
         contract: IBContract,
@@ -1146,19 +1141,19 @@ class InteractiveBrokersClient(EWrapper):
         bar_size: BarSize,
         callback: Callable,
     ) -> ClientSubscription:
-        
+
         self._log.debug(
             f"Subscribing to realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
         )
-        
+
         request_id = self._next_request_id()
-        
+
         cancel = functools.partial(
             self._unsubscribe,
             request_id=request_id,
             cancel_func=functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
         )
-        
+
 
         subscribe = functools.partial(
             self._eclient.reqRealTimeBars,
@@ -1169,7 +1164,7 @@ class InteractiveBrokersClient(EWrapper):
             useRTH=True,
             realTimeBarsOptions=[],
         )
-        
+
         subscription = ClientSubscription(
             id=request_id,
             subscribe=subscribe,
@@ -1180,9 +1175,9 @@ class InteractiveBrokersClient(EWrapper):
         self._subscriptions[request_id] = subscription
 
         subscription.subscribe()
-        
+
         return subscription
-    
+
     def _subscribe_historical_bars(
         self,
         contract: IBContract,
@@ -1190,9 +1185,9 @@ class InteractiveBrokersClient(EWrapper):
         bar_size: BarSize,
         callback: Callable,
     ) -> ClientSubscription:
-        
+
         request_id = self._next_request_id()
-        
+
         self._log.debug(
             f"Subscribing to historical bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
         )
@@ -1216,7 +1211,7 @@ class InteractiveBrokersClient(EWrapper):
             keepUpToDate=True,
             chartOptions=[],
         )
-        
+
         subscription = ClientSubscription(
             id=request_id,
             subscribe=subscribe,
@@ -1227,15 +1222,15 @@ class InteractiveBrokersClient(EWrapper):
         self._subscriptions[request_id] = subscription
 
         subscription.subscribe()
-        
+
         return subscription
-    
+
     def _unsubscribe(
         self,
         request_id: int,
         cancel_func: Callable,
     ) -> None:
-        
+
         subscription = self._subscriptions.get(request_id)
         if subscription is None:
             self._log.debug(f"No subscription found for request_id {request_id}")
@@ -1290,14 +1285,14 @@ class InteractiveBrokersClient(EWrapper):
         bar.volume = volume
         bar.wap = wap
         bar.barCount = count
-        
+
         subscription.callback(bar)
-    
+
     ################################################################################################
     # Accounts
-    
+
     async def request_accounts(self) -> list[str]:
-        
+
         request_id = self._request_id_map["accounts"]
         request = self._create_request(
             id=request_id,
@@ -1320,7 +1315,7 @@ class InteractiveBrokersClient(EWrapper):
 
     ################################################################################################
     # Subscribe account summary
-    
+
     async def subscribe_account_updates(self, callback: Callable) -> ClientSubscription:
         """
         All account values and positions will be returned initially, and then there will
@@ -1541,14 +1536,14 @@ class InteractiveBrokersClient(EWrapper):
         # if reqId == -1:
         #     self.execution_events.emit(event)
         #     return
-        
+
         # request = self._requests.get(reqId)
         # if request is None:
         #     self._log.debug(f"no request for request_id: {reqId}")
         #     return
 
         # self._log.debug(f"request found with id {request.id}")
-        
-        
-        
+
+
+
         # handle request based response

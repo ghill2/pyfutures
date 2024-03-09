@@ -1,23 +1,16 @@
 # from pyfutures.adapter..client.objects import IBFuturesInstrument
-import asyncio
-import json
-from pathlib import Path
 
-import pandas as pd
 import pytest
-from ibapi.contract import Contract as IBContract
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
-from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.config import FuturesChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.tests.test_kit import IBTestProviderStubs
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
+
 init_logging(level_stdout=LogLevel.DEBUG)
-
 
 
 @pytest.mark.asyncio()
@@ -98,9 +91,6 @@ async def test_find_with_contract_id_requests_instrument(instrument_provider):
     contract = await instrument_provider.find_with_contract_id(564400671)
 
     assert contract.id == InstrumentId.from_str("D-RC=F24.ICEEUSOFT")
-
-
-
 
 
 # @pytest.mark.asyncio()

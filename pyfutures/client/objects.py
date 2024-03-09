@@ -4,18 +4,21 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
+
 import pandas as pd
+from ibapi.commission_report import CommissionReport as IBCommissionReport
 from ibapi.contract import Contract as IBContract
+from ibapi.execution import Execution as IBExecution
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
-from ibapi.execution import Execution as IBExecution
-from ibapi.commission_report import CommissionReport as IBCommissionReport
+
 
 @dataclass
 class IBOpenOrderEvent:
     contract: IBContract
     order: IBOrder
     orderState: IBOrderState
+
 
 @dataclass
 class IBPortfolioEvent:
@@ -28,12 +31,14 @@ class IBPortfolioEvent:
     realizedPNL: float
     accountName: str
 
+
 @dataclass
 class IBPositionEvent:
     account: str
     conId: int
     quantity: Decimal
     avgCost: float
+
 
 @dataclass
 class IBExecutionEvent:
@@ -42,14 +47,15 @@ class IBExecutionEvent:
     contract: IBContract
     execution: IBExecution
     commissionReport: IBCommissionReport
-    
-    
+
+
 @dataclass
 class IBErrorEvent:
     reqId: int
     errorCode: int
     errorString: str
     advancedOrderRejectJson: str
+
 
 @dataclass
 class IBOrderStatusEvent:
@@ -75,6 +81,7 @@ class ClientRequest(asyncio.Future):
     def __post_init__(self):
         super().__init__()
 
+
 @dataclass
 class ClientSubscription:
     id: int
@@ -84,9 +91,7 @@ class ClientSubscription:
 
 
 class ClientException(Exception):
-    
     def __init__(self, code: int, message: str):
-        
         self.code = code
         self.message = message
         super().__init__(code, message)  # Pass code and message as separate arguments
@@ -96,35 +101,32 @@ class ClientException(Exception):
 
     def __getstate__(self):
         return {
-            'code': self.code,
-            'message': self.message,
+            "code": self.code,
+            "message": self.message,
         }
-    
+
     def __setstate__(self, state):
-        self.code = state['code']
-        self.message = state['message']
-        
+        self.code = state["code"]
+        self.message = state["message"]
+
     def to_dict(self):
         return self.__getstate__()
-    
+
     @classmethod
     def from_dict(cls, obj: dict) -> ClientException:
-        return cls(
-            code=obj['code'],
-            message=obj['message']
-        )
-    
+        return cls(code=obj["code"], message=obj["message"])
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ClientException):
             return False
-        return self.code == other.code \
-                and self.message == other.message
-        
-    
+        return self.code == other.code and self.message == other.message
+
+
 class ClientDisconnected(Exception):
     def __init__(self, message: str = None):
         super().__init__(message)
-        
+
+
 # class TimeoutError(asyncio.TimeoutError):
 #     """asyncio.TimeoutError that stores the timeout_seconds for use in Historic Client"""
 #
@@ -182,7 +184,6 @@ class ClientDisconnected(Exception):
 #
 
 
-
 # @dataclass
 # class IBBar:
 #     timestamp: pd.Timestamp
@@ -193,12 +194,11 @@ class ClientDisconnected(Exception):
 #     volume: Decimal
 #     wap: int
 #     barCount: int
-    
+
 #     @staticmethod
 #     def from_bar_data(obj: BarData) -> IBBar:
 #         pass
-        
+
 # @dataclass
 # class QuoteTick:
 #     pass
-    

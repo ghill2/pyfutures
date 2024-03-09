@@ -1,4 +1,3 @@
-
 import pandas as pd
 from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import dt_to_unix_nanos

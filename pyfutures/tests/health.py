@@ -1,16 +1,15 @@
-from pathlib import Path
 import asyncio
+from pathlib import Path
 
 import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
 from pytower import PACKAGE_ROOT
-from pyfutures.client.objects import ClientException
+
 from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
 
 @pytest.mark.skip(reason="universe")
 @pytest.mark.asyncio()
@@ -19,7 +18,8 @@ async def test_load_future_chain_details_universe(instrument_provider):
         details_list = await instrument_provider.load_future_chain_details(chain)
         assert len(details_list) > 0
         await asyncio.sleep(1)
-    
+
+
 @pytest.mark.asyncio()
 async def test_request_head_timestamp_contfut(client):
     contract = IBContract()
@@ -123,9 +123,7 @@ def test_historic_schedules_with_sessions_out_of_day():
     """
     find instruments that have sessions where the start and end date is NOT within the same day
     """
-    schedules_dir = Path(
-        "/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules"
-    )
+    schedules_dir = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules")
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
@@ -166,6 +164,7 @@ def find_minimum_day_of_month_within_range(
 
     return pd.Series(filtered).dt.day.min()
 
+
 def test_find_missing_calendars(self):
     missing = set()
 
@@ -183,16 +182,18 @@ def test_find_missing_calendars(self):
 
     for item in missing:
         print(item)
-            
+
+
 def test_from_symbol_universe(self):
-        missing = set()
-        for instrument_id in IBTestProviderStubs.universe_instrument_ids():
-            result = MarketCalendarFactory.from_symbol(instrument_id.symbol)
-            if result is None:
-                missing.add(instrument_id.symbol)
-        for symbol in missing:
-            print(symbol)
-    
+    missing = set()
+    for instrument_id in IBTestProviderStubs.universe_instrument_ids():
+        result = MarketCalendarFactory.from_symbol(instrument_id.symbol)
+        if result is None:
+            missing.add(instrument_id.symbol)
+    for symbol in missing:
+        print(symbol)
+
+
 def test_from_market_hours_universe(self):
     missing = set()
     for instrument_id in IBTestProviderStubs.universe_instrument_ids():
@@ -202,7 +203,8 @@ def test_from_market_hours_universe(self):
 
     for item in missing:
         print(item)
-            
+
+
 def test_multiple_exchanges_universe():
     import json
 
@@ -214,6 +216,7 @@ def test_multiple_exchanges_universe():
             if "," in json_data["Exchange"]:
                 print(instrument_id, json_data["Exchange"])
 
+
 def test_from_liquid_hours_universe(self):
     missing = set()
     for instrument_id in IBTestProviderStubs.universe_instrument_ids():
@@ -223,6 +226,7 @@ def test_from_liquid_hours_universe(self):
 
     for instrument_id in missing:
         print(instrument_id)
+
 
 def test_exchange_timezone_map(self):
     exchanges = list(TIMEZONE_FOR_EXCHANGE.keys())
@@ -237,6 +241,7 @@ def test_exchange_timezone_map(self):
             exchanges.remove(exchange)
 
     print(f"Unrequired: {exchanges}")
+
 
 @pytest.mark.skip(reason="research")
 @pytest.mark.asyncio()
@@ -280,7 +285,8 @@ async def test_get_trading_class(client):
 
     path = PACKAGE_ROOT / "instruments/universe2.csv"
     df.to_csv(path, index=False)
-                
+
+
 if __name__ == "__main__":
     test_historic_schedules_with_sessions_out_of_day()
 

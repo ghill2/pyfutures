@@ -1,10 +1,10 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import ClassVar, Optional
-from dotenv import dotenv_values
+from typing import ClassVar
 
 import aiodocker
+from dotenv import dotenv_values
 
 
 class Gateway:
@@ -12,7 +12,7 @@ class Gateway:
     CONTAINER_NAME: ClassVar[str] = "ib-gateway"
 
     def __init__(self, log_level: int = logging.DEBUG):
-        self._container: Optional[aiodocker.containers.DockerContainer] = None
+        self._container: aiodocker.containers.DockerContainer | None = None
         self.log = logging.getLogger("Gateway")
         self.log.setLevel(log_level)
 
@@ -22,7 +22,6 @@ class Gateway:
         Deletes the container if it exists already.
         Does not start the container, only creates it
         """
-
         _docker = aiodocker.Docker()
         host = "127.0.0.1"
         c = await self.container()
@@ -34,7 +33,7 @@ class Gateway:
         tws_password = dotenv_values()["TWS_PASSWORD"]
 
         # https://github.com/aio-libs/aiodocker/issues/829
-        config=dict(
+        config = dict(
             Image="ghcr.io/gnzsnz/ib-gateway:stable",
             Restart_policy={"Name": "always"},
             # detach=True,
@@ -49,19 +48,10 @@ class Gateway:
             #     "4004": {host, 4002),
             #     "5900": {host, 5900,
             # },
-            Env=[
-            "TRADING_MODE=paper",
-            f"TWS_USERID={tws_userid}",
-            f"TWS_PASSWORD={tws_password}",
-            "READ_ONLY_API=yes"
-            ]
-            )
-
-
-        c = await _docker.containers.create(
-            name=self.CONTAINER_NAME, 
-            config=config
+            Env=["TRADING_MODE=paper", f"TWS_USERID={tws_userid}", f"TWS_PASSWORD={tws_password}", "READ_ONLY_API=yes"],
         )
+
+        c = await _docker.containers.create(name=self.CONTAINER_NAME, config=config)
 
         # await self.wait_until_login(c)
         await c.start()
@@ -75,7 +65,7 @@ class Gateway:
         # to prevent aiodocker from erroring, datetime is converted to seconds epoch
         now = datetime.now()
         now_seconds_epoch = int(now.timestamp())
-        async for chunk in c.log(follow=True,stdout=True, stderr=True, since=now_seconds_epoch):
+        async for chunk in c.log(follow=True, stdout=True, stderr=True, since=now_seconds_epoch):
             if "IBC: Login has completed" in chunk:
                 # self.log.info(chunk)
                 self.log.info("Gateway Started and Ready... Continuing...")
@@ -85,12 +75,10 @@ class Gateway:
         """
         Starts the container if it's not already running.
         """
-
         c = await self.container()
 
         if not c:
             c = await self.create_container()
-
 
         self.log.info("Starting Gateway...")
         metadata = await c.show()
@@ -121,7 +109,7 @@ class Gateway:
             await c.wait()
             self._container = None
 
-    async def container(self) -> Optional[aiodocker.containers.DockerContainer]:
+    async def container(self) -> aiodocker.containers.DockerContainer | None:
         # ... (rest of the code remains the same)
         _docker = aiodocker.Docker()
         containers = await _docker.containers.list(all=True)
@@ -135,7 +123,7 @@ class Gateway:
         return None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     gateway = Gateway()
     loop.run_until_complete(gateway.create_container())

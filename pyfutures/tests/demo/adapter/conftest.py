@@ -2,34 +2,18 @@ import asyncio
 
 import pytest
 import pytest_asyncio
-from nautilus_trader.config import LiveExecEngineConfig
-from nautilus_trader.live.execution_engine import LiveExecutionEngine
-from nautilus_trader.model.identifiers import AccountId
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from nautilus_trader.model.objects import Price
-from nautilus_trader.portfolio.portfolio import Portfolio
-from nautilus_trader.test_kit.stubs.events import TestEventStubs
-from nautilus_trader.test_kit.stubs.execution import TestExecStubs
-
-# fmt: off
-from pyfutures.adapter import IB_VENUE
-from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
-from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.execution import InteractiveBrokersExecClient
-from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
-from pyfutures.tests.demo.order_setup import OrderSetup
-import asyncio
-
-import pytest
 from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
+from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
+# fmt: off
+from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.tests.demo.order_setup import OrderSetup
 
 
 def pytest_addoption(parser):
@@ -95,7 +79,7 @@ def client(event_loop) -> InteractiveBrokersClient:
     )
 
     init_logging(level_stdout=LogLevel.DEBUG)
-    
+
     return client
 
 @pytest.fixture(scope="session")
@@ -251,9 +235,9 @@ async def order_setup(exec_client) -> OrderSetup:
 #     print(instrument_id.value)
 #     provider_params = dict(load_ids=[instrument_id.value], **DEFAULT_PROVIDER_PARAMS)
 #     exec_engine, exec_client, provider, client  = InteractiveBrokersExecEngineFactory.create(
-#         loop=event_loop, 
-#         msgbus=msgbus, 
-#         cache=cache, 
+#         loop=event_loop,
+#         msgbus=msgbus,
+#         cache=cache,
 #         clock=clock,
 #         provider_config=InteractiveBrokersInstrumentProviderConfig(**provider_params)
 #     )
@@ -321,4 +305,3 @@ async def order_setup(exec_client) -> OrderSetup:
 #     cache.add_instrument(instrument)
 #
 #     return instrument
-

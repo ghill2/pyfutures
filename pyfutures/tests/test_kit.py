@@ -1,59 +1,55 @@
 import pathlib
 import re
-from collections import namedtuple
+from dataclasses import dataclass
+from dataclasses import fields
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
-
-from decimal import Decimal
+from nautilus_trader.core.data import Data
+from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.data import QuoteTick
+from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.enums import InstrumentClass
-from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.enums import BarAggregation
+from nautilus_trader.model.enums import InstrumentClass
+from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.functions import bar_aggregation_to_str
 from nautilus_trader.model.functions import price_type_to_str
-from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
-from nautilus_trader.model.data import capsule_to_list
-from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import Symbol
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import Bar
 from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
-from nautilus_trader.core.data import Data
-from pytower.strategies.master import sort_key
-from pyfutures.continuous.config import RollConfig
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
-from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
+from nautilus_trader.test_kit.providers import TestInstrumentProvider
+from pytower.strategies.master import sort_key
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapter.parsing import create_contract
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.schedule import MarketSchedule
 from pyfutures.data.files import ParquetFile
-from dataclasses import dataclass
-from dataclasses import fields
+
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
 PER_CONTRACT_FOLDER = Path.home() / "Desktop" / "per_contract"
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
-MULTIPLE_PRICES_FOLDER = (
-    Path.home() / "Desktop" / "catalog" / "data" / "custom_multiple_bar"
-)
+MULTIPLE_PRICES_FOLDER = Path.home() / "Desktop" / "catalog" / "data" / "custom_multiple_bar"
 CATALOG_FOLDER = Path.home() / "Desktop" / "catalog"
 CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER)  # , show_query_paths=True
 ADJUSTED_PRICES_FOLDER = Path.home() / "Desktop" / "adjusted"
@@ -169,13 +165,11 @@ class UniverseRow:
         aggregation: BarAggregation | None = None,
         month: str | None = None,
     ) -> list[ParquetFile]:
-        aggregation = (
-            bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
-        )
+        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
         month = month or "*"
         glob_str = f"{self.trading_class}={self.symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return self._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
-    
+
     @property
     def contract_bars(self) -> list[Bar]:
         """
@@ -185,14 +179,11 @@ class UniverseRow:
             data_cls=Bar,
             instrument_ids=[self.instrument.id.symbol.value],
         )
-        bars = [
-            b for b in bars
-            if b.bar_type.spec.price_type == PriceType.MID
-        ]
+        bars = [b for b in bars if b.bar_type.spec.price_type == PriceType.MID]
         bars = sorted(bars, key=sort_key)
         assert len(bars) > 0
         return bars
-    
+
     @staticmethod
     def _get_files(
         parent: Path,
@@ -204,7 +195,7 @@ class UniverseRow:
         if len(files) == 0:
             raise RuntimeError(f"Missing files for {glob}")
         return files
-    
+
     @property
     def backend_session(self) -> DataBackendSession:
         # create data
@@ -218,17 +209,15 @@ class UniverseRow:
             session=session,
         )
         return session
-    
+
     @property
     def data(self) -> list[Data]:
         result = self.backend_session.to_query_result()
         data = []
         for chunk in result:
             data.extend(capsule_to_list(chunk))
-            
-        timestamps = {
-            x.ts_init for x in data
-        }
+
+        timestamps = {x.ts_init for x in data}
         for timestamp in timestamps:
             data.append(
                 QuoteTick(
@@ -241,20 +230,19 @@ class UniverseRow:
                     ts_event=timestamp,
                 )
             )
-            
+
         data = sorted(data, key=sort_key)
         return data
-    
+
     @property
     def instruments(self) -> list[Instrument]:
         instruments = CATALOG.instruments(
             instrument_type=FuturesContract,
             instrument_ids=[self.instrument.id.symbol.value],
-            
         )
         instruments.append(self.quote_home_instrument)
         instruments.append(self.instrument)
-        
+
         instruments.append(
             Instrument(
                 instrument_id=InstrumentId.from_str("MES=MES=2023Z.CME"),
@@ -276,12 +264,11 @@ class UniverseRow:
             ),
         )
         return instruments
-        
+
+
 class IBTestProviderStubs:
     @staticmethod
-    def universe_dataframe(
-        filter: list | None = None, skip: list | None = None
-    ) -> pd.DataFrame:
+    def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
         file = UNIVERSE_XLSX_PATH
         assert file.exists()
 
@@ -386,28 +373,18 @@ class IBTestProviderStubs:
             )
         )
 
-        df["quote_currency"] = df.quote_currency.apply(
-            lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1))
-        )
+        df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)))
 
         df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(
-                f"{row.trading_class}={row.symbol}=FUT.SIM"
-            ),
+            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
             axis=1,
         )
         df["instrument_id_live"] = df.apply(
-            lambda row: InstrumentId.from_str(
-                f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"
-            ),
+            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"),
             axis=1,
         )
 
-        df["quote_home_instrument"] = df.quote_currency.apply(
-            lambda x: TestInstrumentProvider.default_fx_ccy(
-                symbol=f"{x}GBP", venue=Venue("SIM")
-            )
-        )
+        df["quote_home_instrument"] = df.quote_currency.apply(lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")))
 
         df["contract"] = df.apply(
             lambda row: create_contract(
@@ -456,7 +433,7 @@ class IBTestProviderStubs:
                 )
             )
         )
-        
+
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
                 instrument_id=row.instrument_id,
@@ -469,7 +446,7 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
-        
+
         df["chain_config"] = df.apply(
             lambda row: ContractChainConfig(
                 bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
@@ -480,9 +457,7 @@ class IBTestProviderStubs:
         )
 
         df["price_precision"] = df.apply(
-            lambda row: len(
-                f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]
-            ),
+            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
             axis=1,
         )
 
@@ -493,9 +468,7 @@ class IBTestProviderStubs:
                 asset_class=AssetClass.COMMODITY,
                 currency=row.quote_currency,
                 price_precision=row.price_precision,
-                price_increment=Price(
-                    row.min_tick * row.price_magnifier, row.price_precision
-                ),
+                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
                 multiplier=Quantity.from_str(str(row.multiplier)),
                 lot_size=Quantity.from_int(1),
                 underlying="",
@@ -525,8 +498,7 @@ class IBTestProviderStubs:
         assert len(rows) > 0
 
         return rows
-    
-    
+
     # @classmethod
     # def multiple_files(
     #     cls,

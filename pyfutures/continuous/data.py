@@ -29,7 +29,7 @@ class MultipleData(Actor):
             handler=self._handle_roll_event,
             # TODO determine priority
         )
-        
+
         self._manage_subscriptions()
 
     def _handle_roll_event(self, event: RollEvent) -> None:
@@ -56,14 +56,14 @@ class MultipleData(Actor):
         #         f"{str(self.chain.roll_date)[:-15]} "
         #         f"{str(self.chain.expiry_date)[:-15]} "
         #     )
-        
+
         # calculate the strategy on every current_bar
         # roll first time current_bar and forward_bar has same timestamp and is within roll window
-        
-        # strategy calculates, create new position size, submit new position size to forward contract 
+
+        # strategy calculates, create new position size, submit new position size to forward contract
         # needs to use forward price
         # add liquid window for execution
-        
+
         if current_bar is None or forward_bar is None:
             return
 

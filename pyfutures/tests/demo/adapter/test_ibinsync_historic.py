@@ -1,28 +1,23 @@
-import asyncio
+import logging
 import pickle
-import pytest
 import time
-from collections import deque
 from pathlib import Path
 
 import ib_insync as ibs
-from ib_insync.util import sleep, logToConsole, logToFile
 import pandas as pd
-from ib_insync import Contract
-from ibapi.common import BarData, HistoricalTickBidAsk
-from ibapi.contract import Contract as IBContract
+import pytest
+from ib_insync.util import logToConsole
+from ib_insync.util import logToFile
+from ib_insync.util import sleep
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
-from nautilus_trader.common.component import Logger
-import logging
-from pyfutures.client.objects import ClientException
-from pyfutures.adapter.enums import (
-    BarSize,
-    Duration,
-    Frequency,
-    WhatToShow,
-)
+
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import Duration
+from pyfutures.adapter.enums import Frequency
+from pyfutures.adapter.enums import WhatToShow
 from pyfutures.adapter.parsing import details_to_instrument_id
 from pyfutures.tests.test_kit import IBTestProviderStubs
+
 
 # logger = logging.getLogger("ib_insync_root")
 # logger.setLevel(logging.DEBUG)
@@ -44,7 +39,6 @@ rows = IBTestProviderStubs.universe_rows()
 ib.reqMarketDataType(4)
 
 
-
 def key_builder(
     detail: IBContractDetails,
     bar_size: BarSize,
@@ -57,7 +51,7 @@ def key_builder(
     end_time_str = end_time.isoformat().replace(":", "_")
     start_time = end_time - duration.to_timedelta()
     start_time_str = start_time.isoformat().replace(":", "_")
-    return f"{instrument_id}-{what_to_show.value}-{str(bar_size)}-{duration.value}-{start_time_str}-{end_time_str}"
+    return f"{instrument_id}-{what_to_show.value}-{bar_size!s}-{duration.value}-{start_time_str}-{end_time_str}"
 
 
 for row in rows:
@@ -72,9 +66,7 @@ for row in rows:
     what_to_show = WhatToShow.BID_ASK
     bar_size = BarSize._1_MINUTE
 
-    head_timestamp = ib.reqHeadTimeStamp(
-        contract=contract, whatToShow=what_to_show.value, useRTH=True, formatDate=2
-    )
+    head_timestamp = ib.reqHeadTimeStamp(contract=contract, whatToShow=what_to_show.value, useRTH=True, formatDate=2)
 
     total_bars = []
     interval = duration.to_timedelta()

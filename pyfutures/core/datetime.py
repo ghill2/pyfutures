@@ -22,8 +22,6 @@ def timedelta_to_nanos(td):
     )
 
 
-
-
 def dt_to_unix_nanos_vectorized(datetimes: pd.Series):
     UNIX_EPOCH = pd.Timestamp("1970-01-01", tz="UTC")
     return (datetimes - UNIX_EPOCH).view("int64").astype("uint64")

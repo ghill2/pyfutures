@@ -1,13 +1,16 @@
 import pickle
-import pytest
+
 import pandas as pd
+import pytest
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RangedRollCycle
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle import RollCycleRange
 
+
 pytestmark = pytest.mark.skip(reason="TODO")
+
 
 class TestRollCycle:
     def test_cycle_previous_month_returns_expected(self):
@@ -58,8 +61,7 @@ class TestRollCycle:
         assert len(cycle) == 4
         assert str(cycle) == "HMUX"
         assert repr(cycle) == "RollCycle(HMUX)"
-    
-    
+
     def test_cycle_next_month_skips_specified_months(self):
         # Arrange
         cycle = RollCycle("HMUX", skip_months=["2022M", "2022U"])
@@ -67,7 +69,7 @@ class TestRollCycle:
         # Act, Assert
         assert cycle.next_month(ContractMonth("2022H")) == ContractMonth("2022X")
         assert cycle.next_month(ContractMonth("2022X")) == ContractMonth("2023H")
-    
+
     @pytest.mark.skip(reason="TODO")
     def test_cycle_previous_month_skips_specified_months(self):
         # Arrange

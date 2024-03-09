@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 import pytz
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.core.nautilus_pyo3.persistence import DataBackendSession
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarAggregation
@@ -33,7 +34,7 @@ from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
-from nautilus_trader.core.datetime import unix_nanos_to_dt
+
 
 def bars_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.index = unix_nanos_to_dt_vectorized(df["ts_event"])
@@ -61,6 +62,7 @@ def quotes_from_rust(df: pd.DataFrame) -> pd.DataFrame:
     df.set_index("timestamp", inplace=True)
     return df
 
+
 def bars_to_dataframe(bars: list[Bar]) -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -73,6 +75,7 @@ def bars_to_dataframe(bars: list[Bar]) -> pd.DataFrame:
         }
     ).set_index("timestamp")
 
+
 def bar_dataframe_to_quote_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -83,7 +86,8 @@ def bar_dataframe_to_quote_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             "timestamp": df.index,
         }
     ).set_index("timestamp")
-    
+
+
 class ParquetFile:
     EXTENSION = ".parquet"
 

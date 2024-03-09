@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 from ibapi.contract import Contract
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 
 from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 @pytest.mark.asyncio()

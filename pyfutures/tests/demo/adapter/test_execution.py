@@ -2,6 +2,8 @@ import asyncio
 
 import pytest
 from ibapi.order import Order as IBOrder
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.execution.messages import CancelOrder
 from nautilus_trader.execution.messages import ModifyOrder
@@ -14,8 +16,6 @@ from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
 
 init_logging(level_stdout=LogLevel.DEBUG)
 
@@ -72,9 +72,7 @@ class TestInteractiveBrokersExecutionFilled:
 
 @pytest.mark.asyncio()
 async def test_load_instrument_id(instrument_provider):
-    instrument = await instrument_provider.load_async(
-        InstrumentId.from_str("MIX.MEFFRV")
-    )
+    instrument = await instrument_provider.load_async(InstrumentId.from_str("MIX.MEFFRV"))
     print(instrument)
 
 

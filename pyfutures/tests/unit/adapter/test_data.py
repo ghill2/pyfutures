@@ -1,50 +1,47 @@
 import asyncio
-import pandas as pd
-import pytest
-from unittest.mock import Mock
-
 import random
 from decimal import Decimal
+from unittest.mock import Mock
 
-from nautilus_trader.model.data import BarType
+import pandas as pd
+import pytest
 from ibapi.common import BarData
-from nautilus_trader.core.uuid import UUID4
-from pyfutures.adapter.enums import BarSize
+from nautilus_trader.common.component import LiveClock
+from nautilus_trader.common.component import MessageBus
 from nautilus_trader.core.datetime import dt_to_unix_nanos
-from pyfutures.adapter.enums import WhatToShow
+from nautilus_trader.core.uuid import UUID4
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.data import Bar
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.tests.unit.adapter.stubs import AdapterStubs
-from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.adapter.data import InteractiveBrokersDataClient
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import MessageBus
 
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
+from pyfutures.adapter.data import InteractiveBrokersDataClient
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
+
 
 class TestInteractiveBrokersDataClient:
-    
     def setup_method(self):
-        
-        
         clock = LiveClock()
 
         msgbus = MessageBus(
             trader_id=TestIdStubs.trader_id(),
             clock=clock,
         )
-        
+
         cache = TestComponentStubs.cache()
         self.contract = AdapterStubs.contract()
         cache.add_instrument(self.contract)
-        
+
         client: InteractiveBrokersClient = ClientStubs.client()
-        
+
         self.data_client = InteractiveBrokersDataClient(
             loop=asyncio.get_event_loop(),
             client=client,
@@ -54,23 +51,22 @@ class TestInteractiveBrokersDataClient:
             instrument_provider=AdapterStubs.instrument_provider(client),
             config=InteractiveBrokersDataClientConfig(),
         )
-        
+
         self.instrument_id = InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
         self.bar_type = BarType.from_str(f"{self.instrument_id}-1-DAY-MID-EXTERNAL")
-        
+
     @pytest.mark.skip(reason="TODO")
     def test_instruments_on_load(self):
         pass
-    
+
     @pytest.mark.asyncio()
     async def test_subscribe_bars(self):
-        
         # Arrange
         self.data_client._client.subscribe_bars = Mock()
-        
+
         # Act
         await self.data_client._subscribe_bars(self.bar_type)
-        
+
         # Assert
         self.data_client._client.subscribe_bars.assert_called_once()
         sent_kwargs = self.data_client._client.subscribe_bars.call_args_list[0][1]
@@ -84,10 +80,9 @@ class TestInteractiveBrokersDataClient:
         assert sent_kwargs["callback"].func == self.data_client._bar_callback
         assert sent_kwargs["callback"].keywords["bar_type"] == self.bar_type
         assert sent_kwargs["callback"].keywords["instrument"] == self.data_client.cache.instrument(self.instrument_id)
-            
+
     @pytest.mark.asyncio()
     async def test_bar_callback(self):
-        
         # Arrange
         bar = BarData()
         timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
@@ -102,14 +97,14 @@ class TestInteractiveBrokersDataClient:
         bar.barCount = 1
         instrument = self.data_client.cache.instrument(self.instrument_id)
         self.data_client._handle_data = Mock()
-        
+
         # Act
         self.data_client._bar_callback(
             bar_type=self.bar_type,
             bar=bar,
             instrument=instrument,
         )
-        
+
         # Assert
         self.data_client._handle_data.assert_called_once_with(
             Bar(
@@ -123,10 +118,9 @@ class TestInteractiveBrokersDataClient:
                 ts_event=dt_to_unix_nanos(timestamp),
             )
         )
-        
+
     @pytest.mark.asyncio()
     async def test_request_bars_handles_expected(self):
-        
         # Arrange
         request_mock = Mock(side_effect=self.request_bars)
         self.data_client._historic.request_bars = request_mock
@@ -136,7 +130,7 @@ class TestInteractiveBrokersDataClient:
         correlation_id = UUID4()
         handle_mock = Mock()
         self.data_client._handle_bars = handle_mock
-        
+
         # Act
         await self.data_client._request_bars(
             bar_type=self.bar_type,
@@ -144,7 +138,7 @@ class TestInteractiveBrokersDataClient:
             correlation_id=correlation_id,
             start=start,
         )
-        
+
         # Assert
         request_mock.assert_called_once()
         sent_kwargs = request_mock.call_args_list[0][1]
@@ -166,22 +160,19 @@ class TestInteractiveBrokersDataClient:
         assert all(isinstance(b, Bar) for b in sent_kwargs["bars"])
         assert sent_kwargs["partial"] is None
         assert sent_kwargs["correlation_id"] == correlation_id
-        
-    async def request_bars(
-        self,
-        **kwargs
-    ) -> list[BarData]:
+
+    async def request_bars(self, **kwargs) -> list[BarData]:
         end_time = kwargs["end_time"]
         start_time = end_time - pd.Timedelta(hours=24)
         time_range = ((end_time - start_time).total_seconds() / 60) - 1
-        
+
         random_times = set()
         while len(random_times) != 30:
             random_minute = random.randint(0, time_range)
             random_time = start_time + pd.Timedelta(minutes=random_minute)
             assert random_time >= start_time and random_time < end_time
             random_times.add(random_time)
-        
+
         bars = [BarData() for _ in range(30)]
         for i, time in enumerate(random_times):
             bars[i].timestamp = time
@@ -194,25 +185,6 @@ class TestInteractiveBrokersDataClient:
             bars[i].wap = Decimal("1")
             bars[i].barCount = 1
         return bars
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # # InteractiveBrokersDataClient Tests

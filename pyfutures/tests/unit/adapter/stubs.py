@@ -1,32 +1,33 @@
+from decimal import Decimal
+
 import pandas as pd
 from ibapi.commission_report import CommissionReport as IBCommissionReport
 from ibapi.contract import Contract as IBContract
 from ibapi.execution import Execution as IBExecution
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.client.objects import IBExecutionEvent, IBOpenOrderEvent, IBOrderStatusEvent
-from nautilus_trader.model.objects import Quantity
-from nautilus_trader.model.objects import Currency
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.identifiers import Symbol
-from nautilus_trader.model.enums import InstrumentClass
 from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.objects import Price
+from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from nautilus_trader.model.objects import Currency
+from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
-        
-from decimal import Decimal
+from pyfutures.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBOpenOrderEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+
 
 class AdapterStubs:
-    
     @staticmethod
     def instrument_provider(client: InteractiveBrokersClient) -> InteractiveBrokersInstrumentProvider:
         config = InteractiveBrokersInstrumentProviderConfig(
             chain_filters={
-                'FMEU': lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+                "FMEU": lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
             },
             parsing_overrides={
                 "MIX": {
@@ -37,7 +38,7 @@ class AdapterStubs:
         )
         provider = InteractiveBrokersInstrumentProvider(client=client, config=config)
         return provider
-        
+
     @staticmethod
     def conId() -> int:
         return 1
@@ -79,7 +80,6 @@ class AdapterStubs:
         orderId: int | None = None,
         orderType: str | None = None,
     ) -> IBOpenOrderEvent:
-
         contract = IBContract()
         contract.conId = cls.conId()
         contract.exchange = "CME"
@@ -126,8 +126,7 @@ class AdapterStubs:
             execution=execution,
             commissionReport=report,
         )
-        
-    
+
     @staticmethod
     def contract(
         instrument_id: InstrumentId | None = None,
@@ -154,4 +153,3 @@ class AdapterStubs:
                 ),
             ),
         )
-        

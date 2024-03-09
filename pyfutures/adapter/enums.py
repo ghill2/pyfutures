@@ -71,7 +71,8 @@ class Duration:
             return pd.Timedelta(days=self.step * 7)
         else:
             raise RuntimeError(f"Timedelta parsing error: the Duration {self} is not a fixed length of time.")
-    
+
+
 class BarSize(Enum):
     _1_SECOND = (1, Frequency.SECOND)
     _5_SECOND = (5, Frequency.SECOND)
@@ -85,8 +86,6 @@ class BarSize(Enum):
     _30_MINUTE = (30, Frequency.MINUTE)
     _1_HOUR = (1, Frequency.HOUR)
     _1_DAY = (1, Frequency.DAY)
-
-
 
     @property
     def step(self) -> int:
@@ -112,10 +111,10 @@ class BarSize(Enum):
     @classmethod
     def from_bar_spec(cls, bar_spec: BarSpecification) -> BarSpecification:
         valid_steps = {
-                BarAggregation.SECOND: (1, 5, 15, 30),
-                BarAggregation.MINUTE: (1, 2, 3, 5, 15, 30),
-                BarAggregation.HOUR: (1,),
-                BarAggregation.DAY: (1,),
+            BarAggregation.SECOND: (1, 5, 15, 30),
+            BarAggregation.MINUTE: (1, 2, 3, 5, 15, 30),
+            BarAggregation.HOUR: (1,),
+            BarAggregation.DAY: (1,),
         }
 
         step = bar_spec.step

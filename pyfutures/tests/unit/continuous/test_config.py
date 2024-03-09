@@ -1,6 +1,6 @@
-from pyfutures.continuous.config import RollConfig
-from pyfutures.continuous.cycle import RollCycle
 from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.config import RollConfig
 
 
 class TestRollConfig:
@@ -13,8 +13,7 @@ class TestRollConfig:
             approximate_expiry_offset=14,
             carry_offset=1,
         )
-    
-    
+
     # def test_from_dict(self):
     #     # Arrange
     #     value = {

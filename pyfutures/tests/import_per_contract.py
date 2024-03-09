@@ -1,56 +1,48 @@
 from pathlib import Path
 
 import joblib
+import pandas as pd
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import QuoteTick
-import pandas as pd
 from nautilus_trader.model.enums import BarAggregation
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.identifiers import Symbol
+from nautilus_trader.model.enums import PriceType
+from nautilus_trader.model.functions import bar_aggregation_from_str
 from nautilus_trader.persistence.wranglers import BarDataWrangler
 from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
-from nautilus_trader.model.functions import bar_aggregation_from_str
-from nautilus_trader.model.enums import PriceType
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.data.files import ParquetFile
-from pyfutures.data.portara import PortaraData
-from pyfutures.data.files import bars_to_dataframe
 from pyfutures.data.files import bar_dataframe_to_quote_dataframe
-from pyfutures.data.writer import BarParquetWriter
-from pyfutures.data.writer import QuoteTickParquetWriter
-from pyfutures.tests.test_kit import PER_CONTRACT_FOLDER
+from pyfutures.data.files import bars_to_dataframe
+from pyfutures.data.portara import PortaraData
 from pyfutures.tests.test_kit import CATALOG
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
+
 def process_daily_bars(row: dict, path: Path) -> None:
-    
     month = ContractMonth(path.stem[-5:])
     aggregation: BarAggregation = bar_aggregation_from_str(path.parent.parent.stem)
 
     df = PortaraData.read_dataframe(path)
-    
+
     # apply settlement time
     df.index = df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30)
     df.index = df.index.tz_localize(row.timezone)
     df.index = df.index.tz_convert("UTC")
-            
+
     instrument = row.instrument_for_month(month)
-    
+
     bar_type_bid = row.bar_type_for_month(month, aggregation, PriceType.BID)
     bar_type_mid = row.bar_type_for_month(month, aggregation, PriceType.MID)
     bar_type_ask = row.bar_type_for_month(month, aggregation, PriceType.ASK)
-    
+
     for bar_type in (bar_type_bid, bar_type_mid, bar_type_ask):
         wrangler = BarDataWrangler(
             instrument=instrument,
             bar_type=bar_type,
-            
         )
         bars = wrangler.process(df)
-        bars = list(sorted(bars, key=lambda x: x.ts_init))
-        
+        bars = sorted(bars, key=lambda x: x.ts_init)
+
         CATALOG.write_chunk(
             data=bars,
             data_cls=Bar,
@@ -58,15 +50,16 @@ def process_daily_bars(row: dict, path: Path) -> None:
         )
         print(f"Written {bar_type!r}....")
 
+
 def process_instruments(row: dict, month: ContractMonth) -> None:
-    
     instrument = row.instrument_for_month(month)
-    
+
     CATALOG.write_data(
         data=[instrument],
         basename_template=instrument.id.value + "-{i}",
     )
     print(f"Written {instrument.id!r}....")
+
 
 def process_as_ticks(row: tuple, path: Path) -> None:
     """
@@ -74,20 +67,18 @@ def process_as_ticks(row: tuple, path: Path) -> None:
     """
     month = ContractMonth(path.stem[-5:])
     instrument = row.instrument_for_month(month)
-    
+
     bars = CATALOG.query(
         data_cls=Bar,
-        bar_types=[
-            BarType.from_str(f"{instrument.id.value}")
-        ],
+        bar_types=[BarType.from_str(f"{instrument.id.value}")],
         # instrument_ids=[
         #     instrument.id.value,
         # ]
     )
-    
+
     df = bars_to_dataframe(bars)
     df = bar_dataframe_to_quote_dataframe(df)
-    
+
     wrangler = QuoteTickDataWrangler(
         instrument=instrument,
     )
@@ -96,7 +87,8 @@ def process_as_ticks(row: tuple, path: Path) -> None:
         data=quotes,
         basename_template=instrument.id.value + "-{i}",
     )
-        
+
+
 rows = IBTestProviderStubs.universe_rows(
     filter=["ECO", "DC", "MES"],
 )
@@ -110,21 +102,18 @@ def import_daily_bars():
         for path in paths:
             yield joblib.delayed(process_daily_bars)(row, path)
 
+
 def import_instruments():
     for row in rows:
         paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
         # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
         # paths = sorted(set(files_d1 + files_m1))
-        
-        months = {
-            ContractMonth(path.stem[-5:])
-            for path in paths
-        }
+
+        months = {ContractMonth(path.stem[-5:]) for path in paths}
         for month in months:
             yield joblib.delayed(process_instruments)(row, month)
 
 
-            
 if __name__ == "__main__":
     joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
     joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_bars())
@@ -141,7 +130,7 @@ if __name__ == "__main__":
 
 # def process_hour(row: tuple) -> None:
 #     assert file.path.exists()
-    
+
 #     # load fx prices
 #     CATALOG.query(
 #         data_cls=QuoteTick,
@@ -149,7 +138,7 @@ if __name__ == "__main__":
 #         # filter_expr=Expression._field('bar_type') == str(bar_type),
 #         # filter_expr=pyarrow._compute.Expression(f"field('bar_type') == '{bar_type}'"),
 #     )
-    
+
 #     # MINUTE -> HOUR
 #     df = file.read(
 #         to_aggregation=(1, BarAggregation.HOUR),
@@ -162,7 +151,7 @@ if __name__ == "__main__":
 #         bar_type=bar_type,
 #         cls=Bar,
 #     )
-    
+
 #     file.path.parent.mkdir(exist_ok=True, parents=True)
 #     writer = BarParquetWriter(
 #         path=file.path,

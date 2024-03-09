@@ -16,14 +16,7 @@ def cache_pickle_daily(dir, filename):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             today = datetime.utcnow().strftime("%Y-%m-%d")
-            path = (
-                Path.home()
-                / "Desktop"
-                / "pyfutures_cache"
-                / dir
-                / today
-                / f"{filename}.pkl"
-            )
+            path = Path.home() / "Desktop" / "pyfutures_cache" / dir / today / f"{filename}.pkl"
 
             if path.exists():
                 print(f"Loading {filename} from cache - {path}")
@@ -88,15 +81,10 @@ def scrape_tables(html_content):
         header_row = table.find("tr")  # Assuming first row is header
 
         if header_row:  # Check if header row exists
-            column_headers = [
-                th.text.strip() for th in header_row.find_all(["td", "th"])
-            ]
+            column_headers = [th.text.strip() for th in header_row.find_all(["td", "th"])]
         else:
             # Handle case where there's no header row
-            column_headers = [
-                f"cell_{i+1}"
-                for i in range(len(table.find_all("tr")[1].find_all(["td", "th"])))
-            ]
+            column_headers = [f"cell_{i+1}" for i in range(len(table.find_all("tr")[1].find_all(["td", "th"])))]
 
         rows = table.find_all("tr")[1:]  # Skip the header row
         for row in rows:
@@ -194,10 +182,7 @@ class MarginInfo:
         finds the margin instrument for the given UniverseRow
         """
         for m_inst in m_instruments:
-            if (
-                m_inst["Exchange"] == row.exchange.replace(",", ".")
-                and m_inst["Trading Class"] == row.trading_class
-            ):
+            if m_inst["Exchange"] == row.exchange.replace(",", ".") and m_inst["Trading Class"] == row.trading_class:
                 return m_inst
 
         raise ValueError(f"UniverseRow not found in margin info instruments: {row}")
@@ -213,10 +198,7 @@ class MarginInfo:
             self.margin_instruments = self.get_all()
 
         # find all universe margin instruments
-        margin_rows = [
-            self._find(self.margin_instruments, r)
-            for r in IBTestProviderStubs.universe_rows()
-        ]
+        margin_rows = [self._find(self.margin_instruments, r) for r in IBTestProviderStubs.universe_rows()]
         # convert margin values in non GBP currency to GBP
         currencies = set([i["Currency"] + "GBP" for i in margin_rows])
         fx_rates = self.fx_rates.get(currencies)

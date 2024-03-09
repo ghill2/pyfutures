@@ -28,7 +28,7 @@
 
 # class TestContinuousData:
 #     def setup(self):
-        
+
 #         self.clock = TestClock()
 #         self.msgbus = MessageBus(
 #             trader_id=TestIdStubs.trader_id(),
@@ -57,7 +57,7 @@
 #         )
 #         chain = ContractChain(
 #             config=config,
-            
+
 #         )
 
 #         self.data = MultipleData(

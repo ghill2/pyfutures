@@ -1,20 +1,23 @@
-from pathlib import Path
 import asyncio
-from collections import deque
 import logging
-from pyfutures.adapter.enums import Frequency
 import time
+from collections import deque
+from pathlib import Path
+
 import pandas as pd
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
-from pyfutures.client.objects import ClientException
-from pyfutures.client.client import InteractiveBrokersClient
+
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
+from pyfutures.adapter.enums import Frequency
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.cache import CachedFunc
+from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
+
 
 class InteractiveBrokersBarClient:
     def __init__(
@@ -24,13 +27,12 @@ class InteractiveBrokersBarClient:
         cache_dir: Path | None = None,
         use_cache: bool = True,
     ):
-        
         self._client = client
         self._delay = delay
         self._log = logging.getLogger(self.__class__.__name__)
-        
+
         self._use_cache = use_cache
-        
+
         if use_cache:
             assert cache_dir is not None
             self.cache = CachedFunc(
@@ -39,9 +41,9 @@ class InteractiveBrokersBarClient:
             )
         else:
             self.cache = None
-        
+
         self._parser = ClientParser()
-        
+
     async def request_bars(
         self,
         contract: IBContract,
@@ -73,7 +75,7 @@ class InteractiveBrokersBarClient:
 
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
-        
+
         if skip_first:
             end_time = end_time.floor(interval)
         else:
@@ -85,11 +87,8 @@ class InteractiveBrokersBarClient:
             bars = []
             start = time.perf_counter()
             try:
-                
-                self._log.info(
-                    f"{contract} | {end_time - interval} -> {end_time}"
-                )
-                
+                self._log.info(f"{contract} | {end_time - interval} -> {end_time}")
+
                 kwargs = dict(
                     contract=contract,
                     bar_size=bar_size,
@@ -97,7 +96,7 @@ class InteractiveBrokersBarClient:
                     duration=duration,
                     end_time=end_time,
                 )
-                
+
                 if self._use_cache and i > 0:
                     is_cached = self.cache.is_cached(**kwargs)
                     func = self.cache
@@ -120,9 +119,7 @@ class InteractiveBrokersBarClient:
             total_bars.extendleft(bars)
 
             if len(bars) > 0:
-                self._log.debug(
-                    f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}"
-                )
+                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
             else:
                 self._log.debug("---> Downloaded 0 bars.")
 
@@ -136,9 +133,7 @@ class InteractiveBrokersBarClient:
             total_bars = deque([b for b in total_bars if b.timestamp >= start_time])
 
             if limit and len(total_bars) >= limit:
-                total_bars = list(total_bars)[
-                    -limit:
-                ]  # last x number of bars in the list
+                total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
                 break
 
         if as_dataframe:
@@ -187,9 +182,7 @@ class InteractiveBrokersBarClient:
         assert start_time is not None and end_time is not None
 
         freq = pd.Timedelta(seconds=60)
-        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[
-            ::-1
-        ]
+        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[::-1]
         results = []
 
         for i in range(len(timestamps) - 2):
@@ -280,9 +273,7 @@ class InteractiveBrokersBarClient:
         assert pd.Series(timestamps).is_monotonic_increasing
 
         if as_dataframe:
-            return pd.DataFrame(
-                [self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results]
-            )
+            return pd.DataFrame([self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results])
         return results
 
 

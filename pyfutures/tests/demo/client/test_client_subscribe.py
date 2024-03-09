@@ -3,14 +3,14 @@ from unittest.mock import Mock
 
 import pytest
 from ibapi.contract import Contract
+from nautilus_trader.common.component import init_logging
+from nautilus_trader.common.enums import LogLevel
 
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
 
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
-init_logging(level_stdout=LogLevel.DEBUG)
 
+init_logging(level_stdout=LogLevel.DEBUG)
 
 
 class TestIBClientSubscribe:

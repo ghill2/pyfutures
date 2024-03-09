@@ -38,8 +38,6 @@ init_logging(level_stdout=LogLevel.DEBUG)
 #
 
 
-
-
 def wrapper(method):
     # @wraps(method)
     print("wrapper applied")

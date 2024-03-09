@@ -19,13 +19,11 @@ class MarketSchedule:
         data: pd.DataFrame,
         timezone: pytz.timezone,
     ):
-        
         self.data = data
-        
+
         self._name = name
         self._zoneinfo = timezone.zone
         self._timezone = timezone
-
 
         # TODO: removes duplicates
         # TODO: check for overlapping times
@@ -34,12 +32,12 @@ class MarketSchedule:
         # TODO: ensure integer index
         # TODO: ensure no missing days, close days have time 00:00 to 00:00
         # TODO: no timezone information before localizing
-    
+
     def open_delta(self, dayofweek: int) -> pd.Timedelta:
         open_times = self.data[self.data.dayofweek == dayofweek].open
         open_time = min(open_times)
         return pd.Timedelta(hours=open_time.hour, minutes=open_time.minute)
-    
+
     def is_open(self, now: pd.Timestamp) -> bool:
         now = now.tz_convert(self._timezone)
 

@@ -16,19 +16,20 @@ from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
 
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.multiple_bar import MultipleBar
 
 pytestmark = pytest.mark.skip
+
 
 class TestParquetWriter:
     def setup(self):
         self.instrument = TestInstrumentProvider.btcusdt_binance()
-    
+
     def test_write_quote_objects_writes_expected(self, tmpdir):
         # Arrange
         quotes = [TestDataStubs.quote_tick(instrument=self.instrument)]
@@ -349,7 +350,6 @@ class TestParquetWriter:
             assert len(chunk) == 3
 
     def test_write_continuous_price_dataframe_writes_expected(self, tmpdir):
-        
         # Arrange
         df = pd.DataFrame.from_dict(
             {
@@ -394,7 +394,7 @@ class TestParquetWriter:
             assert price.roll_date_ns == 1639094400000000000
             assert price.ts_event == 1602460800000000000
             assert price.ts_init == 1602460800000000000
-    
+
     @pytest.mark.skip(reason="change to multiple bar")
     def test_write_continuous_price_objects_writes_expected(self, tmpdir):
         # Arrange
@@ -436,7 +436,7 @@ class TestParquetWriter:
         batch = next(pq.ParquetFile(path).iter_batches(batch_size=2))
         deserialized = ArrowSerializer.deserialize(data_cls=ContinuousPrice, batch=batch)
         assert deserialized == expected
-        
+
         # for chunk in session.to_query_result():
 
         #     chunk = capsule_to_list(chunk)

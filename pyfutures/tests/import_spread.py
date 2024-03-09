@@ -1,32 +1,31 @@
-import sys
 import asyncio
 import logging
-import logging
+
 import pandas as pd
-from pathlib import Path
 import pytest
-from pyfutures.adapter.enums import BarSize, Duration, Frequency
+from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
+
+from pyfutures.adapter.enums import BarSize
+from pyfutures.adapter.enums import Duration
+from pyfutures.adapter.enums import Frequency
 from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.historic import InteractiveBrokersBarClient
-from pyfutures.tests.test_kit import SPREAD_FOLDER
+from pyfutures.logger import init_logging
 from pyfutures.tests.test_kit import CACHE_DIR
 from pyfutures.tests.test_kit import IBTestProviderStubs
-from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
-from pyfutures.logger import init_logging
-from pyfutures.client.cache import Cache
+
 
 async def main():
-    
     init_logging()
-        
+
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
         override_timeout=False,
         api_log_level=logging.ERROR,
     )
-    
+
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
@@ -36,11 +35,11 @@ async def main():
         use_cache=True,
         cache_dir=CACHE_DIR,
     )
-    
+
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
-    
+
     # historic.cache.purge_errors(asyncio.TimeoutError)
-    
+
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):
@@ -54,6 +53,7 @@ async def main():
             skip_first=True,
         )
         # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
+
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())

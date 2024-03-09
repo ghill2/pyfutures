@@ -1,12 +1,11 @@
 import asyncio
 import logging
-import pytest
-import sys
 
-from pyfutures.client.client import (
-    InteractiveBrokersClient,
-)
+import pytest
+
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.connection import Connection
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -34,4 +33,3 @@ def connection(event_loop) -> Connection:
         host="127.0.0.1",
         port=4002,
     )
-
