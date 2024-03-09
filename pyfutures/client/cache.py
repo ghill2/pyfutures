@@ -1,10 +1,8 @@
-import logging
 import pickle
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-import colorlog
 import pandas as pd
 from ibapi.contract import Contract as IBContract
 
@@ -14,29 +12,14 @@ from pyfutures.adapter.enums import WhatToShow
 from pyfutures.adapter.parsing import AdapterParser  # TODO: change to just tradingclass
 from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
-
-
-# # Create a color formatter with blue for INFO messages
-# formatter = colorlog.ColoredFormatter(
-#     "%(log_color)s%(levelname)s:%(name)s:%(message)s %(reset)s",
-#     log_colors={
-#         'DEBUG': 'blue',
-#         'INFO': 'blue',  # Set blue for INFO messages
-#         'WARNING': 'blue',
-#         'ERROR': 'blue',
-#         'CRITICAL': 'blue,blue'
-#     }
-# )
-
-# # Create a stream handler and set the formatter
-# handler = logging.StreamHandler()
-# handler.setFormatter(formatter)
+from pyfutures.logger import LoggerAdapter
 
 
 class Cache:
     def __init__(self, path: Path):
         self.path = Path(path)  # directory
         self._parser = ClientParser()
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     def get(
         self,
@@ -92,12 +75,11 @@ class CachedFunc(Cache):
     name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
     """
 
-    def __init__(self, func: Callable, cache_dir: Path, log_level: int = logging.INFO):
+    def __init__(self, func: Callable, cache_dir: Path):
         super().__init__(cache_dir)
 
         self._func = func
-        self._log = colorlog.getLogger(self.__class__.__name__)
-        self._log.setLevel(log_level)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
         assert args == (), "Keywords arguments only"
@@ -223,3 +205,19 @@ class CachedFunc(Cache):
 #     f"get_errors: cached error response exists: {cached_error=} {key}",
 #     LogColor.BLUE,
 # )
+
+# # Create a color formatter with blue for INFO messages
+# formatter = colorlog.ColoredFormatter(
+#     "%(log_color)s%(levelname)s:%(name)s:%(message)s %(reset)s",
+#     log_colors={
+#         'DEBUG': 'blue',
+#         'INFO': 'blue',  # Set blue for INFO messages
+#         'WARNING': 'blue',
+#         'ERROR': 'blue',
+#         'CRITICAL': 'blue,blue'
+#     }
+# )
+
+# # Create a stream handler and set the formatter
+# handler = logging.StreamHandler()
+# handler.setFormatter(formatter)

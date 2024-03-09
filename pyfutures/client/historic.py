@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import time
 from collections import deque
 from pathlib import Path
@@ -17,6 +16,7 @@ from pyfutures.client.cache import CachedFunc
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
+from pyfutures.logger import LoggerAdapter
 
 
 class InteractiveBrokersBarClient:
@@ -29,7 +29,7 @@ class InteractiveBrokersBarClient:
     ):
         self._client = client
         self._delay = delay
-        self._log = logging.getLogger(self.__class__.__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
         self._use_cache = use_cache
 

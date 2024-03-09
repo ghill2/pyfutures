@@ -47,6 +47,7 @@ from pyfutures.client.objects import IBOrderStatusEvent
 from pyfutures.client.objects import IBPortfolioEvent
 from pyfutures.client.objects import IBPositionEvent
 from pyfutures.client.parsing import ClientParser
+from pyfutures.logger import LoggerAdapter
 
 
 class InteractiveBrokersClient(EWrapper):
@@ -78,7 +79,7 @@ class InteractiveBrokersClient(EWrapper):
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
-        self._log = logging.getLogger(self.__class__.__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
         # Config
         self._loop = loop

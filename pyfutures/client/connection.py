@@ -1,11 +1,12 @@
 import asyncio
-import logging
 import os
 import struct
 from collections.abc import Coroutine
 
 import psutil
 from ibapi import comm
+
+from pyfutures.logger import LoggerAdapter
 
 
 # this bug is still present on the gnznz fork:
@@ -27,7 +28,7 @@ class Connection:
 
         self._is_connected = asyncio.Event()
         self._is_connecting_lock = asyncio.Lock()
-        self._log = logging.getLogger(self.__class__.__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
         self._handlers = set()
 
         # attributes that reset
