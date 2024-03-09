@@ -1,4 +1,3 @@
-# fmt: off
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from nautilus_trader.common.providers import InstrumentProvider
