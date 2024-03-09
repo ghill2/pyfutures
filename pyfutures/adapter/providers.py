@@ -1,7 +1,8 @@
+from collections.abc import Callable
+
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from nautilus_trader.common.providers import InstrumentProvider
-from typing import Callable
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
@@ -93,7 +94,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         For instruments that have weekly and monthly contracts in the same TradingClass it is
         required to apply a custom filter to ensure only monthly contracts are returned.
         """
-        
+
         if len(details_list) > 0 and contract.secType == "FUT":
             filter_func = self._chain_filters.get(contract.tradingClass)
             if filter_func is not None:

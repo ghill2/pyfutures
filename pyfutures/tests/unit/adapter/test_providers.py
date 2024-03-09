@@ -78,7 +78,6 @@ class TestInteractiveBrokersInstrumentProvider:
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2],
         )
-        self.provider._filter_monthly_contracts = Mock(return_value=[details1])
 
         instrument_id = InstrumentId.from_str("FMEU=M7EU=FUT=2024H.EUREX")
         mock_contract = AdapterStubs.contract(instrument_id)
@@ -88,24 +87,7 @@ class TestInteractiveBrokersInstrumentProvider:
         await self.provider.load_async(instrument_id)
 
         # Assert
-        self.provider._filter_monthly_contracts.assert_called_once_with([details1, details2])
-
-    @pytest.mark.asyncio()
-    async def test_filter_monthly_contracts(self):
-        # Arrange
-        details1 = IBContractDetails()
-        details1.contract.tradingClass = "FMEU"
-        details1.contract.localSymbol = "X"
-
-        details2 = IBContractDetails()
-        details2.contract.tradingClass = "FMEU"
-        details2.contract.localSymbol = "D"
-
-        # Act
-        filtered = self.provider._filter_monthly_contracts([details1, details2])
-
-        # Assert
-        assert filtered == [details1]
+        assert len(self.provider.list_all()) == 1
 
     @pytest.mark.asyncio()
     async def test_load_async_filters_monthly_contracts(self):
@@ -134,18 +116,21 @@ class TestInteractiveBrokersInstrumentProvider:
         assert len(self.provider.list_all()) == 1
 
     @pytest.mark.asyncio()
-    async def test_request_future_chain_filters_cycle_returns_expected(self):
+    async def test_request_future_chain_filters_cycle(self):
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
         details1.contractMonth = "202401"
+        details1.contract.localSymbol = "X"  # monthly contract
 
         details2 = IBContractDetails()
         details2.contract.tradingClass = "FMEU"
         details2.contractMonth = "202402"
+        details2.contract.localSymbol = "X"  # monthly contract
 
         details3 = IBContractDetails()
         details3.contract.tradingClass = "FMEU"
         details3.contractMonth = "202403"
+        details3.contract.localSymbol = "X"  # monthly contract
 
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2, details3],
@@ -158,7 +143,7 @@ class TestInteractiveBrokersInstrumentProvider:
         assert details_list == [details1, details2]
 
     @pytest.mark.asyncio()
-    async def test_request_future_chain_filters_cycle_and_monthly_contracts(self):
+    async def test_request_future_chain_filters_monthly_contracts(self):
         print("TEST2")
 
         details1 = IBContractDetails()

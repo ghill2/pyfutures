@@ -95,7 +95,7 @@ class TestContractChain:
                 "margin_maint": "0",
                 "ts_event": 0,
                 "ts_init": 0,
-            }  # noqa
+            }
         )
 
         instrument_provider = ContractProvider(
@@ -141,7 +141,7 @@ class TestContractChain:
                 "margin_maint": "0",
                 "ts_event": 0,
                 "ts_init": 0,
-            }  # noqa
+            }
         )
 
         position = Position(

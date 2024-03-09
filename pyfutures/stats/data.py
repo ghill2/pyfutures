@@ -1,26 +1,14 @@
-import asyncio
 import json
-import pickle
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
-import pandas as pd
 import pytz
 from ibapi.common import Contract as IBContract
-
-from nautilus_trader.adapters.interactive_brokers.historic.client import (
-    HistoricInteractiveBrokersClient,
-)
+from nautilus_trader.adapters.interactive_brokers.historic.client import HistoricInteractiveBrokersClient
 from nautilus_trader.common.component import Logger
 from nautilus_trader.common.enums import LogColor
 
-from pyfutures.tests.test_kit import (
-    IBTestProviderStubs as PyfuturesTestProviderStubs,
-)
-from dotenv import dotenv_values
-import pandas as pd
-import time
-from pyfutures.tests.test_kit import TRADERMADE_FOLDER
 
 logger = Logger(name="data_stats")
 
@@ -34,12 +22,10 @@ def _log(msg: str):
 
 class DataStats:
     def __init__(self, parent_out: Path = None):
-
+        pass
 
     async def setup_client(self):
-        self.hclient = HistoricInteractiveBrokersClient(
-            host="127.0.0.1", port=4002, log_level="DEBUG"
-        )
+        self.hclient = HistoricInteractiveBrokersClient(host="127.0.0.1", port=4002, log_level="DEBUG")
         await self.hclient._client.wait_until_ready()
 
     async def data(self):
@@ -48,7 +34,6 @@ class DataStats:
         quotes_currencies = [d.contract.currency for d in details]
         fx_rates = await self._fx_rates(quotes_currencies)
 
-
     async def _fx_rates_ib(self, currencies):
         # load fx rates from file
         # currencies = set(currencies)
@@ -56,7 +41,7 @@ class DataStats:
         exit()
         fx_rates_json_file = Path(self.parent_out / "fx_rates.json")
         try:
-            with open(fx_rates_json_file, "r") as f:
+            with open(fx_rates_json_file) as f:
                 fx_rates = json.loads(f)
         except:
             fx_rates = {}
@@ -85,16 +70,12 @@ class DataStats:
             return 1.0
         elif currency == "INR":
             return 0.0096
-        contract = IBContract(
-            secType="CASH", exchange="IDEALPRO", currency=currency, symbol="GBP"
-        )
+        contract = IBContract(secType="CASH", exchange="IDEALPRO", currency=currency, symbol="GBP")
         try:
             bars = await self._last_close_mid_bars(contract)
         except:
             print(f"-----> Getting reverse fx rate GBP.{currency}...")
-            contract = Contract(
-                secType="CASH", exchange="IDEALPRO", currency="GBP", symbol=currency
-            )
+            contract = Contract(secType="CASH", exchange="IDEALPRO", currency="GBP", symbol=currency)
             bars = await self._last_close_mid_bars(contract)
             assert len(bars) > 0, "get_fx_rate: Cannot get contract or reverse contract"
             return 1 / float(bars[-1].close)
@@ -126,8 +107,6 @@ class DataStats:
         # print(type(bars[-1].close))
         # print(bars[-1].close)
         return bars
-
-
 
         # sum fees here
 

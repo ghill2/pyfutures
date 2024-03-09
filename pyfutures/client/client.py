@@ -1430,7 +1430,7 @@ class InteractiveBrokersClient(EWrapper):
 
     def accountDownloadEnd(self, accountName: str):
         """
-        This is called after a batch updateAccountValue() and updatePortfolio() is sent.
+        called after a batch updateAccountValue() and updatePortfolio() is sent.
         """
         self._log.debug("accountDownloadEnd")
         self._log.debug(repr(self._requests.get("portfolio")))
