@@ -1,11 +1,13 @@
+# pre-commit install on a new repo to enable the pre commit hook
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
     rev: v0.3.2
     hooks:
     # Run the linter - Do not fail if errors are encountered
-    # --no-fail -> Do not reject commit if unfixable errors are encountered
+    # --exit-zero -> Do not reject commit if unfixable errors are encountered
     - id: ruff
-      args: [ --fix, --config, ../pyproject.toml, --no-fail ]
+      args: [ --fix, --config, ../pyproject.toml, --exit-zero]
     # Run the formatter.
     - id: ruff-format
+      args: [--config, ../pyproject.toml]
