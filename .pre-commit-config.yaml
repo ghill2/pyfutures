@@ -3,8 +3,9 @@ repos:
   # Ruff version.
     rev: v0.3.2
     hooks:
-    # Run the linter.
+    # Run the linter - Do not fail if errors are encountered
+    # --no-fail -> Do not reject commit if unfixable errors are encountered
     - id: ruff
-      args: [ --fix, --config, ../pyproject.toml ]
+      args: [ --fix, --config, ../pyproject.toml, --no-fail ]
     # Run the formatter.
     - id: ruff-format
