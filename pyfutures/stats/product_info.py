@@ -1,15 +1,14 @@
-import requests
-import pandas as pd
-from pathlib import Path
-from bs4 import BeautifulSoup
-from pprint import pprint
-from pyfutures.tests.test_kit import IBTestProviderStubs
-import pickle
-from pyfutures.stats.fx_rates import FxRates
-from pprint import pprint
 import functools
-from datetime import datetime
 import pickle
+from datetime import datetime
+from pathlib import Path
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+from pyfutures.stats.fx_rates import FxRates
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 def cache_pickle_daily(dir, filename):
@@ -73,9 +72,11 @@ def scrape_tables(html_content):
     Scrapes all tables in the provided HTML content and returns a list of dictionaries.
 
     Args:
+    ----
         html_content (str): The HTML content to scrape.
 
     Returns:
+    -------
         list: A list of dictionaries, where each dictionary represents a table row with keys
               corresponding to the column headers.
     """
@@ -262,8 +263,6 @@ class ProductInfo:
     As values listed on the product pages are
     """
 
-    pass
-
     def product_Pages(self, exchange, symbol, url):
         """
         downloads closing price from exchange page
@@ -305,4 +304,3 @@ class ProductInfo:
         Checks on the filesystem, if not found it downloads using requests
         since: use product pages
         """
-        pass

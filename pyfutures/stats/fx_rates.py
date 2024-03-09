@@ -1,9 +1,8 @@
-import pandas as pd
-import json
+from collections.abc import Iterable
 from pathlib import Path
-from dotenv import dotenv_values
+
 import requests
-from typing import Iterable
+from dotenv import dotenv_values
 
 
 class FxRates:

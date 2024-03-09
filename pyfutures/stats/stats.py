@@ -4,26 +4,19 @@ import pickle
 from pathlib import Path
 
 import pandas as pd
-import requests
 from ibapi.common import Contract as IBContract
 from nautilus_trader.common.component import Logger
 
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import IBTestProviderStubs as PyfuturesTestProviderStubs
-
-from pyfutures.stats.fx_rates import FxRates
 
 
 logger = Logger(name="stats")
 
 
 class Stats:
-    def __init__(
-        self, client: InteractiveBrokersClient, parent_out: str = None
-    ) -> None:
+    def __init__(self, client: InteractiveBrokersClient, parent_out: str = None) -> None:
         """ """
         client._request_timeout_seconds = 60
         if parent_out is None:
@@ -41,11 +34,7 @@ class Stats:
         gets contract_details from a pickle file in local folder
         or get from IB api if the pickle file does not exist
         """
-        outpath = Path(
-            self.parent_out
-            / "details"
-            / f"{contract.exchange}-{contract.symbol}.pickle"
-        )
+        outpath = Path(self.parent_out / "details" / f"{contract.exchange}-{contract.symbol}.pickle")
         outpath.parent.mkdir(parents=True, exist_ok=True)
         if outpath.exists():
             print("-----> Getting Contract Details from file...")
@@ -105,13 +94,9 @@ class Stats:
                 continue
 
             outpath.parent.mkdir(parents=True, exist_ok=True)
-            close_price = self._close_price_product_page(
-                r.contract.exchange, r.contract.symbol, r.ib_url
-            )
+            close_price = self._close_price_product_page(r.contract.exchange, r.contract.symbol, r.ib_url)
             if close_price is None:
-                close_price = asyncio.get_event_loop().run_until_complete(
-                    self._close_price_ib_api(detail.contract)
-                )
+                close_price = asyncio.get_event_loop().run_until_complete(self._close_price_ib_api(detail.contract))
 
             prices[key] = close_price
         print(prices)
@@ -132,9 +117,7 @@ class Stats:
                 fee_value = prices[key] * fee_value
 
             if r.contract.currency != fee_currency:
-                quote_contract_xrate = (
-                    fx_rates[f"{fee_currency}{row.contract.currency}"],
-                )
+                quote_contract_xrate = (fx_rates[f"{fee_currency}{row.contract.currency}"],)
                 fee_value = quote_contract_xrate * fee_value
                 fee_type = row.contract.currency
 
@@ -163,9 +146,7 @@ class Stats:
         with open(outpath, "w") as f:
             json.dump([r.fees for r in rows], f, indent=4)
 
-        fees_xrate = [
-            self._calculate_fees_for_row(prices, fx_rates, r.fees) for r in rows
-        ]
+        fees_xrate = [self._calculate_fees_for_row(prices, fx_rates, r.fees) for r in rows]
         outpath = Path(self.parent_out / "fees_calculated.py")
         with open(outpath, "w") as f:
             json.dump(fees_xrate, f, indent=4)
@@ -175,29 +156,17 @@ class Stats:
     def test_last_close(self):
         asyncio.get_event_loop().run_until_complete(self.client.connect())
         rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
-        details = [
-            asyncio.get_event_loop().run_until_complete(
-                self._details(contract=r.contract)
-            )
-            for r in rows
-        ]
+        details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
         for d in details:
             try:
-                asyncio.get_event_loop().run_until_complete(
-                    self._close_price_ib_api(d.contract)
-                )
+                asyncio.get_event_loop().run_until_complete(self._close_price_ib_api(d.contract))
             except:
                 pass
 
     def calc(self):
         results = {}
         rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
-        details = [
-            asyncio.get_event_loop().run_until_complete(
-                self._details(contract=r.contract)
-            )
-            for r in rows
-        ]
+        details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
 
         fx_rates = self._fx_rates(rows)
         prices = self._contract_prices(rows, details)
