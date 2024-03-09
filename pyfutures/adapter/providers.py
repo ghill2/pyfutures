@@ -23,7 +23,6 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         client: InteractiveBrokersClient,
         config: InteractiveBrokersInstrumentProviderConfig = None,
     ):
-
         config = config or InteractiveBrokersInstrumentProviderConfig()
         super().__init__(config=config)
 
@@ -41,7 +40,6 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         instrument_ids: list[InstrumentId],
         filters: dict | None = None,
     ) -> None:
-
         for instrument_id in instrument_ids:
             await self.load_async(instrument_id)
 
@@ -49,7 +47,6 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         self,
         instrument_id: InstrumentId | IBContract,
     ) -> None:
-
         contract: IBContract = self._parse_input(instrument_id)
 
         details_list = await self._request_details(contract)
@@ -67,15 +64,12 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         instrument_id: InstrumentId | IBContract,
         cycle: RollCycle | None = None,
     ) -> list[FuturesContract]:
-
         details_list = await self.request_future_chain(
             instrument_id=instrument_id,
             cycle=cycle,
         )
 
-        contracts: list[FuturesContract] = [
-            self._details_to_instrument(d) for d in details_list
-        ]
+        contracts: list[FuturesContract] = [self._details_to_instrument(d) for d in details_list]
 
         for c in contracts:
             self._add_instrument(c)
@@ -87,47 +81,38 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         instrument_id: InstrumentId | IBContract,
         cycle: RollCycle | None = None,
     ) -> list[IBContractDetails]:
-
         contract: IBContract = self._parse_input(instrument_id)
 
-        return [
-            details for details in (await self._request_details(contract))
-            if ContractMonth.from_int(details.contractMonth) in cycle
-        ]
+        return [details for details in (await self._request_details(contract)) if ContractMonth.from_int(details.contractMonth) in cycle]
 
     async def _request_details(self, contract: IBContract) -> list[IBContractDetails]:
-
         details_list = await self.client.request_contract_details(contract)
-        
+
         """
+        Filtering monthly contracts:
         For instruments that have weekly and monthly contracts in the same TradingClass it is
         required to apply a custom filter to ensure only monthly contracts are returned.
         """
-        # filter monthly contracts
+        
         if len(details_list) > 0 and contract.secType == "FUT":
             filter_func = self._chain_filters.get(contract.tradingClass)
-            assert filter_func is not None
             if filter_func is not None:
-                print(len(details_list))
                 details_list = list(filter(filter_func, details_list))
-                print(len(details_list))
-                exit()
-        
+
         self._assert_monthly_contracts(details_list)
-        
+
         return details_list
-    
+
     @staticmethod
-    def _assert_monthly_contracts(details_list: list[IBContractDetails]) -> bool:
+    def _assert_monthly_contracts(details_list: list[IBContractDetails]) -> None:
         contract_months = [x.contractMonth for x in details_list]
         has_duplicates = len(contract_months) != len(set(contract_months))
-        
-        tradingClass = details_list[0].contract.tradingClass
-        raise ValueError(
-            f"Contract chain for trading class {tradingClass} contains weekly or daily contracts. "
-            "Check or specify a monthly contract filter"
-        )
-    
+        if has_duplicates:
+            tradingClass = details_list[0].contract.tradingClass
+            raise ValueError(
+                f"Contract chain for trading class {tradingClass} contains weekly or daily contracts. " "Check or specify a monthly contract filter"
+            )
+
     def _details_to_instrument(self, details: IBContractDetails) -> Instrument:
         instrument = self._parser.details_to_instrument(
             details=details,
@@ -136,12 +121,10 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         return instrument
 
     def _add_instrument(self, instrument: Instrument) -> None:
-
         self.add(instrument)
 
         conId = instrument.info["contract"]["conId"]
         self.contract_id_to_instrument_id[conId] = instrument.id
-
 
     def _parse_input(self, value: InstrumentId | IBContract) -> IBContract:
         assert isinstance(value, (InstrumentId, IBContract))
@@ -155,13 +138,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         details_list: list[IBContractDetails],
         filter_func: Callable,
     ) -> list[IBContractDetails]:
-        
-        
-
-        
-
         return details_list
-
 
     # async def find_with_contract_id(self, contract_id: int) -> Instrument:
     #     instrument_id = self.contract_id_to_instrument_id.get(contract_id)
@@ -173,8 +150,9 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     #     instrument = self.find(instrument_id)
     #     return instrument
 
-# contract_months = [x.contractMonth for x in details_list]
-        # has_duplicates = len(contract_months) != len(set(contract_months))
 
-        # if not has_duplicates:
-        #     return details_list
+# contract_months = [x.contractMonth for x in details_list]
+# has_duplicates = len(contract_months) != len(set(contract_months))
+
+# if not has_duplicates:
+#     return details_list

@@ -64,16 +64,24 @@ class TestInteractiveBrokersInstrumentProvider:
 
     @pytest.mark.asyncio()
     async def test_load_async_uses_chain_filter(self):
+        
         # Arrange
         details1 = IBContractDetails()
+        details1.contract.tradingClass = "FMEU"
+        details1.contractMonth = "202401"
+        details1.contract.localSymbol = "X"  # monthly contract
+
         details2 = IBContractDetails()
+        details2.contract.tradingClass = "FMEU"
+        details2.contractMonth = "202402"
+        details2.contract.localSymbol = "D"  # daily contract
 
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2],
         )
         self.provider._filter_monthly_contracts = Mock(return_value=[details1])
 
-        instrument_id = InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX")
+        instrument_id = InstrumentId.from_str("FMEU=M7EU=FUT=2024H.EUREX")
         mock_contract = AdapterStubs.contract(instrument_id)
         self.provider._parser.details_to_instrument = Mock(return_value=mock_contract)
 
@@ -115,7 +123,7 @@ class TestInteractiveBrokersInstrumentProvider:
             return_value=[details1, details2],
         )
 
-        instrument_id = InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX")
+        instrument_id = InstrumentId.from_str("FMEU=M7EU=FUT=2024H.EUREX")
         mock_contract = AdapterStubs.contract(instrument_id)
 
         self.provider._parser.details_to_instrument = Mock(return_value=mock_contract)
@@ -145,15 +153,14 @@ class TestInteractiveBrokersInstrumentProvider:
         )
 
         details_list = await self.provider.request_future_chain(
-            instrument_id=InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX"),
+            instrument_id=InstrumentId.from_str("FMEU=M7EU=FUT=2024H.EUREX"),
             cycle=RollCycle("FG"),
         )
         assert details_list == [details1, details2]
 
-    @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_request_future_chain_filters_cycle_and_monthly_contracts(self):
-        print("TEST2")
+
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
         details1.contractMonth = "202401"
@@ -167,14 +174,14 @@ class TestInteractiveBrokersInstrumentProvider:
         details3 = IBContractDetails()
         details3.contract.tradingClass = "FMEU"
         details3.contractMonth = "202403"
-        details2.contract.localSymbol = "X"  # monthly contract
+        details3.contract.localSymbol = "X"  # monthly contract
 
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2, details3],
         )
 
         details_list = await self.provider.request_future_chain(
-            instrument_id=InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX"),
+            instrument_id=InstrumentId.from_str("FMEU=M7EU=FUT=2024H.EUREX"),
             cycle=RollCycle("FG"),
         )
         assert details_list == [details1]
