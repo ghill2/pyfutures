@@ -64,7 +64,6 @@ class TestInteractiveBrokersInstrumentProvider:
 
     @pytest.mark.asyncio()
     async def test_load_async_uses_chain_filter(self):
-        
         # Arrange
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
@@ -160,8 +159,7 @@ class TestInteractiveBrokersInstrumentProvider:
 
     @pytest.mark.asyncio()
     async def test_request_future_chain_filters_cycle_and_monthly_contracts(self):
-        
-        print("TEST1")
+        print("TEST2")
 
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
