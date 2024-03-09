@@ -32,14 +32,14 @@ async def main():
     )
     historic = InteractiveBrokersBarClient(
         client=client,
-        delay=1.5,
+        delay=0.5,
         use_cache=True,
         cache_dir=CACHE_DIR,
     )
     
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
     
-    historic.cache.purge_errors(asyncio.TimeoutError)
+    # historic.cache.purge_errors(asyncio.TimeoutError)
     
     await client.connect()
     await client.request_market_data_type(4)
@@ -48,11 +48,12 @@ async def main():
         bars: pd.DataFrame = await historic.request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
-            what_to_show=WhatToShow.BID_ASK,
+            what_to_show=WhatToShow.BID,
             start_time=start_time,
             as_dataframe=True,
+            skip_first=True,
         )
-        bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
+        # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())

@@ -47,11 +47,9 @@ from pyfutures.client.client import IBOpenOrderEvent
 from pyfutures.client.client import IBOrderStatusEvent
 from pyfutures.client.client import IBPositionEvent
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.adapter.parsing import historical_tick_to_nautilus_quote_tick
-from pyfutures.adapter.parsing import nautilus_order_to_ib_order
-from pyfutures.adapter.parsing import order_event_to_order_status_report
 from pyfutures.adapter.parsing import order_side_to_order_action
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
+from pyfutures.adapter.parsing import AdapterParser
 
 class InteractiveBrokersExecClient(LiveExecutionClient):
     
@@ -94,6 +92,8 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         self._client.error_events += self.error_callback
         self._client.execution_events += self.execution_callback
         self._client.open_order_events += self.open_order_callback
+        
+        self._parser = AdapterParser()
 
         # self._log._is_bypassed = True
     
@@ -226,7 +226,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         if (instrument := self._find_instrument(order.instrument_id)) is None:
             return   # nothing to do
 
-        ib_order: Order = nautilus_order_to_ib_order(
+        ib_order: Order = self._parser.nautilus_order_to_ib_order(
             order=command.order,
             instrument=instrument,
             order_id=await self._client.request_next_order_id(),
@@ -265,7 +265,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         
         self._log.debug(f"Modifying order {command.client_order_id}")
         
-        ib_order: IBOrder = nautilus_order_to_ib_order(
+        ib_order: IBOrder = self._parser.nautilus_order_to_ib_order(
             order=order,
             instrument=instrument,
             order_id=await self._client.request_next_order_id(),
@@ -496,7 +496,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
                 event.conId,
             )
 
-            report = order_event_to_order_status_report(
+            report = self._parser.order_event_to_order_status_report(
                 instrument=instrument,
                 event=event,
                 now_ns=self._clock.timestamp_ns(),
@@ -533,7 +533,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
 
                 instrument = await self._cache.instrument_with_contract_id(event.conId)
 
-                report = order_event_to_order_status_report(
+                report = self._parser.order_event_to_order_status_report(
                     instrument=instrument,
                     event=event,
                     now_ns=self._clock.timestamp_ns(),
@@ -557,7 +557,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
 
         last_quote = await self._client.request_last_quote_tick(contract=contract)
 
-        return historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
+        return self._parser.historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
 
 
 # generate modify

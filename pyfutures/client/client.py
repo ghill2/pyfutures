@@ -48,7 +48,7 @@ from pyfutures.client.objects import IBPositionEvent
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.parsing import parse_datetime
+from pyfutures.client.parsing import ClientParser
 
 
 class InteractiveBrokersClient(EWrapper):
@@ -119,6 +119,7 @@ class InteractiveBrokersClient(EWrapper):
         self._outgoing_msg_queue = queue.Queue()
         
         self._reset()
+        self._parser = ClientParser()
         
     @property
     def subscriptions(self) -> list[ClientSubscription]:
@@ -459,7 +460,7 @@ class InteractiveBrokersClient(EWrapper):
         if request is None:
             return  # no request found for request_id
 
-        bar.timestamp = parse_datetime(bar.date)
+        bar.timestamp = self._parser.parse_datetime(bar.date)
         request.data.append(bar)
 
     def historicalDataEnd(self, reqId: int, start: str, end: str):  # : Override the EWrapper
@@ -719,7 +720,7 @@ class InteractiveBrokersClient(EWrapper):
         self._log.info(f"execDetails reqId={reqId} {execution}")
 
         event = IBExecutionEvent(
-            timestamp=parse_datetime(execution.time),
+            timestamp=self._parser.parse_datetime(execution.time),
             reqId=reqId,
             contract=contract,
             execution=execution,
@@ -979,7 +980,7 @@ class InteractiveBrokersClient(EWrapper):
             return  # no response found for request_id
 
         for tick in ticks:
-            tick.timestamp = parse_datetime(tick.time)
+            tick.timestamp = self._parser.parse_datetime(tick.time)
 
         request.data.extend(ticks)
         if done:
@@ -1030,7 +1031,7 @@ class InteractiveBrokersClient(EWrapper):
             return  # no response found for request_id
 
         for tick in ticks:
-            tick.timestamp = parse_datetime(tick.time)
+            tick.timestamp = self._parser.parse_datetime(tick.time)
 
         request.data.extend(ticks)
 
@@ -1107,7 +1108,7 @@ class InteractiveBrokersClient(EWrapper):
         tick.priceAsk = askPrice
         tick.sizeBid = bidSize
         tick.sizeAsk = askSize
-        tick.timestamp = parse_datetime(time)
+        tick.timestamp = self._parser.parse_datetime(time)
         tick.tickAttribBidAsk = tickAttribBidAsk
 
         subscription.callback(tick)
@@ -1254,7 +1255,7 @@ class InteractiveBrokersClient(EWrapper):
             self._log.debug(f"No subscription found for request_id {reqId}")
             return
 
-        bar.timestamp = parse_datetime(bar.date)
+        bar.timestamp = self._parser.parse_datetime(bar.date)
         subscription.callback(bar)
 
     def realtimeBar(
@@ -1280,7 +1281,7 @@ class InteractiveBrokersClient(EWrapper):
             return  # no subscription found for request_id
 
         bar = BarData()
-        bar.timestamp = parse_datetime(time)
+        bar.timestamp = self._parser.parse_datetime(time)
         bar.date = time
         bar.open = open_
         bar.high = high

@@ -71,7 +71,7 @@ class TestHistoricCache:
         self.cache.purge_errors()
         assert not (self.cache.path / "test_exception.pkl").exists()
         assert (self.cache.path / "test_bar.pkl").exists()
-                    
+        
 class TestCachedFunc:
     
     def setup_method(self):
@@ -108,6 +108,7 @@ class TestCachedFunc:
     
     @pytest.mark.asyncio()
     async def test_build_key(self):
+        # NOTE: if this failed test it means the cache has been invalidated
         expected = "DA=DC=CONTFUT.CME-1 day-BID_ASK-2023-01-01 000000-2023-01-01 080000"
         key = self.cached_func.build_key(**self.cached_func_kwargs)
         assert key == expected

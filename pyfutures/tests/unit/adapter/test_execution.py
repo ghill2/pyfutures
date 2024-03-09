@@ -74,7 +74,7 @@ class TestInteractiveBrokersExecution:
             instrument_provider=AdapterStubs.instrument_provider(client),
         )
         
-        self.contract = AdapterStubs.mes_contract()
+        self.contract = AdapterStubs.contract()
         
         cache.add_instrument(self.contract)
         

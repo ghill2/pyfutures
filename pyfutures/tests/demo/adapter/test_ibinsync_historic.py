@@ -21,7 +21,7 @@ from pyfutures.adapter.enums import (
     Frequency,
     WhatToShow,
 )
-from pyfutures.adapter.parsing import contract_details_to_instrument_id
+from pyfutures.adapter.parsing import details_to_instrument_id
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 # logger = logging.getLogger("ib_insync_root")
@@ -53,7 +53,7 @@ def key_builder(
     end_time: pd.Timestamp,
 ):
     # https://blog.xam.de/2016/07/standard-format-for-time-stamps-in-file.html
-    instrument_id = contract_details_to_instrument_id(detail)
+    instrument_id = details_to_instrument_id(detail)
     end_time_str = end_time.isoformat().replace(":", "_")
     start_time = end_time - duration.to_timedelta()
     start_time_str = start_time.isoformat().replace(":", "_")

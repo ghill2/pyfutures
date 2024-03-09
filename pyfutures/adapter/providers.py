@@ -9,11 +9,7 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.parsing import contract_details_to_instrument
-from pyfutures.adapter.parsing import instrument_id_to_contract
-from pyfutures.continuous.chain import ContractChain
-
-# from pyfutures.continuous.chain import ContractId
+from pyfutures.adapter.parsing import AdapterParser
 from pyfutures.continuous.contract_month import ContractMonth
 
 
@@ -38,6 +34,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
         self._chain_filters = config.chain_filters or {}
         self._parsing_overrides = config.parsing_overrides or {}
+        self._parser = AdapterParser()
     
     async def load_ids_async(
         self,
@@ -53,16 +50,12 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         instrument_id: InstrumentId | IBContract,
     ) -> None:
         
-        if isinstance(instrument_id, InstrumentId):
-            contract: IBContract = instrument_id_to_contract(instrument_id)
+        contract: IBContract = self._parse_input(instrument_id)
 
-        details_list = await self.client.request_contract_details(contract)
+        details_list = await self._request_details(contract)
         
         if len(details_list) == 0:
-            self._log.error("No contracts found")
             return None
-        elif len(details_list) > 0 and contract.secType == "FUT":
-            details_list = self._filter_monthly_contracts(details_list)
         
         assert len(details_list) == 1
         
@@ -81,8 +74,11 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         )
 
         contracts: list[FuturesContract] = [
-            self._add_instrument(d) for d in details_list
+            self._details_to_instrument(d) for d in details_list
         ]
+        
+        for c in contracts:
+            self._add_instrument(c)
 
         return contracts
     
@@ -93,40 +89,40 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     ) -> list[IBContractDetails]:
         
         contract: IBContract = self._parse_input(instrument_id)
-        
-        details_list = await self.client.request_contract_details(contract)
-
-        if len(details_list) == 0:
-            self._log.error("No contracts found")
-            return []
-
-        details_list = self._filter_monthly_contracts(details_list)
 
         return [
-            details for details in details_list
+            details for details in (await self._request_details(contract))
             if ContractMonth.from_int(details.contractMonth) in cycle
         ]
     
+    async def _request_details(self, contract: IBContract) -> list[IBContractDetails]:
+        
+        details_list = await self.client.request_contract_details(contract)
+        
+        if len(details_list) > 0 and contract.secType == "FUT":
+            details_list = self._filter_monthly_contracts(details_list)
+            
+        return details_list
+    
     def _details_to_instrument(self, details: IBContractDetails) -> Instrument:
-        return contract_details_to_instrument(
+        instrument = self._parser.details_to_instrument(
             details=details,
             overrides=self._parsing_overrides.get(details.contract.tradingClass, {}),
         )
+        return instrument
         
-    def _add_instrument(self, instrument: Instrument) -> Instrument:
+    def _add_instrument(self, instrument: Instrument) -> None:
         
         self.add(instrument)
         
         conId = instrument.info["contract"]["conId"]
         self.contract_id_to_instrument_id[conId] = instrument.id
         
-        return instrument
     
-    @staticmethod
-    def _parse_input(value: InstrumentId | IBContract) -> IBContract:
+    def _parse_input(self, value: InstrumentId | IBContract) -> IBContract:
         assert isinstance(value, (InstrumentId, IBContract))
         if isinstance(value, InstrumentId):
-            return instrument_id_to_contract(value)
+            return self._parser.instrument_id_to_contract(value)
         elif isinstance(value, IBContract):
             return value
 
@@ -164,15 +160,16 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
 
         return details_list
 
-    async def find_with_contract_id(self, contract_id: int) -> Instrument:
-        instrument_id = self.contract_id_to_instrument_id.get(contract_id)
-        if instrument_id is None:
-            contract = IBContract()
-            contract.conId = contract_id
-            await self.load_contract(contract)
-            instrument_id = self.contract_id_to_instrument_id.get(contract_id)
-        instrument = self.find(instrument_id)
-        return instrument
+
+    # async def find_with_contract_id(self, contract_id: int) -> Instrument:
+    #     instrument_id = self.contract_id_to_instrument_id.get(contract_id)
+    #     if instrument_id is None:
+    #         contract = IBContract()
+    #         contract.conId = contract_id
+    #         await self.load_contract(contract)
+    #         instrument_id = self.contract_id_to_instrument_id.get(contract_id)
+    #     instrument = self.find(instrument_id)
+    #     return instrument
 
 
 

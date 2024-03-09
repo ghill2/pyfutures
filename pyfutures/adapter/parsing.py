@@ -2,7 +2,6 @@ import time
 from decimal import Decimal
 
 import pandas as pd
-from pyfutures.client.parsing import parse_datetime
 import pytz
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
@@ -33,258 +32,12 @@ from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from pyfutures.continuous.contract_month import ContractMonth
-
-
-def historical_tick_to_nautilus_quote_tick(
-    instrument: Instrument,
-    tick: HistoricalTickBidAsk,
-):
-    return QuoteTick(
-        instrument_id=instrument.id,
-        bid_price=instrument.make_price(tick.priceBid),
-        ask_price=instrument.make_price(tick.priceAsk),
-        bid_size=instrument.make_qty(tick.sizeBid),
-        ask_size=instrument.make_qty(tick.sizeAsk),
-        ts_event=dt_to_unix_nanos(tick.time),
-        ts_init=dt_to_unix_nanos(tick.time),
-    )
-
-
-def bar_data_to_nautilus_bar(
-    bar_type: BarType,
-    bar: BarData,
-    instrument: Instrument,
-) -> Bar:
-    bar = Bar(
-        bar_type=bar_type,
-        open=instrument.make_price(bar.open),
-        high=instrument.make_price(bar.high),
-        low=instrument.make_price(bar.low),
-        close=instrument.make_price(bar.close),
-        volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
-        ts_event=dt_to_unix_nanos(bar.timestamp),
-        ts_init=dt_to_unix_nanos(bar.timestamp),
-    )
-    return bar
+from pyfutures.client.parsing import ClientParser
 
 order_side_to_order_action: dict[str, str] = {
     "BOT": "BUY",
     "SLD": "SELL",
 }
-
-def _desanitize_str(value: str):
-    return value.replace(",", ".")
-
-
-def _sanitize_str(value: str):
-    return value.replace(".", ",")
-
-
-def contract_details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
-    contract = details.contract
-
-    symbol = _sanitize_str(contract.symbol)
-    trading_class = _sanitize_str(contract.tradingClass)
-    exchange = _sanitize_str(contract.exchange)
-
-    if contract.secType == "FUT":
-        assert len(contract.lastTradeDateOrContractMonth) == 8
-        month = str(ContractMonth.from_int(int(details.contractMonth)))
-        return InstrumentId.from_str(
-            f"{trading_class}={symbol}={contract.secType}={month}.{exchange}"
-        )
-    elif contract.secType == "CONTFUT":
-        return InstrumentId.from_str(
-            f"{trading_class}={symbol}={contract.secType}.{exchange}"
-        )
-    elif contract.secType == "CASH":
-        return InstrumentId.from_str(
-            f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
-        )
-    
-def is_unqualified_contract(contract: IBContract) -> bool:
-    if contract.secType == "CONTFUT":
-        return len(contract.lastTradeDateOrContractMonth) == 0
-    else:
-        raise NotImplementedError()
-
-def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
-    
-    symbol = _sanitize_str(contract.symbol)
-    trading_class = _sanitize_str(contract.tradingClass)
-    exchange = _sanitize_str(contract.exchange)
-    
-    if contract.secType == "FUT":
-        raise NotImplementedError()
-    elif contract.secType == "CONTFUT":
-        return InstrumentId.from_str(
-            f"{trading_class}={symbol}={contract.secType}.{exchange}"
-        )
-    elif contract.secType == "CASH":
-        return InstrumentId.from_str(
-            f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
-        )
-
-def create_contract(
-    symbol: str,
-    venue: str,
-    sec_type: str,
-    trading_class: str | None = None,
-    currency: str | None = None,
-) -> IBContract:
-    contract = IBContract()
-
-    contract.symbol = _desanitize_str(symbol)
-    contract.exchange = _desanitize_str(venue)
-    contract.secType = sec_type
-    # contract.includeExpired = False
-    
-    if trading_class is not None:
-        contract.tradingClass = _desanitize_str(trading_class)
-
-    if currency is not None:
-        contract.currency = str(currency)
-
-    return contract
-
-
-def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
-    parts = instrument_id.symbol.value.split("=")
-    venue = instrument_id.venue.value
-    if venue == "IDEALPRO":
-        contract: IBContract = create_contract(
-            symbol=parts[0].split(".")[0],
-            currency=parts[0].split(".")[1],
-            venue=venue,
-            sec_type=parts[1],
-        )
-    else:
-        contract: IBContract = create_contract(
-            trading_class=parts[0],
-            symbol=parts[1],
-            venue=venue,
-            sec_type=parts[2],
-        )
-
-        if len(parts) == 4:
-            contract_month = ContractMonth(parts[3])
-            contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
-    return contract
-
-
-def contract_details_to_instrument(
-    details: IBContractDetails,
-    overrides: dict | None = None,
-) -> Instrument:
-    sec_type = details.contract.secType
-    if sec_type == "FUT":
-        return contract_details_to_futures_instrument(details, overrides=overrides)
-    elif sec_type == "CASH":
-        return contract_details_to_forex_instrument(details)
-    else:
-        raise ValueError(f"Contract SecType {sec_type} not supported") 
-def contract_details_to_futures_instrument(
-    details: IBContractDetails,
-    overrides: dict | None = None,
-) -> FuturesContract:
-    timestamp = time.time_ns()
-    instrument_id = contract_details_to_instrument_id(details)
-
-    min_tick = details.minTick * details.priceMagnifier
-    price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
-    price_increment = Price(min_tick, price_precision)
-
-    return FuturesContract(
-        instrument_id=instrument_id,
-        raw_symbol=Symbol(details.contract.localSymbol),
-        asset_class=_sec_type_to_asset_class(details.underSecType),
-        currency=Currency.from_str(details.contract.currency),
-        price_precision=overrides.get("price_precision") or price_precision,
-        price_increment=overrides.get("price_increment") or price_increment,
-        multiplier=overrides.get("multiplier")
-        or Quantity.from_str(str(details.contract.multiplier)),
-        lot_size=overrides.get("lot_size") or Quantity.from_int(1),
-        underlying=details.underSymbol,
-        activation_ns=0,
-        expiration_ns=dt_to_unix_nanos(
-            parse_datetime(details.contract.lastTradeDateOrContractMonth),
-        ),
-        ts_event=timestamp,
-        ts_init=timestamp,
-        info=contract_details_to_dict(details),
-    )
-
-def dict_to_contract(value: dict) -> IBContract:
-    contract = IBContract()
-    for key, value in value.items():
-        setattr(contract, key, value)
-    return contract
-
-
-def dict_to_contract_details(value: dict) -> IBContractDetails:
-    details = IBContractDetails()
-    details.contract = dict_to_contract(value["contract"])
-    value.pop("contract")
-    for key, value in value.items():
-        setattr(details, key, value)
-    return details
-
-
-def contract_details_to_dict(value: IBContractDetails) -> dict:
-    data = {}
-    data = data | value.__dict__.copy()
-    data["contract"] = value.contract.__dict__.copy()
-    return data
-
-def _tick_size_to_precision(tick_size: float | Decimal) -> int:
-    tick_size_str = f"{tick_size:.10f}"
-    return len(tick_size_str.partition(".")[2].rstrip("0"))
-
-
-def contract_details_to_forex_instrument(
-    details: IBContractDetails,
-) -> CurrencyPair:
-    timestamp = time.time_ns()
-    instrument_id = contract_details_to_instrument_id(details)
-
-    price_precision: int = _tick_size_to_precision(details.minTick)
-    size_precision: int = _tick_size_to_precision(details.minSize)
-
-    return CurrencyPair(
-        instrument_id=instrument_id,
-        raw_symbol=Symbol(details.contract.localSymbol),
-        base_currency=Currency.from_str(details.contract.symbol),
-        quote_currency=Currency.from_str(details.contract.currency),
-        price_precision=price_precision,
-        size_precision=size_precision,
-        price_increment=Price(details.minTick, price_precision),
-        size_increment=Quantity(details.sizeIncrement, size_precision),
-        lot_size=None,
-        max_quantity=None,
-        min_quantity=None,
-        max_notional=None,
-        min_notional=None,
-        max_price=None,
-        min_price=None,
-        margin_init=Decimal(0),
-        margin_maint=Decimal(0),
-        maker_fee=Decimal(0),
-        taker_fee=Decimal(0),
-        ts_event=timestamp,
-        ts_init=timestamp,
-        info=contract_details_to_dict(details),
-    )
-
-
-def _sec_type_to_asset_class(sec_type: str):
-    mapping = {
-        "STK": "EQUITY",
-        "IND": "INDEX",
-        "CASH": "FX",
-        "BOND": "BOND",
-    }
-    return asset_class_from_str(mapping.get(sec_type, sec_type))
-
 
 map_order_status = {
     "ApiPending": OrderStatus.SUBMITTED,
@@ -342,94 +95,362 @@ ib_to_nautilus_order_side = dict(
 )
 ib_to_nautilus_order_type = dict(zip(map_order_type.values(), map_order_type.keys()))
 
+class AdapterParser:
+    
+    @staticmethod
+    def historical_tick_to_nautilus_quote_tick(
+        instrument: Instrument,
+        tick: HistoricalTickBidAsk,
+    ):
+        return QuoteTick(
+            instrument_id=instrument.id,
+            bid_price=instrument.make_price(tick.priceBid),
+            ask_price=instrument.make_price(tick.priceAsk),
+            bid_size=instrument.make_qty(tick.sizeBid),
+            ask_size=instrument.make_qty(tick.sizeAsk),
+            ts_event=dt_to_unix_nanos(tick.time),
+            ts_init=dt_to_unix_nanos(tick.time),
+        )
+    
+    @staticmethod
+    def bar_data_to_nautilus_bar(
+        bar_type: BarType,
+        bar: BarData,
+        instrument: Instrument,
+    ) -> Bar:
+        bar = Bar(
+            bar_type=bar_type,
+            open=instrument.make_price(bar.open),
+            high=instrument.make_price(bar.high),
+            low=instrument.make_price(bar.low),
+            close=instrument.make_price(bar.close),
+            volume=instrument.make_qty(0 if bar.volume == -1 else bar.volume),
+            ts_event=dt_to_unix_nanos(bar.timestamp),
+            ts_init=dt_to_unix_nanos(bar.timestamp),
+        )
+        return bar
+    
+    @staticmethod
+    def details_to_instrument_id(details: IBContractDetails) -> InstrumentId:
+        
+        contract = details.contract
 
-def order_event_to_order_status_report(
-    event: "OrderEvent",
-    instrument: Instrument,
-    now_ns: pd.Timestamp,
-    account_id: AccountId,
-) -> OrderStatusReport:
-    # total_qty = (
-    #     Quantity.from_int(0)
-    #     if event.totalQuantity == UNSET_DECIMAL
-    #     else Quantity.from_str(str(event.totalQuantity))
-    # )
-    # filled_qty = (
-    #     Quantity.from_int(0)
-    #     if event.filledQuantity == UNSET_DECIMAL
-    #     else Quantity.from_str(str(event.filledQuantity))
-    # )
-    total_qty = Quantity.from_str(str(event.totalQuantity))
-    filled_qty = Quantity.from_str(str(event.filledQuantity))
-    if total_qty.as_double() > filled_qty.as_double() > 0:
-        order_status = OrderStatus.PARTIALLY_FILLED
+        symbol = _sanitize_str(contract.symbol)
+        trading_class = _sanitize_str(contract.tradingClass)
+        exchange = _sanitize_str(contract.exchange)
+
+        if contract.secType == "FUT":
+            assert len(contract.lastTradeDateOrContractMonth) == 8
+            month = str(ContractMonth.from_int(int(details.contractMonth)))
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}={month}.{exchange}"
+            )
+        elif contract.secType == "CONTFUT":
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}.{exchange}"
+            )
+        elif contract.secType == "CASH":
+            return InstrumentId.from_str(
+                f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+            )
+    
+    @classmethod
+    def details_to_instrument(
+        cls,
+        details: IBContractDetails,
+        overrides: dict | None = None,
+    ) -> Instrument:
+        sec_type = details.contract.secType
+        if sec_type == "FUT":
+            return cls._details_to_futures_instrument(details, overrides=overrides)
+        elif sec_type == "CASH":
+            return cls._details_to_forex_instrument(details)
+        else:
+            raise ValueError(f"Contract SecType {sec_type} not supported")
+    
+    @staticmethod
+    def instrument_id_to_contract(instrument_id: InstrumentId) -> IBContract:
+        parts = instrument_id.symbol.value.split("=")
+        venue = instrument_id.venue.value
+        if venue == "IDEALPRO":
+            contract: IBContract = create_contract(
+                symbol=parts[0].split(".")[0],
+                currency=parts[0].split(".")[1],
+                venue=venue,
+                sec_type=parts[1],
+            )
+        else:
+            contract: IBContract = create_contract(
+                trading_class=parts[0],
+                symbol=parts[1],
+                venue=venue,
+                sec_type=parts[2],
+            )
+
+            if len(parts) == 4:
+                contract_month = ContractMonth(parts[3])
+                contract.lastTradeDateOrContractMonth = str(contract_month.to_int())
+        return contract
+    
+    @staticmethod
+    def unqualified_contract_to_instrument_id(contract: IBContract) -> InstrumentId:
+        symbol = _sanitize_str(contract.symbol)
+        trading_class = _sanitize_str(contract.tradingClass)
+        exchange = _sanitize_str(contract.exchange)
+        
+        if contract.secType == "FUT":
+            raise NotImplementedError()
+        elif contract.secType == "CONTFUT":
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}.{exchange}"
+            )
+        elif contract.secType == "CASH":
+            return InstrumentId.from_str(
+                f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+            )
+        
+    @classmethod
+    def _details_to_futures_instrument(
+        cls,
+        details: IBContractDetails,
+        overrides: dict | None = None,
+    ) -> FuturesContract:
+        
+        timestamp = time.time_ns()
+        instrument_id = cls.details_to_instrument_id(details)
+
+        min_tick = details.minTick * details.priceMagnifier
+        price_precision = len(f"{min_tick:.8f}".rstrip("0").split(".")[1])
+        price_increment = Price(min_tick, price_precision)
+
+        return FuturesContract(
+            instrument_id=instrument_id,
+            raw_symbol=Symbol(details.contract.localSymbol),
+            asset_class=_sec_type_to_asset_class(details.underSecType),
+            currency=Currency.from_str(details.contract.currency),
+            price_precision=overrides.get("price_precision") or price_precision,
+            price_increment=overrides.get("price_increment") or price_increment,
+            multiplier=overrides.get("multiplier")
+            or Quantity.from_str(str(details.contract.multiplier)),
+            lot_size=overrides.get("lot_size") or Quantity.from_int(1),
+            underlying=details.underSymbol,
+            activation_ns=0,
+            expiration_ns=dt_to_unix_nanos(
+                ClientParser.parse_datetime(details.contract.lastTradeDateOrContractMonth),
+            ),
+            ts_event=timestamp,
+            ts_init=timestamp,
+            info=cls.details_to_dict(details),
+        )
+    
+    @classmethod
+    def _details_to_forex_instrument(
+        cls,
+        details: IBContractDetails,
+    ) -> CurrencyPair:
+        
+        timestamp = time.time_ns()
+        instrument_id = cls.details_to_instrument_id(details)
+
+        price_precision: int = _tick_size_to_precision(details.minTick)
+        size_precision: int = _tick_size_to_precision(details.minSize)
+
+        return CurrencyPair(
+            instrument_id=instrument_id,
+            raw_symbol=Symbol(details.contract.localSymbol),
+            base_currency=Currency.from_str(details.contract.symbol),
+            quote_currency=Currency.from_str(details.contract.currency),
+            price_precision=price_precision,
+            size_precision=size_precision,
+            price_increment=Price(details.minTick, price_precision),
+            size_increment=Quantity(details.sizeIncrement, size_precision),
+            lot_size=None,
+            max_quantity=None,
+            min_quantity=None,
+            max_notional=None,
+            min_notional=None,
+            max_price=None,
+            min_price=None,
+            margin_init=Decimal(0),
+            margin_maint=Decimal(0),
+            maker_fee=Decimal(0),
+            taker_fee=Decimal(0),
+            ts_event=timestamp,
+            ts_init=timestamp,
+            info=cls.details_to_dict(details),
+        )
+    
+    @staticmethod
+    def nautilus_order_to_ib_order(
+        order: IBOrder,
+        instrument: Instrument,
+        order_id: int,
+    ) -> IBOrder:
+        ib_order = IBOrder()
+
+        ib_order.orderId = order_id
+        ib_order.orderRef = order.client_order_id.value
+        ib_order.orderType = map_order_type[order.order_type]
+        ib_order.totalQuantity = order.quantity.as_decimal()
+        ib_order.action = map_order_action[order.side]
+        ib_order.tif = map_time_in_force[order.time_in_force]
+
+        if getattr(order, "price", None) is not None:
+            ib_order.lmtPrice = order.price.as_double()
+
+        # if getattr(order, "display_qty", None) is not None:
+        #     ib_order.displaySize = order.display_qty.as_double()
+
+        # if getattr(order, "expire_time", None) is not None:
+        #     ib_order.goodTillDate = order.expire_time.strftime("%Y%m%d %H:%M:%S %Z")
+
+        # if getattr(order, "parent_order_id", None) is not None:
+        #     ib_order.parentId = order.parent_order_id.value
+
+        contract = IBContract()
+        contract.conId = instrument.info["contract"]["conId"]
+        contract.exchange = instrument.info["contract"]["exchange"]
+        ib_order.contract = contract
+
+        return ib_order
+
+    @classmethod
+    def dict_to_details(cls, value: dict) -> IBContractDetails:
+        details = IBContractDetails()
+        details.contract = cls.dict_to_contract(value["contract"])
+        value.pop("contract")
+        for key, value in value.items():
+            setattr(details, key, value)
+        return details
+    
+    @staticmethod
+    def dict_to_contract(value: dict) -> IBContract:
+        contract = IBContract()
+        for key, value in value.items():
+            setattr(contract, key, value)
+        return contract
+    
+    @staticmethod
+    def details_to_dict(value: IBContractDetails) -> dict:
+        data = {}
+        data = data | value.__dict__.copy()
+        data["contract"] = value.contract.__dict__.copy()
+        return data
+    
+    @staticmethod
+    def order_event_to_order_status_report(
+        event: "OrderEvent",
+        instrument: Instrument,
+        now_ns: pd.Timestamp,
+        account_id: AccountId,
+    ) -> OrderStatusReport:
+        # total_qty = (
+        #     Quantity.from_int(0)
+        #     if event.totalQuantity == UNSET_DECIMAL
+        #     else Quantity.from_str(str(event.totalQuantity))
+        # )
+        # filled_qty = (
+        #     Quantity.from_int(0)
+        #     if event.filledQuantity == UNSET_DECIMAL
+        #     else Quantity.from_str(str(event.filledQuantity))
+        # )
+        total_qty = Quantity.from_str(str(event.totalQuantity))
+        filled_qty = Quantity.from_str(str(event.filledQuantity))
+        if total_qty.as_double() > filled_qty.as_double() > 0:
+            order_status = OrderStatus.PARTIALLY_FILLED
+        else:
+            order_status = map_order_status[event.status]
+
+        # price = None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
+        price = instrument.make_price(event.lmtPrice)
+
+        order_status = OrderStatusReport(
+            account_id=account_id,
+            instrument_id=instrument.id,
+            venue_order_id=VenueOrderId(str(event.orderId)),
+            order_side=ib_to_nautilus_order_side[event.action],
+            order_type=ib_to_nautilus_order_type[event.orderType],
+            time_in_force=ib_to_nautilus_time_in_force[event.tif],
+            order_status=order_status,
+            quantity=total_qty,
+            filled_qty=Quantity.from_int(0),
+            avg_px=Decimal(0),
+            report_id=UUID4(),
+            ts_accepted=now_ns,
+            ts_last=now_ns,
+            ts_init=now_ns,
+            client_order_id=ClientOrderId(str(event.orderId)),
+            price=price,
+            # order_list_id=,
+            # contingency_type=,
+            # expire_time=expire_time,
+            # trigger_price=instrument.make_price(order.auxPrice),
+            # trigger_type=TriggerType.BID_ASK,
+            # limit_offset=,
+            # trailing_offset=,
+        )
+
+        return order_status
+
+def _desanitize_str(value: str):
+    return value.replace(",", ".")
+
+
+def _sanitize_str(value: str):
+    return value.replace(".", ",")
+
+    
+def is_unqualified_contract(contract: IBContract) -> bool:
+    if contract.secType == "CONTFUT":
+        return len(contract.lastTradeDateOrContractMonth) == 0
     else:
-        order_status = map_order_status[event.status]
-
-    # price = None if event.lmtPrice == UNSET_DOUBLE else instrument.make_price(event.lmtPrice)
-    price = instrument.make_price(event.lmtPrice)
-
-    order_status = OrderStatusReport(
-        account_id=account_id,
-        instrument_id=instrument.id,
-        venue_order_id=VenueOrderId(str(event.orderId)),
-        order_side=ib_to_nautilus_order_side[event.action],
-        order_type=ib_to_nautilus_order_type[event.orderType],
-        time_in_force=ib_to_nautilus_time_in_force[event.tif],
-        order_status=order_status,
-        quantity=total_qty,
-        filled_qty=Quantity.from_int(0),
-        avg_px=Decimal(0),
-        report_id=UUID4(),
-        ts_accepted=now_ns,
-        ts_last=now_ns,
-        ts_init=now_ns,
-        client_order_id=ClientOrderId(str(event.orderId)),
-        price=price,
-        # order_list_id=,
-        # contingency_type=,
-        # expire_time=expire_time,
-        # trigger_price=instrument.make_price(order.auxPrice),
-        # trigger_type=TriggerType.BID_ASK,
-        # limit_offset=,
-        # trailing_offset=,
-    )
-
-    return order_status
+        raise NotImplementedError()
 
 
-def nautilus_order_to_ib_order(
-    order: IBOrder,
-    instrument: Instrument,
-    order_id: int,
-) -> IBOrder:
-    ib_order = IBOrder()
-
-    ib_order.orderId = order_id
-    ib_order.orderRef = order.client_order_id.value
-    ib_order.orderType = map_order_type[order.order_type]
-    ib_order.totalQuantity = order.quantity.as_decimal()
-    ib_order.action = map_order_action[order.side]
-    ib_order.tif = map_time_in_force[order.time_in_force]
-
-    if getattr(order, "price", None) is not None:
-        ib_order.lmtPrice = order.price.as_double()
-
-    # if getattr(order, "display_qty", None) is not None:
-    #     ib_order.displaySize = order.display_qty.as_double()
-
-    # if getattr(order, "expire_time", None) is not None:
-    #     ib_order.goodTillDate = order.expire_time.strftime("%Y%m%d %H:%M:%S %Z")
-
-    # if getattr(order, "parent_order_id", None) is not None:
-    #     ib_order.parentId = order.parent_order_id.value
-
+    
+def create_contract(
+    symbol: str,
+    venue: str,
+    sec_type: str,
+    trading_class: str | None = None,
+    currency: str | None = None,
+) -> IBContract:
     contract = IBContract()
-    contract.conId = instrument.info["contract"]["conId"]
-    contract.exchange = instrument.info["contract"]["exchange"]
-    ib_order.contract = contract
 
-    return ib_order
+    contract.symbol = _desanitize_str(symbol)
+    contract.exchange = _desanitize_str(venue)
+    contract.secType = sec_type
+    # contract.includeExpired = False
+    
+    if trading_class is not None:
+        contract.tradingClass = _desanitize_str(trading_class)
+
+    if currency is not None:
+        contract.currency = str(currency)
+
+    return contract
+
+def _tick_size_to_precision(tick_size: float | Decimal) -> int:
+    tick_size_str = f"{tick_size:.10f}"
+    return len(tick_size_str.partition(".")[2].rstrip("0"))
+
+def _sec_type_to_asset_class(sec_type: str):
+    mapping = {
+        "STK": "EQUITY",
+        "IND": "INDEX",
+        "CASH": "FX",
+        "BOND": "BOND",
+    }
+    return asset_class_from_str(mapping.get(sec_type, sec_type))
+
+
+
+
+
+
+
+
+
 
 
 # def ib_quote_tick_to_nautilus_quote_tick(

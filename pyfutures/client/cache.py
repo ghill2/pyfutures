@@ -10,17 +10,15 @@ from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow
 from pathlib import Path
-from pyfutures.adapter.parsing import unqualified_contract_to_instrument_id
 from nautilus_trader.common.component import Logger
 import pickle
 import json
-from pyfutures.client.parsing import bar_data_to_dict
-from pyfutures.client.parsing import bar_data_from_dict
 from ibapi.contract import Contract as IBContract
 from nautilus_trader.common.component import Logger
 from nautilus_trader.core.rust.common import LogColor
-from pyfutures.adapter.parsing import unqualified_contract_to_instrument_id
 from pyfutures.client.objects import ClientException
+from pyfutures.client.parsing import ClientParser
+from pyfutures.adapter.parsing import AdapterParser  # TODO: change to just tradingclass
 import colorlog
 
 # # Create a color formatter with blue for INFO messages
@@ -42,6 +40,7 @@ import colorlog
 class Cache:
     def __init__(self, path: Path):
         self.path = Path(path)  # directory
+        self._parser = ClientParser()
     
     def get(
         self,
@@ -56,7 +55,7 @@ class Cache:
             cached = pickle.load(f)
         
         if isinstance(cached, list):
-            cached = [bar_data_from_dict(b) for b in cached]
+            cached = [self._parser.bar_data_from_dict(b) for b in cached]
         elif isinstance(cached, dict):
             cached = ClientException.from_dict(cached)
             
@@ -72,7 +71,7 @@ class Cache:
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
         
         if isinstance(value, list):
-            value = [bar_data_to_dict(b) for b in value]
+            value = [self._parser.bar_data_to_dict(b) for b in value]
         elif isinstance(value, ClientException):
             value = value.to_dict()
             
@@ -147,7 +146,8 @@ class CachedFunc(Cache):
         **kwargs
     ):
         parsing = {
-            IBContract: lambda x: str(unqualified_contract_to_instrument_id(x)),
+            # TODO: change to just trading class
+            IBContract: lambda x: str(AdapterParser.unqualified_contract_to_instrument_id(x)),
             pd.Timestamp: lambda x: x.strftime("%Y-%m-%d %H%M%S"),
             Duration: lambda x: x.value,
             BarSize: lambda x: str(x),

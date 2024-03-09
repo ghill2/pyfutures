@@ -12,13 +12,9 @@ from nautilus_trader.core.uuid import UUID4
 from pyfutures.adapter.enums import BarSize
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from pyfutures.adapter.enums import WhatToShow
-from ibapi.contract import Contract as IBContract
-import functools
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
-from pyfutures.tests.unit.client.test_historic import TestHistoric
 from nautilus_trader.model.objects import Quantity
-from pyfutures.adapter.parsing import instrument_id_to_contract
 from nautilus_trader.model.data import Bar
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
@@ -29,9 +25,7 @@ from nautilus_trader.common.component import LiveClock
 from nautilus_trader.common.component import MessageBus
 
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 
 class TestInteractiveBrokersDataClient:
     
@@ -46,7 +40,7 @@ class TestInteractiveBrokersDataClient:
         )
         
         cache = TestComponentStubs.cache()
-        self.contract = AdapterStubs.mes_contract()
+        self.contract = AdapterStubs.contract()
         cache.add_instrument(self.contract)
         
         client: InteractiveBrokersClient = ClientStubs.client()

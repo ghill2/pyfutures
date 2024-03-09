@@ -129,10 +129,13 @@ class AdapterStubs:
         
     
     @staticmethod
-    def mes_contract() -> FuturesContract:
+    def contract(
+        instrument_id: InstrumentId | None = None,
+    ) -> FuturesContract:
+        instrument_id = instrument_id or InstrumentId.from_str("MES=MES=FUT=2023Z.CME")
         return FuturesContract(
-            instrument_id=InstrumentId.from_str("MES=MES=FUT=2023Z.CME"),
-            raw_symbol=Symbol("MES"),
+            instrument_id=instrument_id,
+            raw_symbol=instrument_id.symbol,
             asset_class=AssetClass.COMMODITY,
             currency=Currency.from_str("GBP"),
             price_precision=4,

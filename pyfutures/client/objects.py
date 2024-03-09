@@ -10,8 +10,6 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.execution import Execution as IBExecution
 from ibapi.commission_report import CommissionReport as IBCommissionReport
-from pyfutures.client.parsing import parse_datetime
-from ibapi.common import BarData
 
 @dataclass
 class IBOpenOrderEvent:

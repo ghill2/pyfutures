@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from pyfutures.client.parsing import parse_datetime
+from pyfutures.client.parsing import ClientParser
 
 @pytest.mark.parametrize(
     ("value", "expected"),
@@ -29,6 +29,6 @@ def test_parse_datetime(value, expected):
     # find all timestamp formatting in ib execution and ib order
     # test tick format for bar.date
 
-    expected = parse_datetime(value)
+    expected = ClientParser.parse_datetime(value)
     print(expected)
 

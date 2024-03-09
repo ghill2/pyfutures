@@ -16,11 +16,10 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.adapter.parsing import instrument_id_to_contract
-from pyfutures.adapter.parsing import bar_data_to_nautilus_bar
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from nautilus_trader.core.uuid import UUID4
 from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.adapter.parsing import AdapterParser
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
     """
@@ -56,6 +55,8 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             client=client,
             use_cache=False,  # TODO add config
         )
+        
+        self._parser = AdapterParser()
 
     @property
     def instrument_provider(self) -> InteractiveBrokersInstrumentProvider:
@@ -93,14 +94,14 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         )
         
         self._client.subscribe_bars(
-            contract=instrument_id_to_contract(bar_type.instrument_id),
+            contract=self._parser.instrument_id_to_contract(bar_type.instrument_id),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
             bar_size=BarSize.from_bar_spec(bar_type.spec),
             callback=callback
         )
     
     def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
-        nautilus_bar: Bar = bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+        nautilus_bar: Bar = self._parser.bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
         self._handle_data(nautilus_bar)
         
     async def _request_bars(
@@ -125,7 +126,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             return
         
         bars: list[BarData] = await self._historic.request_bars(
-            contract=instrument_id_to_contract(bar_type.instrument_id),
+            contract=self._parser.instrument_id_to_contract(bar_type.instrument_id),
             bar_size=BarSize.from_bar_spec(bar_type.spec),
             what_to_show=WhatToShow.from_price_type(bar_type.spec.price_type),
             start_time=start,
@@ -134,7 +135,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         )
         
         bars: list[Bar] = [
-            bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+            self._parser.bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
             for bar in bars
         ]
         

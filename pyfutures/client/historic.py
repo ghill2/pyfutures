@@ -13,12 +13,8 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import Duration
 from pyfutures.adapter.enums import WhatToShow
-from pyfutures.client.parsing import bar_data_to_dict
-from pyfutures.client.parsing import historical_tick_bid_ask_to_dict
-from pyfutures.client.parsing import parse_datetime
-from pyfutures.adapter.parsing import is_unqualified_contract
 from pyfutures.client.cache import CachedFunc
-
+from pyfutures.client.parsing import ClientParser
 
 class InteractiveBrokersBarClient:
     def __init__(
@@ -43,9 +39,8 @@ class InteractiveBrokersBarClient:
             )
         else:
             self.cache = None
-            
         
-        
+        self._parser = ClientParser()
         
     async def request_bars(
         self,
@@ -56,6 +51,7 @@ class InteractiveBrokersBarClient:
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
         limit: int | None = None,
+        skip_first: bool = False,
     ):
         # assert is_unqualified_contract(contract)
 
@@ -77,7 +73,11 @@ class InteractiveBrokersBarClient:
 
         duration = self._get_appropriate_duration(bar_size)
         interval = duration.to_timedelta()
-        end_time = end_time.ceil(interval)
+        
+        if skip_first:
+            end_time = end_time.floor(interval)
+        else:
+            end_time = end_time.ceil(interval)
 
         total_bars = deque()
         i = 0
@@ -142,7 +142,7 @@ class InteractiveBrokersBarClient:
                 break
 
         if as_dataframe:
-            df = pd.DataFrame([bar_data_to_dict(obj) for obj in total_bars])
+            df = pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in total_bars])
             return df
 
         return total_bars
@@ -206,8 +206,8 @@ class InteractiveBrokersBarClient:
 
             assert len(quotes) <= 1000
             for quote in quotes:
-                assert parse_datetime(quote.time) <= end_time
-                assert parse_datetime(quote.time) >= start_time
+                assert quote.timestamp <= end_time
+                assert quote.timestamp >= start_time
 
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
@@ -258,30 +258,30 @@ class InteractiveBrokersBarClient:
             )
 
             for quote in quotes:
-                assert parse_datetime(quote.time) < end_time
+                assert quote.timestamp < end_time
 
-            quotes = [q for q in quotes if parse_datetime(q.time) >= start_time]
+            quotes = [q for q in quotes if q.timestamp >= start_time]
 
             results = quotes + results
 
             if len(quotes) < count:
                 break
 
-            end_time = parse_datetime(quotes[0].time)
+            end_time = quotes[0].timestamp
             self._log.debug(f"End time: {end_time}")
 
             if self._delay > 0:
                 await asyncio.sleep(self._delay)
 
         for quote in results:
-            assert parse_datetime(quote.time) >= start_time
+            assert quote.timestamp >= start_time
 
-        timestamps = [parse_datetime(quote.time) for quote in quotes]
+        timestamps = [quote.timestamp for quote in quotes]
         assert pd.Series(timestamps).is_monotonic_increasing
 
         if as_dataframe:
             return pd.DataFrame(
-                [historical_tick_bid_ask_to_dict(obj) for obj in results]
+                [self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results]
             )
         return results
 
