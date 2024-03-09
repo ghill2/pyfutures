@@ -153,7 +153,7 @@ class TestInteractiveBrokersInstrumentProvider:
     @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_request_future_chain_filters_cycle_and_monthly_contracts(self):
-        print("TEST")
+        print("TEST2")
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
         details1.contractMonth = "202401"
