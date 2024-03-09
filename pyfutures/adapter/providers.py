@@ -1,6 +1,7 @@
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
 from nautilus_trader.common.providers import InstrumentProvider
+from typing import Callable
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
@@ -97,12 +98,36 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     async def _request_details(self, contract: IBContract) -> list[IBContractDetails]:
 
         details_list = await self.client.request_contract_details(contract)
-
+        
+        """
+        For instruments that have weekly and monthly contracts in the same TradingClass it is
+        required to apply a custom filter to ensure only monthly contracts are returned.
+        """
+        # filter monthly contracts
         if len(details_list) > 0 and contract.secType == "FUT":
-            details_list = self._filter_monthly_contracts(details_list)
-
+            filter_func = self._chain_filters.get(contract.tradingClass)
+            assert filter_func is not None
+            if filter_func is not None:
+                print(len(details_list))
+                details_list = list(filter(filter_func, details_list))
+                print(len(details_list))
+                exit()
+        
+        self._assert_monthly_contracts(details_list)
+        
         return details_list
-
+    
+    @staticmethod
+    def _assert_monthly_contracts(details_list: list[IBContractDetails]) -> bool:
+        contract_months = [x.contractMonth for x in details_list]
+        has_duplicates = len(contract_months) != len(set(contract_months))
+        
+        tradingClass = details_list[0].contract.tradingClass
+        raise ValueError(
+            f"Contract chain for trading class {tradingClass} contains weekly or daily contracts. "
+            "Check or specify a monthly contract filter"
+        )
+    
     def _details_to_instrument(self, details: IBContractDetails) -> Instrument:
         instrument = self._parser.details_to_instrument(
             details=details,
@@ -128,34 +153,12 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     def _filter_monthly_contracts(
         self,
         details_list: list[IBContractDetails],
+        filter_func: Callable,
     ) -> list[IBContractDetails]:
-        """
-        For instruments that have weekly and monthly contracts in the same TradingClass it is
-        required to apply a custom filter to ensure only monthly contracts are returned.
-        """
-        contract_months = [x.contractMonth for x in details_list]
-        has_duplicates = len(contract_months) != len(set(contract_months))
+        
+        
 
-        if not has_duplicates:
-            return details_list
-
-        tradingClass = details_list[0].contract.tradingClass
-
-        filter_func = self._chain_filters.get(tradingClass)
-        if filter_func is None:
-            self._log.error(
-                "Contract chain has duplicate contract months."
-                " specify a monthly contract filter",
-            )
-            return []
-
-        details_list = list(filter(filter_func, details_list))
-
-        if len(details_list) > 1:
-            self._log.error(
-                "The chain filter func failed to return unique monthly contracts",
-            )
-            return []
+        
 
         return details_list
 
@@ -169,3 +172,9 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     #         instrument_id = self.contract_id_to_instrument_id.get(contract_id)
     #     instrument = self.find(instrument_id)
     #     return instrument
+
+# contract_months = [x.contractMonth for x in details_list]
+        # has_duplicates = len(contract_months) != len(set(contract_months))
+
+        # if not has_duplicates:
+        #     return details_list

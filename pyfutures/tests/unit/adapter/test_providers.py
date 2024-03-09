@@ -105,11 +105,11 @@ class TestInteractiveBrokersInstrumentProvider:
         # Arrange
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
-        details1.contract.localSymbol = "X"
+        details1.contract.localSymbol = "month"  # monthly contract
 
         details2 = IBContractDetails()
         details2.contract.tradingClass = "FMEU"
-        details2.contract.localSymbol = "D"
+        details2.contract.localSymbol = "D"  # daily contract
 
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2],
@@ -127,7 +127,7 @@ class TestInteractiveBrokersInstrumentProvider:
         assert len(self.provider.list_all()) == 1
 
     @pytest.mark.asyncio()
-    async def test_request_future_chain_filteres_cycle(self):
+    async def test_request_future_chain_filters_cycle_returns_expected(self):
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
         details1.contractMonth = "202401"
@@ -152,21 +152,21 @@ class TestInteractiveBrokersInstrumentProvider:
 
     @pytest.mark.skip()
     @pytest.mark.asyncio()
-    async def test_request_future_chain_filters_cycle_monthly_contract(self):
+    async def test_request_future_chain_filters_cycle_and_monthly_contracts(self):
         details1 = IBContractDetails()
         details1.contract.tradingClass = "FMEU"
         details1.contractMonth = "202401"
-        details1.contract.localSymbol = "X"
+        details1.contract.localSymbol = "X"  # monthly contract
 
         details2 = IBContractDetails()
         details2.contract.tradingClass = "FMEU"
         details2.contractMonth = "202402"
-        details2.contract.localSymbol = "D"
+        details2.contract.localSymbol = "D"  # daily contract
 
         details3 = IBContractDetails()
         details3.contract.tradingClass = "FMEU"
         details3.contractMonth = "202403"
-        details2.contract.localSymbol = "D"
+        details2.contract.localSymbol = "X"  # monthly contract
 
         self.provider.client.request_contract_details = AsyncMock(
             return_value=[details1, details2, details3],
@@ -176,7 +176,7 @@ class TestInteractiveBrokersInstrumentProvider:
             instrument_id=InstrumentId.from_str("M7EU=FMEU=FUT=2024H.EUREX"),
             cycle=RollCycle("FG"),
         )
-        assert details_list == [details1, details2]
+        assert details_list == [details1]
 
     # @pytest.mark.skip()
     # @pytest.mark.asyncio()
