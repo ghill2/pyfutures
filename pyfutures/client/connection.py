@@ -153,6 +153,9 @@ class Connection:
         """
         # if self._monitor_task is None:
         #     self._monitor_task = self.loop.create_task(self._monitor())
+        #
+        if self.is_connected:
+            return
 
         async with self._is_connecting_lock:
             await self._connect()
