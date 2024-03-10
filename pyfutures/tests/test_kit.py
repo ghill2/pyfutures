@@ -1,5 +1,4 @@
 import pathlib
-import re
 from dataclasses import dataclass
 from dataclasses import fields
 from datetime import datetime
@@ -107,15 +106,17 @@ class UniverseRow:
     contract: IBContract
     contract_cont: IBContract
     fee_fixed: float
-    fee_fixed_currency: float
-    fee_fixed_percent: float
+    fee_fixed_currency: str
+    fee_fixed_percent: bool
     fee_exchange: float
-    fee_exchange_currency: float
+    fee_exchange_currency: str
     fee_regulatory: float
-    fee_regulatory_currency: float
+    fee_regulatory_currency: str
     fee_clearing: float
-    fee_clearing_currency: float
-    fee_clearing_percent: float
+    fee_clearing_currency: str
+    fee_clearing_percent: bool
+    ib_url: str
+    fees: tuple
 
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
         instrument_id = self.instrument_id_for_month(
@@ -280,14 +281,14 @@ class IBTestProviderStubs:
             "ex_symbol": str,
             "data_symbol": str,
             "quote_currency": str,
-            "fee_fixed": str,
+            "fee_fixed": float,
             "fee_fixed_currency": str,
             "fee_fixed_percent": str,  # pd.BooleanDtype(),
-            "fee_exchange": str,
+            "fee_exchange": float,
             "fee_exchange_currency": str,
-            "fee_regulatory": str,
+            "fee_regulatory": float,
             "fee_regulatory_currency": str,
-            "fee_clearing": str,
+            "fee_clearing": float,
             "fee_clearing_currency": str,
             "fee_clearing_percent": str,  # pd.BooleanDtype()
             "timezone": str,
@@ -325,7 +326,7 @@ class IBTestProviderStubs:
         def parse_bool(s):
             if s in ["TRUE", "True"]:
                 return True
-            elif s == ["FALSE", "False"]:
+            elif s in ["FALSE", "False"]:
                 return False
             elif s == "nan":
                 return None
@@ -373,7 +374,8 @@ class IBTestProviderStubs:
             )
         )
 
-        df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)))
+        # df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(re.search(r"\((.*?)\)", x).group(1)))
+        df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(x))
 
         df["instrument_id"] = df.apply(
             lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
@@ -479,6 +481,29 @@ class IBTestProviderStubs:
             ),
             axis=1,
         )
+
+        def parse_fees(row):
+            """
+            Parse fees from UniverseRow() / CSV file into List[tuple] to perform calculations
+            """
+            fees = []
+            if row.fee_fixed != 0:
+                assert row.fee_fixed_currency != "nan"
+                fees.append(dict(name="fixed", value=row.fee_fixed, currency=row.fee_fixed_currency, is_percent=row.fee_fixed_percent))
+            if row.fee_exchange != 0:
+                assert row.fee_exchange_currency != "nan"
+                fees.append(dict(name="exchange", value=row.fee_exchange, currency=row.fee_exchange_currency, is_percent=None))
+            if row.fee_regulatory != 0:
+                assert row.fee_regulatory_currency != "nan"
+                fees.append(dict(name="regulatory", value=row.fee_regulatory, currency=row.fee_regulatory_currency, is_percent=None))
+            if row.fee_clearing != 0:
+                assert row.fee_clearing_currency != "nan"
+                fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))
+            return fees
+
+        df["fees"] = df.apply(parse_fees, axis=1)
+
+        # df["contains_percent_fees"] = df.apply(lambda row: row.fee_fixed_percent or row.clearing_percent)
 
         keep = [f.name for f in fields(UniverseRow)]
         df = df[[x for x in df.columns if x in keep]]

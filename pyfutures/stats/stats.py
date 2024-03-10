@@ -104,26 +104,6 @@ class Stats:
             json.dump(prices, f, indent=4)
         return prices
 
-    def _calculate_fees_for_row(prices, fx_rates, fees):
-        """
-        calculates fees for the row and returns the modified fees
-            - returns fees in the same list[tuple] structure as the input
-        """
-        fees = []
-        for fee_type, fee_value, fee_currency, is_percent in row.fees:
-            # get the fee value if the fee is the percent of the contract price
-            if is_percent:
-                key = f"{r.contract.exchange}-{r.contract.symbol}"
-                fee_value = prices[key] * fee_value
-
-            if r.contract.currency != fee_currency:
-                quote_contract_xrate = (fx_rates[f"{fee_currency}{row.contract.currency}"],)
-                fee_value = quote_contract_xrate * fee_value
-                fee_type = row.contract.currency
-
-        fees.append((fee_type, fee_value, fee_currency, is_percent))
-        return fees
-
     def _fees(self, prices, fx_rates, rows):
         """
             calculates fees for an instrument
@@ -153,15 +133,15 @@ class Stats:
 
         return fees_xrate
 
-    def test_last_close(self):
-        asyncio.get_event_loop().run_until_complete(self.client.connect())
-        rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
-        details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
-        for d in details:
-            try:
-                asyncio.get_event_loop().run_until_complete(self._close_price_ib_api(d.contract))
-            except:
-                pass
+    # def test_last_close(self):
+    #     asyncio.get_event_loop().run_until_complete(self.client.connect())
+    #     rows = [r for r in PyfuturesTestProviderStubs().universe_rows()]
+    #     details = [asyncio.get_event_loop().run_until_complete(self._details(contract=r.contract)) for r in rows]
+    #     for d in details:
+    #         try:
+    #             asyncio.get_event_loop().run_until_complete(self._close_price_ib_api(d.contract))
+    #         except:
+    #             pass
 
     def calc(self):
         results = {}

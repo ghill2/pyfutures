@@ -21,6 +21,7 @@ init_logging(level_stdout=LogLevel.DEBUG)
 class TestInteractiveBrokersClientData:
     @pytest.mark.asyncio()
     async def test_request_head_timestamp_single(self, client):
+        await client.connect()
         contract = IBContract()
         contract.conId = 553444806
         contract.exchange = "ICEEUSOFT"

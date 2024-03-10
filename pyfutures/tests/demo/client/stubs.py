@@ -11,6 +11,9 @@ from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.logger import LoggerAdapter
 
 
+CLIENT = None
+
+
 class ClientStubs:
     @staticmethod
     def logger_adapter(level: int = logging.DEBUG, path: Path | None = None) -> LoggerAdapter:
@@ -26,18 +29,19 @@ class ClientStubs:
     @staticmethod
     def client(
         loop: asyncio.AbstractEventLoop = None,
-        request_timeout_seconds: float = 0.5,  # requests should fail immediately for unit tests
-        override_timeout: bool = True,  # use timeout for all requests even if timeout is given
         api_log_level: int = logging.DEBUG,
     ) -> InteractiveBrokersClient:
-        return InteractiveBrokersClient(
+        global CLIENT
+        if CLIENT:
+            return CLIENT
+
+        CLIENT = InteractiveBrokersClient(
             loop=loop or asyncio.get_event_loop(),
             host="127.0.0.1",
             port=4002,
             api_log_level=api_log_level,
-            request_timeout_seconds=request_timeout_seconds,
-            override_timeout=override_timeout,
         )
+        return CLIENT
 
     @staticmethod
     def connection(client_id: int) -> Connection:
