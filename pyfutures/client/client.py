@@ -67,7 +67,7 @@ class InteractiveBrokersClient(EWrapper):
         self,
         loop: asyncio.AbstractEventLoop,
         host: str = "127.0.0.1",
-        port: int = 7497,
+        port: int = 4002,
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
@@ -396,8 +396,8 @@ class InteractiveBrokersClient(EWrapper):
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
-                duration=self._get_appropriate_duration(bar_size),
-
+                duration=Duration.to_appropriate_duration(bar_size),
+                end_time=pd.Timestamp.utcnow(),
         )
         return bars[-1] if len(bars) > 0 else None
 
