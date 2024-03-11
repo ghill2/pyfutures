@@ -79,8 +79,8 @@ class TestHistoric:
         ]
 
     @pytest.mark.asyncio()
-    async def test_historic_first_request_not_use_cache(self):
-        # the first request will have imcomplete data because the end time is ceiled to the interval
+    async def test_first_request_not_use_cache(self):
+        # the first request will have incomplete data because the end time is ceiled to the interval
         # do not cache the first request
 
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
@@ -97,9 +97,28 @@ class TestHistoric:
 
         self.historic._client.request_bars.assert_called_once()
         self.historic.cache.assert_called_once()
+        
+    @pytest.mark.asyncio()
+    async def test_first_request_uses_cache_with_skip_first(self):
+
+        self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
+        self.historic.cache = AsyncMock(side_effect=self.request_bars)
+        self.historic.cache.is_cached = Mock(return_value=True)
+
+        await self.historic.request_bars(
+            contract=self.contract,
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.BID_ASK,
+            start_time=pd.Timestamp("2023-01-04 00:00:00", tz="UTC"),
+            end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
+            skip_first=True,
+        )
+
+        self.historic._client.request_bars.assert_not_called()
+        self.historic.cache.assert_called_once()
 
     @pytest.mark.asyncio()
-    async def test_historic_delay_if_not_cached(self):
+    async def test_delay_if_not_cached(self):
         self.historic._delay = 1
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
         self.historic.cache = AsyncMock(side_effect=self.request_bars)
@@ -120,7 +139,7 @@ class TestHistoric:
 
     @pytest.mark.skip(reason="TODO: add get response")
     @pytest.mark.asyncio()
-    async def test_historic_no_delay_if_cached(self):
+    async def test_no_delay_if_cached(self):
         self.historic._delay = 1
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
         self.historic.cache = AsyncMock(side_effect=self.request_bars)
