@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from pyfutures.schedule.market_calendar import MarketCalendar
+from pyfutures.schedule.calendar import MarketCalendar
 
 
 pytestmark = pytest.mark.skip

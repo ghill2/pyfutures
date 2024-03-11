@@ -410,7 +410,8 @@ class InteractiveBrokersClient(EWrapper):
         end_time: pd.Timestamp,
     ) -> list[BarData]:
         """
-        formatDate=1, returns bars as a timestamp in the exchange timezone
+        formatDate=1, returns timestamp in the exchange timezone
+        formatDate=2, returns timestamp as integer seconds from epoch (UTC)
         """
         # await self._conn._is_connected.wait()
 
@@ -434,7 +435,7 @@ class InteractiveBrokersClient(EWrapper):
                 durationStr=str(duration),
                 barSizeSetting=str(bar_size),
                 whatToShow=what_to_show.name,
-                useRTH=True,
+                useRTH=False,
                 formatDate=2,
                 keepUpToDate=False,
                 chartOptions=[],

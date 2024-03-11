@@ -43,6 +43,13 @@ class MarketSchedule:
 
         now_time = now.time()
 
+        # print(now_time)
+        # print(now.dayofweek)
+        # print(now_time >= self.data.open)
+        # print(now_time < self.data.close)
+        # print(self.data)
+        # print(self._timezone)
+        # exit()
         mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
 
         return mask.any()

@@ -2,19 +2,70 @@ import asyncio
 import logging
 
 import pandas as pd
-import pytest
-from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
 from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import Frequency
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import CACHE_DIR
+from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.tests.test_kit import SPREAD_FOLDER
+
+
+async def use_rt():
+    """
+    test data in this range is returned without RTH argument
+    2024-02-27 00:00:00 > 2024-02-27 06:30:00
+    12:30 > 15:30 = Japan
+    03:30 > 06:30 = UTC
+
+    00:00 > 06.30 Japan
+    15:00 >  21:00
+    """
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+        api_log_level=logging.ERROR,
+    )
+
+    rows = IBTestProviderStubs.universe_rows(
+        filter=["JBLM"],
+    )
+    row = rows[0]
+
+    historic = InteractiveBrokersBarClient(
+        client=client,
+        delay=0.5,
+        use_cache=False,
+        cache_dir=CACHE_DIR,
+    )
+
+    await client.connect()
+    await client.request_market_data_type(4)
+
+    print(f"Processing {row.uname}: BID...")
+    df: pd.DataFrame = await historic.request_bars(
+        contract=row.contract_cont,
+        bar_size=BarSize._1_MINUTE,
+        what_to_show=WhatToShow.BID,
+        start_time=pd.Timestamp("2024-02-26", tz="UTC"),
+        end_time=pd.Timestamp("2024-02-28", tz="UTC"),
+        as_dataframe=True,
+        skip_first=False,
+    )
+    df.sort_values(by="timestamp", inplace=True)
+    df.reset_index(inplace=True, drop=True)
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        print(df)
+
 
 async def write_spread(write: bool = False):
     client: InteractiveBrokersClient = ClientStubs.client(
@@ -36,11 +87,11 @@ async def write_spread(write: bool = False):
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
 
     # historic.cache.purge_errors(asyncio.TimeoutError)
-    
+
     rows = [r for r in rows if r.uname == "FTI"]
     print(rows)
     assert len(rows) > 0
-    
+
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):
@@ -55,7 +106,7 @@ async def write_spread(write: bool = False):
         )
         if write:
             bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet", index=False)
-            
+
         print(f"Processing {i}/{len(rows)}: {row.uname}: ASK...")
         bars: pd.DataFrame = await historic.request_bars(
             contract=row.contract_cont,
@@ -68,9 +119,10 @@ async def write_spread(write: bool = False):
         if write:
             bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet", index=False)
 
+
 if __name__ == "__main__":
     # write_spread(write=True)
-    asyncio.get_event_loop().run_until_complete(write_spread())
+    asyncio.get_event_loop().run_until_complete(use_rt())
 
 # @pytest.mark.asyncio()
 # async def test_export_spread_daily(client):
@@ -100,7 +152,6 @@ if __name__ == "__main__":
 #         )
 #         print(bars)
 #         break
-
 
 
 # @pytest.mark.asyncio()

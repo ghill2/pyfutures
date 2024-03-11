@@ -1,4 +1,3 @@
-import joblib
 import pandas as pd
 
 from pyfutures.tests.test_kit import SPREAD_FOLDER
@@ -8,13 +7,18 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 """
 once per hour should be enough
 """
+
+
 def get_spread_value(row):
     bid_path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
     ask_path = SPREAD_FOLDER / f"{row.uname}_ASK.parquet"
 
     bid_df = pd.read_parquet(bid_path)
     ask_df = pd.read_parquet(ask_path)
-    
+
+    bid_df.sort_values(by="timestamp", inplace=True)
+    ask_df.sort_values(by="timestamp", inplace=True)
+
     df = pd.merge(bid_df, ask_df, on="timestamp", how="inner", suffixes=("_bid", "_ask"))
     df.drop(
         [
@@ -44,15 +48,40 @@ def get_spread_value(row):
         axis=1,
         inplace=True,
     )
-    
-    print(len(df))
+    df = df[(df.bid != 0.0) & (df.ask != 0.0)]
+    df["dayofweek"] = df.timestamp.dt.dayofweek
+    # with pd.option_context(
+    #     "display.max_rows",
+    #     None,
+    #     "display.max_columns",
+    #     None,
+    #     "display.width",
+    #     None,
+    # ):
+    #     print(df[-3000:])
     # TODO: why is this the same length after filtering by liquid hours
+
+    print(row.market_schedule.data)
+    schedule = row.liquid_schedule
+    # is_open = schedule.is_open(
+    #     pd.Timestamp("2024-02-27 15:31:00+00:00") # 00:00 Japan time
+    # )
+    # 12:30 > 15:30 = Japan
+    # 03:30 > 06:30 = UTC
+    # print(is_open)
+    # 2024-02-26 06:30:00+00:00
+    # 2024-02-26 20:59:00+00:00
+
+    # 2024-02-28 06:30:00+00:00
+    # 0          0  12:30:00  15:02:00
+    # print(row.liquid_schedule.data)
+    # exit()
     mask = df.timestamp.apply(row.liquid_schedule.is_open)
     df = df[mask]
     assert not df.empty
-    print(len(df))
-    
-    exit()
+    # print(len(df))
+
+    # exit()
 
     # Group by date and hour
     grouped = df.groupby(pd.Grouper(key="timestamp", freq="H"))
@@ -99,7 +128,7 @@ if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    rows = [r for r in rows if r.uname == "FEF"]
+    rows = [r for r in rows if r.uname == "JBLM"]
     get_spread_value(rows[0])
     # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
 

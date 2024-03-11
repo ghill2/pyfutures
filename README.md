@@ -13,6 +13,7 @@ API > Settings > Download Orders on Connection > Disabled
 API > Settings > Send instrument-specific attributes for dual-mode API client in > UTC format  
 
 # TODO
+check historical bar timestamp order returned
 support expiry date calculation by 3rd Tuesday of the month etc
 support expiry date calculation by last day of the month 2 months previous to contract month
 support lookback by market calendar if expiry date is within closed market hours
