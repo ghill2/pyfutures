@@ -97,7 +97,13 @@ class TestHistoric:
 
         self.historic._client.request_bars.assert_called_once()
         self.historic.cache.assert_called_once()
-        
+    
+    @pytest.mark.skip()
+    @pytest.mark.asyncio()
+    async def test_first_request_uses_cache_with_skip_first(self):
+        # test delay is not used on first request and skip_first = True
+        pass
+    
     @pytest.mark.asyncio()
     async def test_first_request_uses_cache_with_skip_first(self):
 

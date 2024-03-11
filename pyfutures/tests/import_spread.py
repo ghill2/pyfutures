@@ -11,15 +11,12 @@ from pyfutures.adapter.enums import Frequency
 from pyfutures.adapter.enums import WhatToShow
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.historic import InteractiveBrokersBarClient
-from pyfutures.logger import init_logging
 from pyfutures.tests.test_kit import CACHE_DIR
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
+from pyfutures.tests.test_kit import SPREAD_FOLDER
 
-
-async def main():
-    init_logging()
-
+async def write_spread(write: bool = False):
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
         override_timeout=False,
@@ -39,24 +36,41 @@ async def main():
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
 
     # historic.cache.purge_errors(asyncio.TimeoutError)
-
+    
+    rows = [r for r in rows if r.uname == "FTI"]
+    print(rows)
+    assert len(rows) > 0
+    
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):
-        print(f"Processing {i}/{len(rows)}: {row.uname}...")
+        print(f"Processing {i}/{len(rows)}: {row.uname}: BID...")
         bars: pd.DataFrame = await historic.request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._1_MINUTE,
             what_to_show=WhatToShow.BID,
             start_time=start_time,
-            as_dataframe=True,
+            as_dataframe=write,
             skip_first=True,
         )
-        # bars.to_parquet(SPREAD_FOLDER / f"{row.uname}.parquet", index=False)
-
+        if write:
+            bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet", index=False)
+            
+        print(f"Processing {i}/{len(rows)}: {row.uname}: ASK...")
+        bars: pd.DataFrame = await historic.request_bars(
+            contract=row.contract_cont,
+            bar_size=BarSize._1_MINUTE,
+            what_to_show=WhatToShow.ASK,
+            start_time=start_time,
+            as_dataframe=write,
+            skip_first=True,
+        )
+        if write:
+            bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet", index=False)
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())
+    # write_spread(write=True)
+    asyncio.get_event_loop().run_until_complete(write_spread())
 
 # @pytest.mark.asyncio()
 # async def test_export_spread_daily(client):
@@ -87,36 +101,6 @@ if __name__ == "__main__":
 #         print(bars)
 #         break
 
-
-@pytest.mark.asyncio()
-async def test_cache(client):
-    rows = IBTestProviderStubs.universe_rows()
-
-    # req_cached = CachedFunc(func=request_bars_cached)
-
-    for row in rows:
-        # modify the FUT instrument for CONTFUT
-        # df["instrument_id_live"] = df.apply(
-        #     lambda row: InstrumentId.from_str(
-        #         f"{row.trading_class}={row.symbol}=CONTFUT.{row.exchange}"
-        #     ),
-        #     axis=1,
-        # )
-        #
-        # details = IBContractDetails(contract=row.contract_cont)
-        # row.instrument.info = details
-        bars = await req_cached(
-            client=client,
-            instrument=row.instrument,
-            details=IBContractDetails(contract=row.contract_cont),
-            bar_size=BarSize._1_MINUTE,
-            what_to_show=WhatToShow.BID_ASK,
-            duration=Duration(step=1, freq=Frequency.DAY),
-            end_time=pd.Timestamp("2020-09-16 13:30:00+0000", tz="UTC"),
-            # info=contract_details_to_dict(details),
-        )
-        # print(await req_cached._cache.get("YES PLS"))
-        break
 
 
 # @pytest.mark.asyncio()

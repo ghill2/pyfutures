@@ -154,8 +154,7 @@ class InteractiveBrokersBarClient:
         stop = time.perf_counter()
         self._log.debug(f"Elapsed time: {stop - start:.2f}")
         
-        # delay if required
-        if self._delay > 0 and is_cached:
+        if self._delay > 0 and not is_cached:
             self._log.debug(f"Waiting for {self._delay} seconds...")
             await asyncio.sleep(self._delay)
 

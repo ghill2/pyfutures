@@ -77,7 +77,6 @@ class TestConnection:
 
         await self.connection.connect(timeout_seconds=1)
 
-        print("FUCK", connection.is_connected)
         assert connection.is_connected
 
     @pytest.mark.skip()

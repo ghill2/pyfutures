@@ -440,9 +440,9 @@ class IBTestProviderStubs:
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
                 instrument_id=row.instrument_id,
-                hold_cycle=RollCycle(row.hold_cycle, skip_months=row.missing_months)
+                hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months)
                 if "," in row.hold_cycle else
-                RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
+                RollCycle(row.hold_cycle, skip_months=row.missing_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,

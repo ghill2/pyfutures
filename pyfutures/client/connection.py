@@ -232,7 +232,6 @@ class Connection:
             msg = b"\x00\x00\x00\x0871\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
             # assert msg == b"\x00\x00\x00\x0871\x002\x001\x00\x00"
             # msg = b"\x00\x00\x00\x0871\x002\x001\x00\x00"
-
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
             self._is_connected.set()
