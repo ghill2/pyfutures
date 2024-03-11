@@ -11,8 +11,8 @@ from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import MultipleData
-from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.Z.data import MultipleData
+from pyfutures.continuous.Z.multiple_bar import MultipleBar
 
 
 class MultiplePriceWrangler:

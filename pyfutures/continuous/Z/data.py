@@ -4,10 +4,10 @@ from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 
-from pyfutures.continuous.actor import Actor
+from pyfutures.continuous.Z.actor import Actor
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.chain import RollEvent
-from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.Z.multiple_bar import MultipleBar
 
 
 class MultipleData(Actor):

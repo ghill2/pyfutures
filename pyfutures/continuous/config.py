@@ -8,7 +8,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
-from pyfutures.continuous.schedule import MarketSchedule
+from pyfutures.schedule.schedule import MarketSchedule
 
 
 # An integer constrained to values <= 0
@@ -23,7 +23,6 @@ class RollConfig(NautilusConfig, frozen=True):
     carry_offset: The number of contracts forward or backwards defines carry in the priced roll cycle
     approximate_expiry_offset: The offset, relative to the first of the contract month that the expiry date approximately occurs
     """
-
     instrument_id: InstrumentId
     hold_cycle: RollCycle
     priced_cycle: RollCycle
@@ -31,8 +30,6 @@ class RollConfig(NautilusConfig, frozen=True):
     approximate_expiry_offset: NonNegativeInt
     carry_offset: Literal[1, -1]
     skip_months: list[ContractMonth] | None = None
-    weekly_schedule: MarketSchedule | None = None
-
 
 class ContractChainConfig(NautilusConfig, frozen=True):
     bar_type: BarType

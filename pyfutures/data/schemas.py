@@ -5,7 +5,7 @@ from nautilus_trader.model.objects import QUANTITY_MAX
 from numpy.dtypes import Float64DType
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 
-from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.Z.multiple_bar import MultipleBar
 
 
 DEFAULT_VOLUME = float(QUANTITY_MAX)

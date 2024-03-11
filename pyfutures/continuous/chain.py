@@ -96,6 +96,7 @@ class ContractChain(Actor):
         # pre-roll reporting
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
+        
         stats = {}
         stats["timestamp"] = unix_nanos_to_dt(bar.ts_init).strftime("%Y-%m-%d %H:%M:%S")
         stats["balance"] = float(self.cache.account_for_venue(Venue("SIM")).balances().get(GBP).free)
@@ -189,7 +190,7 @@ class ContractChain(Actor):
 
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-
+        
         if current_timestamp != forward_timestamp:
             return False
 

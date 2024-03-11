@@ -8,8 +8,8 @@ from nautilus_trader.persistence.wranglers import BarDataWrangler
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.contract_month import MONTH_LIST
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.data import MultipleData
-from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.Z.data import MultipleData
+from pyfutures.continuous.Z.multiple_bar import MultipleBar
 from pyfutures.continuous.providers import ContractProvider
 from pyfutures.continuous.wrangler import MultiplePriceWrangler
 from pyfutures.data.files import ParquetFile

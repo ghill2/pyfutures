@@ -27,7 +27,7 @@ from nautilus_trader.persistence.funcs import urisafe_instrument_id
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.multiple_bar import MultipleBar
+from pyfutures.continuous.Z.multiple_bar import MultipleBar
 from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.conversion import bar_to_bar
 from pyfutures.data.writer import BarParquetWriter

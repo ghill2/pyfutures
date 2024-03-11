@@ -4,9 +4,9 @@ import pandas as pd
 import pytest
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RangedRollCycle
+from pyfutures.continuous.cycle_range import RangedRollCycle
 from pyfutures.continuous.cycle import RollCycle
-from pyfutures.continuous.cycle import RollCycleRange
+from pyfutures.continuous.cycle_range import RollCycleRange
 
 
 pytestmark = pytest.mark.skip(reason="TODO")

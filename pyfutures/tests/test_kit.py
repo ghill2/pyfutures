@@ -39,8 +39,9 @@ from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
-from pyfutures.continuous.schedule import MarketSchedule
+from pyfutures.schedule.schedule import MarketSchedule
 from pyfutures.data.files import ParquetFile
+from pyfutures.continuous.cycle_range import RangedRollCycle
 
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
@@ -439,7 +440,9 @@ class IBTestProviderStubs:
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
                 instrument_id=row.instrument_id,
-                hold_cycle=RollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
+                hold_cycle=RollCycle(row.hold_cycle, skip_months=row.missing_months)
+                if "," in row.hold_cycle else
+                RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,

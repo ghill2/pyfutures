@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from pyfutures.continuous.schedule import MarketSchedule
+from pyfutures.schedule.schedule import MarketSchedule
 
 
 pytestmark = pytest.mark.skip
