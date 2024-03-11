@@ -25,6 +25,24 @@ class RollEvent:
 
 
 class ContractChain(Actor):
+    """
+    Continous framework plan:
+    
+    Config - self explanatory
+    ContractMonth - self explanatory
+    
+    ContrainChain
+    - outputs bar streams for -1, 0, +1
+    
+    ContinuousBarWrangler
+    - wranglers bar data from the ContractChain for streams -1, 0, +1
+    - maybe add -2, +2 aswell
+    - bars for -1, 0, +1 could be merge into one bar stream? sorted by -1, +1, 0
+    
+    AdjustedPrices
+    - subscribes to 0, +1 streams
+    - decide how to trigger a roll from the 0 and +1 streams maybe need a RollSignal class?
+    """
     def __init__(
         self,
         config: ContractChainConfig,
