@@ -61,8 +61,8 @@ def get_spread_value(row):
     #     print(df[-3000:])
     # TODO: why is this the same length after filtering by liquid hours
 
-    print(row.market_schedule.data)
-    schedule = row.liquid_schedule
+    print(row.liquid_schedule.data)
+    # exit()
     # is_open = schedule.is_open(
     #     pd.Timestamp("2024-02-27 15:31:00+00:00") # 00:00 Japan time
     # )

@@ -12,6 +12,12 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 @pytest.mark.skip(reason="universe")
+async def test_liquid_hours_with_data():
+    # for all liquid hours in the universe, test there are bars for each session
+    pass
+
+
+@pytest.mark.skip(reason="universe")
 @pytest.mark.asyncio()
 async def test_load_future_chain_details_universe(instrument_provider):
     for chain in IBTestProviderStubs.universe_future_chains():

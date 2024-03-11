@@ -45,12 +45,13 @@ async def use_rt():
     await client.request_market_data_type(4)
 
     print(f"Processing {row.uname}: BID...")
+
     df: pd.DataFrame = await historic.request_bars(
         contract=row.contract_cont,
         bar_size=BarSize._1_MINUTE,
         what_to_show=WhatToShow.BID,
-        start_time=pd.Timestamp("2024-02-26", tz="UTC"),
-        end_time=pd.Timestamp("2024-02-28", tz="UTC"),
+        start_time=pd.Timestamp("2024-01-23", tz="UTC"),  # Tuesday
+        end_time=pd.Timestamp("2024-01-29", tz="UTC"),  # Friday
         as_dataframe=True,
         skip_first=False,
     )
@@ -64,6 +65,7 @@ async def use_rt():
         "display.width",
         None,
     ):
+        df["dayofweek"] = df.timestamp.dt.dayofweek
         print(df)
 
 
