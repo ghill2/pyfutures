@@ -119,7 +119,7 @@ class UniverseRow:
     # fee_clearing_currency: str
     # fee_clearing_percent: bool
     ib_url: str
-    # fees: tuple
+    fees: tuple
 
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
         instrument_id = self.instrument_id_for_month(
@@ -336,7 +336,7 @@ class IBTestProviderStubs:
 
         # openpyxl casting is broken for booleans
         # https://github.com/pandas-dev/pandas/issues/45903
-        # df["fee_execution_percent"] = df["fee_execution_percent"].apply(parse_bool)
+        df["fee_execution_percent"] = df["fee_execution_percent"].apply(parse_bool)
         # df["fee_clearing_percent"] = df["fee_clearing_percent"].apply(parse_bool)
         df["data_completes"] = df["data_completes"].apply(parse_bool)
 
@@ -495,30 +495,29 @@ class IBTestProviderStubs:
             fee_execution|exchange|regulatory_currency -> dtype=str, openpyxl still parses empty cells as nan type=float
             """
             fees = []
+            # TODO: not working
+            # for value, currency in zip(["fee_execution", "fee_exchange", "fee_regulatory"], ["fee_execution_currency", "fee_exchange_currency", "fee_regulatory_currency"]):
+            #     if isinstance(row[currency], float): # if fee currency cell is empty
+            #         # assert that the fee value cell is empty
+            #         assert math.isnan(row[value]) 
 
-            # print(row.exchange, row.trading_class, row.fee_execution,type(row.fee_execution), row.fee_execution_currency, row.fee_execution_percent, row.fee_exchange, type(row.fee_exchange), row.fee_exchange_currency, row.fee_regulatory, type(row.fee_regulatory), row.fee_regulatory_currency)
-            # print(row.fee_exchange, type(row.fee_exchange))
-            # print(math.isnan(row.fee_exchange))
-            #
-            # if the fee value is non empty, the currency should be non empty
-            print(row.fee_exchange_currency, type(row.fee_exchange_currency))
-            if not math.isnan(row.fee_execution): # if non empty cell
+
+
+            if not math.isnan(row.fee_execution):  # if non empty cell
                 # assert not math.isnan(row.fee_execution_currency)
                 fees.append(dict(name="fixed", value=row.fee_execution, currency=row.fee_execution_currency, is_percent=row.fee_execution_percent))
             if not math.isnan(row.fee_exchange):
-                # assert 
+                # assert not math.isnan(row.fee_exchange_currency)
                 fees.append(dict(name="exchange", value=row.fee_exchange, currency=row.fee_exchange_currency, is_percent=None))
             if not math.isnan(row.fee_regulatory):
-                # assert math.isnan(row.fee_regulatory_currency != "nan"
+                # assert not math.isnan(row.fee_regulatory_currency)
                 fees.append(dict(name="regulatory", value=row.fee_regulatory, currency=row.fee_regulatory_currency, is_percent=None))
             # if row.fee_clearing != 0:
-                # assert row.fee_clearing_currency != "nan"
-                # fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))
+            # assert row.fee_clearing_currency != "nan"
+            # fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))
             return fees
 
-        # df["fees"] = df.apply(parse_fees, axis=1)
-
-        # df["contains_percent_fees"] = df.apply(lambda row: row.fee_fixed_percent or row.clearing_percent)
+        df["fees"] = df.apply(parse_fees, axis=1)
 
         keep = [f.name for f in fields(UniverseRow)]
         df = df[[x for x in df.columns if x in keep]]
