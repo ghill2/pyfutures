@@ -7,13 +7,16 @@ from ibapi.order import Order as IBOrder
 from nautilus_trader.core.uuid import UUID4
 
 
+from pyfutures.tests.demo.client.stubs import ClientStubs
+
+
 """
 Tests to research the order of the api when orders are executed
 """
 
 
 @pytest.mark.asyncio()
-async def test_market_order_filled(client):
+async def test_market_order_filled(event_loop):
     """
     INFO:InteractiveBrokersClient:openOrder 15, orderStatus PreSubmitted, commission: 1.7976931348623157e+308, completedStatus:
     INFO:InteractiveBrokersClient:execDetails reqId=-1 ExecId: 0000e1a7.65e1eca3.01.01, Time: 20240301-19:09:16, Account: DU7779554, Exchange: CME, Side: BOT, Shares: 1, Price: 16.79, PermId: 1432478529, ClientId: 1, OrderId: 15, Liquidation: 0, CumQty: 1, AvgPrice: 16.79, OrderRef: f6e35614-1e4f-4cd1-a6b6-32ff344ca800, EvRule: , EvMultiplier: 0, ModelCode: , LastLiquidity: 1
@@ -21,6 +24,7 @@ async def test_market_order_filled(client):
     INFO:InteractiveBrokersClient:openOrder 15, orderStatus Filled, commission: 2.97USD, completedStatus:
     INFO:InteractiveBrokersClient:commissionReport
     """
+    client = ClientStubs.client(loop=event_loop)
     await client.connect()
 
     order = IBOrder()
@@ -45,10 +49,11 @@ async def test_market_order_filled(client):
 
 
 @pytest.mark.asyncio()
-async def test_limit_order_accepted(client):
+async def test_limit_order_accepted(event_loop):
     """
     INFO:InteractiveBrokersClient:openOrder 14, orderStatus Submitted, commission: 1.7976931348623157e+308, completedStatus:
     """
+    client = ClientStubs.client(loop=event_loop)
     await client.connect()
 
     order = IBOrder()

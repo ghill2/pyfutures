@@ -10,13 +10,17 @@ from pyfutures.adapter.enums import BarSize
 from pyfutures.adapter.enums import WhatToShow
 
 
+from pyfutures.tests.demo.client.stubs import ClientStubs
+
+
 init_logging(level_stdout=LogLevel.DEBUG)
 
 
 class TestIBClientSubscribe:
     @pytest.mark.skip(reason="flakey if market not open")
     @pytest.mark.asyncio()
-    async def test_subscribe_quote_ticks(self, client):
+    async def test_subscribe_quote_ticks(event_loop):
+        client = ClientStubs.client(loop=event_loop)
         callback_mock = Mock()
 
         contract = Contract()
@@ -39,7 +43,8 @@ class TestIBClientSubscribe:
 
     @pytest.mark.skip(reason="flakey if market not open")
     @pytest.mark.asyncio()
-    async def test_subscribe_bars_realtime(self, client):
+    async def test_subscribe_bars_realtime(event_loop):
+        client = ClientStubs.client(loop=event_loop)
         callback_mock = Mock()
 
         contract = Contract()

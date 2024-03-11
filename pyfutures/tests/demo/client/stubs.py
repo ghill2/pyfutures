@@ -34,9 +34,8 @@ class ClientStubs:
         global CLIENT
         if CLIENT:
             return CLIENT
-
         CLIENT = InteractiveBrokersClient(
-            loop=loop or asyncio.get_event_loop(),
+            loop=loop,
             host="127.0.0.1",
             port=4002,
             api_log_level=api_log_level,

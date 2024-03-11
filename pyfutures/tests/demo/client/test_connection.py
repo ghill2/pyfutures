@@ -22,6 +22,7 @@ from pyfutures.adapter.enums import WhatToShow
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 from pyfutures.tests.client.demo.gateway import Gateway
+from pyfutures.tests.demo.client.stubs import ClientStubs
 
 
 # TO SHOW LOGS / OUTPUT:
@@ -62,12 +63,13 @@ def gateway():
 
 
 @pytest.mark.asyncio()
-async def test_reconnect(gateway, client):
+async def test_reconnect(gateway, event_loop):
     """
     Tests if the watch dog reconnects
     This also tests reconnect on empty bytestring
     as an empty bytestring is sent to the pyfutures client when the docker container shuts down
     """
+    client = ClientStubs.client(loop=event_loop)
     await gateway.start()
     await client.connect()
     expected = await client.request_account_summary()
@@ -88,11 +90,12 @@ async def test_reconnect(gateway, client):
 
 # Possibly test all methods in these 2 tests to avoid the amount of docker container restarts
 @pytest.mark.asyncio()
-async def test_disconnect_then_request(gateway, client):
+async def test_disconnect_then_request(gateway, event_loop):
     """
     If request_bars() is executed when the client is disconnected
     the client should wait to send the request until the client is connected again
     """
+    client = ClientStubs.client(loop=event_loop)
     contract = IBContract()
     contract.secType = "CONTFUT"
     contract.exchange = "CME"
@@ -121,8 +124,9 @@ async def test_disconnect_then_request(gateway, client):
 
 
 @pytest.mark.asyncio()
-async def test_request_then_disconnect():
+async def test_request_then_disconnect(event_loop):
     """
     if request_bars() is executed and then the client is disconnected before a response is received
     the client should immediately set the response to a ClientDisconnected Exception so the parent can handle?
     """
+    client = ClientStubs.client(loop=event_loop)
