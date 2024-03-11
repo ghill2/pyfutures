@@ -43,6 +43,8 @@ from pyfutures.schedule.schedule import MarketSchedule
 from pyfutures.data.files import ParquetFile
 from pyfutures.continuous.cycle_range import RangedRollCycle
 
+import math
+
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
 RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
@@ -106,18 +108,18 @@ class UniverseRow:
     instrument: FuturesContract
     contract: IBContract
     contract_cont: IBContract
-    fee_fixed: float
-    fee_fixed_currency: str
-    fee_fixed_percent: bool
-    fee_exchange: float
-    fee_exchange_currency: str
-    fee_regulatory: float
-    fee_regulatory_currency: str
-    fee_clearing: float
-    fee_clearing_currency: str
-    fee_clearing_percent: bool
+    # fee_execution: float
+    # fee_execution_currency: str
+    # fee_execution_percent: bool
+    # fee_exchange: float
+    # fee_exchange_currency: str
+    # fee_regulatory: float
+    # fee_regulatory_currency: str
+    # fee_clearing: float
+    # fee_clearing_currency: str
+    # fee_clearing_percent: bool
     ib_url: str
-    fees: tuple
+    # fees: tuple
 
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
         instrument_id = self.instrument_id_for_month(
@@ -282,9 +284,9 @@ class IBTestProviderStubs:
             "ex_symbol": str,
             "data_symbol": str,
             "quote_currency": str,
-            "fee_fixed": float,
-            "fee_fixed_currency": str,
-            "fee_fixed_percent": str,  # pd.BooleanDtype(),
+            "fee_execution": float,
+            "fee_execution_currency": str,
+            "fee_execution_percent": str,  # pd.BooleanDtype(),
             "fee_exchange": float,
             "fee_exchange_currency": str,
             "fee_regulatory": float,
@@ -334,8 +336,8 @@ class IBTestProviderStubs:
 
         # openpyxl casting is broken for booleans
         # https://github.com/pandas-dev/pandas/issues/45903
-        df["fee_fixed_percent"] = df["fee_fixed_percent"].apply(parse_bool)
-        df["fee_clearing_percent"] = df["fee_clearing_percent"].apply(parse_bool)
+        # df["fee_execution_percent"] = df["fee_execution_percent"].apply(parse_bool)
+        # df["fee_clearing_percent"] = df["fee_clearing_percent"].apply(parse_bool)
         df["data_completes"] = df["data_completes"].apply(parse_bool)
 
         # temporary remove instruments that are failing to roll
@@ -441,8 +443,8 @@ class IBTestProviderStubs:
             lambda row: RollConfig(
                 instrument_id=row.instrument_id,
                 hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months)
-                if "," in row.hold_cycle else
-                RollCycle(row.hold_cycle, skip_months=row.missing_months),
+                if "," in row.hold_cycle
+                else RollCycle(row.hold_cycle, skip_months=row.missing_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
@@ -488,23 +490,33 @@ class IBTestProviderStubs:
         def parse_fees(row):
             """
             Parse fees from UniverseRow() / CSV file into List[tuple] to perform calculations
+
+            fee_execution|exchange|regulatory -> dtype=float, therefore openpyxl parses empty cells as nan type=float
+            fee_execution|exchange|regulatory_currency -> dtype=str, openpyxl still parses empty cells as nan type=float
             """
             fees = []
-            if row.fee_fixed != 0:
-                assert row.fee_fixed_currency != "nan"
-                fees.append(dict(name="fixed", value=row.fee_fixed, currency=row.fee_fixed_currency, is_percent=row.fee_fixed_percent))
-            if row.fee_exchange != 0:
-                assert row.fee_exchange_currency != "nan"
+
+            # print(row.exchange, row.trading_class, row.fee_execution,type(row.fee_execution), row.fee_execution_currency, row.fee_execution_percent, row.fee_exchange, type(row.fee_exchange), row.fee_exchange_currency, row.fee_regulatory, type(row.fee_regulatory), row.fee_regulatory_currency)
+            # print(row.fee_exchange, type(row.fee_exchange))
+            # print(math.isnan(row.fee_exchange))
+            #
+            # if the fee value is non empty, the currency should be non empty
+            print(row.fee_exchange_currency, type(row.fee_exchange_currency))
+            if not math.isnan(row.fee_execution): # if non empty cell
+                # assert not math.isnan(row.fee_execution_currency)
+                fees.append(dict(name="fixed", value=row.fee_execution, currency=row.fee_execution_currency, is_percent=row.fee_execution_percent))
+            if not math.isnan(row.fee_exchange):
+                # assert 
                 fees.append(dict(name="exchange", value=row.fee_exchange, currency=row.fee_exchange_currency, is_percent=None))
-            if row.fee_regulatory != 0:
-                assert row.fee_regulatory_currency != "nan"
+            if not math.isnan(row.fee_regulatory):
+                # assert math.isnan(row.fee_regulatory_currency != "nan"
                 fees.append(dict(name="regulatory", value=row.fee_regulatory, currency=row.fee_regulatory_currency, is_percent=None))
-            if row.fee_clearing != 0:
-                assert row.fee_clearing_currency != "nan"
-                fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))
+            # if row.fee_clearing != 0:
+                # assert row.fee_clearing_currency != "nan"
+                # fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))
             return fees
 
-        df["fees"] = df.apply(parse_fees, axis=1)
+        # df["fees"] = df.apply(parse_fees, axis=1)
 
         # df["contains_percent_fees"] = df.apply(lambda row: row.fee_fixed_percent or row.clearing_percent)
 
