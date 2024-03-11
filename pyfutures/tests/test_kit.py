@@ -98,6 +98,7 @@ class UniverseRow:
     sub_sector: str
     region: str
     quote_currency: Currency
+    description: str
     timezone: pytz.timezone
     settlement_time: pd.Timedelta
     market_schedule: MarketSchedule
@@ -119,6 +120,7 @@ class UniverseRow:
     # fee_clearing_currency: str
     # fee_clearing_percent: bool
     ib_url: str
+    fee_category: str
     fees: tuple
 
     def instrument_for_month(self, month: ContractMonth) -> FuturesContract:
@@ -284,6 +286,7 @@ class IBTestProviderStubs:
             "ex_symbol": str,
             "data_symbol": str,
             "quote_currency": str,
+            "description": str,
             "fee_execution": float,
             "fee_execution_currency": str,
             "fee_execution_percent": str,  # pd.BooleanDtype(),
@@ -294,6 +297,7 @@ class IBTestProviderStubs:
             "fee_clearing": float,
             "fee_clearing_currency": str,
             "fee_clearing_percent": str,  # pd.BooleanDtype()
+            "fee_category": str,
             "timezone": str,
             "price_precision": pd.Float64Dtype(),
             "data_start_minute": str,

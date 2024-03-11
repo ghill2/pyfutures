@@ -1,6 +1,6 @@
 import pytest
 
-from pyfutures.stats.fees import FeeCalculator
+from pytower.stats.fees import FeeCalculator
 from pyfutures.tests.demo.client.stubs import ClientStubs
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
