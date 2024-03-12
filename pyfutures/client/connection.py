@@ -15,7 +15,11 @@ from pyfutures.logger import LoggerAdapter
 
 class Connection:
     """
+    Market data connection test
+    https://www.interactivebrokers.com/cgi-bin/conn_test.pl
+
     IB maintenance periods:
+    https://www.interactivebrokers.com/en/software/systemStatus.php
 
     Europe:
         Saturday - Thursday:
