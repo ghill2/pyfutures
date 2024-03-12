@@ -1,16 +1,13 @@
 import asyncio
-import time
 import logging
 
 import pandas as pd
-import random
+
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.test_kit import CACHE_DIR
-from pyfutures.client.objects import ClientException
-from pyfutures.client.parsing import ClientParser
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
@@ -72,6 +69,52 @@ async def use_rt():
         print(df)
 
 
+async def write_spread_first_hour():
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    print(start_time, end_time)
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+        api_log_level=logging.ERROR,
+    )
+
+    historic = InteractiveBrokersBarClient(
+        client=client,
+        delay=0.5,
+        use_cache=True,
+        cache_dir=CACHE_DIR,
+    )
+
+    rows = IBTestProviderStubs.universe_rows(
+        # filter=["ECO"],
+    )
+    row = rows[0]
+
+    schedule = row.liquid_schedule
+
+    open_times = schedule.to_open_range(
+        start_date=start_time,
+        end_date=end_time,
+    )
+
+    await client.connect()
+    await client.request_market_data_type(4)
+
+    for open_time in open_times[::-1]:
+        bars: pd.DataFrame = await historic.request_bars(
+            contract=row.contract_cont,
+            bar_size=BarSize._5_SECOND,
+            what_to_show=WhatToShow.BID,
+            start_time=open_time,
+            end_time=open_time + pd.Timedelta(hours=1),
+            use_cache=True,
+            as_dataframe=True,
+        )
+        print(bars)
+        exit()
+
+
 async def write_spread(write: bool = False):
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
@@ -91,17 +134,14 @@ async def write_spread(write: bool = False):
 
     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
 
-    # historic.cache.purge_errors(asyncio.TimeoutError)
-
     rows = [r for r in rows if r.uname == "FTI"]
     assert len(rows) > 0
 
     await client.connect()
     await client.request_market_data_type(4)
     for i, row in enumerate(rows):
-        
         # US Futures bundle. any us tickers
-        
+
         print(f"Processing {i}/{len(rows)}: {row.uname}: BID...")
         bars: pd.DataFrame = await historic.request_bars(
             contract=row.contract_cont,
@@ -128,8 +168,7 @@ async def write_spread(write: bool = False):
 
 
 if __name__ == "__main__":
-    # write_spread(write=True)
-    asyncio.get_event_loop().run_until_complete(measure_time_first_liquid_hour())
+    asyncio.get_event_loop().run_until_complete(write_spread_first_hour())
 
 
 # async def import_spread_using_bars():
@@ -137,15 +176,15 @@ if __name__ == "__main__":
 #     sample a random 20 second bar within the liquid hours
 #     elapsed 20 seconds:
 #     """
-    
+
 #     # filter hours in the liquid sessions
 #     rows = IBTestProviderStubs.universe_rows(
 #         # filter=["DC"],
 #     )
-    
+
 #     end_time = pd.Timestamp.utcnow().floor("1D")
 #     start_time = end_time - pd.Timedelta(days=128)
-    
+
 #     client: InteractiveBrokersClient = ClientStubs.client(
 #         request_timeout_seconds=60 * 10,
 #         override_timeout=False,
@@ -154,36 +193,36 @@ if __name__ == "__main__":
 #     await client.connect()
 #     await client.request_market_data_type(4)
 #     for row in rows:
-        
+
 #         path = SPREAD_FOLDER / f"{row.uname}_spreads.parquet"
 #         if path.exists():
 #             print(f"Skipping {path}")
 #             continue
-        
+
 #         schedule = row.liquid_schedule
 #         hours = pd.date_range(start_time, end_time, freq="H")
-        
+
 #         hours = [
 #             h for h in hours if schedule.is_open(h)
 #         ]
-        
+
 #         average_spreads = []
-        
+
 #         for i, hour in enumerate(hours):
-            
+
 #             bar = None
 #             attempts = 0
 #             while bar is None:
-                
+
 #                 if attempts > 50:
 #                     raise RuntimeError("Attempts maximum exceeded")
-                
+
 #                 random_second = random.randrange(0, 295, 5)
 #                 _end_time = hour + pd.Timedelta(seconds=random_second)
 #                 assert schedule.is_open(_end_time)
-                
+
 #                 print(f"Requesting {i}/{len(hours)}: {_end_time}. Attempt: {attempts}")
-                
+
 #                 try:
 #                     start = time.perf_counter()
 #                     bars_bid: pd.DataFrame = await client.request_bars(
@@ -218,25 +257,25 @@ if __name__ == "__main__":
 #                     print(str(e.__class__.__name__))
 #                     attempts += 1
 #                     continue
-                
+
 #                 df: pd.DataFrame = _merge_dataframe(
 #                     bars_bid=bars_bid,
 #                     bars_ask=bars_ask,
 #                 )
 #                 print(df)
-                
+
 #                 if df.empty:
 #                     print(f"Empty after merge. Retrying...")
 #                     attempts += 1
 #                     continue
-                
+
 #                 df = df[(df.bid != 0.0) & (df.ask != 0.0)]
 #                 df = df[df.bid != df.ask]
 #                 if df.empty:
 #                     print(f"Filtering 0 and equal values resultedin empty dataframe. Retrying...")
 #                     attempts += 1
 #                     continue
-                
+
 #                 """
 #                 BID_ASK
 #                     open: Time average bid
@@ -249,8 +288,8 @@ if __name__ == "__main__":
 #                 average_spreads.append(value)
 #                 print(f"Average spread: {value} for {_end_time}")
 #                 await asyncio.sleep(0.5)
-        
-        
+
+
 #         pd.Series(average_spreads).to_frame().to_parquet(path, index=False)
 
 # async def import_spread_using_quotes():
@@ -258,15 +297,15 @@ if __name__ == "__main__":
 #     sample a random 20 second bar within the liquid hours
 #     elapsed 20 seconds:
 #     """
-    
+
 #     # filter hours in the liquid sessions
 #     rows = IBTestProviderStubs.universe_rows(
 #         # filter=["DC"],
 #     )
-    
+
 #     end_time = pd.Timestamp.utcnow().floor("1D")
 #     start_time = end_time - pd.Timedelta(days=128)
-    
+
 #     client: InteractiveBrokersClient = ClientStubs.client(
 #         request_timeout_seconds=60 * 10,
 #         override_timeout=False,
@@ -275,36 +314,36 @@ if __name__ == "__main__":
 #     await client.connect()
 #     await client.request_market_data_type(4)
 #     for row in rows:
-        
+
 #         path = SPREAD_FOLDER / f"{row.uname}_spreads.parquet"
 #         if path.exists():
 #             print(f"Skipping {path}")
 #             continue
-        
+
 #         schedule = row.liquid_schedule
 #         hours = pd.date_range(start_time, end_time, freq="H")
-        
+
 #         hours = [
 #             h for h in hours if schedule.is_open(h)
 #         ]
-        
+
 #         average_spreads = []
-        
+
 #         for i, hour in enumerate(hours):
-            
+
 #             bar = None
 #             attempts = 0
 #             while bar is None:
-                
+
 #                 if attempts > 50:
 #                     raise RuntimeError("Attempts maximum exceeded")
-                
+
 #                 random_second = random.randrange(0, 295, 5)
 #                 _end_time = hour + pd.Timedelta(seconds=random_second)
 #                 assert schedule.is_open(_end_time)
-                
+
 #                 print(f"Requesting {i}/{len(hours)}: {_end_time}. Attempt: {attempts}")
-                
+
 #                 try:
 #                     start = time.perf_counter()
 #                     bars_bid: pd.DataFrame = await client.request_bars(
@@ -328,14 +367,14 @@ if __name__ == "__main__":
 #                     print(str(e.__class__.__name__))
 #                     attempts += 1
 #                     continue
-                
+
 #                 quote = quotes[-1]
 #                 value = df.iloc[-1].ask - df.iloc[-1].bid
 #                 average_spreads.append(value)
 #                 print(f"Average spread: {value} for {_end_time}")
 #                 await asyncio.sleep(0.5)
-        
-        
+
+
 #         pd.Series(average_spreads).to_frame().to_parquet(path, index=False)
 
 # @pytest.mark.asyncio()

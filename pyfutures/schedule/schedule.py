@@ -180,7 +180,8 @@ class MarketSchedule:
         # returns timestamps for every open_time in the schedule
 
         # TODO: assert utc input
-
+        if end_date is None:
+            end_date = pd.Timestamp.utcnow()
         days = pd.date_range(
             start=start_date,
             end=end_date,
@@ -196,6 +197,8 @@ class MarketSchedule:
                 day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute) for day in days[days.dayofweek == session.dayofweek]
             )
         timestamps = pd.DatetimeIndex(timestamps).sort_values().tz_convert("UTC")
+        timestamps = timestamps[(timestamps >= start_date) & (timestamps < end_date)]
+
         return list(timestamps)
 
         # group sessions by dayofweek

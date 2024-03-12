@@ -8,11 +8,11 @@ from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
+from pyfutures.client.cache import CachedFunc
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.cache import CachedFunc
-from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
@@ -53,7 +53,7 @@ class InteractiveBrokersBarClient:
         end_time: pd.Timestamp | None = None,
         as_dataframe: bool = False,
         limit: int | None = None,
-        skip_first: bool = False,
+        use_cache: bool = True,
     ):
         # assert is_unqualified_contract(contract)
 
@@ -72,22 +72,24 @@ class InteractiveBrokersBarClient:
             self._log.info(f"head_timestamp: {start_time}")
 
         assert start_time < end_time
-        
+
         if duration is None:
             duration = bar_size.to_appropriate_duration()
-            
+
         interval = duration.to_timedelta()
 
-        if skip_first:
-            end_time = end_time.floor(interval)
-        else:
-            end_time = end_time.ceil(interval)
+        end_time = end_time.ceil(interval)
 
         total_bars = deque()
 
         i = 0
         while end_time > start_time:
-            self._log.info(f"{contract} | {end_time - interval} -> {end_time}")
+            if end_time >= pd.Timestamp.utcnow():
+                _use_cache = False
+            else:
+                _use_cache = use_cache
+
+            self._log.info(f"{contract} | {end_time - interval} -> {end_time} | use_cache={_use_cache}")
 
             bars: list[BarData] = await self._request_bars(
                 contract=contract,
@@ -95,10 +97,10 @@ class InteractiveBrokersBarClient:
                 what_to_show=what_to_show,
                 duration=duration,
                 end_time=end_time,
-                use_cache=self._use_cache if skip_first else (self._use_cache and i > 0),
+                use_cache=_use_cache,
             )
 
-            # bars = [b for b in bars if b.timestamp >= start_time]
+            bars = [b for b in bars if b.timestamp >= start_time]
 
             if len(bars) > 0:
                 self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")

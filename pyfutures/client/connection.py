@@ -14,6 +14,27 @@ from pyfutures.logger import LoggerAdapter
 
 
 class Connection:
+    """
+    IB maintenance periods:
+
+    Europe:
+        Saturday - Thursday:
+            - 05:45 - 06:45 CET
+            - 04:45 - 05:45 UTC
+
+        Friday:
+            - 23:00 - 03:00 ET
+            - 18:00 - 22:00 UTC
+
+    North America:
+        Saturday - Thursday:
+            - 23:45 - 00:45 ET
+            - 18:45 - 19:00 UTC
+        Friday:
+            - 23:00 - 03:00 ET
+            - 18:00 - 22:00 UTC
+    """
+
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,

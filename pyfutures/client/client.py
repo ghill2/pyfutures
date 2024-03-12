@@ -33,10 +33,10 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
+from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.connection import Connection
 from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientRequest
 from pyfutures.client.objects import ClientSubscription
@@ -412,7 +412,7 @@ class InteractiveBrokersClient(EWrapper):
         formatDate=1, returns timestamp in the exchange timezone
         formatDate=2, returns timestamp as integer seconds from epoch (UTC)
         """
-        # await self._conn._is_connected.wait()
+        self._log.info(f"{contract} | {end_time} | {bar_size} | {duration} | {what_to_show}")
 
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
