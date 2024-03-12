@@ -7,6 +7,8 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.logger import LoggerAdapter
+from pyfutures.logger import LoggerAttributes
 from pyfutures.tests.test_kit import CACHE_DIR
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -70,9 +72,15 @@ async def use_rt():
 
 
 async def write_spread_first_hour():
+    LoggerAttributes.level = logging.INFO
+
+    log = LoggerAdapter.from_name("WriteSpread")
+
     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
     start_time = end_time - pd.Timedelta(days=128)
-    print(start_time, end_time)
+
+    log.info(f"{start_time} > {end_time}")
+
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
         override_timeout=False,
@@ -102,17 +110,17 @@ async def write_spread_first_hour():
     await client.request_market_data_type(4)
 
     for open_time in open_times[::-1]:
-        bars: pd.DataFrame = await historic.request_bars(
+        log.info(f"{open_time}")
+        bars: pd.DataFrame = await historic._request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._5_SECOND,
             what_to_show=WhatToShow.BID,
             start_time=open_time,
             end_time=open_time + pd.Timedelta(hours=1),
-            use_cache=True,
+            use_cache=False,
             as_dataframe=True,
         )
         print(bars)
-        exit()
 
 
 async def write_spread(write: bool = False):

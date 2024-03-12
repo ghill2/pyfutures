@@ -1,16 +1,13 @@
 import asyncio
 import functools
-
-# fmt: on
 import logging
 import queue
+import time
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
 import eventkit
-
-# fmt: off
 import pandas as pd
 from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
@@ -33,6 +30,7 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
+from pyfutures.client.cache import HistoricCache
 from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -51,7 +49,6 @@ from pyfutures.logger import LoggerAdapter
 
 
 class InteractiveBrokersClient(EWrapper):
-
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
@@ -73,7 +70,6 @@ class InteractiveBrokersClient(EWrapper):
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
         override_timeout: bool = False,  # overrides timeout for all request even if given, useful for testing
     ):
-
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
@@ -136,7 +132,6 @@ class InteractiveBrokersClient(EWrapper):
     # Connection
 
     async def connect(self) -> None:
-
         self._outgoing_msg_task = self._loop.create_task(
             coro=self._process_outgoing_msg_queue(),
             name="outgoing_message_queue",
@@ -149,7 +144,6 @@ class InteractiveBrokersClient(EWrapper):
         self._outgoing_msg_queue.put(msg)
 
     async def _process_outgoing_msg_queue(self) -> None:
-
         while True:
             if self.connection.is_connected:
                 while not self._outgoing_msg_queue.empty():
@@ -157,18 +151,14 @@ class InteractiveBrokersClient(EWrapper):
                     self._connection.sendMsg(msg)
                 await asyncio.sleep(0)
             else:
-                self._log.debug(
-                    "Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds..."
-                )
+                self._log.debug("Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds...")
                 await asyncio.sleep(5)
-
 
     def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
         self._decoder.interpret(fields)
 
     def _reset(self) -> None:
-
         self._request_id_seq = -10
 
         if self._outgoing_msg_task is not None:
@@ -194,7 +184,6 @@ class InteractiveBrokersClient(EWrapper):
         data: list | dict | None = None,
         timeout_seconds: int | None = None,
     ) -> ClientRequest:
-
         assert isinstance(id, int)
 
         if self._override_timeout:
@@ -213,7 +202,6 @@ class InteractiveBrokersClient(EWrapper):
         return request
 
     async def _wait_for_request(self, request: ClientRequest) -> Any:
-
         try:
             await asyncio.wait_for(request, timeout=request.timeout_seconds)
         except asyncio.TimeoutError:
@@ -240,7 +228,6 @@ class InteractiveBrokersClient(EWrapper):
         errorString: str,
         advancedOrderRejectJson="",
     ) -> None:  # : Override the EWrapper
-
         # TODO: if reqId is negative, its part of a request
 
         event = IBErrorEvent(
@@ -315,7 +302,6 @@ class InteractiveBrokersClient(EWrapper):
     # Contract Details
 
     async def request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
-
         self._log.debug(f"Requesting contract details for {contract=}")
 
         request = self._create_request(
@@ -328,7 +314,6 @@ class InteractiveBrokersClient(EWrapper):
         return await self._wait_for_request(request)
 
     async def request_last_contract_month(self, contract: IBContract) -> str:
-
         self._log.debug(
             f"Requesting last contract month for: {contract.symbol}, {contract.tradingClass}",
         )
@@ -338,7 +323,6 @@ class InteractiveBrokersClient(EWrapper):
         return details_list[-1].contractMonth
 
     async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails | None:
-
         self._log.debug(
             f"Requesting front contract for: {contract.symbol}, {contract.tradingClass}",
         )
@@ -372,7 +356,6 @@ class InteractiveBrokersClient(EWrapper):
         request.data.append(contractDetails)
 
     def contractDetailsEnd(self, reqId: int):
-
         self._log.debug("contractDetailsEnd")
 
         request = self._requests.get(reqId)
@@ -380,25 +363,69 @@ class InteractiveBrokersClient(EWrapper):
             self._log.error(f"No request found for {reqId}")
             return
 
-        request.set_result(
-            sorted(request.data, key=lambda x: x.contractMonth)
-        )
+        request.set_result(sorted(request.data, key=lambda x: x.contractMonth))
 
     ################################################################################################
     # Request bars
-    async def request_last_bar(self,
+    async def request_last_bar(
+        self,
         contract: IBContract,
         bar_size: BarSize,
         what_to_show: WhatToShow,
     ) -> BarData | None:
         bars = await self.request_bars(
-                contract=contract,
-                bar_size=bar_size,
-                what_to_show=what_to_show,
-                duration=bar_size.to_appropriate_duration(),
-                end_time=pd.Timestamp.utcnow(),
+            contract=contract,
+            bar_size=bar_size,
+            what_to_show=what_to_show,
+            duration=bar_size.to_appropriate_duration(),
+            end_time=pd.Timestamp.utcnow(),
         )
         return bars[-1] if len(bars) > 0 else None
+
+    async def request_bars(
+        self,
+        contract: IBContract,
+        bar_size: BarSize,
+        what_to_show: WhatToShow,
+        duration: Duration,
+        end_time: pd.Timestamp,
+        cache: HistoricCache | None = None,
+        delay: float = 0,
+    ):
+        kwargs = dict(
+            contract=contract,
+            bar_size=bar_size,
+            what_to_show=what_to_show,
+            duration=duration,
+            end_time=end_time,
+        )
+
+        if cache is None:
+            func = self._client.request_bars
+            is_cached = False
+        else:
+            is_cached = self.cache.is_cached(**kwargs)
+            func = self.cache
+
+        # fetch bars
+
+        start = time.perf_counter()
+        bars = []
+        try:
+            bars: list[BarData] = await func(**kwargs)
+        except ClientException as e:
+            self._log.error(str(e))
+        except asyncio.TimeoutError as e:
+            self._log.error(str(e.__class__.__name__))
+        stop = time.perf_counter()
+
+        self._log.debug(f"Elapsed time: {stop - start:.2f}")
+
+        if delay > 0 and not is_cached:
+            self._log.debug(f"Waiting for {delay} seconds...")
+            await asyncio.sleep(delay)
+
+        return bars
 
     async def request_bars(
         self,
@@ -420,7 +447,7 @@ class InteractiveBrokersClient(EWrapper):
             timeout_seconds=60 * 10,
         )
 
-        self._log.debug(
+        self._log.info(
             f"reqHistoricalData: {request.id}, {contract}, "
             f"endDateTime={end_time}, durationStr={duration}, "
             f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}"
@@ -448,10 +475,12 @@ class InteractiveBrokersClient(EWrapper):
         # bars can be returned before the start time
         start_time = end_time - duration.to_timedelta()
 
-        bars = [
-            b for b in bars
-            if b.timestamp >= start_time and b.timestamp < end_time
-        ]
+        if len(bars) > 0:
+            self._log.info(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
+        else:
+            self._log.info("---> Downloaded 0 bars.")
+
+        bars = [b for b in bars if b.timestamp >= start_time and b.timestamp < end_time]
         return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper
@@ -474,7 +503,6 @@ class InteractiveBrokersClient(EWrapper):
     async def request_next_order_id(
         self,
     ) -> int:
-
         request_id = self._request_id_map["next_order_id"]
         request = self._create_request(request_id)
 
@@ -589,7 +617,9 @@ class InteractiveBrokersClient(EWrapper):
         OrderStatusReport
 
         """
-        self._log.info(f"openOrder {orderId}, orderStatus {orderState.status}, commission: {orderState.commission}{orderState.commissionCurrency}, completedStatus: {orderState.completedStatus}")
+        self._log.info(
+            f"openOrder {orderId}, orderStatus {orderState.status}, commission: {orderState.commission}{orderState.commissionCurrency}, completedStatus: {orderState.completedStatus}"
+        )
 
         if orderState.warningText != "":
             self._log.warning(f"order {orderId} has warning: {orderState.warningText}")
@@ -626,7 +656,6 @@ class InteractiveBrokersClient(EWrapper):
     # Positions query
 
     async def request_positions(self) -> list[IBPositionEvent]:
-
         request_id = self._request_id_map["positions"]
         request = self._create_request(
             id=request_id,
@@ -683,7 +712,6 @@ class InteractiveBrokersClient(EWrapper):
     # Executions query
 
     async def request_executions(self, client_id: int):
-
         request_id: int = self._next_request_id()
         request = self._create_request(
             id=request_id,
@@ -952,7 +980,6 @@ class InteractiveBrokersClient(EWrapper):
             f"numberOfTicks={count}, whatToShow='BID_ASK', "
         )
 
-
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
@@ -992,7 +1019,6 @@ class InteractiveBrokersClient(EWrapper):
         end_time: pd.Timestamp,
         count: int = 1000,
     ) -> list[HistoricalTickLast]:
-
         assert start_time.tz is not None, "Timestamp is not timezone aware"
         assert end_time.tz is not None, "Timestamp is not timezone aware"
         assert start_time < end_time
@@ -1042,7 +1068,6 @@ class InteractiveBrokersClient(EWrapper):
         contract: IBContract,
         callback: Callable,
     ) -> ClientSubscription:
-
         request_id = self._next_request_id()
 
         subscribe = functools.partial(
@@ -1059,7 +1084,6 @@ class InteractiveBrokersClient(EWrapper):
             request_id=request_id,
             cancel_func=functools.partial(self._eclient.cancelTickByTickData, reqId=request_id),
         )
-
 
         subscription = ClientSubscription(
             id=request_id,
@@ -1119,7 +1143,6 @@ class InteractiveBrokersClient(EWrapper):
         bar_size: BarSize,
         callback: Callable,
     ) -> ClientSubscription:
-
         if bar_size == BarSize._5_SECOND:
             return self._subscribe_realtime_bars(
                 contract=contract,
@@ -1142,7 +1165,6 @@ class InteractiveBrokersClient(EWrapper):
         bar_size: BarSize,
         callback: Callable,
     ) -> ClientSubscription:
-
         self._log.debug(
             f"Subscribing to realtime bars {contract.symbol} {contract.exchange} {bar_size!s} {what_to_show.name}",
         )
@@ -1150,11 +1172,8 @@ class InteractiveBrokersClient(EWrapper):
         request_id = self._next_request_id()
 
         cancel = functools.partial(
-            self._unsubscribe,
-            request_id=request_id,
-            cancel_func=functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
+            self._unsubscribe, request_id=request_id, cancel_func=functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
         )
-
 
         subscribe = functools.partial(
             self._eclient.reqRealTimeBars,
@@ -1186,7 +1205,6 @@ class InteractiveBrokersClient(EWrapper):
         bar_size: BarSize,
         callback: Callable,
     ) -> ClientSubscription:
-
         request_id = self._next_request_id()
 
         self._log.debug(
@@ -1194,9 +1212,7 @@ class InteractiveBrokersClient(EWrapper):
         )
 
         cancel = functools.partial(
-            self._unsubscribe,
-            request_id=request_id,
-            cancel_func=functools.partial(self._eclient.cancelHistoricalData, reqId=request_id)
+            self._unsubscribe, request_id=request_id, cancel_func=functools.partial(self._eclient.cancelHistoricalData, reqId=request_id)
         )
 
         subscribe = functools.partial(
@@ -1231,7 +1247,6 @@ class InteractiveBrokersClient(EWrapper):
         request_id: int,
         cancel_func: Callable,
     ) -> None:
-
         subscription = self._subscriptions.get(request_id)
         if subscription is None:
             self._log.debug(f"No subscription found for request_id {request_id}")
@@ -1293,7 +1308,6 @@ class InteractiveBrokersClient(EWrapper):
     # Accounts
 
     async def request_accounts(self) -> list[str]:
-
         request_id = self._request_id_map["accounts"]
         request = self._create_request(
             id=request_id,
@@ -1388,7 +1402,6 @@ class InteractiveBrokersClient(EWrapper):
         """
         self._log.debug("updateAccountValue")
 
-
     def updatePortfolio(
         self,
         contract: IBContract,
@@ -1446,13 +1459,7 @@ class InteractiveBrokersClient(EWrapper):
     ################################################################################################
     # Realtime historical schedule
 
-
-    async def request_historical_schedule(
-        self,
-        contract: IBContract,
-        durationStr: str | None = None
-    ) -> ListOfHistoricalSessions:
-
+    async def request_historical_schedule(self, contract: IBContract, durationStr: str | None = None) -> ListOfHistoricalSessions:
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
         )
@@ -1483,41 +1490,37 @@ class InteractiveBrokersClient(EWrapper):
         timeZone: str,
         sessions: ListOfHistoricalSessions,
     ):
-
         request = self._requests.get(reqId)
         if request is None:
             self._log.error(f"No request found for {reqId}")
             return
 
-        data = [
-            (session.refDate, session.startDateTime, session.endDateTime)
-            for session in sessions
-        ]
+        data = [(session.refDate, session.startDateTime, session.endDateTime) for session in sessions]
 
         df = pd.DataFrame(data, columns=["day", "start", "end"])
 
         df.day = pd.to_datetime(df.day, format="%Y%m%d")
         df.start = pd.to_datetime(df.start, format="%Y%m%d-%H:%M:%S")
         df.end = pd.to_datetime(df.end, format="%Y%m%d-%H:%M:%S")
-        df['timezone'] = timeZone
+        df["timezone"] = timeZone
 
-        df.sort_values(by=['day', 'start'], inplace=True)
+        df.sort_values(by=["day", "start"], inplace=True)
 
         request.set_result(df)
 
     # request.data.extend(
-        #     [
-        #         IBQuoteTick(
-        #             name=request.name,
-        #             time=parse_datetime(tick.time),
-        #             bid_price=tick.priceBid,
-        #             ask_price=tick.priceAsk,
-        #             bid_size=tick.sizeBid,
-        #             ask_size=tick.sizeAsk,
-        #         )
-        #         for tick in ticks
-        #     ],
-        # )
+    #     [
+    #         IBQuoteTick(
+    #             name=request.name,
+    #             time=parse_datetime(tick.time),
+    #             bid_price=tick.priceBid,
+    #             ask_price=tick.priceAsk,
+    #             bid_size=tick.sizeBid,
+    #             ask_size=tick.sizeAsk,
+    #         )
+    #         for tick in ticks
+    #     ],
+    # )
 
     # def marketDataType(self, reqId:TickerId, marketDataType:int):
     #     """TWS sends a marketDataType(type) callback to the API, where
@@ -1533,18 +1536,18 @@ class InteractiveBrokersClient(EWrapper):
 
     #     request.set_result(marketDataType)
 
+
 # # handle event-driven based response without a request
-        # if reqId == -1:
-        #     self.execution_events.emit(event)
-        #     return
+# if reqId == -1:
+#     self.execution_events.emit(event)
+#     return
 
-        # request = self._requests.get(reqId)
-        # if request is None:
-        #     self._log.debug(f"no request for request_id: {reqId}")
-        #     return
+# request = self._requests.get(reqId)
+# if request is None:
+#     self._log.debug(f"no request for request_id: {reqId}")
+#     return
 
-        # self._log.debug(f"request found with id {request.id}")
+# self._log.debug(f"request found with id {request.id}")
 
 
-
-        # handle request based response
+# handle request based response

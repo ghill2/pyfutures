@@ -1,5 +1,4 @@
 import asyncio
-import time
 from collections import deque
 from pathlib import Path
 
@@ -13,7 +12,6 @@ from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
 
@@ -100,8 +98,6 @@ class InteractiveBrokersBarClient:
                 use_cache=_use_cache,
             )
 
-            bars = [b for b in bars if b.timestamp >= start_time]
-
             if len(bars) > 0:
                 self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
             else:
@@ -122,48 +118,6 @@ class InteractiveBrokersBarClient:
             return df
 
         return total_bars
-
-    async def _request_bars(
-        self,
-        contract: IBContract,
-        bar_size: BarSize,
-        what_to_show: WhatToShow,
-        duration: Duration,
-        end_time: pd.Timestamp,
-        use_cache: bool,
-    ):
-        kwargs = dict(
-            contract=contract,
-            bar_size=bar_size,
-            what_to_show=what_to_show,
-            duration=duration,
-            end_time=end_time,
-        )
-
-        if use_cache:
-            is_cached = self.cache.is_cached(**kwargs)
-            func = self.cache
-        else:
-            func = self._client.request_bars
-            is_cached = False
-
-        # fetch bars
-        start = time.perf_counter()
-        bars = []
-        try:
-            bars: list[BarData] = await func(**kwargs)
-        except ClientException as e:
-            self._log.error(str(e))
-        except asyncio.TimeoutError as e:
-            self._log.error(str(e.__class__.__name__))
-        stop = time.perf_counter()
-        self._log.debug(f"Elapsed time: {stop - start:.2f}")
-
-        if self._delay > 0 and not is_cached:
-            self._log.debug(f"Waiting for {self._delay} seconds...")
-            await asyncio.sleep(self._delay)
-
-        return bars
 
     async def request_quote_ticks(
         self,
