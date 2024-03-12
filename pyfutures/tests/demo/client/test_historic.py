@@ -7,8 +7,8 @@ from ibapi.contract import Contract as IBContract
 
 # from nautilus_trader.core.datetime import secs_to_nanos
 # from nautilus_trader.core.datetime import unix_nanos_to_dt
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.client.parsing import parse_datetime
 

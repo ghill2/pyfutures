@@ -33,9 +33,9 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.connection import Connection
 from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientRequest
@@ -390,7 +390,6 @@ class InteractiveBrokersClient(EWrapper):
         contract: IBContract,
         bar_size: BarSize,
         what_to_show: WhatToShow,
-        use_rth: bool = True,
     ) -> BarData | None:
         bars = await self.request_bars(
                 contract=contract,

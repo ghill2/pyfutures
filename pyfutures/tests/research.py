@@ -6,6 +6,61 @@ from ibapi.contract import Contract as IBContract
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
+async def use_rt():
+    """
+    test data with use_rth returns different data where the product listing has liquid hours
+    2024-02-27 00:00:00 > 2024-02-27 06:30:00
+    12:30 > 15:30 = Japan
+    03:30 > 06:30 = UTC
+
+    00:00 > 06.30 Japan
+    15:00 >  21:00
+    """
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+        api_log_level=logging.ERROR,
+    )
+
+    rows = IBTestProviderStubs.universe_rows(
+        filter=["JBLM"],
+    )
+    row = rows[0]
+
+    historic = InteractiveBrokersBarClient(
+        client=client,
+        delay=0.5,
+        use_cache=False,
+        cache_dir=CACHE_DIR,
+    )
+
+    await client.connect()
+    await client.request_market_data_type(4)
+
+    print(f"Processing {row.uname}: BID...")
+
+    df: pd.DataFrame = await historic.request_bars(
+        contract=row.contract_cont,
+        bar_size=BarSize._1_MINUTE,
+        what_to_show=WhatToShow.BID,
+        start_time=pd.Timestamp("2024-01-23", tz="UTC"),  # Tuesday
+        end_time=pd.Timestamp("2024-01-29", tz="UTC"),  # Friday
+        as_dataframe=True,
+        skip_first=False,
+    )
+    df.sort_values(by="timestamp", inplace=True)
+    df.reset_index(inplace=True, drop=True)
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        df["dayofweek"] = df.timestamp.dt.dayofweek
+        print(df)
+        
 async def find_universe_weekly_contracts(client):
     """
     Find instruments that have special contracts and need special handling.

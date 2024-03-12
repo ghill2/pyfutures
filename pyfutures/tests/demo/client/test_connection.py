@@ -13,10 +13,10 @@ from ibapi.contract import Contract as IBContract
 #     InteractiveBrokersGatewayConfig,
 # )
 #
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import Frequency
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import Frequency
+from pyfutures.client.enums import WhatToShow
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)

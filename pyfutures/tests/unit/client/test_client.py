@@ -21,10 +21,10 @@ from ibapi.order import Order
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import Frequency
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import Frequency
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.client import IBOpenOrderEvent
 from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientSubscription

@@ -10,8 +10,8 @@ from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 from pytower import PACKAGE_ROOT
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs

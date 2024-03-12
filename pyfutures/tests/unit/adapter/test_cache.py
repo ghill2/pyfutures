@@ -9,8 +9,8 @@ import pytest
 from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.cache import Cache
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.objects import ClientException

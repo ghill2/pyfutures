@@ -8,9 +8,9 @@ from typing import Any
 import pandas as pd
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import WhatToShow
 from pyfutures.adapter.parsing import AdapterParser  # TODO: change to just tradingclass
 from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser

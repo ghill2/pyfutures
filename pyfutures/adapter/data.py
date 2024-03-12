@@ -15,8 +15,8 @@ from nautilus_trader.model.instruments.base import Instrument
 
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.adapter.parsing import AdapterParser
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient

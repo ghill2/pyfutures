@@ -20,8 +20,8 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs

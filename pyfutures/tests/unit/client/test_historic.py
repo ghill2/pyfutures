@@ -8,8 +8,8 @@ import pytest
 from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
 

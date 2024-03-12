@@ -6,8 +6,8 @@ from ibapi.contract import Contract
 from nautilus_trader.common.component import init_logging
 from nautilus_trader.common.enums import LogLevel
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 
 
 from pyfutures.tests.demo.client.stubs import ClientStubs

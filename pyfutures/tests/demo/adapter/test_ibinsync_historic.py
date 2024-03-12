@@ -11,10 +11,10 @@ from ib_insync.util import logToFile
 from ib_insync.util import sleep
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import Frequency
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import Frequency
+from pyfutures.client.enums import WhatToShow
 from pyfutures.adapter.parsing import details_to_instrument_id
 from pyfutures.tests.test_kit import IBTestProviderStubs
 

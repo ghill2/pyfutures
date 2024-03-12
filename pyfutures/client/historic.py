@@ -8,9 +8,9 @@ from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.adapter.enums import BarSize
-from pyfutures.adapter.enums import Duration
-from pyfutures.adapter.enums import WhatToShow
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import Duration
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.objects import ClientException
@@ -48,8 +48,9 @@ class InteractiveBrokersBarClient:
         contract: IBContract,
         bar_size: BarSize,
         what_to_show: WhatToShow,
-        start_time: pd.Timestamp = None,
-        end_time: pd.Timestamp = None,
+        duration: Duration | None = None,
+        start_time: pd.Timestamp | None = None,
+        end_time: pd.Timestamp | None = None,
         as_dataframe: bool = False,
         limit: int | None = None,
         skip_first: bool = False,
@@ -71,8 +72,10 @@ class InteractiveBrokersBarClient:
             self._log.info(f"head_timestamp: {start_time}")
 
         assert start_time < end_time
-
-        duration = Duration.to_appropriate_duration(bar_size)
+        
+        if duration is None:
+            duration = Duration.to_appropriate_duration(bar_size)
+            
         interval = duration.to_timedelta()
 
         if skip_first:
