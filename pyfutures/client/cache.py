@@ -1,5 +1,7 @@
 import pickle
+import asyncio
 from collections.abc import Callable
+
 from pathlib import Path
 from typing import Any
 
@@ -25,18 +27,19 @@ class Cache:
         self,
         key: str,
     ) -> list[Any] | Exception | None:
-        path = self._pickle_path(key)
-        if not path.exists():
+        
+        
+        pickle_path = self._pickle_path(key)
+        parquet_path = self._parquet_path(key)
+        if pickle_path.exists() and parquet_path.exists():
+            raise RuntimeError("Invalid cache")
+        elif not pickle_path.exists() and not parquet_path.exists():
             return None
-
-        with open(path, "rb") as f:
-            cached = pickle.load(f)
-
-        if isinstance(cached, list):
-            cached = [self._parser.bar_data_from_dict(b) for b in cached]
-        elif isinstance(cached, dict):
-            cached = ClientException.from_dict(cached)
-
+        elif parquet_path.exists():
+            cached = pd.read_parquet(parquet_path)
+            cached = self._parser.bar_data_from_dataframe(cached)
+        elif pickle_path.exists():
+            cached = self._read_pickle(pickle_path)
         return cached
 
     def set(
@@ -48,7 +51,9 @@ class Cache:
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
 
         if isinstance(value, list):
-            value = [self._parser.bar_data_to_dict(b) for b in value]
+            df = self._parser.bar_data_to_dataframe(value)
+            df.to_parquet(self._parquet_path(key), index=False)
+            return
         elif isinstance(value, ClientException):
             value = value.to_dict()
 
@@ -57,11 +62,21 @@ class Cache:
 
     def purge_errors(self, cls: type | tuple[type] = Exception) -> None:
         for path in self.path.glob("*.pkl"):
-            with open(path, "rb") as f:
-                cached = pickle.load(f)
+            cached = self._read_pickle(path)
             if isinstance(cached, cls):
                 path.unlink()
-
+    
+    @staticmethod
+    def _read_pickle(path: Path) -> Exception:
+        with open(path, "rb") as f:
+            cached = pickle.load(f)
+            if isinstance(cached, dict):
+                cached = ClientException.from_dict(cached)
+        return cached
+        
+    def _parquet_path(self, key: str) -> Path:
+        return self.path / f"{key}.parquet"
+    
     def _pickle_path(self, key: str) -> Path:
         return self.path / f"{key}.pkl"
 

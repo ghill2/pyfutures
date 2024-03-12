@@ -52,26 +52,36 @@ class TestHistoricCache:
 
     @pytest.mark.asyncio()
     async def test_client_exception_round_trip(self):
-        exception = ClientException(code=123, message="test")
-        self.cache.set(key="test", value=exception)
+        ex = ClientException(code=123, message="test")
+        self.cache.set(key="test", value=ex)
         cached = self.cache.get(key="test")
-        assert cached == exception
+        assert cached == ex
 
     @pytest.mark.asyncio()
     async def test_client_exception_round_trip(self):
-        exception = asyncio.TimeoutError()
-        self.cache.set(key="test", value=exception)
+        ex = asyncio.TimeoutError()
+        self.cache.set(key="test", value=ex)
         cached = self.cache.get(key="test")
         assert isinstance(cached, asyncio.TimeoutError)
 
     @pytest.mark.asyncio()
-    async def test_purge_errors(self):
+    async def test_purge_timeout_error(self):
         self.cache.set(key="test_bar", value=[self.bar])
         self.cache.set(key="test_exception", value=asyncio.TimeoutError())
         assert (self.cache.path / "test_exception.pkl").exists()
         self.cache.purge_errors()
         assert not (self.cache.path / "test_exception.pkl").exists()
-        assert (self.cache.path / "test_bar.pkl").exists()
+        assert (self.cache.path / "test_bar.parquet").exists()
+        
+    @pytest.mark.asyncio()
+    async def test_purge_client_exception(self):
+        ex = ClientException(code=123, message="test")
+        self.cache.set(key="test_bar", value=[self.bar])
+        self.cache.set(key="test_exception", value=ex)
+        assert (self.cache.path / "test_exception.pkl").exists()
+        self.cache.purge_errors()
+        assert not (self.cache.path / "test_exception.pkl").exists()
+        assert (self.cache.path / "test_bar.parquet").exists()
 
 
 class TestCachedFunc:
