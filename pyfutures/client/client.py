@@ -391,6 +391,7 @@ class InteractiveBrokersClient(EWrapper):
         end_time: pd.Timestamp,
         cache: HistoricCache | None = None,
         delay: float = 0,
+        as_dataframe: bool = False,
     ):
         kwargs = dict(
             contract=contract,
@@ -401,11 +402,11 @@ class InteractiveBrokersClient(EWrapper):
         )
 
         if cache is None:
-            func = self._client.request_bars
+            func = self._request_bars
             is_cached = False
         else:
-            is_cached = self.cache.is_cached(**kwargs)
-            func = self.cache
+            is_cached = cache.is_cached(**kwargs)
+            func = cache
 
         # fetch bars
 
@@ -425,9 +426,13 @@ class InteractiveBrokersClient(EWrapper):
             self._log.debug(f"Waiting for {delay} seconds...")
             await asyncio.sleep(delay)
 
+        if as_dataframe:
+            df = pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in bars])
+            return df
+
         return bars
 
-    async def request_bars(
+    async def _request_bars(
         self,
         contract: IBContract,
         bar_size: BarSize,

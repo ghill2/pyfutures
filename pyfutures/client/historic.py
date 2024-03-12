@@ -113,10 +113,6 @@ class InteractiveBrokersBarClient:
                 total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
                 break
 
-        if as_dataframe:
-            df = pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in total_bars])
-            return df
-
         return total_bars
 
     async def request_quote_ticks(

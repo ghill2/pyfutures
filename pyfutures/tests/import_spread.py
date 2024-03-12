@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from pathlib import Path
 
 import pandas as pd
 
@@ -109,15 +110,17 @@ async def write_spread_first_hour():
     await client.connect()
     await client.request_market_data_type(4)
 
+    cache = Path.home() / "Desktop" / "download_cache"
+
     for open_time in open_times[::-1]:
         log.info(f"{open_time}")
-        bars: pd.DataFrame = await historic._request_bars(
+        bars: pd.DataFrame = await client.request_bars(
             contract=row.contract_cont,
             bar_size=BarSize._5_SECOND,
             what_to_show=WhatToShow.BID,
             start_time=open_time,
             end_time=open_time + pd.Timedelta(hours=1),
-            use_cache=False,
+            cache=cache,
             as_dataframe=True,
         )
         print(bars)

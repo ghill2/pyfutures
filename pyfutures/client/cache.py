@@ -1,7 +1,5 @@
 import pickle
-import asyncio
 from collections.abc import Callable
-
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +9,6 @@ from ibapi.contract import Contract as IBContract
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
-from pyfutures.adapter.parsing import AdapterParser  # TODO: change to just tradingclass
 from pyfutures.client.objects import ClientException
 from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
@@ -27,8 +24,6 @@ class Cache:
         self,
         key: str,
     ) -> list[Any] | Exception | None:
-        
-        
         pickle_path = self._pickle_path(key)
         parquet_path = self._parquet_path(key)
         if pickle_path.exists() and parquet_path.exists():
@@ -65,7 +60,7 @@ class Cache:
             cached = self._read_pickle(path)
             if isinstance(cached, cls):
                 path.unlink()
-    
+
     @staticmethod
     def _read_pickle(path: Path) -> Exception:
         with open(path, "rb") as f:
@@ -73,10 +68,10 @@ class Cache:
             if isinstance(cached, dict):
                 cached = ClientException.from_dict(cached)
         return cached
-        
+
     def _parquet_path(self, key: str) -> Path:
         return self.path / f"{key}.parquet"
-    
+
     def _pickle_path(self, key: str) -> Path:
         return self.path / f"{key}.pkl"
 
@@ -84,15 +79,13 @@ class Cache:
         return len(list(self.path.rglob("*.pkl")))
 
 
-class CachedFunc(Cache):
+class CachedFunc:
     """
     Creates a cache
     name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
     """
 
-    def __init__(self, func: Callable, cache_dir: Path):
-        super().__init__(cache_dir)
-
+    def __init__(self, func: Callable, cache: Cache):
         self._func = func
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
