@@ -1,7 +1,6 @@
 import asyncio
 import time
 import logging
-from ibapi.common import BarData
 
 import pandas as pd
 import random
@@ -15,99 +14,64 @@ from pyfutures.client.parsing import ClientParser
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.client.enums import Frequency
-from pyfutures.client.enums import Duration
 
-async def measure_time_entire_liquid_hours():
-    # for 5 second bars: how long will it take to download 150 instruments worth of data in the liquid hours
-    
-    rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
-    )
-    end_time = pd.Timestamp.utcnow().floor("1D")
-    start_time = end_time - pd.Timedelta(days=128)
-    
-    request_count = 0
-    for row in rows:
-        times = row.liquid_schedule.to_date_range(
-            start_date=start_time,
-            end_date=end_time,
-            interval=pd.Timedelta(hours=1),
-        )
-        # open_seconds = len(times) * 60
-        print(len(times))
-        
-        request_count += len(times)  # open_seconds / 3600  # 5sec bars = 1 hour duration
-    
-    request_time_seconds = 5
-    print(request_count * request_time_seconds)
-    
-    
-async def measure_time_first_liquid_hour():
-    # for 5 second bars: how long will it take to download 150 instruments worth of data in the liquid hours
-    
-    rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
-    )
-    end_time = pd.Timestamp.utcnow().floor("1D")
-    start_time = end_time - pd.Timedelta(days=128)
-    
-    request_count = 0
-    for row in rows:
-        times = row.liquid_schedule.to_open_range(
-            start_date=start_time,
-            end_date=end_time,
-        )
-        request_count += len(times)  # open_seconds / 3600  # 5sec bars = 1 hour duration
-    
-    request_time_seconds = 10
-    expected_seconds = request_count * request_time_seconds
-    
-async def measure_time_request_time():
-    
-    start = time.perf_counter()
-    
+
+async def use_rt():
+    """
+    test data in this range is returned without RTH argument
+    2024-02-27 00:00:00 > 2024-02-27 06:30:00
+    12:30 > 15:30 = Japan
+    03:30 > 06:30 = UTC
+
+    00:00 > 06.30 Japan
+    15:00 >  21:00
+    """
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,
         override_timeout=False,
         api_log_level=logging.ERROR,
     )
+
+    rows = IBTestProviderStubs.universe_rows(
+        filter=["JBLM"],
+    )
+    row = rows[0]
+
+    historic = InteractiveBrokersBarClient(
+        client=client,
+        delay=0.5,
+        use_cache=False,
+        cache_dir=CACHE_DIR,
+    )
+
     await client.connect()
     await client.request_market_data_type(4)
-    
-    bar_size = BarSize._5_SECOND
-    bars: pd.DataFrame = await client.request_bars(
+
+    print(f"Processing {row.uname}: BID...")
+
+    df: pd.DataFrame = await historic.request_bars(
         contract=row.contract_cont,
-        bar_size=bar_size,
+        bar_size=BarSize._1_MINUTE,
         what_to_show=WhatToShow.BID,
-        duration=bar_size.to_appropriate_duration(),
-        end_time=pd.Timestamp.utcnow().floor(pd.Timedelta(hours=1)),
+        start_time=pd.Timestamp("2024-01-23", tz="UTC"),  # Tuesday
+        end_time=pd.Timestamp("2024-01-29", tz="UTC"),  # Friday
+        as_dataframe=True,
+        skip_first=False,
     )
-    
-    print(len(bars))
-    stop = time.perf_counter()
-    request_elapsed = stop - start
-    expected_seconds = request_elapsed * request_count
-    print(expected_seconds)
-    expected_hours = expected_seconds / 60
-    expected_days = expected_hours / 24
-    print(f"Elapsed expected_days = {expected_days}")
-    
-    exit()
-    
-            
-        
-        
-        
-        
-    # client: InteractiveBrokersClient = ClientStubs.client(
-    #     request_timeout_seconds=60 * 10,
-    #     override_timeout=False,
-    #     api_log_level=logging.ERROR,
-    # )
-    
-    
-    
+    df.sort_values(by="timestamp", inplace=True)
+    df.reset_index(inplace=True, drop=True)
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        df["dayofweek"] = df.timestamp.dt.dayofweek
+        print(df)
+
+
 async def write_spread(write: bool = False):
     client: InteractiveBrokersClient = ClientStubs.client(
         request_timeout_seconds=60 * 10,

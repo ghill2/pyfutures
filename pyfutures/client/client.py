@@ -434,7 +434,7 @@ class InteractiveBrokersClient(EWrapper):
                 durationStr=str(duration),
                 barSizeSetting=str(bar_size),
                 whatToShow=what_to_show.name,
-                useRTH=False,
+                useRTH=1,
                 formatDate=2,
                 keepUpToDate=False,
                 chartOptions=[],

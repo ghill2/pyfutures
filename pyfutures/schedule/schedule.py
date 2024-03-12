@@ -40,6 +40,13 @@ class MarketSchedule:
         open_time = min(open_times)
         return pd.Timedelta(hours=open_time.hour, minutes=open_time.minute)
 
+    def is_open(self, now: pd.Timestamp) -> bool:
+        now = now.tz_convert("Japan")
+
+        now_time = now.time()
+
+        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
+
     def is_open(self, timestamp: pd.Timestamp) -> bool:
         
         # TODO: assert utz timezone
@@ -255,18 +262,20 @@ class MarketSchedule:
         08:45-11:02, 12:30-15:02
         08:45-11:02, 12:30-15:02
         """
+        data = pd.DataFrame(columns=["dayofweek", "open", "close"])
         for s in value.replace(" ", "").split(","):
             start, end = tuple(s.split("-"))
             start_hour, start_minutes = tuple(start.split(":"))
             end_hour, end_minutes = tuple(end.split(":"))
-        data = pd.DataFrame(columns=["dayofweek", "open", "close"])
-        for dayofweek in range(5):
-            # create dataframe
-            data.loc[len(data)] = {
-                "dayofweek": dayofweek,
-                "open": datetime.time(int(start_hour), int(start_minutes)),
-                "close": datetime.time(int(end_hour), int(end_minutes)),
-            }
+
+            for dayofweek in range(5):
+                data.loc[len(data)] = {
+                    "dayofweek": dayofweek,
+                    "open": datetime.time(int(start_hour), int(start_minutes)),
+                    "close": datetime.time(int(end_hour), int(end_minutes)),
+                }
+        data.sort_values(by=["dayofweek", "open"], inplace=True)
+
         return MarketSchedule(
             name=name,
             data=data,

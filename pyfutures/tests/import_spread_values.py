@@ -41,51 +41,35 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
         axis=1,
         inplace=True,
     )
-    assert list(df.columns) == ["timestamp", "bid", "ask"]
-    return df
+    df = df[(df.bid != 0.0) & (df.ask != 0.0)]
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        df["local"] = df.timestamp.dt.tz_convert("MET")
+        df["dayofweek"] = df.local.dt.dayofweek
+        # is_open = row.liquid_schedule.is_open(
+        #     pd.Timestamp("2024-02-28 18:34:00+00:00", tz="UTC"),
+        # )
+        df = df.iloc[-3000:]
+        from pathlib import Path
 
+        path = Path.home() / "Desktop/FTI.csv"
+        df.to_csv(path, index=False)
 
-def get_spread_value(row):
-    bid_path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
-    ask_path = SPREAD_FOLDER / f"{row.uname}_ASK.parquet"
-
-    bid_df = pd.read_parquet(bid_path)
-    ask_df = pd.read_parquet(ask_path)
-
-    df = _merge_dataframe(bid_df, ask_df)
-    df["dayofweek"] = df.timestamp.dt.dayofweek
-    # with pd.option_context(
-    #     "display.max_rows",
-    #     None,
-    #     "display.max_columns",
-    #     None,
-    #     "display.width",
-    #     None,
-    # ):
-    #     print(df[-3000:])
     # TODO: why is this the same length after filtering by liquid hours
-
-    print(row.liquid_schedule.data)
-    # exit()
-    # is_open = schedule.is_open(
-    #     pd.Timestamp("2024-02-27 15:31:00+00:00") # 00:00 Japan time
-    # )
-    # 12:30 > 15:30 = Japan
-    # 03:30 > 06:30 = UTC
-    # print(is_open)
-    # 2024-02-26 06:30:00+00:00
-    # 2024-02-26 20:59:00+00:00
-
-    # 2024-02-28 06:30:00+00:00
-    # 0          0  12:30:00  15:02:00
     # print(row.liquid_schedule.data)
-    # exit()
+    # start: 17:35:00+00:00
+    # end: 20:59:00+00:00
+    previous_len = len(df)
     mask = df.timestamp.apply(row.liquid_schedule.is_open)
     df = df[mask]
     assert not df.empty
-    # print(len(df))
-
-    # exit()
+    assert len(df) != previous_len
 
     # Group by date and hour
     grouped = df.groupby(pd.Grouper(key="timestamp", freq="H"))
@@ -109,30 +93,26 @@ def get_spread_value(row):
 
 if __name__ == "__main__":
     """
+    2024-02-28 21:00:00+00:00
+    2024-02-28 23:45:00+00:00
     error with schedule:
     
-    JBLM: schedule error
-    JBL: schedule error
-    FTI: schedule error
-    FCE: schedule error
-    MFA: schedule error
-    MFC: schedule error
-    CN: schedule error
-    TWN: schedule error
-    SGP: schedule error
-    6A: schedule error
-    6J: schedule error
-    IU: schedule error
-    M6A: schedule error
-    6N: schedule error
-    KU: schedule error
-    UC: schedule error
-    FEF: schedule error
+    FTI:
+    FCE:
+    MFA:
+    MFC:
+    CN:
+    TWN:
+    SGP:
+    IU:
+    M6A:
+    UC:
+    FEF:
     """
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    rows = [r for r in rows if r.uname == "JBLM"]
+    rows = [r for r in rows if r.uname == "FTI"]
     get_spread_value(rows[0])
     # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
 

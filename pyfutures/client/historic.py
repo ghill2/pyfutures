@@ -84,12 +84,11 @@ class InteractiveBrokersBarClient:
             end_time = end_time.ceil(interval)
 
         total_bars = deque()
-        
+
         i = 0
         while end_time > start_time:
-            
             self._log.info(f"{contract} | {end_time - interval} -> {end_time}")
-                
+
             bars: list[BarData] = await self._request_bars(
                 contract=contract,
                 bar_size=bar_size,
@@ -98,29 +97,30 @@ class InteractiveBrokersBarClient:
                 end_time=end_time,
                 use_cache=self._use_cache if skip_first else (self._use_cache and i > 0),
             )
-            bars = [b for b in bars if b.timestamp >= start_time]
-            
+
+            # bars = [b for b in bars if b.timestamp >= start_time]
+
             if len(bars) > 0:
                 self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
             else:
                 self._log.debug("---> Downloaded 0 bars.")
-            
+
             total_bars.extendleft(bars)
-            
+
             end_time = end_time - interval
 
             i += 1
-            
+
             if limit and len(total_bars) >= limit:
                 total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
                 break
-        
+
         if as_dataframe:
             df = pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in total_bars])
             return df
-        
+
         return total_bars
-        
+
     async def _request_bars(
         self,
         contract: IBContract,
@@ -144,7 +144,7 @@ class InteractiveBrokersBarClient:
         else:
             func = self._client.request_bars
             is_cached = False
-        
+
         # fetch bars
         start = time.perf_counter()
         bars = []
@@ -156,7 +156,7 @@ class InteractiveBrokersBarClient:
             self._log.error(str(e.__class__.__name__))
         stop = time.perf_counter()
         self._log.debug(f"Elapsed time: {stop - start:.2f}")
-        
+
         if self._delay > 0 and not is_cached:
             self._log.debug(f"Waiting for {self._delay} seconds...")
             await asyncio.sleep(self._delay)

@@ -1,3 +1,4 @@
+import math
 import pathlib
 from dataclasses import dataclass
 from dataclasses import fields
@@ -39,11 +40,9 @@ from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
-from pyfutures.schedule.schedule import MarketSchedule
-from pyfutures.data.files import ParquetFile
 from pyfutures.continuous.cycle_range import RangedRollCycle
-
-import math
+from pyfutures.data.files import ParquetFile
+from pyfutures.schedule.schedule import MarketSchedule
 
 
 TEST_PATH = pathlib.Path(PACKAGE_ROOT / "tests/adapters/interactive_brokers/")
@@ -354,6 +353,7 @@ class IBTestProviderStubs:
 
         if filter is not None:
             df = df[df.trading_class.isin(filter)]
+            assert not df.empty
 
         if skip is not None:
             df = df[~df.trading_class.isin(skip)]
@@ -503,9 +503,7 @@ class IBTestProviderStubs:
             # for value, currency in zip(["fee_execution", "fee_exchange", "fee_regulatory"], ["fee_execution_currency", "fee_exchange_currency", "fee_regulatory_currency"]):
             #     if isinstance(row[currency], float): # if fee currency cell is empty
             #         # assert that the fee value cell is empty
-            #         assert math.isnan(row[value]) 
-
-
+            #         assert math.isnan(row[value])
 
             if not math.isnan(row.fee_execution):  # if non empty cell
                 # assert not math.isnan(row.fee_execution_currency)
