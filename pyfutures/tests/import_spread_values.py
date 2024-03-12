@@ -7,15 +7,8 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 """
 once per hour should be enough
 """
-
-
-def get_spread_value(row):
-    bid_path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
-    ask_path = SPREAD_FOLDER / f"{row.uname}_ASK.parquet"
-
-    bid_df = pd.read_parquet(bid_path)
-    ask_df = pd.read_parquet(ask_path)
-
+def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame:
+    
     bid_df.sort_values(by="timestamp", inplace=True)
     ask_df.sort_values(by="timestamp", inplace=True)
 
@@ -48,7 +41,18 @@ def get_spread_value(row):
         axis=1,
         inplace=True,
     )
-    df = df[(df.bid != 0.0) & (df.ask != 0.0)]
+    assert list(df.columns) == ["timestamp", "bid", "ask"]
+    return df
+
+
+def get_spread_value(row):
+    bid_path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
+    ask_path = SPREAD_FOLDER / f"{row.uname}_ASK.parquet"
+
+    bid_df = pd.read_parquet(bid_path)
+    ask_df = pd.read_parquet(ask_path)
+
+    df = _merge_dataframe(bid_df, ask_df)
     df["dayofweek"] = df.timestamp.dt.dayofweek
     # with pd.option_context(
     #     "display.max_rows",

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import datetime
 from typing import Annotated
-
+from functools import reduce
 import pandas as pd
 import pytz
 from msgspec import Meta
+import numpy as np
+from typing import Iterable
 
 
 # An integer constrained to values < 0
@@ -38,22 +40,35 @@ class MarketSchedule:
         open_time = min(open_times)
         return pd.Timedelta(hours=open_time.hour, minutes=open_time.minute)
 
-    def is_open(self, now: pd.Timestamp) -> bool:
-        now = now.tz_convert(self._timezone)
-
-        now_time = now.time()
-
-        # print(now_time)
-        # print(now.dayofweek)
-        # print(now_time >= self.data.open)
-        # print(now_time < self.data.close)
-        # print(self.data)
-        # print(self._timezone)
-        # exit()
-        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
-
+    def is_open(self, timestamp: pd.Timestamp) -> bool:
+        
+        # TODO: assert utz timezone
+        
+        local = timestamp.tz_convert(self._timezone)
+        local_time = timestamp.time()
+        mask = (local_time >= self.data.open) \
+                & (local_time < self.data.close) \
+                & (local.dayofweek == self.data.dayofweek)
         return mask.any()
-
+    
+    def is_open_list(self, timestamps: Iterable[pd.Timestamp]) -> pd.DatetimeIndex:
+        
+        # TODO: assert utz timezone
+        
+        locals = timestamps.tz_convert(self._timezone)
+        local_times = timestamps.time
+        
+        mask = np.zeros(len(timestamps), dtype=bool)
+        sessions = self.data.itertuples()
+        for session in sessions:
+            _mask = (local_times >= session.open) \
+                    & (local_times < session.close) \
+                    & (locals.dayofweek == session.dayofweek)
+            mask = mask | _mask
+        return timestamps[mask]  # utc
+        
+        raise NotImplementedError()
+    
     def is_closed(self, now: pd.Timestamp) -> bool:
         return not self.is_open(now)
 
@@ -142,12 +157,53 @@ class MarketSchedule:
         interval: pd.Timedelta,
         end_date: pd.Timestamp | None = None,
     ) -> pd.DataFrame:
+        
         if end_date is None:
             end_date = pd.Timestamp.utcnow()
-        times = pd.date_range(start=start_date, end=end_date, freq=interval)
-        times = times.tz_convert(self._timezone)
-        return [time for time in times if self.is_open(time) or self.is_open(time + interval)]
-
+        assert start_date.tzname() == "UTC"
+        assert end_date.tzname() == "UTC"
+            
+        times = pd.date_range(
+            start=start_date,
+            end=end_date,
+            freq=interval,
+        )
+        return self.is_open_list(times)
+    
+    def to_open_range(
+        self,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp | None = None,
+    ) -> pd.DataFrame:
+        
+        # returns timestamps for every open_time in the schedule
+        
+        # TODO: assert utc input
+        
+        days = pd.date_range(
+            start=start_date,
+            end=end_date,
+            freq=pd.Timedelta(days=1),
+        )
+        days = days.tz_convert(self._timezone)
+        
+        sessions = self.data.itertuples()
+        
+        timestamps = []
+        for session in sessions:
+            timestamps.extend(
+                day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute)
+                for day in days[days.dayofweek == session.dayofweek]
+            )
+        timestamps = pd.DatetimeIndex(timestamps).sort_values().tz_convert("UTC")
+        return list(timestamps)
+            
+        # group sessions by dayofweek
+        
+        # for each session
+        
+        
+        
     def sessions(
         self,
         start_date: pd.Timestamp,

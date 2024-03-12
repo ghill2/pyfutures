@@ -395,7 +395,7 @@ class InteractiveBrokersClient(EWrapper):
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
-                duration=Duration.to_appropriate_duration(bar_size),
+                duration=bar_size.to_appropriate_duration(),
                 end_time=pd.Timestamp.utcnow(),
         )
         return bars[-1] if len(bars) > 0 else None

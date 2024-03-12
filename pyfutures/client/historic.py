@@ -74,7 +74,7 @@ class InteractiveBrokersBarClient:
         assert start_time < end_time
         
         if duration is None:
-            duration = Duration.to_appropriate_duration(bar_size)
+            duration = bar_size.to_appropriate_duration()
             
         interval = duration.to_timedelta()
 
