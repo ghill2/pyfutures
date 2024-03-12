@@ -128,10 +128,10 @@ class CachedFunc(Cache):
     def build_key(cls, **kwargs):
         parsing = {
             # TODO: change to just trading class
-            IBContract: lambda x: str(AdapterParser.unqualified_contract_to_instrument_id(x)),
-            pd.Timestamp: lambda x: x.strftime("%Y-%m-%d %H%M%S"),
+            IBContract: lambda x: f"{x.tradingClass}-{x.exchange}-{x.secType}",
+            pd.Timestamp: lambda x: x.strftime("%Y-%m-%d-%H-%M-%S"),
             Duration: lambda x: x.value,
-            BarSize: lambda x: str(x),
+            BarSize: lambda x: str(x).replace(" ", "-"),
             WhatToShow: lambda x: x.value,
         }
 
@@ -146,7 +146,7 @@ class CachedFunc(Cache):
             assert isinstance(part, str), f"Check parsing func for type {type(x).__name__} return type str"
             parts.append(part)
 
-        key = "-".join(parts)
+        key = "=".join(parts)
 
         return cls._sanitize_filename(key)
 

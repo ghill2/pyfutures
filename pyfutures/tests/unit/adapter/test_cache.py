@@ -119,7 +119,7 @@ class TestCachedFunc:
     @pytest.mark.asyncio()
     async def test_build_key(self):
         # NOTE: if this failed test it means the cache has been invalidated
-        expected = "DA=DC=CONTFUT.CME-1 day-BID_ASK-2023-01-01 000000-2023-01-01 080000"
+        expected = "DA-CME-CONTFUT=1-day=BID_ASK=2023-01-01-00-00-00=2023-01-01-08-00-00"
         key = self.cached_func.build_key(**self.cached_func_kwargs)
         assert key == expected
 
