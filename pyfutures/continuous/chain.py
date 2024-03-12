@@ -42,6 +42,11 @@ class ContractChain(Actor):
     AdjustedPrices
     - subscribes to 0, +1 streams
     - decide how to trigger a roll from the 0 and +1 streams maybe need a RollSignal class?
+    
+    
+    https://www.seykota.com/tribe/TSP/Continuous/index.htm#:~:text=The%20Panama%20Method&text=In%20like%20manner%2C%20a%20Panama,Continuous%20Chart%20for%20S%26P%20Futures.
+    The adjustment value uses the current contract price and forward contract price of the same timestamp to backadjust the values
+    before sending the continuous bar
     """
     def __init__(
         self,
