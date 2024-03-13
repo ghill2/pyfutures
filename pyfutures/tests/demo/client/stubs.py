@@ -43,9 +43,12 @@ class ClientStubs:
         return CLIENT
 
     @staticmethod
-    def connection(client_id: int) -> Connection:
+    def connection(
+        loop: asyncio.AbstractEventLoop,  # has to use pytest asyncio event_loop
+        client_id: int,
+    ) -> Connection:
         return Connection(
-            loop=asyncio.get_event_loop(),
+            loop=loop or asyncio.get_event_loop(),
             host="127.0.0.1",
             port=4002,
             client_id=client_id,

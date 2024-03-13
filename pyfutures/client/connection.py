@@ -57,7 +57,7 @@ class Connection:
         self._handlers = set()
 
         # attributes that reset
-        self._monitor_task: asyncio.Task | None = None
+        self._connect_monitor_task: asyncio.Task | None = None
         self._listen_task: asyncio.Task | None = None
         self._reader, self._writer = (None, None)
         self._handshake_message_ids = []
@@ -133,9 +133,10 @@ class Connection:
         due to a schedule restart or during IB nightly reset.
         """
         self._log.debug("Handling disconnect.")
-        self._reset()
 
-        # await self.connect()
+        self._connect_monitor_task.cancel()
+        self._connect_monitor_task = None
+
         # reconnect subscriptions
         # for sub in self._subscriptions:
         #     sub.cancel()
@@ -147,20 +148,23 @@ class Connection:
         else:
             self._process_handshake(msg)
 
-    async def _monitor(self) -> None:
+    async def _connect_monitor(self, timeout_seconds: float | int = 5.0) -> None:
         """
         Monitors the socket connection for disconnections.
         """
+        self._log.debug("Connect Monitor task started...")
         try:
             while True:
-                await asyncio.sleep(5)
-
                 if self.is_connected:
                     continue
 
-                self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
+                # self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
+                self._log.debug("Connecting")
 
-                await self.connect()
+                async with self._is_connecting_lock:
+                    await self._connect()
+                    await self._handshake(timeout_seconds=timeout_seconds)
+                await asyncio.sleep(timeout_seconds)
 
         except Exception as e:
             self._log.error(repr(e))
@@ -174,17 +178,15 @@ class Connection:
 
     async def connect(self, timeout_seconds: int = 5) -> None:
         """
-        Called by the user
+        Called by the user after instantiation
         """
-        # if self._monitor_task is None:
-        #     self._monitor_task = self.loop.create_task(self._monitor())
-        #
-        if self.is_connected:
-            return
 
-        async with self._is_connecting_lock:
-            await self._connect()
-            await self._handshake(timeout_seconds=timeout_seconds)
+        if self._connect_monitor_task is None:
+            self._connect_monitor_task = self.loop.create_task(self._connect_monitor(timeout_seconds=timeout_seconds))
+
+        self._log.debug("BEFPRE WAOT FPR")
+        await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
+        self._log.debug("AFTER WAIT FOR")
 
     async def _connect(self) -> None:
         """
@@ -200,9 +202,8 @@ class Connection:
         try:
             self._reader, self._writer = await asyncio.open_connection(self.host, self.port)
         except ConnectionRefusedError as e:
-            self._log.error(f"Socket connection failed, check TWS is open {e!r}")
-            self._reset()
-            raise
+            self._log.error(f"ConnectionRefusedError: Socket connection failed, check TWS is open {e!r}")
+            return
         self._log.debug(f"Socket connected. {self._reader} {self._writer}")
 
         # start listen task
@@ -258,7 +259,8 @@ class Connection:
             # assert msg == b"\x00\x00\x00\x0871\x002\x001\x00\x00"
             # msg = b"\x00\x00\x00\x0871\x002\x001\x00\x00"
             self._sendMsg(msg)
-        elif all(id in self._handshake_message_ids for id in (176, 15, 9)):
+        elif all(id in self._handshake_message_ids for id in (176, 15)):
+            self._log.debug("SETTING CONNECTED")
             self._is_connected.set()
 
     def _prefix(self, msg):
@@ -292,87 +294,3 @@ class Connection:
             if name == "java" or name.startswith("Trader Workstation"):
                 return True
         return False
-
-    # def error(  # too complex
-    #     self,
-    #     req_id: int,
-    #     error_code: int,
-    #     error_string: str,
-    #     advanced_order_reject_json: str = "",
-    # ) -> None:
-    #     self._log.debug(error_string)
-
-    # def is_connected(self) -> bool:
-    #     """
-    #     Returns False if the socket has been disconnected, for example, due to a schedule restart
-    #     or during IB nightly reset.
-    #     """
-    #     return self._conn.isConnected()
-
-    # return
-    # try:
-    #     await asyncio.wait_for(self.socket.is_ready.wait(), 5)
-    #     return
-    # except asyncio.TimeoutError as e:
-    #     self._log.error(f"{repr(e)}")
-
-    # # except Exception as e:
-    # #     self._log.error(type(e))
-    # #     self._log.error(repr(e))
-    # #     pass
-
-    # while attempts > 0:
-
-    #     # connect socket
-    #     self._log.debug(f"Connecting socket...")
-    #     try:
-    #         await asyncio.wait_for(self.socket.connect(), 10)
-    #         await asyncio.wait_for(self._handshake.perform(), 10)
-    #     except (asyncio.TimeoutError, ConnectionRefusedError, ConnectionResetError) as e:
-    #         self._log.error(repr(e))
-    #         self._log.debug(f"Error during socket connection, reconnecting... attempts={attempts}")
-    #         attempts -= 1
-    #         await asyncio.sleep(5)
-    #         continue
-
-    #     return True
-
-    # self._log.error("Failed to connect")
-    # return False
-    # # Wait for TWS to start
-    # while not self.is_tws_running():
-    #     self._log.debug(f"Waiting for tws to start...")
-    #     await asyncio.sleep(2.5)
-    # connect socket
-    # while attempts > 0:
-
-    #     self._log.debug(f"Attempt {attempts}...")
-    #     try:
-
-    #         break
-    #     except ConnectionRefusedError as e:
-    #         """
-    #         When TWS is not running, the socket connection will be refused.
-    #         """
-    #         self._log.error(f"{repr(e)}")
-    #         self._log.debug(f"Socket connection refused. Waiting 10 seconds then reattempting...")
-    #         attempts -= 1
-    #         await asyncio.sleep(10)
-
-    # return
-
-    # # # handshake
-    # # while attempts > 0:
-    # #     self._log.debug(f"Attempt {attempts}...")
-    # #     try:
-
-    # #     except asyncio.TimeoutError as e:
-    # #         """
-    # #         When TWS is not running, the socket connection will be refused.
-    # #         """
-    # #         self._log.error(f"{repr(e)}")
-    # #         self._log.debug(f"Handshake failed. Waiting 10 seconds then reattempting...")
-    # #         attempts -= 1
-    # #         await asyncio.sleep(10)
-
-    # self._log.debug("Connection failed")

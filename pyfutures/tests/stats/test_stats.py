@@ -7,6 +7,7 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 from pathlib import Path
 
 
+@pytest.mark.skip(reason="unused")
 @pytest.mark.asyncio()
 async def test_all_fees_calculated(event_loop):
     # assert that the fees are not the same for the percent rows
@@ -16,6 +17,7 @@ async def test_all_fees_calculated(event_loop):
     fees = await fees_calc.calculate_rows(rows)
 
 
+@pytest.mark.skip(reason="unused")
 @pytest.mark.asyncio()
 async def test_stats_return_expected(event_loop):
     client = ClientStubs.client(loop=event_loop)

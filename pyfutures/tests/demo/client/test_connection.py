@@ -21,7 +21,7 @@ from pyfutures.client.enums import WhatToShow
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-from pyfutures.tests.client.demo.gateway import Gateway
+from pyfutures.tests.demo.client.gateway import Gateway
 from pyfutures.tests.demo.client.stubs import ClientStubs
 
 
@@ -54,6 +54,13 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 
 # TODO: ALways start the container once before running all tests
 # Sometimes the docker container socat responds with Connection Refused...
+
+
+@pytest.mark.asyncio()
+async def test_connect(event_loop):
+    print("test_connect")
+    connection = ClientStubs.connection(loop=event_loop, client_id=1)
+    await connection.connect(timeout_seconds=20)
 
 
 @pytest.fixture(scope="session")
