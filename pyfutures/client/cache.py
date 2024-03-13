@@ -113,7 +113,6 @@ class CachedFunc:
             self._log.debug(f"Saved {self._value_to_str(result)} items...")
             return result
         except Exception as e:
-            self._log.error(str(e))
             self._cache.set(key, e)
             self._log.debug(f"Saved {e} items...")
             raise

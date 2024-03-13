@@ -426,8 +426,11 @@ class InteractiveBrokersClient(EWrapper):
         except asyncio.TimeoutError as e:
             self._log.error(str(e.__class__.__name__))
         stop = time.perf_counter()
-
-        self._log.info(f"Elapsed time: {stop - start:.1f}s")
+        
+        if is_cached:
+            self._log.info(f"Read {len(bars)} from cache")
+        else:
+            self._log.info(f"Elapsed time: {stop - start:.1f}s")
         
         # delay if needed
         if delay > 0 and not is_cached:
