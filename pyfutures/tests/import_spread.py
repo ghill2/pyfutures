@@ -7,6 +7,8 @@ import pandas as pd
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
+from pyfutures.client.enums import Frequency
+from pyfutures.client.enums import Duration
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.logger import LoggerAdapter
 from pyfutures.logger import LoggerAttributes
@@ -15,64 +17,7 @@ from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
 
-
-async def use_rt():
-    """
-    test data in this range is returned without RTH argument
-    2024-02-27 00:00:00 > 2024-02-27 06:30:00
-    12:30 > 15:30 = Japan
-    03:30 > 06:30 = UTC
-
-    00:00 > 06.30 Japan
-    15:00 >  21:00
-    """
-    client: InteractiveBrokersClient = ClientStubs.client(
-        request_timeout_seconds=60 * 10,
-        override_timeout=False,
-        api_log_level=logging.ERROR,
-    )
-
-    rows = IBTestProviderStubs.universe_rows(
-        filter=["JBLM"],
-    )
-    row = rows[0]
-
-    historic = InteractiveBrokersBarClient(
-        client=client,
-        delay=0.5,
-        use_cache=False,
-        cache_dir=CACHE_DIR,
-    )
-
-    await client.connect()
-    await client.request_market_data_type(4)
-
-    print(f"Processing {row.uname}: BID...")
-
-    df: pd.DataFrame = await historic.request_bars(
-        contract=row.contract_cont,
-        bar_size=BarSize._1_MINUTE,
-        what_to_show=WhatToShow.BID,
-        start_time=pd.Timestamp("2024-01-23", tz="UTC"),  # Tuesday
-        end_time=pd.Timestamp("2024-01-29", tz="UTC"),  # Friday
-        as_dataframe=True,
-        skip_first=False,
-    )
-    df.sort_values(by="timestamp", inplace=True)
-    df.reset_index(inplace=True, drop=True)
-    with pd.option_context(
-        "display.max_rows",
-        None,
-        "display.max_columns",
-        None,
-        "display.width",
-        None,
-    ):
-        df["dayofweek"] = df.timestamp.dt.dayofweek
-        print(df)
-
-
-async def write_spread_first_hour():
+async def cache_spread():
     LoggerAttributes.level = logging.INFO
 
     log = LoggerAdapter.from_name("WriteSpread")
@@ -88,99 +33,91 @@ async def write_spread_first_hour():
         api_log_level=logging.ERROR,
     )
 
-    historic = InteractiveBrokersBarClient(
-        client=client,
-        delay=0.5,
-        use_cache=True,
-        cache_dir=CACHE_DIR,
-    )
-
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
-    row = rows[0]
+    for row in rows:
 
-    schedule = row.liquid_schedule
+        schedule = row.liquid_schedule
 
-    open_times = schedule.to_open_range(
-        start_date=start_time,
-        end_date=end_time,
-    )
-
-    await client.connect()
-    await client.request_market_data_type(4)
-
-    cache = Path.home() / "Desktop" / "download_cache"
-
-    for open_time in open_times[::-1]:
-        log.info(f"{open_time}")
-        bars: pd.DataFrame = await client.request_bars(
-            contract=row.contract_cont,
-            bar_size=BarSize._5_SECOND,
-            what_to_show=WhatToShow.BID,
-            start_time=open_time,
-            end_time=open_time + pd.Timedelta(hours=1),
-            cache=cache,
-            as_dataframe=True,
+        open_times = schedule.to_open_range(
+            start_date=start_time,
+            end_date=end_time,
         )
-        print(bars)
 
+        await client.connect()
+        await client.request_market_data_type(4)
 
-async def write_spread(write: bool = False):
-    client: InteractiveBrokersClient = ClientStubs.client(
-        request_timeout_seconds=60 * 10,
-        override_timeout=False,
-        api_log_level=logging.ERROR,
-    )
+        cache = Path.home() / "Desktop" / "download_cache2"
 
-    rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
-    )
-    historic = InteractiveBrokersBarClient(
-        client=client,
-        delay=0.5,
-        use_cache=True,
-        cache_dir=CACHE_DIR,
-    )
-
-    start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
-
-    rows = [r for r in rows if r.uname == "FTI"]
-    assert len(rows) > 0
-
-    await client.connect()
-    await client.request_market_data_type(4)
-    for i, row in enumerate(rows):
-        # US Futures bundle. any us tickers
-
-        print(f"Processing {i}/{len(rows)}: {row.uname}: BID...")
-        bars: pd.DataFrame = await historic.request_bars(
-            contract=row.contract_cont,
-            bar_size=BarSize._1_MINUTE,
-            what_to_show=WhatToShow.BID,
-            start_time=start_time,
-            as_dataframe=write,
-            skip_first=True,
-        )
-        if write:
-            bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet", index=False)
-
-        print(f"Processing {i}/{len(rows)}: {row.uname}: ASK...")
-        bars: pd.DataFrame = await historic.request_bars(
-            contract=row.contract_cont,
-            bar_size=BarSize._1_MINUTE,
-            what_to_show=WhatToShow.ASK,
-            start_time=start_time,
-            as_dataframe=write,
-            skip_first=True,
-        )
-        if write:
-            bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet", index=False)
-
+        for open_time in open_times[::-1]:
+            log.info(f"{open_time}")
+            seconds_in_hour: int = 60 * 60
+            await client.request_bars(
+                contract=row.contract_cont,
+                bar_size=BarSize._5_SECOND,
+                what_to_show=WhatToShow.BID,
+                duration=Duration(seconds_in_hour, Frequency.SECOND),
+                end_time=open_time + pd.Timedelta(hours=1),
+                cache=cache,
+                as_dataframe=False,
+                delay=0.5,
+            )
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(write_spread_first_hour())
+    asyncio.get_event_loop().run_until_complete(cache_spread())
 
+
+# async def write_spread(write: bool = False):
+#     client: InteractiveBrokersClient = ClientStubs.client(
+#         request_timeout_seconds=60 * 10,
+#         override_timeout=False,
+#         api_log_level=logging.ERROR,
+#     )
+
+#     rows = IBTestProviderStubs.universe_rows(
+#         # filter=["ECO"],
+#     )
+#     historic = InteractiveBrokersBarClient(
+#         client=client,
+#         delay=0.5,
+#         use_cache=True,
+#         cache_dir=CACHE_DIR,
+#     )
+
+#     start_time = (pd.Timestamp.utcnow() - pd.Timedelta(days=128)).floor("1D")
+
+#     rows = [r for r in rows if r.uname == "FTI"]
+#     assert len(rows) > 0
+
+#     await client.connect()
+#     await client.request_market_data_type(4)
+#     for i, row in enumerate(rows):
+#         # US Futures bundle. any us tickers
+
+#         print(f"Processing {i}/{len(rows)}: {row.uname}: BID...")
+#         bars: pd.DataFrame = await historic.request_bars(
+#             contract=row.contract_cont,
+#             bar_size=BarSize._1_MINUTE,
+#             what_to_show=WhatToShow.BID,
+#             start_time=start_time,
+#             as_dataframe=write,
+#             skip_first=True,
+#         )
+#         if write:
+#             bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet", index=False)
+
+#         print(f"Processing {i}/{len(rows)}: {row.uname}: ASK...")
+#         bars: pd.DataFrame = await historic.request_bars(
+#             contract=row.contract_cont,
+#             bar_size=BarSize._1_MINUTE,
+#             what_to_show=WhatToShow.ASK,
+#             start_time=start_time,
+#             as_dataframe=write,
+#             skip_first=True,
+#         )
+#         if write:
+#             bars.to_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet", index=False)
 
 # async def import_spread_using_bars():
 #     """

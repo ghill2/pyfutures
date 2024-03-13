@@ -8,6 +8,7 @@ from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
 from pyfutures.client.cache import CachedFunc
+from pyfutures.client.cache import Cache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -22,22 +23,13 @@ class InteractiveBrokersBarClient:
         client: InteractiveBrokersClient,
         delay: float = 0,
         cache_dir: Path | None = None,
-        use_cache: bool = True,
+        cache: Cache | None = None,
     ):
         self._client = client
         self._delay = delay
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
-        self._use_cache = use_cache
-
-        if use_cache:
-            assert cache_dir is not None
-            self.cache = CachedFunc(
-                self._client.request_bars,
-                cache_dir=cache_dir,
-            )
-        else:
-            self.cache = None
+        self._cache = cache
 
         self._parser = ClientParser()
 
@@ -82,20 +74,22 @@ class InteractiveBrokersBarClient:
 
         i = 0
         while end_time > start_time:
+            
             if end_time >= pd.Timestamp.utcnow():
-                _use_cache = False
+                cache = None
             else:
-                _use_cache = use_cache
+                cache = self._cache
 
-            self._log.info(f"{contract} | {end_time - interval} -> {end_time} | use_cache={_use_cache}")
+            self._log.info(f"{contract} | {end_time - interval} -> {end_time} | use_cache={cache}")
 
-            bars: list[BarData] = await self._request_bars(
+            bars: list[BarData] = await self._client.request_bars(
                 contract=contract,
                 bar_size=bar_size,
                 what_to_show=what_to_show,
                 duration=duration,
                 end_time=end_time,
-                use_cache=_use_cache,
+                cache=cache,
+                as_dataframe=False,
             )
 
             if len(bars) > 0:

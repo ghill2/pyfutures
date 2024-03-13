@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
+from pathlib import Path
 
 import eventkit
 import pandas as pd
@@ -30,7 +31,8 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from pyfutures.client.cache import HistoricCache
+from pyfutures.client.cache import Cache
+from pyfutures.client.cache import CachedFunc
 from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -389,7 +391,7 @@ class InteractiveBrokersClient(EWrapper):
         what_to_show: WhatToShow,
         duration: Duration,
         end_time: pd.Timestamp,
-        cache: HistoricCache | None = None,
+        cache: Cache | Path | None = None,
         delay: float = 0,
         as_dataframe: bool = False,
     ):
@@ -400,35 +402,40 @@ class InteractiveBrokersClient(EWrapper):
             duration=duration,
             end_time=end_time,
         )
-
+        
+        # initialize cache
+        func: Callable = self._request_bars
         if cache is None:
-            func = self._request_bars
             is_cached = False
         else:
-            is_cached = cache.is_cached(**kwargs)
-            func = cache
-
-        # fetch bars
-
+            if isinstance(cache, Path):
+                cache = Cache(cache)
+            func: Callable = CachedFunc(
+                func=func,
+                cache=cache,
+            )
+            is_cached = func.is_cached(**kwargs)
+        
+        # request bars
         start = time.perf_counter()
         bars = []
         try:
             bars: list[BarData] = await func(**kwargs)
         except ClientException as e:
-            self._log.error(str(e))
+            pass
         except asyncio.TimeoutError as e:
             self._log.error(str(e.__class__.__name__))
         stop = time.perf_counter()
 
-        self._log.debug(f"Elapsed time: {stop - start:.2f}")
-
+        self._log.info(f"Elapsed time: {stop - start:.1f}s")
+        
+        # delay if needed
         if delay > 0 and not is_cached:
-            self._log.debug(f"Waiting for {delay} seconds...")
+            self._log.info(f"Waiting for {delay}s...")
             await asyncio.sleep(delay)
 
         if as_dataframe:
-            df = pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in bars])
-            return df
+            return pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in bars])
 
         return bars
 
@@ -444,18 +451,13 @@ class InteractiveBrokersClient(EWrapper):
         formatDate=1, returns timestamp in the exchange timezone
         formatDate=2, returns timestamp as integer seconds from epoch (UTC)
         """
-        self._log.info(f"{contract} | {end_time} | {bar_size} | {duration} | {what_to_show}")
+        start_time = end_time - duration.to_timedelta()
+        self._log.info(f"{start_time} | {end_time} | {bar_size} | {duration} | {what_to_show} | {contract}")
 
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
             data=[],
             timeout_seconds=60 * 10,
-        )
-
-        self._log.info(
-            f"reqHistoricalData: {request.id}, {contract}, "
-            f"endDateTime={end_time}, durationStr={duration}, "
-            f"barSizeSetting={bar_size}, whatToShow={what_to_show.name}"
         )
 
         try:
@@ -477,15 +479,19 @@ class InteractiveBrokersClient(EWrapper):
             self._eclient.cancelHistoricalData(reqId=request.id)
             raise
 
-        # bars can be returned before the start time
-        start_time = end_time - duration.to_timedelta()
-
         if len(bars) > 0:
             self._log.info(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
         else:
             self._log.info("---> Downloaded 0 bars.")
-
+        
+        previous_len = len(bars)
+        
         bars = [b for b in bars if b.timestamp >= start_time and b.timestamp < end_time]
+        
+        if previous_len != len(bars):
+            filtered_count = previous_len - len(bars)
+            self._log.info(f"---> Filtered {filtered_count} bars.")
+            
         return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper

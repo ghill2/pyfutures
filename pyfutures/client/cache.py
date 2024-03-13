@@ -44,7 +44,9 @@ class Cache:
     ) -> None:
         if not isinstance(value, (list, Exception)):
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
-
+        
+        self.path.mkdir(parents=True, exist_ok=True)
+        
         if isinstance(value, list):
             df = self._parser.bar_data_to_dataframe(value)
             df.to_parquet(self._parquet_path(key), index=False)
@@ -80,23 +82,22 @@ class Cache:
 
 
 class CachedFunc:
-    """
-    Creates a cache
-    name: str -> the subdirectory of the cache, eg request_bars, request_quote_ticks, request_trade_ticks
-    """
 
     def __init__(self, func: Callable, cache: Cache):
+        
         self._func = func
+        self._cache = cache
+        
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
         assert args == (), "Keywords arguments only"
 
-        self.path.mkdir(parents=True, exist_ok=True)
+        
 
         key = self.build_key(*args, **kwargs)
 
-        cached = self.get(key)
+        cached = self._cache.get(key)
         if cached is not None:
             self._log.debug(f"Returning cached {key}={self._value_to_str(cached)}")
             if isinstance(cached, Exception):
@@ -108,12 +109,12 @@ class CachedFunc:
 
         try:
             result = await self._func(**kwargs)
-            self.set(key, result)
+            self._cache.set(key, result)
             self._log.debug(f"Saved {self._value_to_str(result)} items...")
             return result
         except Exception as e:
             self._log.error(str(e))
-            self.set(key, e)
+            self._cache.set(key, e)
             self._log.debug(f"Saved {e} items...")
             raise
 
@@ -146,7 +147,7 @@ class CachedFunc:
     def is_cached(self, *args, **kwargs) -> bool:
         assert args == (), "Keywords arguments only"
         key = self.build_key(**kwargs)
-        cached = self.get(key)
+        cached = self._cache.get(key)
         return cached is not None
 
     @staticmethod
