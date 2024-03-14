@@ -101,13 +101,15 @@ class Connection:
                 data = await self._reader.read(4096)
                 self._log.debug(f"<-- {data}")
             except ConnectionResetError as e:
-                self._log.error(f"listen: TWS closed the connection {e!r}...")
-                await self._handle_disconnect()
+                self._log.debug(f"TWS closed the connection {e!r}...")
+                # await self._handle_disconnect()
+                self._is_connected.clear()
                 return
 
             if len(data) == 0:
                 self._log.debug("0 bytes received from server, connect has been dropped")
-                await self._handle_disconnect()
+                # await self._handle_disconnect()
+                self._is_connected.clear()
                 return
 
             buf += data
@@ -127,19 +129,19 @@ class Connection:
 
             await asyncio.sleep(0)
 
-    async def _handle_disconnect(self) -> None:
-        """
-        Called when the socket has been disconnected for some reason, for example,
-        due to a schedule restart or during IB nightly reset.
-        """
-        self._log.debug("Handling disconnect.")
-
-        self._connect_monitor_task.cancel()
-        self._connect_monitor_task = None
-
-        # reconnect subscriptions
-        # for sub in self._subscriptions:
-        #     sub.cancel()
+    # async def _handle_discconnect(self) -> None:
+    #     """
+    #     Called when the socket has been disconnected for some reason, for example,
+    #     due to a schedule restart or during IB nightly reset.
+    #     """
+    #     self._log.debug("Handling disconnect.")
+    #
+    #     self._connect_monitor_task.cancel()
+    #     self._connect_monitor_task = None
+    #
+    # reconnect subscriptions
+    # for sub in self._subscriptions:
+    #     sub.cancel()
 
     def _handle_msg(self, msg: bytes) -> None:
         if self.is_connected:
@@ -156,15 +158,12 @@ class Connection:
         try:
             while True:
                 if self.is_connected:
+                    await asyncio.sleep(timeout_seconds)
                     continue
-
-                # self._log.debug("Watchdog: connection has been disconnected. Reconnecting...")
-                self._log.debug("Connecting")
 
                 async with self._is_connecting_lock:
                     await self._connect()
                     await self._handshake(timeout_seconds=timeout_seconds)
-                await asyncio.sleep(timeout_seconds)
 
         except Exception as e:
             self._log.error(repr(e))
@@ -184,9 +183,7 @@ class Connection:
         if self._connect_monitor_task is None:
             self._connect_monitor_task = self.loop.create_task(self._connect_monitor(timeout_seconds=timeout_seconds))
 
-        self._log.debug("BEFPRE WAOT FPR")
         await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
-        self._log.debug("AFTER WAIT FOR")
 
     async def _connect(self) -> None:
         """
@@ -237,6 +234,7 @@ class Connection:
 
     async def _send_handshake(self) -> None:
         msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
+        # msg = b"API\x00\x00\x00\x00\tv100..176"
         self._sendMsg(msg)
 
     def _process_handshake(self, msg: bytes):
@@ -248,19 +246,18 @@ class Connection:
 
         id = int(fields[0])
         self._handshake_message_ids.append(id)
-        self._log.debug(str(self._handshake_message_ids))
-        self._log.debug(str(all(id in self._handshake_message_ids for id in (176, 15, 9))))
+        # self._log.debug(str(self._handshake_message_ids))
+        # self._log.debug(str(all(id in self._handshake_message_ids for id in (176, 15, 9))))
 
         if self._handshake_message_ids == [176] and len(fields) == 2:
             version, _ = fields
             assert int(version) == 176
             self._log.debug("Sending startApi message...")
-            msg = b"\x00\x00\x00\x0871\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
+            # msg = b"\x00\x00\x00\x0871\x002\x00" + str(self.client_id).encode() + b"\x00\x00" # old msg without \t
+            msg = b"\x00\x00\x00\t71\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
             # assert msg == b"\x00\x00\x00\x0871\x002\x001\x00\x00"
-            # msg = b"\x00\x00\x00\x0871\x002\x001\x00\x00"
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15)):
-            self._log.debug("SETTING CONNECTED")
             self._is_connected.set()
 
     def _prefix(self, msg):

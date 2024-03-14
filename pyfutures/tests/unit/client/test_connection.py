@@ -239,137 +239,190 @@ class TestConnection:
 # the writer might have to queue the responses
 # first test with demo
 # then once connection is working, test with mock server
+#
+
+# not using handle_disconnect()
+# the terminology is confusing.
+# this is supposed to handle a reconnect after disconnection
+# not a graceful shut down or disconnect
 from pyfutures.logger import LoggerAttributes
 
 LoggerAttributes.level = logging.DEBUG
 
 
-@pytest.mark.skip(reason="hangs when running entire test suite")
+# NOTE: mocker fixture required to avoid hanging
+
+
+# as there is no clean way to wait for an asyncio.Event to be unset
+# set timeout for the test instead and use While
+@pytest.mark.timeout(0.5)
 @pytest.mark.asyncio()
-async def test_handshake_client_id_1(mocker, event_loop):
-    # NOTE: mocker fixture required to avoid hanging
+async def test_reconnection_on_empty_byte(mocker):
     connection = ClientStubs.connection(client_id=1)
     mock_server = MockServer()
-
     mocker.patch(
         "asyncio.open_connection",
         return_value=(mock_server.reader, mock_server.writer),
     )
 
-    # await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
-    await connection.connect(timeout_seconds=5)
+    await connection.connect(timeout_seconds=0.1)
 
-    print("HANDSHAKE CLIENT ID")
-    mocker_server = None
-    # assert connection.is_connected
-    # tasks = asyncio.all_tasks()
-    # for task in tasks:
-    #     if task is not asyncio.current_task():  # Avoid cancelling the current task
-    #         task.cancel()
-    #     await asyncio.gather(*tasks, return_exceptions=True)  # Wait for all cancellations to finish
+    assert connection.is_connected
+
+    mock_server.disconnect()
+
+    # _connect_monitor_task() is asyncio.sleeping at this time
+    # wait until the next iteration loop that checks connection.is_connected
+    while connection.is_connected:
+        await asyncio.sleep(0.01)
+
+    # now wait for reconnect
+    await connection._is_connected.wait()
+
+
+@pytest.mark.timeout(0.5)
+@pytest.mark.asyncio()
+async def test_reconnection_on_conn_reset_error(mocker):
+    connection = ClientStubs.connection(client_id=1)
+    mock_server = MockServer()
+    mocker.patch(
+        "asyncio.open_connection",
+        return_value=(mock_server.reader, mock_server.writer),
+    )
+
+    await connection.connect(timeout_seconds=0.1)
+
+    assert connection.is_connected
+
+    # await mock_server.disconnect()
+    mock_server.send_response(ConnectionResetError)
+
+    # _connect_monitor_task() is asyncio.sleeping at this time
+    # wait until the next iteration loop that checks connection.is_connected
+    while connection.is_connected:
+        await asyncio.sleep(0.01)
+
+    # now wait for reconnect
+    await connection._is_connected.wait()
+
+
+# TODO: cant really test this with unit tests.
+#
+# @pytest.mark.skip(reason="hangs when running entire test suite")
+#
+# @pytest.mark.asyncio()
+# async def test_handshake_client_id_1(mocker, event_loop):
+#     connection = ClientStubs.connection(client_id=1)
+#     mock_server = MockServer()
+#     mocker.patch(
+#         "asyncio.open_connection",
+#         return_value=(mock_server.reader, mock_server.writer),
+#     )
+#     await connection.connect(timeout_seconds=1)
+#
+# @pytest.mark.skip(reason="hangs when running entire test suite")
+# @pytest.mark.asyncio()
+# async def test_handshake_client_id_2(mocker):
+#     # NOTE: mocker fixture required to avoid hanging
+#
+#     connection: Connection = ClientStubs.connection(client_id=2)
+#
+#     # Act
+#     mocker.patch(
+#         "asyncio.open_connection",
+#         return_value=(self.mock_server.reader, self.mock_server.writer),
+#     )
+#
+#     await self.connection.connect(timeout_seconds=1)
+#
+#     assert connection.is_connected
+#
+
+
+@pytest.mark.skip(reason="TODO")
+@pytest.mark.asyncio()
+async def test_reset_closes_writer(self, connection):
+    pass
 
 
 # class TestConnection:
-#     def setup_method(self):
-#         logger = logging.getLogger()
-#         logger.setLevel(logging.DEBUG)
+# def setup_method(self):
+#     logger = logging.getLogger()
+#     logger.setLevel(logging.DEBUG)
 #
-#         self.connection: Connection = ClientStubs.connection(client_id=1)
-#         self.mock_server = MockServer()
+#     self.connection: Connection = ClientStubs.connection(client_id=1)
+#     self.mock_server = MockServer()
+# @pytest.mark.skip()
+# @pytest.mark.asyncio()
+# async def test_reconnection_on_conn_reset_error_old(mocker):
+#     """
+#     _listen_task ConnectionResetError should call _handle_disconnect()
+#     when a connection reset error is raised, the client should attempt to reconnect
+#     test: raise the error, then wait until self.is_connected is True
+#     """
+#     # NOTE: mocker fixture required to avoid hanging
 #
-#     @pytest.mark.asyncio()
-#     async def test_connect(self, mocker):
-#         # NOTE: mocker fixture required to avoid hanging
+#     self.connection._handle_disconnect = AsyncMock()
 #
-#         # Arrange
-#         mock_reader = AsyncMock()
-#         mock_writer = AsyncMock()
+#     def raise_error(*args, **kwargs):
+#         raise ConnectionResetError
 #
-#         mocker.patch(
-#             "asyncio.open_connection",
-#             return_value=(mock_reader, mock_writer),
-#         )
+#     self.mock_server.reader.read.side_effect = raise_error
 #
-#         # Act
-#         await self.connection._connect()
+#     mocker.patch(
+#         "asyncio.open_connection",
+#         return_value=(AsyncMock(), None),
+#     )
 #
-#         # Assert
-#         asyncio.open_connection.assert_called_once_with(
-#             self.connection.host,
-#             self.connection.port,
-#         )
-#         assert self.connection._reader == mock_reader
-#         assert self.connection._writer == mock_writer
+#     await self.connection._connect()  # start listen task
+#     await asyncio.sleep(0)
+#     self.connection._handle_disconnect.assert_called_once()
+# @pytest.mark.skip()
+# @pytest.mark.asyncio()
+# async def test_reconnection_on_empty_byte_old(mocker):
+#     """
+#     when an empty byte is received on the socket, the client should attempt to reconnect
+#     """
+#     # NOTE: mocker fixture required to avoid hanging
+#     connection: Connection = ClientStubs.connection(client_id=1)
 #
-#         listen_started = not self.connection._listen_task.done() and not self.connection._listen_task.cancelled()
-#         assert listen_started
-#         assert self.connection._listen_task in asyncio.all_tasks(self.connection.loop)
+#     connection._handle_disconnect = AsyncMock()
+#     mock_reader = AsyncMock()
+#     mock_reader.read.return_value = b""
 #
-#     # @pytest.mark.skip(reason="hangs when running entire test suite")
-#     @pytest.mark.asyncio()
-#     async def test_handshake_client_id_2(self, mocker):
-#         # NOTE: mocker fixture required to avoid hanging
+#     mocker.patch(
+#         "asyncio.open_connection",
+#         return_value=(mock_reader, None),
+#     )
 #
-#         connection: Connection = ClientStubs.connection(client_id=2)
+#     await connection._connect()  # start listen task
+#     await asyncio.sleep(0)
+#     connection._handle_disconnect.assert_called_once()
 #
-#         # Act
-#         mocker.patch(
-#             "asyncio.open_connection",
-#             return_value=(self.mock_server.reader, self.mock_server.writer),
-#         )
+# @pytest.mark.asyncio()
+# async def test_connect(self, mocker):
+#     # NOTE: mocker fixture required to avoid hanging
 #
-#         await self.connection.connect(timeout_seconds=1)
+#     # Arrange
+#     mock_reader = AsyncMock()
+#     mock_writer = AsyncMock()
 #
-#         assert connection.is_connected
+#     mocker.patch(
+#         "asyncio.open_connection",
+#         return_value=(mock_reader, mock_writer),
+#     )
 #
-#     @pytest.mark.skip()
-#     @pytest.mark.asyncio()
-#     async def test_reconnection_on_empty_byte(self, mocker):
-#         """
-#         when an empty byte is received on the socket, the client should attempt to reconnect
-#         """
-#         # NOTE: mocker fixture required to avoid hanging
+#     # Act
+#     await self.connection._connect()
 #
-#         self.connection._handle_disconnect = AsyncMock()
-#         mock_reader = AsyncMock()
-#         mock_reader.read.return_value = b""
+#     # Assert
+#     asyncio.open_connection.assert_called_once_with(
+#         self.connection.host,
+#         self.connection.port,
+#     )
+#     assert self.connection._reader == mock_reader
+#     assert self.connection._writer == mock_writer
 #
-#         mocker.patch(
-#             "asyncio.open_connection",
-#             return_value=(mock_reader, None),
-#         )
-#
-#         await self.connection._connect()  # start listen task
-#         await asyncio.sleep(0)
-#         self.connection._handle_disconnect.assert_called_once()
-#
-#     @pytest.mark.skip()
-#     @pytest.mark.asyncio()
-#     async def test_reconnection_on_conn_reset_error(self, mocker):
-#         """
-#         _listen_task ConnectionResetError should call _handle_disconnect()
-#         when a connection reset error is raised, the client should attempt to reconnect
-#         test: raise the error, then wait until self.is_connected is True
-#         """
-#         # NOTE: mocker fixture required to avoid hanging
-#
-#         self.connection._handle_disconnect = AsyncMock()
-#
-#         def raise_error(*args, **kwargs):
-#             raise ConnectionResetError
-#
-#         self.mock_server.reader.read.side_effect = raise_error
-#
-#         mocker.patch(
-#             "asyncio.open_connection",
-#             return_value=(AsyncMock(), None),
-#         )
-#
-#         await self.connection._connect()  # start listen task
-#         await asyncio.sleep(0)
-#         self.connection._handle_disconnect.assert_called_once()
-#
-#     @pytest.mark.skip(reason="TODO")
-#     @pytest.mark.asyncio()
-#     async def test_reset_closes_writer(self, connection):
-#         pass
+#     listen_started = not self.connection._listen_task.done() and not self.connection._listen_task.cancelled()
+#     assert listen_started
+#     assert self.connection._listen_task in asyncio.all_tasks(self.connection.loop)

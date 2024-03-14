@@ -55,11 +55,14 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 # TODO: ALways start the container once before running all tests
 # Sometimes the docker container socat responds with Connection Refused...
 
+# with IB Eclient/EWrapper:
+# > clientId=10 -> NullPointerException, no OutofMemoryError
+
 
 @pytest.mark.asyncio()
 async def test_connect(event_loop):
     print("test_connect")
-    connection = ClientStubs.connection(loop=event_loop, client_id=1)
+    connection = ClientStubs.connection(loop=event_loop, client_id=12)
     await connection.connect(timeout_seconds=20)
 
 
@@ -137,3 +140,33 @@ async def test_request_then_disconnect(event_loop):
     the client should immediately set the response to a ClientDisconnected Exception so the parent can handle?
     """
     client = ClientStubs.client(loop=event_loop)
+
+
+@pytest.mark.skip(reason="unused")
+def test_bytestrings():
+    """
+    Helper test to reference / compare ibapi connection bytestrings with pyfutures connection bytestrings
+
+
+    Bytestrings that worked when clientId > 10:
+        handshake:
+            msg = b"API\x00\x00\x00\x00\tv100..176"
+        startApi:
+            msg = b"\x00\x00\x00\t71\x002\x0012\x00\x00"
+    """
+    from ibapi.wrapper import EWrapper
+    from ibapi.client import EClient
+    import logging
+    import sys
+
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+    eclient = EClient(wrapper=EWrapper())
+
+    eclient.clientId = 10
+    names = logging.Logger.manager.loggerDict
+    for name in names:
+        if "ibapi" in name:
+            logging.getLogger(name).setLevel(logging.DEBUG)
+
+    eclient.connect("127.0.0.1", 4002, 11)
