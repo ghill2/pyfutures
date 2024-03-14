@@ -24,6 +24,18 @@ async def test_reset(event_loop):
 
 
 @pytest.mark.asyncio()
+@pytest.mark.skip(reason="TODO")
+async def test_errors_shown():
+    """
+    Tests if:
+        - an error is shown if the client sends a request before the client has connected
+    """
+    client = ClientStubs.client()
+    await client.request_account_summary()  # is_connected
+    await asyncio.sleep(20)
+
+
+@pytest.mark.asyncio()
 async def test_request_contract_details_returns_expected(event_loop):
     client = ClientStubs.client(loop=event_loop)
     await client.connect()

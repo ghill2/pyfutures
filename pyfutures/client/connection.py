@@ -45,10 +45,12 @@ class Connection:
         host: str,
         port: int,
         client_id: int,
+        subscriptions: dict = {},
     ):
         self.loop = loop
         self.host = host
         self.port = port
+        self._subscriptions = subscriptions
         self.client_id = client_id
 
         self._is_connected = asyncio.Event()
@@ -61,6 +63,9 @@ class Connection:
         self._listen_task: asyncio.Task | None = None
         self._reader, self._writer = (None, None)
         self._handshake_message_ids = []
+
+        self._min_version = 176
+        self._max_version = 176
 
     def _reset(self) -> bool:
         self._log.debug("Initializing...")
@@ -165,6 +170,13 @@ class Connection:
                     await self._connect()
                     await self._handshake(timeout_seconds=timeout_seconds)
 
+                    print(len(self._subscriptions))
+                    self._log.debug(self._subscriptions)
+                    if len(self._subscriptions) > 0:
+                        self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
+                        for sub in self._subscriptions.values():
+                            sub.subscribe()
+
         except Exception as e:
             self._log.error(repr(e))
 
@@ -190,7 +202,7 @@ class Connection:
         Called by watch_dog and manually with connect() by the user
         NOTE: do not call handshake here so we can test connect and handshake separately
         """
-        self._log.debug("Connecting...")
+        self._log.debug(f"Connecting on client_id {self.client_id}...")
 
         self._reset()
 
@@ -233,8 +245,9 @@ class Connection:
         self.loop.create_task(self._writer.drain())
 
     async def _send_handshake(self) -> None:
-        msg = b"API\0" + self._prefix(b"v%d..%d%s" % (176, 176, b" "))
-        # msg = b"API\x00\x00\x00\x00\tv100..176"
+        msg = b"v%d..%d" % (self._min_version, self._max_version)
+        msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
+        msg = b"API\x00" + msg
         self._sendMsg(msg)
 
     def _process_handshake(self, msg: bytes):
@@ -253,15 +266,14 @@ class Connection:
             version, _ = fields
             assert int(version) == 176
             self._log.debug("Sending startApi message...")
-            # msg = b"\x00\x00\x00\x0871\x002\x00" + str(self.client_id).encode() + b"\x00\x00" # old msg without \t
-            msg = b"\x00\x00\x00\t71\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
-            # assert msg == b"\x00\x00\x00\x0871\x002\x001\x00\x00"
+            # <Start Api Req Code><Version><ClientId> -> struct.pack
+            msg = b"71\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
+            msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15)):
             self._is_connected.set()
 
-    def _prefix(self, msg):
-        # prefix a message with its length
+    def _prefix(self, msg: bytes):
         return struct.pack(">I", len(msg)) + msg
 
     @classmethod

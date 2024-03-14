@@ -28,20 +28,35 @@ class ClientStubs:
 
     @staticmethod
     def client(
+        client_id: int = 1,
         loop: asyncio.AbstractEventLoop = None,
         api_log_level: int = logging.DEBUG,
-        cached: bool = True,
     ) -> InteractiveBrokersClient:
         global CLIENT
         if CLIENT:
             return CLIENT
         CLIENT = InteractiveBrokersClient(
             loop=loop,
+            client_id=client_id,
             host="127.0.0.1",
             port=4002,
             api_log_level=api_log_level,
         )
         return CLIENT
+
+    @staticmethod
+    def uncached_client(
+        client_id: int = 1,
+        loop: asyncio.AbstractEventLoop = None,
+        api_log_level: int = logging.DEBUG,
+    ) -> InteractiveBrokersClient:
+        return InteractiveBrokersClient(
+            loop=loop,
+            client_id=client_id,
+            host="127.0.0.1",
+            port=4002,
+            api_log_level=api_log_level,
+        )
 
     @staticmethod
     def connection(

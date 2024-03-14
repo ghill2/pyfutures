@@ -42,13 +42,11 @@ class ClientStubs:
         )
 
     @staticmethod
-    def connection(client_id: int) -> Connection:
-        return Connection(
-            loop=asyncio.get_event_loop(),
-            host="127.0.0.1",
-            port=4002,
-            client_id=client_id,
-        )
+    def connection(
+        client_id: int,
+        subscriptions: dict = {},
+    ) -> Connection:
+        return Connection(loop=asyncio.get_event_loop(), host="127.0.0.1", port=4002, client_id=client_id, subscriptions=subscriptions)
 
     @classmethod
     def historic(cls) -> InteractiveBrokersBarClient:

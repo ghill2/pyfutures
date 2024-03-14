@@ -39,9 +39,7 @@ class MockServer:
         else:
             raise msg
 
-
         print(f"responsed: {msg}")
-
 
     def _handle_write(self, msg: bytes) -> None:
         """
@@ -52,11 +50,11 @@ class MockServer:
         print(f"write: {msg}")
 
         responses = []
-        if msg == b"API\x00\x00\x00\x00\nv176..176 ":
+        if msg == b"API\x00\x00\x00\x00\tv176..176":
             responses = [
                 b"\x00\x00\x00*176\x0020240308 13:30:34 Greenwich Mean Time\x00",
             ]
-        elif msg.startswith(b"\x00\x00\x00\t71\x002\x00"):
+        elif msg.startswith(b"\x00\x00\x00") and b"71\x002\x00" in msg:
             responses = [
                 b"\x00\x00\x00\x0f15\x001\x00DU1234567\x00",
                 b"\x00\x00\x00\x069\x001\x006\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00",
@@ -64,7 +62,6 @@ class MockServer:
 
         self._to_send.extend(responses)
         self.respond.set()
-
 
     def send_response(self, msg):
         # mock a disconnect by sending send an empty byte string to the client

@@ -100,6 +100,7 @@ class InteractiveBrokersClient(EWrapper):
             host=host,
             port=port,
             client_id=client_id,
+            subscriptions=self._subscriptions
         )
         self._connection.register_handler(self._handle_msg)
 

@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import ClassVar
+from pyfutures.logger import LoggerAdapter
 
 import aiodocker
 from dotenv import dotenv_values
@@ -51,13 +52,11 @@ CREATE_CONFIG = {
 
 
 class Gateway:
-    IMAGE: ClassVar[str] = "ghcr.io/gnzsnz/ib-gateway:stable"
     CONTAINER_NAME: ClassVar[str] = "ib-gateway"
 
     def __init__(self, log_level: int = logging.DEBUG):
         self._container: aiodocker.containers.DockerContainer | None = None
-        self.log = logging.getLogger("Gateway")
-        self.log.setLevel(log_level)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     async def create_container(self):
         """
@@ -79,14 +78,14 @@ class Gateway:
         """
         Checks the docker container logs for a given bytestring.
         """
-        self.log.info("Waiting until Gateway has (re)started........")
+        self._log.info("Waiting until Gateway has (re)started........")
         # to prevent aiodocker from erroring, datetime is converted to seconds epoch
         now = datetime.now()
         now_seconds_epoch = int(now.timestamp())
         async for chunk in c.log(follow=True, stdout=True, stderr=True, since=now_seconds_epoch):
             if "IBC: Login has completed" in chunk:
-                # self.log.info(chunk)
-                self.log.info("Gateway Started and Ready... Continuing...")
+                # self._log.info(chunk)
+                self._log.info("Gateway Started and Ready... Continuing...")
                 break
 
     async def start(self, wait: bool = True):
@@ -98,10 +97,10 @@ class Gateway:
         if not c:
             c = await self.create_container()
 
-        self.log.info("Starting Gateway...")
+        self._log.info("Starting Gateway...")
         metadata = await c.show()
         if metadata["State"]["Status"] == "running":
-            self.log.info("start() called when container is already running...")
+            self._log.info("start() called when container is already running...")
             return
 
         await c.start()  # Use aiodocker's async start()
@@ -113,6 +112,7 @@ class Gateway:
         Restarts the container.
         """
         c = await self.container()
+        self._log.info(f"Restarting Container {c}...")
         await c.restart()  # Use aiodocker's async restart()
         await self.wait_until_login(c)
 
@@ -122,7 +122,7 @@ class Gateway:
         """
         c = await self.container()
         if c:
-            self.log.info("Stopping Gateway...")
+            self._log.info("Stopping Gateway...")
             await c.stop()
             await c.wait()
             self._container = None
