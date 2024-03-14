@@ -25,6 +25,7 @@ class ClientStubs:
 
     @staticmethod
     def client(
+        client_id: int = 1,
         loop: asyncio.AbstractEventLoop = None,
         request_timeout_seconds: float = 0.5,  # requests should fail immediately for unit tests
         override_timeout: bool = True,  # use timeout for all requests even if timeout is given
@@ -34,6 +35,7 @@ class ClientStubs:
             loop=loop or asyncio.get_event_loop(),
             host="127.0.0.1",
             port=4002,
+            client_id=client_id,
             api_log_level=api_log_level,
             request_timeout_seconds=request_timeout_seconds,
             override_timeout=override_timeout,
