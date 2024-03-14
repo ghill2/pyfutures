@@ -43,12 +43,6 @@ class TestInteractiveBrokersClient:
         self.client = ClientStubs.client()
 
     @pytest.mark.asyncio()
-    async def test_connect_10(event_loop):
-        print("test_connect")
-        client = ClientStubs.client(client_id=10, loop=event_loop)
-        await client.connect()
-
-    @pytest.mark.asyncio()
     async def test_eclient_sends_to_client(self):
         # Arrange
         self.client.sendMsg = Mock()
