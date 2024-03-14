@@ -79,6 +79,22 @@ class TestConnection:
 
         assert connection.is_connected
 
+    @pytest.mark.asyncio()
+    async def test_handshake_client_id_10(self, mocker):
+        # NOTE: mocker fixture required to avoid hanging
+
+        connection: Connection = ClientStubs.connection(client_id=10)
+
+        # Act
+        mocker.patch(
+            "asyncio.open_connection",
+            return_value=(self.mock_server.reader, self.mock_server.writer),
+        )
+
+        await self.connection.connect(timeout_seconds=1)
+
+        assert connection.is_connected
+
     @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_empty_byte_handles_disconnect(self, mocker):

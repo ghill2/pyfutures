@@ -6,16 +6,14 @@ import pandas as pd
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
-from pyfutures.client.enums import WhatToShow
-from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import Duration
-from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.enums import Frequency
+from pyfutures.client.enums import WhatToShow
 from pyfutures.logger import LoggerAdapter
 from pyfutures.logger import LoggerAttributes
-from pyfutures.tests.test_kit import CACHE_DIR
-from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
+
 
 async def cache_spread():
     LoggerAttributes.level = logging.INFO
@@ -37,7 +35,6 @@ async def cache_spread():
         # filter=["ECO"],
     )
     for row in rows:
-
         schedule = row.liquid_schedule
 
         open_times = schedule.to_open_range(
@@ -50,7 +47,7 @@ async def cache_spread():
 
         cache = Path.home() / "Desktop" / "download_cache2"
 
-        for open_time in open_times[::-1]:
+        for open_time in open_times:
             log.info(f"{open_time}")
             seconds_in_hour: int = 60 * 60
             await client.request_bars(
@@ -63,6 +60,7 @@ async def cache_spread():
                 as_dataframe=False,
                 delay=0.5,
             )
+
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(cache_spread())

@@ -21,11 +21,11 @@ from ibapi.order import Order
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 
+from pyfutures.client.client import IBOpenOrderEvent
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.client import IBOpenOrderEvent
 from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.client.objects import IBErrorEvent
@@ -41,6 +41,12 @@ pytestmark = pytest.mark.unit
 class TestInteractiveBrokersClient:
     def setup_method(self):
         self.client = ClientStubs.client()
+
+    @pytest.mark.asyncio()
+    async def test_connect_10(event_loop):
+        print("test_connect")
+        client = ClientStubs.client(client_id=10, loop=event_loop)
+        await client.connect()
 
     @pytest.mark.asyncio()
     async def test_eclient_sends_to_client(self):
