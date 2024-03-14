@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from pyfutures.client.cache import Cache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -45,7 +46,8 @@ async def cache_spread():
         await client.connect()
         await client.request_market_data_type(4)
 
-        cache = Path.home() / "Desktop" / "download_cache2"
+        cache = Cache(Path.home() / "Desktop" / "download_cache2")
+        cache.purge_errors(asyncio.TimeoutError)
 
         for open_time in open_times:
             log.info(f"{open_time}")

@@ -406,3 +406,157 @@ class TestContractChain:
     #     for chunk in session.to_query_result():
     #         chunk = capsule_to_list(chunk)
     #         yield from chunk
+
+
+#         assert len(prices_d1) == 111
+#         assert len(prices_m1) == 3803
+
+#         assert prices_d1[-1].current_month == ContractMonth("1998M")
+#         assert prices_m1[-1].current_month == ContractMonth("1998M")
+
+#         assert chain.rolls.iloc[0].month.value == "1998M"
+#         assert chain.rolls.iloc[0].timestamp == pd.Timestamp("1998-03-10", tz="UTC")
+
+#     def test_chain_for_each_data(self):
+#         chain_d1 = ContractChain(
+#             bar_type=BarType.from_str("MES.IB-1-DAY-MID-EXTERNAL"),
+#             config=self.chain_config,
+#             instrument_provider=self.instrument_provider,
+#         )
+#         data_d1 = MultipleData(
+#             bar_type=BarType.from_str("MES.IB-1-DAY-MID-EXTERNAL"),
+#             chain=chain_d1,
+#         )
+
+#         chain_m1 = ContractChain(
+#             bar_type=BarType.from_str("MES.IB-1-MINUTE-MID-EXTERNAL"),
+#             config=self.chain_config,
+#             instrument_provider=self.instrument_provider,
+#         )
+#         data_m1 = MultipleData(
+#             bar_type=BarType.from_str("MES.IB-1-MINUTE-MID-EXTERNAL"),
+#             chain=chain_m1,
+#         )
+
+#         for actor in [chain_m1, chain_d1, data_d1, data_m1]:
+#             actor.register_base(
+#                 portfolio=self.portfolio,
+#                 msgbus=self.msgbus,
+#                 cache=self.cache,
+#                 clock=self.clock,
+#                 logger=self.logger,
+#             )
+#             actor.start()
+
+#         self.data_engine.start()
+
+#         prices_d1 = []
+#         self.msgbus.subscribe(
+#             topic=data_d1.topic,
+#             handler=prices_d1.append,
+#         )
+
+#         prices_m1 = []
+#         self.msgbus.subscribe(
+#             topic=data_m1.topic,
+#             handler=prices_m1.append,
+#         )
+
+#         for bar in self.bars:
+#             self.data_engine.process(bar)
+
+#         assert len(prices_d1) == 111
+#         assert len(prices_m1) == 3756
+
+#         assert prices_d1[-1].current_month == ContractMonth("1998M")
+#         assert prices_m1[-1].current_month == ContractMonth("1998M")
+
+#         assert chain_d1.rolls.iloc[0].month.value == "1998M"
+#         assert chain_d1.rolls.iloc[0].timestamp == pd.Timestamp("1998-03-10", tz="UTC")
+
+#         assert chain_m1.rolls.iloc[0].month.value == "1998M"
+#         assert chain_m1.rolls.iloc[0].timestamp == pd.Timestamp("1998-03-10 13:17", tz="UTC")
+
+
+# def test_chain_rolls_at_time_expected(self):
+
+#     for bar in self.bars:
+#         self.data_engine.process(bar)
+
+#         # print(unix_nanos_to_dt(bar.ts_init), bar)
+#         if len(self.chain.rolls) == 1:
+#             break
+
+
+#     assert bar.bar_type == BarType.from_str("MES=MES=FUT=2021M.SIM-1-DAY-MID-EXTERNAL")
+#     assert bar.ts_init == dt_to_unix_nanos(pd.Timestamp("2021-03-10 21:00:30+00:00"))
+
+# def test_chain_adds_rolls(self):
+
+#     for bar in self.bars:
+#         self.data_engine.process(bar)
+
+#     assert len(self.chain.rolls) == 3
+
+#     assert self.chain.rolls.timestamp.iloc[0] == pd.Timestamp("2021-03-10 21:00:30+00:00")
+#     assert self.chain.rolls.to_month.iloc[0] == ContractMonth("2021M")
+
+#     assert self.chain.rolls.timestamp.iloc[1] == pd.Timestamp("2021-06-10 20:00:30+00:00")
+#     assert self.chain.rolls.to_month.iloc[1] == ContractMonth("2021U")
+
+#     assert self.chain.rolls.timestamp.iloc[2] == pd.Timestamp("2021-09-10 20:00:30+00:00")
+#     assert self.chain.rolls.to_month.iloc[2] == ContractMonth("2021Z")
+
+# folder = Path(PACKAGE_ROOT) / "tests/unit_tests/continuous/data"
+# paths = [
+#     folder / "MES=MES=FUT=2021H.SIM-1-DAY-MID-EXTERNAL-0.parquet",
+#     folder / "MES=MES=FUT=2021M.SIM-1-DAY-MID-EXTERNAL-0.parquet",
+#     folder / "MES=MES=FUT=2021U.SIM-1-DAY-MID-EXTERNAL-0.parquet",
+#     folder / "MES=MES=FUT=2021Z.SIM-1-DAY-MID-EXTERNAL-0.parquet",
+
+# ]
+
+# session = DataBackendSession()
+
+# for i, path in enumerate(paths):
+#     session.add_file(NautilusDataType.Bar, f"data{i}", str(path))
+
+# self.bars = []
+
+# for chunk in session.to_query_result():
+#     self.bars.extend(capsule_to_list(chunk))
+
+# self.bars = sorted(
+#     self.bars,
+#     key=lambda x: (
+#         x.ts_init,
+#         MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]),
+#     ),
+# )
+
+# self.msgbus = MessageBus(
+#     trader_id=TestIdStubs.trader_id(),
+#     clock=self.clock,
+# )
+
+# self.cache = Cache()
+
+# self.portfolio = Portfolio(
+#     self.msgbus,
+#     self.cache,
+#     self.clock,
+# )
+
+# self.data_engine = DataEngine(
+#     msgbus=self.msgbus,
+#     cache=self.cache,
+#     clock=self.clock,
+#     config=DataEngineConfig(debug=True),
+# )
+
+
+# def on_bar(self, bar: Bar) -> None:
+#     print(
+#         unix_nanos_to_dt(bar.ts_init),
+#         bar.bar_type.instrument_id.value.split("=")[1].split(".")[0]
+#     )
