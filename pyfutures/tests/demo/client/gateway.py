@@ -7,6 +7,49 @@ import aiodocker
 from dotenv import dotenv_values
 
 
+# https://github.com/aio-libs/aiodocker/issues/829
+# copied from nautilus_trader IB gateway when docker container.create() is called
+# this is the config sent in the request to the docker server endpoint
+#
+tws_userid = dotenv_values()["TWS_USERNAME"]
+tws_password = dotenv_values()["TWS_PASSWORD"]
+CREATE_CONFIG = {
+    "Hostname": None,
+    "Domainname": None,
+    "ExposedPorts": {"4003/tcp": {}, "4004/tcp": {}, "5900/tcp": {}},
+    "User": None,
+    "Tty": False,
+    "OpenStdin": False,
+    "StdinOnce": False,
+    "AttachStdin": False,
+    "AttachStdout": False,
+    "AttachStderr": False,
+    "Env": [f"TWS_USERID={tws_userid}", f"TWS_PASSWORD={tws_password}", "TRADING_MODE=paper", "READ_ONLY_API=yes"],
+    "Cmd": None,
+    "Image": "ghcr.io/gnzsnz/ib-gateway:stable",
+    "Volumes": None,
+    "NetworkDisabled": False,
+    "Entrypoint": None,
+    "WorkingDir": None,
+    "HostConfig": {
+        "NetworkMode": "default",
+        "RestartPolicy": {"Name": "always"},
+        "PortBindings": {
+            "4003/tcp": [{"HostIp": "127.0.0.1", "HostPort": "4001"}],
+            "4004/tcp": [{"HostIp": "127.0.0.1", "HostPort": "4002"}],
+            "5900/tcp": [{"HostIp": "127.0.0.1", "HostPort": "5900"}],
+        },
+    },
+    "NetworkingConfig": None,
+    "MacAddress": None,
+    "Labels": None,
+    "StopSignal": None,
+    "Healthcheck": None,
+    "StopTimeout": None,
+    "Runtime": None,
+}
+
+
 class Gateway:
     IMAGE: ClassVar[str] = "ghcr.io/gnzsnz/ib-gateway:stable"
     CONTAINER_NAME: ClassVar[str] = "ib-gateway"
@@ -23,38 +66,13 @@ class Gateway:
         Does not start the container, only creates it
         """
         _docker = aiodocker.Docker()
-        host = "127.0.0.1"
         c = await self.container()
 
         if c:
             await self.stop()
 
-        tws_userid = dotenv_values()["TWS_USERNAME"]
-        tws_password = dotenv_values()["TWS_PASSWORD"]
+        c = await _docker.containers.create(name=self.CONTAINER_NAME, config=CREATE_CONFIG)
 
-        # https://github.com/aio-libs/aiodocker/issues/829
-        config = dict(
-            Image="ghcr.io/gnzsnz/ib-gateway:stable",
-            Restart_policy={"Name": "always"},
-            # detach=True,
-            Platform="amd64",
-            ExposedPorts={
-                "4001/tcp": {},
-                "4002/tcp": {},
-                "5900/tcp": {},
-            },
-            # Ports={
-            #     "4003": {host, 4001),
-            #     "4004": {host, 4002),
-            #     "5900": {host, 5900,
-            # },
-            Env=["TRADING_MODE=paper", f"TWS_USERID={tws_userid}", f"TWS_PASSWORD={tws_password}", "READ_ONLY_API=yes"],
-        )
-
-        c = await _docker.containers.create(name=self.CONTAINER_NAME, config=config)
-
-        # await self.wait_until_login(c)
-        await c.start()
         return c
 
     async def wait_until_login(self, c) -> bool:
@@ -127,3 +145,32 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     gateway = Gateway()
     loop.run_until_complete(gateway.create_container())
+
+
+# @classmethod
+# async def start_tws(cls):
+#     print("Starting tws...")
+#     if cls.is_tws_running():
+#         await cls.kill_tws()
+#     os.system("sh /opt/ibc/twsstartmacos.sh")
+#
+#     while not cls.is_tws_running():
+#         print("Waiting for tws to open...")
+#         await asyncio.sleep(1)
+#
+# @classmethod
+# async def kill_tws(cls):
+#     print("Killing tws...")
+#     os.system("killall -m java")
+#     os.system("killall -m Trader Workstation 10.26")
+#     while cls.is_tws_running():
+#         print("Waiting for tws to close...")
+#         await asyncio.sleep(1)
+#
+# @staticmethod
+# def is_tws_running() -> bool:
+#     for process in psutil.process_iter(["pid", "name"]):
+#         name = process.info["name"].lower()
+#         if name == "java" or name.startswith("Trader Workstation"):
+#             return True
+#     return False

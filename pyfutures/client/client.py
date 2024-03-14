@@ -133,13 +133,14 @@ class InteractiveBrokersClient(EWrapper):
     ################################################################################################
     # Connection
 
-    async def connect(self) -> None:
+    async def connect(self, timeout_seconds: int = 5) -> None:
+
         self._outgoing_msg_task = self._loop.create_task(
             coro=self._process_outgoing_msg_queue(),
             name="outgoing_message_queue",
         )
 
-        await self._connection.connect()
+        await self._connection.connect(timeout_seconds=timeout_seconds)
 
     def sendMsg(self, msg: bytes) -> None:
         # messages output from self.eclient are sent here

@@ -24,23 +24,13 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 from pyfutures.tests.demo.client.gateway import Gateway
 from pyfutures.tests.demo.client.stubs import ClientStubs
 
+# Make sure Docker Desktop is open before running tests
 
 # TO SHOW LOGS / OUTPUT:
 # pytest -o log_cli=true
 #
 # Requirements: ensure Docker Desktop is running on OSX
 # or get docker CLI version working by manually running the docker daemon.
-
-
-# @pytest.fixture(scope="session")
-# def gateway():
-#     return InteractiveBrokersGateway(
-#         trading_mode="paper",
-#         config=InteractiveBrokersGatewayConfig(
-#             username=dotenv_values()["TWS_USERNAME"],
-#             password=dotenv_values()["TWS_PASSWORD"],
-#         ),
-#     )
 
 ###########
 ## TEST CASE 1:
@@ -62,8 +52,8 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 @pytest.mark.asyncio()
 async def test_connect(event_loop):
     print("test_connect")
-    connection = ClientStubs.connection(loop=event_loop, client_id=12)
-    await connection.connect(timeout_seconds=20)
+    client = ClientStubs.client(loop=event_loop)
+    await client.connect(timeout_seconds=20)
 
 
 @pytest.fixture(scope="session")
@@ -170,3 +160,36 @@ def test_bytestrings():
             logging.getLogger(name).setLevel(logging.DEBUG)
 
     eclient.connect("127.0.0.1", 4002, 11)
+
+
+@pytest.mark.skip(reason="helper")
+def test_nautilus_gateway():
+    """
+    Used to generate the docker API configuration to use in aiodocker
+    log the config in python (sync) docker package
+    """
+    from dotenv import dotenv_values
+
+    from nautilus_trader.adapters.interactive_brokers.config import (
+        InteractiveBrokersGatewayConfig,
+    )
+    from nautilus_trader.adapters.interactive_brokers.gateway import (
+        InteractiveBrokersGateway,
+    )
+
+    config = InteractiveBrokersGatewayConfig(
+        start=False,
+        username=dotenv_values()["TWS_USERNAME"],
+        password=dotenv_values()["TWS_PASSWORD"],
+        trading_mode="paper",
+        read_only_api=True,
+    )
+
+    gateway = InteractiveBrokersGateway(config=config)
+    gateway.start()
+
+
+def test_socket():
+    """
+    Sends handshake to the the socket using bash only
+    """

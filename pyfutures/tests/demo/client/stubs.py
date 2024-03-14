@@ -30,6 +30,7 @@ class ClientStubs:
     def client(
         loop: asyncio.AbstractEventLoop = None,
         api_log_level: int = logging.DEBUG,
+        cached: bool = True,
     ) -> InteractiveBrokersClient:
         global CLIENT
         if CLIENT:
