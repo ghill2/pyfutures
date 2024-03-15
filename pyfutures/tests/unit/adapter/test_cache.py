@@ -72,7 +72,7 @@ class TestHistoricCache:
         self.cache.purge_errors()
         assert not (self.cache.path / "test_exception.pkl").exists()
         assert (self.cache.path / "test_bar.parquet").exists()
-        
+
     @pytest.mark.asyncio()
     async def test_purge_client_exception(self):
         ex = ClientException(code=123, message="test")
@@ -111,10 +111,7 @@ class TestCachedFunc:
             end_time=pd.Timestamp("2023-01-01 08:00:00", tz="UTC"),
         )
 
-        self.cached_func = CachedFunc(
-            func=self.request_bars,
-            cache_dir=Path(tempfile.mkdtemp()),
-        )
+        self.cached_func = CachedFunc(func=self.request_bars, cache=Cache(path=Path(tempfile.mkdtemp())))
 
     @pytest.mark.asyncio()
     async def test_build_key(self):
@@ -156,7 +153,7 @@ class TestCachedFunc:
     @pytest.mark.asyncio()
     async def test_call_raises_cached_exception(self):
         exception = ClientException(code=123, message="test")
-        self.cached_func.get = Mock(return_value=exception)
+        self.cached_func._cache.get = Mock(return_value=exception)
 
         with pytest.raises(ClientException):
             await self.cached_func(**self.cached_func_kwargs)
@@ -165,7 +162,7 @@ class TestCachedFunc:
     async def test_call_writes_uncached_bar_data(self):
         await self.cached_func(**self.cached_func_kwargs)
         key = self.cached_func.build_key(**self.cached_func_kwargs)
-        assert self.cached_func.get(key) is not None
+        assert self.cached_func._cache.get(key) is not None
 
     @pytest.mark.asyncio()
     async def test_is_cached(self):
