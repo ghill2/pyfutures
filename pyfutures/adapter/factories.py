@@ -89,7 +89,7 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         clock: LiveClock,
     ) -> InteractiveBrokersExecClient:
         client = get_client_cached(loop)
-        provider = get_provider_cached(client, config)
+        provider = get_provider_cached(client, config.instrument_provider)
 
         global EXEC_CLIENT
         if EXEC_CLIENT is None:

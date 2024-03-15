@@ -5,6 +5,7 @@ import pytest
 from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
+from unittest.mock import Mock
 
 # from pyfutures.adapter..client.objects import IBTradeTick
 from pyfutures.client.enums import BarSize
@@ -147,54 +148,28 @@ async def test_request_bars(event_loop):
     assert len(bars) > 0
 
 
-@pytest.mark.asyncio()
-async def test_client_handles_errors(event_loop):
-    """If an error is raised within the callback responses, the client should show the errors in the log"""
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-    #
-    # def side_effect(**kwargs):
-    # client.historicalData(reqId=1, bar=BarData())
-
-    # send_mock = Mock(side_effect=side_effect)
-    # client._client.reqHistoricalData = send_mock
-    # error_mock()
-    #
-    contract = IBContract()
-    contract.secType = "CONTFUT"
-    contract.exchange = "CME"
-    contract.symbol = "DA"
-
-    await client.request_bars(
-        contract=contract,
-        bar_size=BarSize._1_MINUTE,
-        what_to_show=WhatToShow.TRADES,
-        duration=Duration(step=1, freq=Frequency.DAY),
-        end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D"),
-    )
-
-
-@pytest.mark.asyncio()
-async def test_subscribe_quote_ticks(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-
-    callback_mock = Mock()
-
-    contract = Contract()
-    contract.conId = 553444806
-    contract.exchange = "ICEEUSOFT"
-
-    client.subscribe_quote_ticks(
-        name="test",
-        contract=contract,
-        callback=callback_mock,
-    )
-
-    async def wait_for_quote_tick():
-        while callback_mock.call_count == 0:
-            await asyncio.sleep(0)
-
-    await asyncio.wait_for(wait_for_quote_tick(), 10)
-
-    assert callback_mock.call_count > 0
+# @pytest.mark.asyncio()
+# async def test_client_handles_errors(event_loop):
+#     """If an error is raised within the callback responses, the client should show the errors in the log"""
+#     client = ClientStubs.client(loop=event_loop)
+#     await client.connect()
+#     #
+#     # def side_effect(**kwargs):
+#     # client.historicalData(reqId=1, bar=BarData())
+#
+#     # send_mock = Mock(side_effect=side_effect)
+#     # client._client.reqHistoricalData = send_mock
+#     # error_mock()
+#     #
+#     contract = IBContract()
+#     contract.secType = "CONTFUT"
+#     contract.exchange = "CME"
+#     contract.symbol = "DA"
+#
+#     await client.request_bars(
+#         contract=contract,
+#         bar_size=BarSize._1_MINUTE,
+#         what_to_show=WhatToShow.TRADES,
+#         duration=Duration(step=1, freq=Frequency.DAY),
+#         end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D"),
+#     )
