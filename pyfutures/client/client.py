@@ -95,13 +95,7 @@ class InteractiveBrokersClient(EWrapper):
         if override_timeout:
             assert isinstance(self._request_timeout_seconds, (float, int))
 
-        self._connection = Connection(
-            loop=loop,
-            host=host,
-            port=port,
-            client_id=client_id,
-            subscriptions=self._subscriptions
-        )
+        self._connection = Connection(loop=loop, host=host, port=port, client_id=client_id, subscriptions=self._subscriptions)
         self._connection.register_handler(self._handle_msg)
 
         self._eclient = EClient(wrapper=None)
@@ -404,7 +398,7 @@ class InteractiveBrokersClient(EWrapper):
             duration=duration,
             end_time=end_time,
         )
-        
+
         # initialize cache
         func: Callable = self._request_bars
         if cache is None:
@@ -417,7 +411,7 @@ class InteractiveBrokersClient(EWrapper):
                 cache=cache,
             )
             is_cached = func.is_cached(**kwargs)
-        
+
         # request bars
         start = time.perf_counter()
         bars = []
@@ -428,12 +422,12 @@ class InteractiveBrokersClient(EWrapper):
         except asyncio.TimeoutError as e:
             self._log.error(str(e.__class__.__name__))
         stop = time.perf_counter()
-        
+
         if is_cached:
             self._log.info(f"Read {len(bars)} from cache")
         else:
             self._log.info(f"Elapsed time: {stop - start:.1f}s")
-        
+
         # delay if needed
         if delay > 0 and not is_cached:
             self._log.info(f"Waiting for {delay}s...")
@@ -488,15 +482,15 @@ class InteractiveBrokersClient(EWrapper):
             self._log.info(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
         else:
             self._log.info("---> Downloaded 0 bars.")
-        
+
         previous_len = len(bars)
-        
+
         bars = [b for b in bars if b.timestamp >= start_time and b.timestamp < end_time]
-        
+
         if previous_len != len(bars):
             filtered_count = previous_len - len(bars)
             self._log.info(f"---> Filtered {filtered_count} bars.")
-            
+
         return bars
 
     def historicalData(self, reqId: int, bar: BarData):  # : Override the EWrapper

@@ -13,6 +13,7 @@ from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
+from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 
@@ -23,14 +24,14 @@ DATA_CLIENT = None
 EXEC_CLIENT = None
 
 
-def get_provider_cached():
+def get_provider_cached(client, config):
     global PROVIDER
     if PROVIDER is None:
-        PROVIDER = AdapterStubs.instrument_provider(clien=CLIENT)
+        PROVIDER = InteractiveBrokersInstrumentProvider(client=client, config=config)
     return PROVIDER
 
 
-def get_client_cached(loop, msgbus, clock, cache):
+def get_client_cached(loop):
     global CLIENT
     if CLIENT is None:
         CLIENT = InteractiveBrokersClient(
@@ -56,8 +57,8 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersDataClient:
-        client = get_client_cached(loop, msgbus, clock, cache)
-        provider = get_provider_cached()
+        client = get_client_cached(loop)
+        provider = get_provider_cached(client, config.instrument_provider)
 
         global DATA_CLIENT
         if DATA_CLIENT is None:
@@ -68,7 +69,6 @@ class InteractiveBrokersLiveDataClientFactory(LiveDataClientFactory):
                 cache=cache,
                 clock=clock,
                 instrument_provider=provider,
-                # ibg_client_id=1,
                 config=config,
             )
         return DATA_CLIENT
@@ -88,8 +88,8 @@ class InteractiveBrokersLiveExecClientFactory(LiveExecClientFactory):
         cache: Cache,
         clock: LiveClock,
     ) -> InteractiveBrokersExecClient:
-        client = get_client_cached(loop, msgbus, clock, cache)
-        provider = get_provider_cached()
+        client = get_client_cached(loop)
+        provider = get_provider_cached(client, config)
 
         global EXEC_CLIENT
         if EXEC_CLIENT is None:

@@ -108,6 +108,8 @@ class UniverseRow:
     instrument: FuturesContract
     contract: IBContract
     contract_cont: IBContract
+    instrument_id: InstrumentId
+    instrument_id_live: InstrumentId
     # fee_execution: float
     # fee_execution_currency: str
     # fee_execution_percent: bool

@@ -1,112 +1,112 @@
-import asyncio
-
-import pytest
-import pytest_asyncio
-from nautilus_trader.common.component import LiveClock
-from nautilus_trader.common.component import MessageBus
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.test_kit.stubs.component import TestComponentStubs
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-
-# fmt: off
-from pyfutures.adapter.execution import InteractiveBrokersExecClient
-from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.tests.demo.order_setup import OrderSetup
-
-
-def pytest_addoption(parser):
-    parser.addoption(
-        '--instrument-id',
-        action='store',
-        # default="EOE=MFA=Z23.FTA",
-        default="DC=DA=FUT=2024G.CME",
-        help='Base URL for the API tests',
-    )
-    parser.addoption(
-        '--file-logging',
-        action='store',
-        default=False,
-        help='Enable file logging for the test',
-    )
-    parser.addoption(
-        '--file-log-path',
-        action='store',
-        default="",
-        help='Log path for the test',
-    )
-
-@pytest.fixture(scope="session")
-def instrument_id(request) -> InstrumentId:
-    value = request.config.getoption('--instrument-id')
-    return InstrumentId.from_str(value)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    # loop = asyncio.get_event_loop_policy().new_event_loop()
-    loop = asyncio.get_event_loop()
-    # asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
-def clock() -> LiveClock:
-    return LiveClock()
-
-
-@pytest.fixture(scope="session")
-def msgbus(clock):
-    return MessageBus(
-        TestIdStubs.trader_id(),
-        clock,
-    )
-
-
-@pytest.fixture(scope="session")
-def cache():
-    return TestComponentStubs.cache()
-
-
-@pytest.fixture(scope="session")
-def client(event_loop) -> InteractiveBrokersClient:
-    client = InteractiveBrokersClient(
-        loop=event_loop,
-        host="127.0.0.1",
-        port=4002,
-    )
-
-    init_logging(level_stdout=LogLevel.DEBUG)
-
-    return client
-
-@pytest.fixture(scope="session")
-@pytest.mark.asyncio
-def exec_client(event_loop, msgbus, cache, clock, instrument_id) -> InteractiveBrokersExecClient:
-    # provider_params = dict(load_ids=[instrument_id.value], **DEFAULT_PROVIDER_PARAMS)
-    exec_engine, exec_client, provider, client  = InteractiveBrokersExecEngineFactory.create(
-        loop=event_loop,
-        msgbus=msgbus,
-        cache=cache,
-        clock=clock,
-    )
-
-    event_loop.run_until_complete(client.connect())
-    yield exec_client
-
-@pytest_asyncio.fixture(scope="session")
-async def order_setup(exec_client) -> OrderSetup:
-    order_setup = OrderSetup(
-        exec_client=exec_client,
-        data_client=None,
-    )
-    # await order_setup.close_all()
-    # await asyncio.sleep(1)
-    yield order_setup
-    # await order_setup.close_all()
-    # event_loop.run_until_complete(order_setup.close_all())
+# import asyncio
+#
+# import pytest
+# import pytest_asyncio
+# from nautilus_trader.common.component import LiveClock
+# from nautilus_trader.common.component import MessageBus
+# from nautilus_trader.common.component import init_logging
+# from nautilus_trader.common.enums import LogLevel
+# from nautilus_trader.model.identifiers import InstrumentId
+# from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+# from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
+#
+# # fmt: off
+# from pyfutures.adapter.execution import InteractiveBrokersExecClient
+# from pyfutures.client.client import InteractiveBrokersClient
+# from pyfutures.tests.demo.order_setup import OrderSetup
+#
+#
+# def pytest_addoption(parser):
+#     parser.addoption(
+#         '--instrument-id',
+#         action='store',
+#         # default="EOE=MFA=Z23.FTA",
+#         default="DC=DA=FUT=2024G.CME",
+#         help='Base URL for the API tests',
+#     )
+#     parser.addoption(
+#         '--file-logging',
+#         action='store',
+#         default=False,
+#         help='Enable file logging for the test',
+#     )
+#     parser.addoption(
+#         '--file-log-path',
+#         action='store',
+#         default="",
+#         help='Log path for the test',
+#     )
+#
+# @pytest.fixture(scope="session")
+# def instrument_id(request) -> InstrumentId:
+#     value = request.config.getoption('--instrument-id')
+#     return InstrumentId.from_str(value)
+#
+#
+# @pytest.fixture(scope="session")
+# def event_loop():
+#     # loop = asyncio.get_event_loop_policy().new_event_loop()
+#     loop = asyncio.get_event_loop()
+#     # asyncio.set_event_loop(loop)
+#     yield loop
+#     loop.close()
+#
+#
+# @pytest.fixture(scope="session")
+# def clock() -> LiveClock:
+#     return LiveClock()
+#
+#
+# @pytest.fixture(scope="session")
+# def msgbus(clock):
+#     return MessageBus(
+#         TestIdStubs.trader_id(),
+#         clock,
+#     )
+#
+#
+# @pytest.fixture(scope="session")
+# def cache():
+#     return TestComponentStubs.cache()
+#
+#
+# @pytest.fixture(scope="session")
+# def client(event_loop) -> InteractiveBrokersClient:
+#     client = InteractiveBrokersClient(
+#         loop=event_loop,
+#         host="127.0.0.1",
+#         port=4002,
+#     )
+#
+#     init_logging(level_stdout=LogLevel.DEBUG)
+#
+#     return client
+#
+# @pytest.fixture(scope="session")
+# @pytest.mark.asyncio
+# def exec_client(event_loop, msgbus, cache, clock, instrument_id) -> InteractiveBrokersExecClient:
+#     # provider_params = dict(load_ids=[instrument_id.value], **DEFAULT_PROVIDER_PARAMS)
+#     exec_engine, exec_client, provider, client  = InteractiveBrokersExecEngineFactory.create(
+#         loop=event_loop,
+#         msgbus=msgbus,
+#         cache=cache,
+#         clock=clock,
+#     )
+#
+#     event_loop.run_until_complete(client.connect())
+#     yield exec_client
+#
+# @pytest_asyncio.fixture(scope="session")
+# async def order_setup(exec_client) -> OrderSetup:
+#     order_setup = OrderSetup(
+#         exec_client=exec_client,
+#         data_client=None,
+#     )
+#     yield order_setup
+# await order_setup.close_all()
+# await asyncio.sleep(1)
+# await order_setup.close_all()
+# event_loop.run_until_complete(order_setup.close_all())
 
 # @pytest.fixture(scope="session")
 # def socket(event_loop) -> InteractiveBrokersClient:
@@ -127,9 +127,6 @@ async def order_setup(exec_client) -> OrderSetup:
 # def log(request, clock, instrument_id) -> None:
 #     file_logging = request.config.getoption('--file-logging')
 #     file_log_path = request.config.getoption('--file-log-path')
-
-
-
 
 
 # @pytest.fixture(scope="session")
@@ -159,7 +156,6 @@ async def order_setup(exec_client) -> OrderSetup:
 # from pyfutures.adapter..execution import InteractiveBrokersExecutionClient
 # from pyfutures.adapter..factories import InteractiveBrokersLiveExecClientFactory
 # from pyfutures.tests.adapters.order_setup import OrderSetup
-
 
 
 # def pytest_addoption(parser):
@@ -205,14 +201,11 @@ async def order_setup(exec_client) -> OrderSetup:
 #     return instrument
 
 
-
 # @pytest.fixture(scope="session")
 # def event_loop(request):
 #     loop = asyncio.new_event_loop()
 #     yield loop
 #     loop.close()
-
-
 
 
 # DEFAULT_PROVIDER_PARAMS = dict(
@@ -246,9 +239,6 @@ async def order_setup(exec_client) -> OrderSetup:
 #     yield exec_client
 
 
-
-
-
 # @pytest_asyncio.fixture(scope="session")
 # async def order_setup(exec_client) -> OrderSetup:
 #     print("ORDER SETUP")
@@ -256,11 +246,11 @@ async def order_setup(exec_client) -> OrderSetup:
 #         exec_client=exec_client,
 #         data_client=None,
 #     )
-    # await order_setup.close_all()
-    # await asyncio.sleep(1)
-    # yield order_setup
-    # await order_setup.close_all()
-    # event_loop.run_until_complete(order_setup.close_all())
+# await order_setup.close_all()
+# await asyncio.sleep(1)
+# yield order_setup
+# await order_setup.close_all()
+# event_loop.run_until_complete(order_setup.close_all())
 
 # @pytest.fixture(scope="session")
 # def socket(event_loop) -> InteractiveBrokersClient:
@@ -281,9 +271,6 @@ async def order_setup(exec_client) -> OrderSetup:
 # def log(request, clock, instrument_id) -> None:
 #     file_logging = request.config.getoption('--file-logging')
 #     file_log_path = request.config.getoption('--file-log-path')
-
-
-
 
 
 # @pytest.fixture(scope="session")

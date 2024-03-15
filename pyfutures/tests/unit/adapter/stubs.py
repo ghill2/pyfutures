@@ -21,21 +21,27 @@ from pyfutures.client.objects import IBExecutionEvent
 from pyfutures.client.objects import IBOpenOrderEvent
 from pyfutures.client.objects import IBOrderStatusEvent
 
+PROVIDER_CONFIG = dict(
+    chain_filters={
+        "FMEU": lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
+    },
+    parsing_overrides={
+        "MIX": {
+            "price_precision": 0,
+            "price_increment": Price(5, 0),
+        },
+    },
+)
+
 
 class AdapterStubs:
     @staticmethod
+    def provider_config():
+        return PROVIDER_CONFIG
+
+    @staticmethod
     def instrument_provider(client: InteractiveBrokersClient) -> InteractiveBrokersInstrumentProvider:
-        config = InteractiveBrokersInstrumentProviderConfig(
-            chain_filters={
-                "FMEU": lambda x: x.contract.localSymbol[-1] not in ("M", "D"),
-            },
-            parsing_overrides={
-                "MIX": {
-                    "price_precision": 0,
-                    "price_increment": Price(5, 0),
-                },
-            },
-        )
+        config = InteractiveBrokersInstrumentProviderConfig(**PROVIDER_CONFIG)
         provider = InteractiveBrokersInstrumentProvider(client=client, config=config)
         return provider
 

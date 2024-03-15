@@ -55,7 +55,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
 
         self._historic = InteractiveBrokersBarClient(
             client=client,
-            use_cache=False,  # TODO add config
+            # use_cache=False,  # TODO add config
         )
 
         self._parser = AdapterParser()
