@@ -3,16 +3,12 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from nautilus_trader.model.data import Bar
-from nautilus_trader.model.data import BarType
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.functions import bar_aggregation_from_str
 from nautilus_trader.persistence.wranglers import BarDataWrangler
-from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
 
 from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.data.files import bar_dataframe_to_quote_dataframe
-from pyfutures.data.files import bars_to_dataframe
 from pyfutures.data.portara import PortaraData
 from pyfutures.tests.test_kit import CATALOG
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -61,36 +57,8 @@ def process_instruments(row: dict, month: ContractMonth) -> None:
     print(f"Written {instrument.id!r}....")
 
 
-def process_as_ticks(row: tuple, path: Path) -> None:
-    """
-    Export execution ticks
-    """
-    month = ContractMonth(path.stem[-5:])
-    instrument = row.instrument_for_month(month)
-
-    bars = CATALOG.query(
-        data_cls=Bar,
-        bar_types=[BarType.from_str(f"{instrument.id.value}")],
-        # instrument_ids=[
-        #     instrument.id.value,
-        # ]
-    )
-
-    df = bars_to_dataframe(bars)
-    df = bar_dataframe_to_quote_dataframe(df)
-
-    wrangler = QuoteTickDataWrangler(
-        instrument=instrument,
-    )
-    quotes = wrangler.process(df)
-    CATALOG.write_data(
-        data=quotes,
-        basename_template=instrument.id.value + "-{i}",
-    )
-
-
 rows = IBTestProviderStubs.universe_rows(
-    filter=["ECO", "DC", "MES"],
+    filter=["ECO", "DC", "MES", "HG"],
 )
 
 
@@ -119,6 +87,33 @@ if __name__ == "__main__":
     joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_bars())
     # joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_quotes())
 
+
+# def process_as_ticks(row: tuple, path: Path) -> None:
+#     """
+#     Export execution ticks
+#     """
+#     month = ContractMonth(path.stem[-5:])
+#     instrument = row.instrument_for_month(month)
+
+#     bars = CATALOG.query(
+#         data_cls=Bar,
+#         bar_types=[BarType.from_str(f"{instrument.id.value}")],
+#         # instrument_ids=[
+#         #     instrument.id.value,
+#         # ]
+#     )
+
+#     df = bars_to_dataframe(bars)
+#     df = bar_dataframe_to_quote_dataframe(df)
+
+#     wrangler = QuoteTickDataWrangler(
+#         instrument=instrument,
+#     )
+#     quotes = wrangler.process(df)
+#     CATALOG.write_data(
+#         data=quotes,
+#         basename_template=instrument.id.value + "-{i}",
+#     )
 
 # def import_daily_quotes():
 #     for row in rows:

@@ -12,11 +12,12 @@ from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
 from pyfutures.logger import LoggerAdapter
 from pyfutures.logger import LoggerAttributes
+from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
-async def cache_spread():
+async def write_spread(write: bool = False):
     LoggerAttributes.level = logging.INFO
 
     log = LoggerAdapter.from_name("WriteSpread")
@@ -49,23 +50,30 @@ async def cache_spread():
         cache = Cache(Path.home() / "Desktop" / "download_cache2")
         cache.purge_errors(asyncio.TimeoutError)
 
-        for open_time in open_times:
-            log.info(f"{open_time}")
-            seconds_in_hour: int = 60 * 60
-            await client.request_bars(
-                contract=row.contract_cont,
-                bar_size=BarSize._5_SECOND,
-                what_to_show=WhatToShow.BID,
-                duration=Duration(seconds_in_hour, Frequency.SECOND),
-                end_time=open_time + pd.Timedelta(hours=1),
-                cache=cache,
-                as_dataframe=False,
-                delay=0.5,
-            )
+        for what_to_show in (WhatToShow.BID, WhatToShow.ASK):
+            df = pd.DataFrame()
+            for open_time in open_times:
+                log.info(f"{open_time}")
+                seconds_in_hour: int = 60 * 60
+                _df = await client.request_bars(
+                    contract=row.contract_cont,
+                    bar_size=BarSize._5_SECOND,
+                    what_to_show=what_to_show,
+                    duration=Duration(seconds_in_hour, Frequency.SECOND),
+                    end_time=open_time + pd.Timedelta(hours=1),
+                    cache=cache,
+                    as_dataframe=True,
+                    delay=0.5,
+                )
+                df = pd.concat([df, _df])
+            if write:
+                path = SPREAD_FOLDER / f"{row.uname}_{what_to_show.name}.parquet"
+                path.parent.mkdir(exist_ok=True, parents=True)
+                df.to_parquet(path, index=False)
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(cache_spread())
+    asyncio.get_event_loop().run_until_complete(write_spread(write=True))
 
 
 # async def write_spread(write: bool = False):

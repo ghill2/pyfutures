@@ -124,31 +124,4 @@
 #                 assert data[-1].ts_event == 1639094400000000000
 #                 assert data[-1].ts_init == 1639094400000000000
 
-#     def _iterate_bars(self) -> Generator[Bar, None, None]:
-#         folder = Path(PACKAGE_ROOT) / "tests/test_data/interactive_brokers/data/bar/MES"
-#         session = DataBackendSession()
 
-#         filenames = [
-#             "MES=H22.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=H23.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=H24.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=M22.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=M23.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=M24.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=U22.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=U23.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=U24.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=Z21.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=Z22.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=Z23.IB-1-DAY-MID-EXTERNAL.parquet",
-#             "MES=Z24.IB-1-DAY-MID-EXTERNAL.parquet",
-#         ]
-
-#         for i, filename in enumerate(filenames):
-#             path = folder / filename
-#             assert path.exists()
-#             session.add_file(NautilusDataType.Bar, f"data{i}", str(path))
-
-#         for chunk in session.to_query_result():
-#             chunk = capsule_to_list(chunk)
-#             yield from chunk

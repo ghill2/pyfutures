@@ -27,27 +27,28 @@ class RollEvent:
 class ContractChain(Actor):
     """
     Continous framework plan:
-    
+
     Config - self explanatory
     ContractMonth - self explanatory
-    
+
     ContrainChain
     - outputs bar streams for -1, 0, +1
-    
+
     ContinuousBarWrangler
     - wranglers bar data from the ContractChain for streams -1, 0, +1
     - maybe add -2, +2 aswell
     - bars for -1, 0, +1 could be merge into one bar stream? sorted by -1, +1, 0
-    
+
     AdjustedPrices
     - subscribes to 0, +1 streams
     - decide how to trigger a roll from the 0 and +1 streams maybe need a RollSignal class?
-    
-    
+
+
     https://www.seykota.com/tribe/TSP/Continuous/index.htm#:~:text=The%20Panama%20Method&text=In%20like%20manner%2C%20a%20Panama,Continuous%20Chart%20for%20S%26P%20Futures.
     The adjustment value uses the current contract price and forward contract price of the same timestamp to backadjust the values
     before sending the continuous bar
     """
+
     def __init__(
         self,
         config: ContractChainConfig,
@@ -119,7 +120,7 @@ class ContractChain(Actor):
         # pre-roll reporting
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
-        
+
         stats = {}
         stats["timestamp"] = unix_nanos_to_dt(bar.ts_init).strftime("%Y-%m-%d %H:%M:%S")
         stats["balance"] = float(self.cache.account_for_venue(Venue("SIM")).balances().get(GBP).free)
@@ -213,7 +214,7 @@ class ContractChain(Actor):
 
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-        
+
         if current_timestamp != forward_timestamp:
             return False
 
@@ -491,3 +492,14 @@ class ContractChain(Actor):
 #         return len(keys_order)
 # stats = dict(sorted(stats.items(), key=custom_sort))
 # assert list(stats.keys())[:len(keys_order)] == keys_order
+
+
+# def _trim_last(self, bars: list[Bar]) -> list[Bar]:
+#     if len(bars) == 0:
+#         return []
+#     last_bar = bars[-1]
+#     last_is_end_month = \
+#         last_bar.bar_type.instrument_id.symbol.value.endswith(str(self._end_month))
+#     if last_is_end_month:
+#         bars.pop(-1)
+#     return bars
