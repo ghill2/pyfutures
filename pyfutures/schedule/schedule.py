@@ -21,6 +21,12 @@ class MarketSchedule:
         data: pd.DataFrame,
         timezone: pytz.timezone,
     ):
+        """
+        Excepts data to be in the format:
+        dayofweek: (integer 0 > 6)
+        open: datetime.time()
+        close: datetime.time()
+        """
         self.data = data
 
         self._name = name

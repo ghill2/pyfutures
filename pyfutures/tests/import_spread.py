@@ -36,6 +36,10 @@ async def write_spread(write: bool = False):
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
     )
+
+    cache = Cache(Path.home() / "Desktop" / "download_cache2")
+    cache.purge_errors(asyncio.TimeoutError)
+
     for row in rows:
         schedule = row.liquid_schedule
 
@@ -46,9 +50,6 @@ async def write_spread(write: bool = False):
 
         await client.connect()
         await client.request_market_data_type(4)
-
-        cache = Cache(Path.home() / "Desktop" / "download_cache2")
-        cache.purge_errors(asyncio.TimeoutError)
 
         for what_to_show in (WhatToShow.BID, WhatToShow.ASK):
             df = pd.DataFrame()
@@ -73,7 +74,7 @@ async def write_spread(write: bool = False):
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(write_spread(write=True))
+    asyncio.get_event_loop().run_until_complete(write_spread(write=False))
 
 
 # async def write_spread(write: bool = False):
