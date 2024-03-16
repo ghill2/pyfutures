@@ -40,6 +40,11 @@ class MarketSchedule:
         # TODO: ensure integer index
         # TODO: ensure no missing days, close days have time 00:00 to 00:00
         # TODO: no timezone information before localizing
+        # TODO assert open > close
+        # TODO assert columns == dayofweek, open, close
+        # TODO assert columns types == int, datetime.time, datetime.time
+        # TODO assert dayofweek in range(7)
+        # TODO assert input types
 
     def open_delta(self, dayofweek: int) -> pd.Timedelta:
         open_times = self.data[self.data.dayofweek == dayofweek].open
