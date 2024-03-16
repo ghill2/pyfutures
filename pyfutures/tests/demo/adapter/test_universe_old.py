@@ -18,14 +18,29 @@ from pyfutures.client.cache import DetailsCache
 
 
 @pytest.mark.asyncio()
-async def test_request_contract_details(event_loop):
+async def test_subscribe_realtime_bars(event_loop):
     client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
     rows = IBTestProviderStubs.universe_rows()
     cache_path = Path.home() / "Desktop" / "pyfutures_cache" / "details"
     cache = DetailsCache(path=cache_path)
-    for row in rows:
-        await client.request_contract_details(contract=row.contract_cont, cache=cache)
+
+    def on_bar(bar):
+        print("NEW BAR")
+        print(bar)
+
+    await client.request_accounts()
+    await asyncio.sleep(5)
+    await client.request_accounts()
+    for row in rows[0:9]:
+        details = await client.request_contract_details(contract=row.contract_cont, cache=cache)
+        client._subscribe_realtime_bars(
+            contract=details[0].contract,
+            what_to_show=WhatToShow.BID,
+            bar_size=BarSize._5_SECOND,
+            callback=on_bar,
+        )
+    await asyncio.sleep(50)
 
 
 @pytest.mark.asyncio()

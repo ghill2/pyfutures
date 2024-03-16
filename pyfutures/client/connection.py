@@ -100,39 +100,37 @@ class Connection:
         assert self._reader is not None
 
         buf = b""
+        try:
+            while True:
+                try:
+                    data = await self._reader.read(4096)
+                    self._log.debug(f"<-- {data}")
+                except ConnectionResetError as e:
+                    self._log.debug(f"TWS closed the connection {e!r}...")
+                    self._is_connected.clear()
+                    return
 
-        while True:
-            try:
-                data = await self._reader.read(4096)
-                self._log.debug(f"<-- {data}")
-            except ConnectionResetError as e:
-                self._log.debug(f"TWS closed the connection {e!r}...")
-                # await self._handle_disconnect()
-                self._is_connected.clear()
-                return
+                if len(data) == 0:
+                    self._log.debug("0 bytes received from server, connect has been dropped")
+                    self._is_connected.clear()
+                    return
 
-            if len(data) == 0:
-                self._log.debug("0 bytes received from server, connect has been dropped")
-                # await self._handle_disconnect()
-                self._is_connected.clear()
-                return
+                buf += data
 
-            buf += data
+                while len(buf) > 0:
+                    (size, msg, buf) = comm.read_msg(buf)
 
-            while len(buf) > 0:
-                (size, msg, buf) = comm.read_msg(buf)
+                    if msg:
+                        self._handle_msg(msg)
+                        await asyncio.sleep(0)
 
-                if msg:
-                    # self._log.debug(f"<-- {msg!r}")
+                    else:
+                        self._log.debug("more incoming packet(s) are needed ")
+                        break
 
-                    self._handle_msg(msg)
-                    await asyncio.sleep(0)
-
-                else:
-                    self._log.debug("more incoming packet(s) are needed ")
-                    break
-
-            await asyncio.sleep(0)
+                await asyncio.sleep(0)
+        except Exception as e:
+            self._log.exception(f"_listen unhandled while exception, _listen task cancelled: {e}")
 
     # async def _handle_discconnect(self) -> None:
     #     """
@@ -170,8 +168,6 @@ class Connection:
                     await self._connect()
                     await self._handshake(timeout_seconds=timeout_seconds)
 
-                    print(len(self._subscriptions))
-                    self._log.debug(self._subscriptions)
                     if len(self._subscriptions) > 0:
                         self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
                         for sub in self._subscriptions.values():

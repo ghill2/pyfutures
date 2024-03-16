@@ -9,6 +9,8 @@ from typing import Any
 from pathlib import Path
 
 import eventkit
+
+import traceback
 import pandas as pd
 from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
@@ -154,7 +156,10 @@ class InteractiveBrokersClient(EWrapper):
 
     def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
-        self._decoder.interpret(fields)
+        try:
+            self._decoder.interpret(fields)
+        except Exception as e:
+            self._log.exception("_listen callback exception, _listen task still running...", e)
 
     def _reset(self) -> None:
         self._request_id_seq = -10

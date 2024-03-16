@@ -63,13 +63,18 @@ class MockServer:
         self._to_send.extend(responses)
         self.respond.set()
 
+    def queue_response(self, msg):
+        """
+        Queue bytes to respond with when a request is received at writer.write()
+        """
+        self._to_send.append(msg)
+
     def send_response(self, msg):
-        # mock a disconnect by sending send an empty byte string to the client
+        """
+        Send bytes immediately to the _listen task / reader.read()
+        """
         self._to_send.append(msg)
         self.respond.set()
-        # process the reader task now
-        # incase this is called at the end of a test
-        # await asyncio.sleep(0)
 
     def disconnect(self):
         self.send_response(b"")
