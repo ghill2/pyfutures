@@ -6,8 +6,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
-from nautilus_trader.common.component import init_logging
-from nautilus_trader.common.enums import LogLevel
 from pytower import PACKAGE_ROOT
 
 from pyfutures.client.enums import BarSize
@@ -15,13 +13,24 @@ from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersBarClient
 from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
-
-
-init_logging(level_stdout=LogLevel.WARNING)
+from pyfutures.tests.demo.client.stubs import ClientStubs
+from pyfutures.client.cache import DetailsCache
 
 
 @pytest.mark.asyncio()
-async def test_request_last_bar_universe(client):
+async def test_request_contract_details(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
+    await client.connect()
+    rows = IBTestProviderStubs.universe_rows()
+    cache_path = Path.home() / "Desktop" / "pyfutures_cache" / "details"
+    cache = DetailsCache(path=cache_path)
+    for row in rows:
+        await client.request_contract_details(contract=row.contract_cont, cache=cache)
+
+
+@pytest.mark.asyncio()
+async def test_request_last_bar_universe(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
     await client.connect()
@@ -50,10 +59,12 @@ async def test_request_last_bar_universe(client):
 
 
 @pytest.mark.asyncio()
-async def test_request_last_quote_tick_universe(client):
+async def test_request_last_quote_tick_universe(event_loop):
     """
     Find missing subscriptions in the universe
     """
+
+    client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
     missing = []
@@ -78,7 +89,8 @@ async def test_request_last_quote_tick_universe(client):
 
 
 @pytest.mark.asyncio()
-async def test_request_bars_universe(client):
+async def test_request_bars_universe(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
     historic = InteractiveBrokersBarClient(client=client)
@@ -103,7 +115,8 @@ async def test_request_bars_universe(client):
 
 
 @pytest.mark.asyncio()
-async def test_request_start_quote_tick_universe(client):
+async def test_request_start_quote_tick_universe(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
     missing = []
@@ -128,7 +141,8 @@ async def test_request_start_quote_tick_universe(client):
 
 
 @pytest.mark.asyncio()
-async def test_request_price_magnifier(client):
+async def test_request_price_magnifier(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
 
     contract = IBContract()
@@ -144,7 +158,8 @@ async def test_request_price_magnifier(client):
 
 
 @pytest.mark.asyncio()
-async def test_can_just_use_trading_class(client):
+async def test_can_just_use_trading_class(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
 
     universe = IBTestProviderStubs.universe_dataframe()
@@ -169,7 +184,8 @@ async def test_can_just_use_trading_class(client):
         # print(details.minTick)
 
 
-async def test_fmeu(client):
+async def test_fmeu(event_loop):
+    client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
 
     contract = IBContract()
@@ -182,10 +198,12 @@ async def test_fmeu(client):
 
 # @pytest.mark.skip(reason="research")
 @pytest.mark.asyncio()
-async def test_trading_class(client):
+async def test_trading_class(event_loop):
     """
     Find which instruments in the universe have more than one trading class
     """
+
+    client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
 
     df = IBTestProviderStubs.universe_dataframe()
@@ -229,10 +247,11 @@ async def test_trading_class(client):
 
 @pytest.mark.skip(reason="research")
 @pytest.mark.asyncio()
-async def test_weekly_contracts(client):
+async def test_weekly_contracts(event_loop):
     """
     Find instruments that have special contracts and need special handling.
     """
+    client = ClientStubs.uncached_client(loop=event_loop)
     # data = {}
     # for details in IBTestProviderStubs.universe_contract_details():
     #     data.setdefault(details.contract.symbol, []).append(details)

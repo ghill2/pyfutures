@@ -8,7 +8,7 @@ from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
 from pyfutures.client.cache import CachedFunc
-from pyfutures.client.cache import Cache
+from pyfutures.client.cache import RequestsCache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -23,7 +23,7 @@ class InteractiveBrokersBarClient:
         client: InteractiveBrokersClient,
         delay: float = 0,
         cache_dir: Path | None = None,
-        cache: Cache | None = None,
+        cache: RequestsCache | None = None,
     ):
         self._client = client
         self._delay = delay
@@ -74,7 +74,6 @@ class InteractiveBrokersBarClient:
 
         i = 0
         while end_time > start_time:
-            
             if end_time >= pd.Timestamp.utcnow():
                 cache = None
             else:

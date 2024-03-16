@@ -31,7 +31,8 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from pyfutures.client.cache import Cache
+from pyfutures.client.cache import RequestsCache
+from pyfutures.client.cache import DetailsCache
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
@@ -129,7 +130,6 @@ class InteractiveBrokersClient(EWrapper):
     # Connection
 
     async def connect(self, timeout_seconds: int = 5) -> None:
-
         self._outgoing_msg_task = self._loop.create_task(
             coro=self._process_outgoing_msg_queue(),
             name="outgoing_message_queue",
@@ -298,8 +298,25 @@ class InteractiveBrokersClient(EWrapper):
 
     ################################################################################################
     # Contract Details
+    async def request_contract_details(
+        self,
+        contract: IBContract,
+        cache: DetailsCache | Path | None = None,
+    ):
+        func: Callable = self._request_contract_details
 
-    async def request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
+        if cache is not None:
+            if isinstance(cache, Path):
+                cache = DetailsCache(cache)
+            func: Callable = CachedFunc(
+                func=func,
+                cache=cache,
+            )
+
+        details: list[IBContractDetails] = await func(contract=contract)
+        return details
+
+    async def _request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
         self._log.debug(f"Requesting contract details for {contract=}")
 
         request = self._create_request(
@@ -387,7 +404,7 @@ class InteractiveBrokersClient(EWrapper):
         what_to_show: WhatToShow,
         duration: Duration,
         end_time: pd.Timestamp,
-        cache: Cache | Path | None = None,
+        cache: RequestsCache | Path | None = None,
         delay: float = 0,
         as_dataframe: bool = False,
     ):
@@ -405,7 +422,7 @@ class InteractiveBrokersClient(EWrapper):
             is_cached = False
         else:
             if isinstance(cache, Path):
-                cache = Cache(cache)
+                cache = RequestsCache(cache)
             func: Callable = CachedFunc(
                 func=func,
                 cache=cache,
