@@ -104,7 +104,7 @@ class Connection:
             while True:
                 try:
                     data = await self._reader.read(4096)
-                    self._log.debug(f"<-- {data}")
+                    # self._log.debug(f"<-- {data}")
                 except ConnectionResetError as e:
                     self._log.debug(f"TWS closed the connection {e!r}...")
                     self._is_connected.clear()
@@ -119,6 +119,7 @@ class Connection:
 
                 while len(buf) > 0:
                     (size, msg, buf) = comm.read_msg(buf)
+                    self._log.debug(f"<-- {size}: {msg}")
 
                     if msg:
                         self._handle_msg(msg)
@@ -167,11 +168,6 @@ class Connection:
                 async with self._is_connecting_lock:
                     await self._connect()
                     await self._handshake(timeout_seconds=timeout_seconds)
-
-                    if len(self._subscriptions) > 0:
-                        self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
-                        for sub in self._subscriptions.values():
-                            sub.subscribe()
 
         except Exception as e:
             self._log.error(repr(e))
@@ -267,6 +263,11 @@ class Connection:
             msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
             self._sendMsg(msg)
         elif all(id in self._handshake_message_ids for id in (176, 15)):
+            # reconnect subscriptions
+            if len(self._subscriptions) > 0:
+                self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
+                for sub in self._subscriptions.values():
+                    sub.subscribe()
             self._is_connected.set()
 
     def _prefix(self, msg: bytes):
