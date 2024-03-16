@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from pytower import PACKAGE_ROOT
+
 import datetime
 import logging
 import re
 import sys
 import traceback
 from pathlib import Path
+import time
+import inspect
+import os
 
 
 NORMAL = 0
@@ -98,9 +103,9 @@ class LoggerAdapter:
             )
             self.logger.addHandler(handler)
 
-    @classmethod
-    def set_timestamp_ns(cls, timestamp_ns: int) -> None:
-        cls._timestamp_ns = timestamp_ns
+    # @classmethod
+    # def set_timestamp_ns(cls, timestamp_ns: int) -> None:
+    #     cls._timestamp_ns = timestamp_ns
 
     @classmethod
     def from_name(cls, name: str) -> LoggerAdapter:
@@ -158,6 +163,17 @@ class LoggerAdapter:
 
         self.error(f"{message}\n{ex_string}\n{stack_trace_lines}")
 
+    @staticmethod
+    def _format_path(path):
+        """
+        iterate backwards on the filepath until a dirname is matched
+        """
+        components = path.split(os.sep)  # Split path into components based on separator
+        for i in range(len(components) - 1, -1, -1):  # Iterate backwards
+            if components[i] in ("nautilus_trader", "pytower", "pyfutures"):
+                return os.sep.join(components[i:])
+        return path  # Return original path if not found
+
     def _format_line(
         self,
         message: str,
@@ -179,15 +195,22 @@ class LoggerAdapter:
             })
         }
         """
-        t = self._unix_nanos_to_iso8601(self._timestamp_ns)
+        t = self._unix_nanos_to_iso8601(time.time_ns())
         l = LEVEL_TO_STR[level]
+
+        caller_frame = inspect.currentframe().f_back.f_back
+        filepath = caller_frame.f_code.co_filename
+        filepath = self._format_path(filepath)
+        line_number = caller_frame.f_lineno
+        func_name = caller_frame.f_code.co_name
+
         msg = message
 
         if color is None:
-            return f"{t} {c}[{l}] {self.name} {self.id}: {msg}"
+            return f"{t} [{l}] {filepath}::{func_name}::{line_number} [{l}] {self.name} {self.id}: {msg}"
         else:
             c = LOG_COLOR_TO_COLOR[color]
-            return f"\x1b[1m{t}\x1b[0m {c}[{l}] {self.name} {self.id}: {msg}\x1b[0m"
+            return f"\x1b[1m{t}\x1b[0m {c} [{l}] {filepath}::{func_name}::{line_number} {self.name} {self.id}: {msg}\x1b[0m"
 
         # return f"{self.timestamp} WARNING {self._trading_class} {message}"
 
