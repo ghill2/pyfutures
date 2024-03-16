@@ -11,12 +11,12 @@ from ibapi.contract import Contract as IBContract
 
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.cache import Cache
+from pyfutures.client.cache import RequestsCache
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.objects import ClientException
 
 
-class TestHistoricCache:
+class TestRequestsCache:
     def setup_method(self):
         bar = BarData()
         bar.timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
@@ -30,14 +30,12 @@ class TestHistoricCache:
         bar.barCount = 0
         self.bar = bar
 
-        self.cache = Cache(path=tempfile.mkdtemp())
+        self.cache = RequestsCache(path=tempfile.mkdtemp())
 
-    @pytest.mark.asyncio()
-    async def test_get_returns_none_if_not_cached(self):
+    def test_get_returns_none_if_not_cached(self):
         assert self.cache.get(key="test") is None
 
-    @pytest.mark.asyncio()
-    async def test_bar_data_round_trip(self):
+    def test_bar_data_round_trip(self):
         self.cache.set(key="test", value=[self.bar])
         bars = self.cache.get(key="test")
         assert bars[0].timestamp == self.bar.timestamp
@@ -50,22 +48,19 @@ class TestHistoricCache:
         assert bars[0].wap == self.bar.wap
         assert bars[0].barCount == self.bar.barCount
 
-    @pytest.mark.asyncio()
-    async def test_client_exception_round_trip(self):
+    def test_client_exception_round_trip(self):
         ex = ClientException(code=123, message="test")
         self.cache.set(key="test", value=ex)
         cached = self.cache.get(key="test")
         assert cached == ex
 
-    @pytest.mark.asyncio()
-    async def test_client_exception_round_trip(self):
+    def test_client_exception_round_trip(self):
         ex = asyncio.TimeoutError()
         self.cache.set(key="test", value=ex)
         cached = self.cache.get(key="test")
         assert isinstance(cached, asyncio.TimeoutError)
 
-    @pytest.mark.asyncio()
-    async def test_purge_timeout_error(self):
+    def test_purge_timeout_error(self):
         self.cache.set(key="test_bar", value=[self.bar])
         self.cache.set(key="test_exception", value=asyncio.TimeoutError())
         assert (self.cache.path / "test_exception.pkl").exists()
@@ -73,8 +68,7 @@ class TestHistoricCache:
         assert not (self.cache.path / "test_exception.pkl").exists()
         assert (self.cache.path / "test_bar.parquet").exists()
 
-    @pytest.mark.asyncio()
-    async def test_purge_client_exception(self):
+    def test_purge_client_exception(self):
         ex = ClientException(code=123, message="test")
         self.cache.set(key="test_bar", value=[self.bar])
         self.cache.set(key="test_exception", value=ex)
@@ -84,7 +78,8 @@ class TestHistoricCache:
         assert (self.cache.path / "test_bar.parquet").exists()
 
 
-class TestCachedFunc:
+
+class TestRequestsCachedFunc:
     def setup_method(self):
         bar = BarData()
         bar.timestamp = pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
@@ -111,14 +106,15 @@ class TestCachedFunc:
             end_time=pd.Timestamp("2023-01-01 08:00:00", tz="UTC"),
         )
 
-        self.cached_func = CachedFunc(func=self.request_bars, cache=Cache(path=Path(tempfile.mkdtemp())))
+        self.cached_func = CachedFunc(func=self.request_bars, cache=RequestsCache(path=Path(tempfile.mkdtemp())))
 
-    @pytest.mark.asyncio()
-    async def test_build_key(self):
+
+    def test_build_key(self):
         # NOTE: if this failed test it means the cache has been invalidated
         expected = "DA-CME-CONTFUT=1-day=BID_ASK=2023-01-01-00-00-00=2023-01-01-08-00-00"
-        key = self.cached_func.build_key(**self.cached_func_kwargs)
+        key = self.cached_func._cache.build_key(**self.cached_func_kwargs)
         assert key == expected
+
 
     @pytest.mark.asyncio()
     async def test_call_returns_expected_cached_bar_data(self):
@@ -161,7 +157,7 @@ class TestCachedFunc:
     @pytest.mark.asyncio()
     async def test_call_writes_uncached_bar_data(self):
         await self.cached_func(**self.cached_func_kwargs)
-        key = self.cached_func.build_key(**self.cached_func_kwargs)
+        key = self.cached_func._cache.build_key(**self.cached_func_kwargs)
         assert self.cached_func._cache.get(key) is not None
 
     @pytest.mark.asyncio()
