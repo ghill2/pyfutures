@@ -5,6 +5,9 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 
+from contextlib import asynccontextmanager
+
+
 class MockServer:
     def __init__(self):
         # append to this queue to receive msg at self._reader.read()
@@ -22,24 +25,25 @@ class MockServer:
         self._log = logging.getLogger("MockSocket")
         # self._log.setLevel(logging.DEBUG)
 
-        self._to_send = deque()
+        self._responses = []
+        self._to_send = []
 
     async def _handle_read(self, _):
         """
         do not yield, otherwise the function is not executed
         """
-
-        if len(self._to_send) == 0:
-            self.respond.clear()
-        await self.respond.wait()
-
-        msg = self._to_send.popleft()
+        print("_handle_read")
+        while len(self._to_send) == 0:
+            print(self._to_send)
+            await asyncio.sleep(0.1)
+        print("_after read")
+        print("responding self._to_send", self._to_send)
+        msg = self._to_send.pop(0)
+        print(f"responding: {msg}")
         if isinstance(msg, bytes):
             return msg
         else:
             raise msg
-
-        print(f"responsed: {msg}")
 
     def _handle_write(self, msg: bytes) -> None:
         """
@@ -47,34 +51,41 @@ class MockServer:
         Ensures a transaction Client -> Gateway, Gateway -> Server
         do not yield, otherwise the function is not executed
         """
-        print(f"write: {msg}")
+        print(f"_handle_write: {msg}")
 
-        responses = []
         if msg == b"API\x00\x00\x00\x00\tv176..176":
-            responses = [
+            res = [
                 b"\x00\x00\x00*176\x0020240308 13:30:34 Greenwich Mean Time\x00",
             ]
+            self._to_send.extend(res)
         elif msg.startswith(b"\x00\x00\x00") and b"71\x002\x00" in msg:
-            responses = [
+            res = [
                 b"\x00\x00\x00\x0f15\x001\x00DU1234567\x00",
-                b"\x00\x00\x00\x069\x001\x006\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00",
+                # b"\x00\x00\x00\x069\x001\x006\x00\x00\x00\x0064\x002\x00-1\x002104\x00Market data farm connection is OK:usfarm\x00\x00",
             ]
 
-        self._to_send.extend(responses)
-        self.respond.set()
+            self._to_send.extend(res)
+        else:
+            req_res = self._responses.pop(0)
+            assert msg == req_res["req"]
+            print("_handle_write: adding to self._to_send: ", req_res["res"])
+            self._to_send.extend(req_res["res"])
 
-    def queue_response(self, msg):
+            # self.respond.set()
+
+    def queue_response(self, req, res):
         """
         Queue bytes to respond with when a request is received at writer.write()
         """
-        self._to_send.append(msg)
+        self._responses.append(dict(req=req, res=res if isinstance(res, list) else [res]))
+        print("queued respons", self._responses)
 
     def send_response(self, msg):
         """
         Send bytes immediately to the _listen task / reader.read()
         """
         self._to_send.append(msg)
-        self.respond.set()
+        # self.respond.set()
 
     def disconnect(self):
         self.send_response(b"")

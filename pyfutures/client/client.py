@@ -153,10 +153,7 @@ class InteractiveBrokersClient(EWrapper):
 
     def _handle_msg(self, msg: bytes) -> None:
         fields = comm.read_fields(msg)
-        try:
-            self._decoder.interpret(fields)
-        except Exception as e:
-            self._log.exception("_listen callback exception, _listen task still running...", e)
+        self._decoder.interpret(fields)
 
     def _reset(self) -> None:
         self._request_id_seq = -10
@@ -1338,7 +1335,6 @@ class InteractiveBrokersClient(EWrapper):
         request = self._create_request(
             id=request_id,
         )
-
         self._eclient.reqManagedAccts()
 
         return await self._wait_for_request(request)

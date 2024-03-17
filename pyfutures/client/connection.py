@@ -122,7 +122,10 @@ class Connection:
                     self._log.debug(f"<-- {size}: {msg}")
 
                     if msg:
-                        self._handle_msg(msg)
+                        try:
+                            self._handle_msg(msg)
+                        except Exception as e:
+                            self._log.exception("_listen callback exception, _listen task still running...", e)
                         await asyncio.sleep(0)
 
                     else:
@@ -131,7 +134,7 @@ class Connection:
 
                 await asyncio.sleep(0)
         except Exception as e:
-            self._log.exception(f"_listen unhandled while exception, _listen task cancelled: {e}")
+            self._log.exception("_listen task exception, _listen task cancelled", e)
 
     # async def _handle_discconnect(self) -> None:
     #     """
@@ -170,7 +173,7 @@ class Connection:
                     await self._handshake(timeout_seconds=timeout_seconds)
 
         except Exception as e:
-            self._log.error(repr(e))
+            self._log.exception("_connect_monitor task exception, task cancelled", e)
 
     @property
     def is_connected(self) -> bool:
