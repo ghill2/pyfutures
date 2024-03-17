@@ -71,13 +71,13 @@ class MarketSchedule:
 
         return mask.any()
 
-    def is_open(self, timestamp: pd.Timestamp) -> bool:
-        # TODO: assert utz timezone
-
-        local = timestamp.tz_convert(self._timezone)
-        local_time = timestamp.time()
-        mask = (local_time >= self.data.open) & (local_time < self.data.close) & (local.dayofweek == self.data.dayofweek)
-        return mask.any()
+    # def is_open(self, timestamp: pd.Timestamp) -> bool:
+    #     # TODO: assert utz timezone
+    #
+    #     local = timestamp.tz_convert(self._timezone)
+    #     local_time = timestamp.time()
+    #     mask = (local_time >= self.data.open) & (local_time < self.data.close) & (local.dayofweek == self.data.dayofweek)
+    #     return mask.any()
 
     def is_open_list(self, timestamps: list[pd.Timestamp]) -> pd.DatetimeIndex:
         # TODO: assert utz timezone
@@ -353,7 +353,6 @@ class MarketSchedule:
 
     @classmethod
     def from_detail(cls, detail: IBContractDetails):
-        print("=============================")
         ib_ranges = detail.tradingHours.split(";")
 
         if detail.tradingHours is None or detail.tradingHours == "":
@@ -375,17 +374,6 @@ class MarketSchedule:
         name = f"{detail.contract.tradingClass}-{detail.contract.symbol}.{detail.contract.exchange}"
         timezone = pytz.timezone(detail.timeZoneId)
         return MarketSchedule(name=name, data=data, timezone=timezone)
-
-    def _parse_safe_int(string) -> int:
-        """
-        if 2nd char is 0, parse the first char  as int only
-        """
-        if len(string) != 2:
-            raise ValueError("Input string must be exactly 2 characters long")
-        if string[1] == "0":
-            return int(string[0])
-        else:
-            return string
 
 
 # class MarketCalendar:
