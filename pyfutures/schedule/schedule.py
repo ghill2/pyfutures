@@ -6,8 +6,8 @@ from typing import Annotated
 import numpy as np
 import pandas as pd
 import pytz
-from msgspec import Meta
 from ibapi.contract import ContractDetails as IBContractDetails
+from msgspec import Meta
 
 
 # An integer constrained to values < 0
@@ -28,7 +28,7 @@ class MarketSchedule:
         close: datetime.time()
 
         Example:
-
+        -------
         dayofweek      open     close
         0          0  00:00:00  16:00:00
         5          0  17:00:00  23:59:00
@@ -204,14 +204,15 @@ class MarketSchedule:
         # returns timestamps for every open_time in the schedule
 
         # TODO: assert utc input
+        # TODO: assert utc input
         if end_date is None:
             end_date = pd.Timestamp.utcnow()
+
         days = pd.date_range(
-            start=start_date,
-            end=end_date,
+            start=start_date.tz_localize(None),
+            end=end_date.tz_localize(None),
             freq=pd.Timedelta(days=1),
         )
-        days = days.tz_convert(self._timezone)
 
         sessions = self.data.itertuples()
 
@@ -220,14 +221,10 @@ class MarketSchedule:
             timestamps.extend(
                 day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute) for day in days[days.dayofweek == session.dayofweek]
             )
-        timestamps = pd.DatetimeIndex(timestamps).sort_values().tz_convert("UTC")
+        timestamps = pd.DatetimeIndex(timestamps).sort_values().tz_localize(self._timezone).tz_convert("UTC")
+
         timestamps = timestamps[(timestamps >= start_date) & (timestamps < end_date)]
-
         return list(timestamps)
-
-        # group sessions by dayofweek
-
-        # for each session
 
     def sessions(
         self,

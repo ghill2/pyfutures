@@ -154,13 +154,13 @@ class InteractiveBrokersHistoricClient:
             for quote in quotes:
                 assert quote.timestamp < end_time
 
+            end_time = quotes[0].timestamp
+
             quotes = [q for q in quotes if q.timestamp >= start_time]
             assert pd.Series(q.timestamp for q in quotes).is_monotonic_increasing
 
             results = quotes + results
             assert pd.Series(q.timestamp for q in results).is_monotonic_increasing
-
-            end_time = quotes[0].timestamp
 
         if as_dataframe:
             return pd.DataFrame([self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results])

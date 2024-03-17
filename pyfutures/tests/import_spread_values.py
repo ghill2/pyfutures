@@ -1,5 +1,5 @@
-import asyncio
 import logging
+from datetime import timezone
 from pathlib import Path
 
 import pandas as pd
@@ -53,6 +53,9 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
 
 
 def find_missing_sessions(row):
+    path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
+    df = pd.read_parquet(path)
+
     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
     start_time = end_time - pd.Timedelta(days=128)
     schedule = row.liquid_schedule
@@ -60,22 +63,20 @@ def find_missing_sessions(row):
         start_date=start_time,
         end_date=end_time,
     )
-    bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
-    if bid_df.empty:
-        print(f"{row.uname}")
-        # empties.append(row.uname)
 
-        return
-
-    ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
-    df = _merge_dataframe(bid_df, ask_df)
     for i, open_time in enumerate(open_times):
-        start = open_time
         end = open_time + pd.Timedelta(hours=1)
-        mask = (df.timestamp >= start) & (df.timestamp < end)
-        df = df[mask]
-        # if df.empty:
-        #     print(f"No data for session {i + 1}/{len(open_times)} {row.uname}. {start} > {end}")
+        start = open_time
+        assert start.tzinfo == timezone.utc
+        assert end.tzinfo == timezone.utc
+        assert df.timestamp.dt.tzinfo == timezone.utc
+
+        df = df[(df.timestamp >= start) and (df.timestamp < end)]
+        print(df)
+
+        exit()
+        if df.empty:
+            print(f"No data for session {i + 1}/{len(open_times)} {row.uname}. {start} > {end}")
 
 
 def get_spread_value(row):
@@ -141,8 +142,9 @@ async def find_spread_values(row):
         start_date=start_time,
         end_date=end_time,
     )
-    open_time = open_times[1]
-    print(open_time, open_time.dayofweek)
+    open_times = [t for t in open_times if t.dayofweek == 2]
+    open_time = open_times[::-1][0]
+
     await client.connect()
     await client.request_market_data_type(4)
 
@@ -166,7 +168,7 @@ async def find_spread_values(row):
     # df = await historic.request_quotes(
     #     contract=row.contract_cont,
     #     # start_time=open_time.floor(pd.Timedelta(days=1)),
-    #     start_time=open_time.ceil(pd.Timedelta(hours=4)),
+    #     start_time=open_time.floor(pd.Timedelta(days=1)),
     #     end_time=open_time.ceil(pd.Timedelta(days=1)),
     #     cache=None,
     #     as_dataframe=True,
@@ -185,18 +187,21 @@ async def find_spread_values(row):
             print("empty")
             return
 
-        df["local"] = df.timestamp.dt.tz_convert("MET")
+        df["local"] = df.timestamp.dt.tz_convert(row.timezone)
         df["dayofweek"] = df.local.dt.dayofweek
         path = Path.home() / "Desktop/DC.parquet"
+        print(open_time, open_time.dayofweek)
         print(df)
         df.to_parquet(path, index=False)
 
 
 if __name__ == "__main__":
     """
-    DC
-    # 15:30 > 16:00
-    # 16:00 > 22:00
+    DC bars
+    15:30 > 16:00
+    16:00 > 22:00
+    DC quotes
+    # 15:29:55+01:00 > 20:54:58+01:00
     
     KE
     
@@ -206,8 +211,9 @@ if __name__ == "__main__":
     )
     # rows = [r for r in rows if r.uname == "FTI"]
     # get_spread_value(rows[0])
-    for row in rows:
-        asyncio.get_event_loop().run_until_complete(find_spread_values(row))
+    find_missing_sessions(rows[0])
+    # for row in rows:
+    #     asyncio.get_event_loop().run_until_complete(find_missing_sessions(row))
 
     # """
     # 2024-02-28 21:00:00+00:00

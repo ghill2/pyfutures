@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from pyfutures.client.cache import RequestsCache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -33,10 +34,10 @@ async def write_spread(write: bool = False):
     )
 
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
+        filter=["DC"],
     )
 
-    cache = Cache(Path.home() / "Desktop" / "download_cache2")
+    cache = RequestsCache(Path.home() / "Desktop" / "download_cache2")
     cache.purge_errors(asyncio.TimeoutError)
 
     for row in rows:
@@ -61,7 +62,7 @@ async def write_spread(write: bool = False):
                     what_to_show=what_to_show,
                     duration=Duration(seconds_in_hour, Frequency.SECOND),
                     end_time=open_time + pd.Timedelta(hours=1),
-                    cache=cache,
+                    cache=None,
                     as_dataframe=True,
                     delay=0.5,
                 )

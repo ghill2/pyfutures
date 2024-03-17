@@ -31,6 +31,7 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
+from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
 from pyfutures.client.cache import RequestsCache
 from pyfutures.client.connection import Connection
@@ -482,10 +483,11 @@ class InteractiveBrokersClient(EWrapper):
         )
 
         try:
+            endDateTime = end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S")
             self._eclient.reqHistoricalData(
                 reqId=request.id,
                 contract=contract,
-                endDateTime=end_time.tz_convert("UTC").strftime(format="%Y%m%d-%H:%M:%S"),
+                endDateTime=endDateTime,
                 durationStr=str(duration),
                 barSizeSetting=str(bar_size),
                 whatToShow=what_to_show.name,
