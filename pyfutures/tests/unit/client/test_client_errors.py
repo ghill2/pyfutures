@@ -1,10 +1,11 @@
-from pyfutures.client.client import InteractiveBrokersClient
-import pytest
-from unittest.mock import Mock
-from pyfutures.tests.unit.client.stubs import ClientStubs
 import asyncio
+from unittest.mock import Mock
 
+import pytest
+
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.mock_server import MockServer
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
 # PROBLEMS:
@@ -21,6 +22,7 @@ from pyfutures.tests.unit.client.mock_server import MockServer
 @pytest.mark.asyncio()
 async def test_handle_exception_in_callback(mocker, event_loop):
     """
+    if any of the code on the response side encounters an exception the client will still keep running
     if an exception is encountered in the callbacks
       - the client should display the exception in the logs
       - the client should send back a ClientException in the reqId ?
