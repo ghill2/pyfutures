@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pytz
 from msgspec import Meta
+from ibapi.contract import ContractDetails as IBContractDetails
 
 
 # An integer constrained to values < 0
@@ -26,6 +27,20 @@ class MarketSchedule:
         dayofweek: (integer 0 > 6)
         open: datetime.time()
         close: datetime.time()
+
+        Example:
+
+        dayofweek      open     close
+        0          0  00:00:00  16:00:00
+        5          0  17:00:00  23:59:00
+        1          1  00:00:00  16:00:00
+        6          1  17:00:00  23:59:00
+        2          2  00:00:00  16:00:00
+        7          2  17:00:00  23:59:00
+        3          3  00:00:00  16:00:00
+        8          3  17:00:00  23:59:00
+        4          4  00:00:00  16:00:00
+        9          4  17:00:00  23:59:00
         """
         self.data = data
 
@@ -35,10 +50,7 @@ class MarketSchedule:
 
         # TODO: removes duplicates
         # TODO: check for overlapping times
-        # TODO: sort by date and then open time
-        # TODO: check open and close are same day
-        # TODO: ensure integer index
-        # TODO: ensure no missing days, close days have time 00:00 to 00:00
+        # TODO: sort by date and then open time TODO: check open and close are same day TODO: ensure integer index TODO: ensure no missing days, close days have time 00:00 to 00:00
         # TODO: no timezone information before localizing
         # TODO assert open > close
         # TODO assert columns == dayofweek, open, close
@@ -286,6 +298,93 @@ class MarketSchedule:
             data=data,
             timezone=timezone,
         )
+
+    @staticmethod
+    def _parse_detail_range(value: str) -> list[dict]:
+        """
+        converts IB tradingHour ranges into dataframe rows to use with the market schedule
+
+        Case 1:
+         - open and close day are different. returns 2 rows for the dataframe
+         input: 20240314:1700-20240315:1355
+         output: 20240314:1700-20240314:0000, 20240315:0000-20240315:1355
+        Case 2:
+         - open and close day are the same, returns a single row
+         input: 20240123:0700-20240123:2000
+         output: 20240123:0700-20240123:2000
+
+        """
+        parts = value.split("-")
+        if len(parts) == 2:
+            open_date, open_time = tuple(parts[0].split(":"))
+            close_date, close_time = tuple(parts[1].split(":"))
+
+            open_hour = int(open_time[0:2])
+            open_minutes = int(open_time[2:4])
+            close_hour = int(close_time[0:2])
+            close_minutes = int(close_time[2:4])
+
+            open_dayofweek = pd.to_datetime(open_date, format="%Y%m%d").dayofweek
+            close_dayofweek = pd.to_datetime(close_date, format="%Y%m%d").dayofweek
+
+            if open_dayofweek != close_dayofweek:
+                assert close_dayofweek == (open_dayofweek + 1) % 7
+                return [
+                    {
+                        "dayofweek": open_dayofweek,
+                        "open": datetime.time(open_hour, open_minutes),
+                        "close": datetime.time(23, 59),
+                    },
+                    {
+                        "dayofweek": close_dayofweek,
+                        "open": datetime.time(0, 0),
+                        "close": datetime.time(close_hour, close_minutes),
+                    },
+                ]
+            else:
+                return [
+                    {
+                        "dayofweek": open_dayofweek,
+                        "open": datetime.time(open_hour, open_minutes),
+                        "close": datetime.time(close_hour, close_minutes),
+                    },
+                ]
+
+    @classmethod
+    def from_detail(cls, detail: IBContractDetails):
+        print("=============================")
+        ib_ranges = detail.tradingHours.split(";")
+
+        if detail.tradingHours is None or detail.tradingHours == "":
+            return None
+        if detail.timeZoneId is None or detail.timeZoneId == "":
+            return None
+
+        data = pd.DataFrame(columns=["dayofweek", "open", "close"])
+        for ib_range in ib_ranges:
+            if "CLOSED" in ib_range:
+                continue
+
+            sc_ranges = cls._parse_detail_range(ib_range)
+            for sc_range in sc_ranges:
+                data.loc[len(data)] = sc_range
+
+        data.sort_values(by=["dayofweek", "open"], inplace=True)
+
+        name = f"{detail.contract.tradingClass}-{detail.contract.symbol}.{detail.contract.exchange}"
+        timezone = pytz.timezone(detail.timeZoneId)
+        return MarketSchedule(name=name, data=data, timezone=timezone)
+
+    def _parse_safe_int(string) -> int:
+        """
+        if 2nd char is 0, parse the first char  as int only
+        """
+        if len(string) != 2:
+            raise ValueError("Input string must be exactly 2 characters long")
+        if string[1] == "0":
+            return int(string[0])
+        else:
+            return string
 
 
 # class MarketCalendar:

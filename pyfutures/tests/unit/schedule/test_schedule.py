@@ -7,9 +7,85 @@ import pytest
 import pytz
 
 from pyfutures.schedule.schedule import MarketSchedule
+from ibapi.contract import ContractDetails as IBContractDetails
+from ibapi.contract import Contract as IBContract
 
 
-pytestmark = pytest.mark.skip
+# pytestmark = pytest.mark.skip
+
+
+def test_from_detail():
+    contract = IBContract()
+    contract.tradingClass = "DC"
+    contract.symbol = "DA"
+    contract.exchange = "CME"
+
+    detail = IBContractDetails()
+    detail.tradingHours = "20240314:1700-20240315:1355;20240316:CLOSED;20240317:1700-20240318:1600;20240318:1700-20240319:1600;20240319:1700-20240320:1600;20240320:1700-20240321:1600"
+    detail.timeZoneId = "US/Central"
+    detail.contract = contract
+    schedule = MarketSchedule.from_detail(detail=detail)
+
+    name = f"{detail.contract.tradingClass}-{detail.contract.symbol}.{detail.contract.exchange}"
+    assert schedule._name == name
+    assert schedule.data.loc[3].dayofweek == 0
+    assert schedule.data.loc[3].open == datetime.time(00, 00)
+    assert schedule.data.loc[3].close == datetime.time(16, 00)
+
+    assert schedule.data.loc[4].dayofweek == 0
+    assert schedule.data.loc[4].open == datetime.time(17, 00)
+    assert schedule.data.loc[4].close == datetime.time(23, 59)
+
+    assert schedule.data.loc[5].dayofweek == 1
+    assert schedule.data.loc[5].open == datetime.time(00, 00)
+    assert schedule.data.loc[5].close == datetime.time(16, 00)
+
+    assert schedule.data.loc[6].dayofweek == 1
+    assert schedule.data.loc[6].open == datetime.time(17, 00)
+    assert schedule.data.loc[6].close == datetime.time(23, 59)
+
+    assert schedule.data.loc[7].dayofweek == 2
+    assert schedule.data.loc[7].open == datetime.time(00, 00)
+    assert schedule.data.loc[7].close == datetime.time(16, 00)
+
+    assert schedule.data.loc[8].dayofweek == 2
+    assert schedule.data.loc[8].open == datetime.time(17, 00)
+    assert schedule.data.loc[8].close == datetime.time(23, 59)
+
+    assert schedule.data.loc[9].dayofweek == 3
+    assert schedule.data.loc[9].open == datetime.time(00, 00)
+    assert schedule.data.loc[9].close == datetime.time(16, 00)
+
+    assert schedule.data.loc[0].dayofweek == 3
+    assert schedule.data.loc[0].open == datetime.time(17, 00)
+    assert schedule.data.loc[0].close == datetime.time(23, 59)
+
+    assert schedule.data.loc[1].dayofweek == 4
+    assert schedule.data.loc[1].open == datetime.time(00, 00)
+    assert schedule.data.loc[1].close == datetime.time(13, 55)
+
+    assert schedule.data.loc[2].dayofweek == 6
+    assert schedule.data.loc[2].open == datetime.time(17, 00)
+    assert schedule.data.loc[2].close == datetime.time(23, 59)
+
+
+def test_parse_detail_range():
+    ib_range = "20240314:1700-20240315:1355"
+    sc_ranges = MarketSchedule._parse_detail_range(ib_range)
+    assert len(sc_ranges) == 2
+    assert sc_ranges[0]["dayofweek"] == 3
+    assert sc_ranges[0]["open"] == datetime.time(17, 00)
+    assert sc_ranges[0]["close"] == datetime.time(23, 59)
+    assert sc_ranges[1]["dayofweek"] == 4
+    assert sc_ranges[1]["open"] == datetime.time(00, 00)
+    assert sc_ranges[1]["close"] == datetime.time(13, 55)
+
+    ib_range = "20240123:0700-20240123:2000"
+    sc_ranges = MarketSchedule._parse_detail_range(ib_range)
+    assert len(sc_ranges) == 1
+    assert sc_ranges[0]["dayofweek"] == 1
+    assert sc_ranges[0]["open"] == datetime.time(7, 00)
+    assert sc_ranges[0]["close"] == datetime.time(20, 00)
 
 
 class TestMarketSchedule:

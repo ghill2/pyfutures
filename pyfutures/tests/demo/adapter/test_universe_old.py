@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+from pyfutures.schedule.schedule import MarketSchedule
 import pytest
 from ibapi.contract import Contract as IBContract
 from pytower import PACKAGE_ROOT
@@ -15,6 +16,7 @@ from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.demo.client.stubs import ClientStubs
 from pyfutures.client.cache import DetailsCache
+import pytz
 
 
 @pytest.mark.asyncio()
@@ -29,9 +31,6 @@ async def test_subscribe_realtime_bars(event_loop):
         print("NEW BAR")
         print(bar)
 
-    await client.request_accounts()
-    await asyncio.sleep(5)
-    await client.request_accounts()
     for row in rows[0:9]:
         details = await client.request_contract_details(contract=row.contract_cont, cache=cache)
         client._subscribe_realtime_bars(
