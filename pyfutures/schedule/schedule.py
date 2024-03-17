@@ -49,7 +49,10 @@ class MarketSchedule:
 
         # TODO: removes duplicates
         # TODO: check for overlapping times
-        # TODO: sort by date and then open time TODO: check open and close are same day TODO: ensure integer index TODO: ensure no missing days, close days have time 00:00 to 00:00
+        # TODO: sort by date and then open time
+        # TODO: check open and close are same day
+        # TODO: ensure integer index
+        # TODO: ensure no missing days, close days have time 00:00 to 00:00
         # TODO: no timezone information before localizing
         # TODO assert open > close
         # TODO assert columns == dayofweek, open, close
@@ -71,14 +74,6 @@ class MarketSchedule:
 
         return mask.any()
 
-    # def is_open(self, timestamp: pd.Timestamp) -> bool:
-    #     # TODO: assert utz timezone
-    #
-    #     local = timestamp.tz_convert(self._timezone)
-    #     local_time = timestamp.time()
-    #     mask = (local_time >= self.data.open) & (local_time < self.data.close) & (local.dayofweek == self.data.dayofweek)
-    #     return mask.any()
-
     def is_open_list(self, timestamps: list[pd.Timestamp]) -> pd.DatetimeIndex:
         # TODO: assert utz timezone
         timestamps = pd.DatetimeIndex(timestamps)
@@ -93,8 +88,6 @@ class MarketSchedule:
             mask = mask | _mask
 
         return timestamps[mask]
-
-        raise NotImplementedError
 
     def is_closed(self, now: pd.Timestamp) -> bool:
         return not self.is_open(now)
@@ -160,7 +153,7 @@ class MarketSchedule:
     def __repr__(self) -> str:
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{type(self).__name__}({self._name})"
 
     def __getstate__(self):
