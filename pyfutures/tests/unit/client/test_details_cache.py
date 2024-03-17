@@ -1,10 +1,11 @@
-from ibapi.contract import ContractDetails as IBContractDetails
-from ibapi.contract import Contract as IBContract
 import tempfile
-from pyfutures.client.cache import CachedFunc
-from pyfutures.client.cache import DetailsCache
 from unittest.mock import Mock
+
 import pytest
+from ibapi.contract import Contract as IBContract
+from ibapi.contract import ContractDetails as IBContractDetails
+
+from pyfutures.client.cache import DetailsCache
 
 
 def create_detail():

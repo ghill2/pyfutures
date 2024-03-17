@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from pyfutures.client.cache import Cache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration

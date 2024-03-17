@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import eventkit
-
-import traceback
 import pandas as pd
 from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
@@ -33,9 +31,8 @@ from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from ibapi.wrapper import EWrapper
 
-from pyfutures.client.cache import RequestsCache
 from pyfutures.client.cache import DetailsCache
-from pyfutures.client.cache import CachedFunc
+from pyfutures.client.cache import RequestsCache
 from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration

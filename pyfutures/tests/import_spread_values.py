@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 
 from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -150,16 +152,17 @@ async def find_spread_values(row):
     seconds_in_hour: int = 60 * 60
     seconds_in_day: int = seconds_in_hour * 24
 
-    # df = await historic.request_bars(
-    #         contract=row.contract_cont,
-    #         bar_size=BarSize._5_SECOND,
-    #         what_to_show=WhatToShow.BID,
-    #         start_time=open_time.floor(pd.Timedelta(days=1)),
-    #         end_time=open_time.ceil(pd.Timedelta(days=1)),
-    #         cache=None,
-    #         as_dataframe=True,
-    #         delay=0.5,
-    #     )
+    df = await historic.request_bars(
+        contract=row.contract_cont,
+        bar_size=BarSize._5_SECOND,
+        what_to_show=WhatToShow.BID,
+        start_time=open_time.floor(pd.Timedelta(days=1)),
+        end_time=open_time.ceil(pd.Timedelta(days=1)),
+        cache=None,
+        as_dataframe=True,
+        delay=0.5,
+    )
+
     # df = await historic.request_quotes(
     #     contract=row.contract_cont,
     #     # start_time=open_time.floor(pd.Timedelta(days=1)),

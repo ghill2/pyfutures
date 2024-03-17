@@ -9,10 +9,9 @@ import pytest
 from ibapi.common import BarData
 from ibapi.contract import Contract as IBContract
 
+from pyfutures.client.cache import RequestsCache
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.cache import RequestsCache
-from pyfutures.client.cache import CachedFunc
 from pyfutures.client.objects import ClientException
 
 
@@ -78,7 +77,6 @@ class TestRequestsCache:
         assert (self.cache.path / "test_bar.parquet").exists()
 
 
-
 class TestRequestsCachedFunc:
     def setup_method(self):
         bar = BarData()
@@ -108,13 +106,11 @@ class TestRequestsCachedFunc:
 
         self.cached_func = CachedFunc(func=self.request_bars, cache=RequestsCache(path=Path(tempfile.mkdtemp())))
 
-
     def test_build_key(self):
         # NOTE: if this failed test it means the cache has been invalidated
         expected = "DA-CME-CONTFUT=1-day=BID_ASK=2023-01-01-00-00-00=2023-01-01-08-00-00"
         key = self.cached_func._cache.build_key(**self.cached_func_kwargs)
         assert key == expected
-
 
     @pytest.mark.asyncio()
     async def test_call_returns_expected_cached_bar_data(self):

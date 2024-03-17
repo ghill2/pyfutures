@@ -6,7 +6,7 @@ from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.client.cache import Cache
+from pyfutures.client.cache import BaseCache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -34,7 +34,7 @@ class InteractiveBrokersHistoricClient:
         end_time: pd.Timestamp | None = None,
         as_dataframe: bool = False,
         limit: int | None = None,
-        cache: Cache | Path | None = None,
+        cache: BaseCache | Path | None = None,
         delay: float = 0,
     ):
         # assert is_unqualified_contract(contract)
@@ -110,7 +110,7 @@ class InteractiveBrokersHistoricClient:
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
         limit: int | None = None,
-        cache: Cache | Path | None = None,
+        cache: BaseCache | Path | None = None,
         delay: float = 0,
     ):
         """

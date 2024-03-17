@@ -106,7 +106,6 @@ class RequestsCache(BaseCache):
     @classmethod
     def build_key(cls, **kwargs):
         parsing = {
-            # TODO: change to just trading class
             IBContract: lambda x: f"{x.tradingClass}-{x.exchange}-{x.secType}",
             pd.Timestamp: lambda x: x.strftime("%Y-%m-%d-%H-%M-%S"),
             Duration: lambda x: x.value,
@@ -131,7 +130,6 @@ class RequestsCache(BaseCache):
 
 
 class DetailsCache(BaseCache):
-
     """
     if the front contracts expiry is before the current date, then...
     automatically invalidate the cache for the cache.get() call / request?
@@ -169,7 +167,7 @@ class DetailsCache(BaseCache):
 
 
 class CachedFunc:
-    def __init__(self, func: Callable, cache: RequestsCache | DetailsCache):
+    def __init__(self, func: Callable, cache: BaseCache):
         self._func = func
         self._cache = cache
 
