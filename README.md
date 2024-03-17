@@ -13,6 +13,7 @@ API > Settings > Download Orders on Connection > Disabled
 API > Settings > Send instrument-specific attributes for dual-mode API client in > UTC format  
 
 # TODO
+we don't need two caches for details and requests
 implement cache and delay for quote and trade ticks on client
 handle now in client to avoid cache missing data
 if end_time >= pd.Timestamp.utcnow():
