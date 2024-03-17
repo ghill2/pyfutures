@@ -11,7 +11,7 @@ from pytower import PACKAGE_ROOT
 
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.client.objects import ClientException
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.demo.client.stubs import ClientStubs
@@ -107,7 +107,7 @@ async def test_request_bars_universe(event_loop):
     client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
-    historic = InteractiveBrokersBarClient(client=client)
+    historic = InteractiveBrokersHistoricClient(client=client)
     await client.connect()
     client._client.reqMarketDataType(2)
     await asyncio.sleep(2)

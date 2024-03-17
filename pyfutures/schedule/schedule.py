@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterable
 from typing import Annotated
 
 import numpy as np
@@ -80,10 +79,11 @@ class MarketSchedule:
         mask = (local_time >= self.data.open) & (local_time < self.data.close) & (local.dayofweek == self.data.dayofweek)
         return mask.any()
 
-    def is_open_list(self, timestamps: Iterable[pd.Timestamp]) -> pd.DatetimeIndex:
+    def is_open_list(self, timestamps: list[pd.Timestamp]) -> pd.DatetimeIndex:
         # TODO: assert utz timezone
-
+        timestamps = pd.DatetimeIndex(timestamps)
         locals = timestamps.tz_convert(self._timezone)
+
         local_times = timestamps.time
 
         mask = np.zeros(len(timestamps), dtype=bool)
@@ -91,7 +91,8 @@ class MarketSchedule:
         for session in sessions:
             _mask = (local_times >= session.open) & (local_times < session.close) & (locals.dayofweek == session.dayofweek)
             mask = mask | _mask
-        return timestamps[mask]  # utc
+
+        return timestamps[mask]
 
         raise NotImplementedError
 

@@ -7,7 +7,7 @@ import pandas as pd
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.connection import Connection
-from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.logger import LoggerAdapter
 
 
@@ -49,8 +49,8 @@ class ClientStubs:
         return Connection(loop=asyncio.get_event_loop(), host="127.0.0.1", port=4002, client_id=client_id, subscriptions=subscriptions)
 
     @classmethod
-    def historic(cls) -> InteractiveBrokersBarClient:
-        return InteractiveBrokersBarClient(
+    def historic(cls) -> InteractiveBrokersHistoricClient:
+        return InteractiveBrokersHistoricClient(
             client=cls.client(),
             use_cache=True,
             cache_dir=Path(tempfile.gettempdir()),

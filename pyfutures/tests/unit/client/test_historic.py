@@ -10,13 +10,13 @@ from ibapi.contract import Contract as IBContract
 
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
 class TestHistoric:
     def setup_method(self):
-        self.historic: InteractiveBrokersBarClient = ClientStubs.historic()
+        self.historic: InteractiveBrokersHistoricClient = ClientStubs.historic()
         self.contract = IBContract()
         self.contract.secType == "CONTFUT"
         self.contract.tradingClass == "DC"
@@ -97,16 +97,15 @@ class TestHistoric:
 
         self.historic._client.request_bars.assert_called_once()
         self.historic.cache.assert_called_once()
-    
+
     @pytest.mark.skip()
     @pytest.mark.asyncio()
     async def test_first_request_uses_cache_with_skip_first(self):
         # test delay is not used on first request and skip_first = True
         pass
-    
+
     @pytest.mark.asyncio()
     async def test_first_request_uses_cache_with_skip_first(self):
-
         self.historic._client.request_bars = AsyncMock(side_effect=self.request_bars)
         self.historic.cache = AsyncMock(side_effect=self.request_bars)
         self.historic.cache.is_cached = Mock(return_value=True)

@@ -5,8 +5,8 @@ import queue
 import time
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import eventkit
 
@@ -413,6 +413,12 @@ class InteractiveBrokersClient(EWrapper):
         delay: float = 0,
         as_dataframe: bool = False,
     ):
+        # TODO: do not cache time range that might have missing data
+        # if end_time >= pd.Timestamp.utcnow():
+        #     cache = None
+        # else:
+        #     cache = self._cache
+
         kwargs = dict(
             contract=contract,
             bar_size=bar_size,
@@ -439,7 +445,7 @@ class InteractiveBrokersClient(EWrapper):
         bars = []
         try:
             bars: list[BarData] = await func(**kwargs)
-        except ClientException as e:
+        except ClientException:
             pass
         except asyncio.TimeoutError as e:
             self._log.error(str(e.__class__.__name__))
@@ -494,7 +500,6 @@ class InteractiveBrokersClient(EWrapper):
                 keepUpToDate=False,
                 chartOptions=[],
             )
-
             bars = await self._wait_for_request(request)
         except ClientException:
             self._eclient.cancelHistoricalData(reqId=request.id)
@@ -935,8 +940,6 @@ class InteractiveBrokersClient(EWrapper):
         return None
 
     def headTimestamp(self, reqId: int, headTimestamp: str):
-        # print("headTimestamp")
-
         request = self._requests.get(reqId)
         if request is None:
             return  # no response found for request_id
@@ -983,7 +986,7 @@ class InteractiveBrokersClient(EWrapper):
     async def request_quote_ticks(
         self,
         contract: IBContract,
-        start_time: pd.Timestamp,
+        # start_time: pd.Timestamp,
         end_time: pd.Timestamp,
         count: int = 1000,
     ) -> list[HistoricalTickBidAsk]:
@@ -997,32 +1000,26 @@ class InteractiveBrokersClient(EWrapper):
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
         """
-        assert start_time.tz is not None, "Timestamp is not timezone aware"
+        # assert start_time.tz is not None, "Timestamp is not timezone aware"
         assert end_time.tz is not None, "Timestamp is not timezone aware"
-        assert start_time < end_time
+        # assert start_time < end_time
 
         request = self._create_request(
             id=self._next_request_id(),
             data=[],
         )
 
-        self._log.debug(
-            f"reqHistoricalTicks: {request.id=}, {contract=}, "
-            f"startDateTime={start_time}, endDateTime={end_time}, "
-            f"numberOfTicks={count}, whatToShow='BID_ASK', "
-        )
-
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
-            startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
+            # startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
+            startDateTime="",
             endDateTime=end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
             numberOfTicks=count,  # Max is 1000 per request.
             whatToShow="BID_ASK",
-            useRth=True,
+            useRth=1,
             ignoreSize=False,
             miscOptions=[],
-            # formatDate=1,
         )
 
         return await self._wait_for_request(request)

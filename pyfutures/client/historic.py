@@ -1,4 +1,3 @@
-import asyncio
 from collections import deque
 from pathlib import Path
 
@@ -7,8 +6,7 @@ from ibapi.common import BarData
 from ibapi.common import HistoricalTickBidAsk
 from ibapi.contract import Contract as IBContract
 
-from pyfutures.client.cache import CachedFunc
-from pyfutures.client.cache import RequestsCache
+from pyfutures.client.cache import Cache
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
@@ -17,20 +15,13 @@ from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
 
 
-class InteractiveBrokersBarClient:
+class InteractiveBrokersHistoricClient:
     def __init__(
         self,
         client: InteractiveBrokersClient,
-        delay: float = 0,
-        cache_dir: Path | None = None,
-        cache: RequestsCache | None = None,
     ):
         self._client = client
-        self._delay = delay
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
-
-        self._cache = cache
-
         self._parser = ClientParser()
 
     async def request_bars(
@@ -43,7 +34,8 @@ class InteractiveBrokersBarClient:
         end_time: pd.Timestamp | None = None,
         as_dataframe: bool = False,
         limit: int | None = None,
-        use_cache: bool = True,
+        cache: Cache | Path | None = None,
+        delay: float = 0,
     ):
         # assert is_unqualified_contract(contract)
 
@@ -74,11 +66,6 @@ class InteractiveBrokersBarClient:
 
         i = 0
         while end_time > start_time:
-            if end_time >= pd.Timestamp.utcnow():
-                cache = None
-            else:
-                cache = self._cache
-
             self._log.info(f"{contract} | {end_time - interval} -> {end_time} | use_cache={cache}")
 
             bars: list[BarData] = await self._client.request_bars(
@@ -89,69 +76,42 @@ class InteractiveBrokersBarClient:
                 end_time=end_time,
                 cache=cache,
                 as_dataframe=False,
+                delay=delay,
             )
 
-            if len(bars) > 0:
-                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
-            else:
-                self._log.debug("---> Downloaded 0 bars.")
+            assert pd.Series(b.timestamp for b in bars).is_monotonic_increasing
 
-            total_bars.extendleft(bars)
+            total_bars.extendleft(bars[::-1])
+
+            assert pd.Series(b.timestamp for b in total_bars).is_monotonic_increasing
+
+            if len(bars) > 0:
+                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}. Total = {len(total_bars)}")
+            else:
+                self._log.debug(f"---> Downloaded 0 bars. Total = {len(total_bars)}")
 
             end_time = end_time - interval
 
             i += 1
 
-            if limit and len(total_bars) >= limit:
+            if limit is not None and len(total_bars) >= limit:
                 total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
                 break
 
+        if as_dataframe:
+            return pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in total_bars])
+
         return total_bars
 
-    async def request_quote_ticks(
+    async def request_quotes(
         self,
         contract: IBContract,
         start_time: pd.Timestamp = None,
         end_time: pd.Timestamp = None,
         as_dataframe: bool = False,
-    ):
-        assert start_time is not None and end_time is not None
-
-        freq = pd.Timedelta(seconds=60)
-        timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[::-1]
-        results = []
-
-        for i in range(len(timestamps) - 2):
-            start_time = timestamps[i]
-            end_time = timestamps[i + 1]
-            self._log.debug(f"Requesting: {start_time} > {end_time}")
-
-            quotes: list[HistoricalTickBidAsk] = await self._client.request_quote_ticks(
-                contract=contract,
-                start_time=start_time,
-                end_time=end_time,
-                count=1000,
-            )
-
-            assert len(quotes) <= 1000
-            for quote in quotes:
-                assert quote.timestamp <= end_time
-                assert quote.timestamp >= start_time
-
-            if self._delay > 0:
-                await asyncio.sleep(self._delay)
-
-        if as_dataframe:
-            return pd.DataFrame([obj for obj in results])
-
-        return results
-
-    async def request_quote_ticks2(
-        self,
-        contract: IBContract,
-        start_time: pd.Timestamp = None,
-        end_time: pd.Timestamp = None,
-        as_dataframe: bool = False,
+        limit: int | None = None,
+        cache: Cache | Path | None = None,
+        delay: float = 0,
     ):
         """
         if end_time is passed only:
@@ -169,47 +129,42 @@ class InteractiveBrokersBarClient:
             first_tick = x
             break on first tick timestamp
         """
-        assert start_time is not None and end_time is not None
+        if end_time is None:
+            end_time = pd.Timestamp.utcnow()
+
+        if start_time is None:
+            self._log.info(f"requesting head_timestamp for {contract.tradingClass}")
+            start_time = await self._client.request_head_timestamp(
+                contract=contract,
+                what_to_show=WhatToShow.BID_ASK,
+            )
+            self._log.info(f"head_timestamp: {start_time}")
 
         results = []
 
-        i = 0
-        count = 1000
-        while True:
-            # split time range into interval, floor start and ceil end
-            # for each interval, reduce end time until empty list
-            self._log.debug(f"Requesting: {end_time}")
+        while end_time > start_time:
+            self._log.debug(f"Requesting: {contract.tradingClass} {end_time}")
+
             quotes: list[HistoricalTickBidAsk] = await self._client.request_quote_ticks(
                 contract=contract,
-                # start_time=start_time,
                 end_time=end_time,
-                count=count,
+                count=1000,
             )
 
             for quote in quotes:
                 assert quote.timestamp < end_time
 
             quotes = [q for q in quotes if q.timestamp >= start_time]
+            assert pd.Series(q.timestamp for q in quotes).is_monotonic_increasing
 
             results = quotes + results
-
-            if len(quotes) < count:
-                break
+            assert pd.Series(q.timestamp for q in results).is_monotonic_increasing
 
             end_time = quotes[0].timestamp
-            self._log.debug(f"End time: {end_time}")
-
-            if self._delay > 0:
-                await asyncio.sleep(self._delay)
-
-        for quote in results:
-            assert quote.timestamp >= start_time
-
-        timestamps = [quote.timestamp for quote in quotes]
-        assert pd.Series(timestamps).is_monotonic_increasing
 
         if as_dataframe:
             return pd.DataFrame([self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results])
+
         return results
 
 
@@ -454,3 +409,45 @@ class InteractiveBrokersBarClient:
 # )
 # start_time = quotes[0].time
 # assert start_time < end_time
+
+# async def request_quote_ticks(
+#     self,
+#     contract: IBContract,
+#     start_time: pd.Timestamp = None,
+#     end_time: pd.Timestamp = None,
+#     as_dataframe: bool = False,
+#     limit: int | None = None,
+#     cache: Cache | Path | None = None,
+#     delay: float = 0,
+# ):
+#     assert start_time is not None and end_time is not None
+
+#     freq = pd.Timedelta(seconds=60)
+#     timestamps = pd.date_range(start=start_time, end=end_time, freq=freq, tz="UTC")[::-1]
+#     results = []
+
+#     for i in range(len(timestamps) - 2):
+#         start_time = timestamps[i]
+#         end_time = timestamps[i + 1]
+
+#         self._log.debug(f"Requesting: {start_time} > {end_time}")
+
+#         quotes: list[HistoricalTickBidAsk] = await self._client.request_quote_ticks(
+#             contract=contract,
+#             start_time=start_time,
+#             end_time=end_time,
+#             count=1000,
+#         )
+
+#         assert len(quotes) <= 1000
+#         for quote in quotes:
+#             assert quote.timestamp <= end_time
+#             assert quote.timestamp >= start_time
+
+#         if self._delay > 0:
+#             await asyncio.sleep(self._delay)
+
+#     if as_dataframe:
+#         return pd.DataFrame([obj for obj in results])
+
+#     return results

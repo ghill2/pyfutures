@@ -1,14 +1,17 @@
+import asyncio
+import logging
+from pathlib import Path
+
 import pandas as pd
 
+from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
-"""
-once per hour should be enough
-"""
 def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame:
-    
     bid_df.sort_values(by="timestamp", inplace=True)
     ask_df.sort_values(by="timestamp", inplace=True)
 
@@ -41,7 +44,47 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
         axis=1,
         inplace=True,
     )
+    assert list(df.columns) == ["timestamp", "bid", "ask"]
     df = df[(df.bid != 0.0) & (df.ask != 0.0)]
+    # df.timestamp = df.timestamp.dt.tz_localize("UTC")
+    return df
+
+
+def find_missing_sessions(row):
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    schedule = row.liquid_schedule
+    open_times = schedule.to_open_range(
+        start_date=start_time,
+        end_date=end_time,
+    )
+    bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
+    if bid_df.empty:
+        print(f"{row.uname}")
+        # empties.append(row.uname)
+
+        return
+
+    ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
+    df = _merge_dataframe(bid_df, ask_df)
+    for i, open_time in enumerate(open_times):
+        start = open_time
+        end = open_time + pd.Timedelta(hours=1)
+        mask = (df.timestamp >= start) & (df.timestamp < end)
+        df = df[mask]
+        # if df.empty:
+        #     print(f"No data for session {i + 1}/{len(open_times)} {row.uname}. {start} > {end}")
+
+
+def get_spread_value(row):
+    bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
+
+    ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
+
+    df = _merge_dataframe(bid_df, ask_df)
+
+    schedule = row.liquid_schedule
+
     with pd.option_context(
         "display.max_rows",
         None,
@@ -52,68 +95,134 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
     ):
         df["local"] = df.timestamp.dt.tz_convert("MET")
         df["dayofweek"] = df.local.dt.dayofweek
-        # is_open = row.liquid_schedule.is_open(
-        #     pd.Timestamp("2024-02-28 18:34:00+00:00", tz="UTC"),
-        # )
+
+        # previous_len = len(df)
+        # mask = schedule.is_open_list(list(df.timestamp))
+        # mask = df.timestamp.apply(schedule.is_open)
+        # df = df[mask]
+        # assert not df.empty
+
         df = df.iloc[-3000:]
-        from pathlib import Path
+        print(df)
 
-        path = Path.home() / "Desktop/FTI.csv"
-        df.to_csv(path, index=False)
+        # Group by date and hour
+        grouped = df.groupby(pd.Grouper(key="timestamp", freq="H"))
 
-    # TODO: why is this the same length after filtering by liquid hours
-    # print(row.liquid_schedule.data)
-    # start: 17:35:00+00:00
-    # end: 20:59:00+00:00
-    previous_len = len(df)
-    mask = df.timestamp.apply(row.liquid_schedule.is_open)
-    df = df[mask]
-    assert not df.empty
-    assert len(df) != previous_len
+        values = []
+        for group_key, df in grouped:
+            if df.empty:
+                continue
 
-    # Group by date and hour
-    grouped = df.groupby(pd.Grouper(key="timestamp", freq="H"))
+            random_row = df.sample().iloc[0]
+            average_spread = random_row.ask - random_row.bid
+            values.append(average_spread)
 
-    values = []
-    for group_key, df in grouped:
+        average_spread: float = pd.Series(values).mean()
+        i = 7
+        if average_spread == 0.0:
+            print(f"{row.trading_class}: {average_spread:.{i}f} failed")
+        else:
+            print(f"{row.trading_class}: {average_spread:.{i}f}")
+
+
+async def find_spread_values(row):
+    schedule = row.liquid_schedule
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+        api_log_level=logging.ERROR,
+    )
+
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    open_times = schedule.to_open_range(
+        start_date=start_time,
+        end_date=end_time,
+    )
+    open_time = open_times[1]
+    print(open_time, open_time.dayofweek)
+    await client.connect()
+    await client.request_market_data_type(4)
+
+    historic = InteractiveBrokersHistoricClient(
+        client=client,
+    )
+    seconds_in_hour: int = 60 * 60
+    seconds_in_day: int = seconds_in_hour * 24
+
+    # df = await historic.request_bars(
+    #         contract=row.contract_cont,
+    #         bar_size=BarSize._5_SECOND,
+    #         what_to_show=WhatToShow.BID,
+    #         start_time=open_time.floor(pd.Timedelta(days=1)),
+    #         end_time=open_time.ceil(pd.Timedelta(days=1)),
+    #         cache=None,
+    #         as_dataframe=True,
+    #         delay=0.5,
+    #     )
+    # df = await historic.request_quotes(
+    #     contract=row.contract_cont,
+    #     # start_time=open_time.floor(pd.Timedelta(days=1)),
+    #     start_time=open_time.ceil(pd.Timedelta(hours=4)),
+    #     end_time=open_time.ceil(pd.Timedelta(days=1)),
+    #     cache=None,
+    #     as_dataframe=True,
+    #     delay=0.5,
+    # )
+
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
         if df.empty:
-            continue
+            print("empty")
+            return
 
-        random_row = df.sample().iloc[0]
-        average_spread = random_row.ask - random_row.bid
-        values.append(average_spread)
-
-    average_spread: float = pd.Series(values).mean()
-    i = 7
-    if average_spread == 0.0:
-        print(f"{row.trading_class}: {average_spread:.{i}f} failed")
-    else:
-        print(f"{row.trading_class}: {average_spread:.{i}f}")
+        df["local"] = df.timestamp.dt.tz_convert("MET")
+        df["dayofweek"] = df.local.dt.dayofweek
+        path = Path.home() / "Desktop/DC.parquet"
+        print(df)
+        df.to_parquet(path, index=False)
 
 
 if __name__ == "__main__":
     """
-    2024-02-28 21:00:00+00:00
-    2024-02-28 23:45:00+00:00
-    error with schedule:
+    DC
+    # 15:30 > 16:00
+    # 16:00 > 22:00
     
-    FTI:
-    FCE:
-    MFA:
-    MFC:
-    CN:
-    TWN:
-    SGP:
-    IU:
-    M6A:
-    UC:
-    FEF:
+    KE
+    
     """
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
+        filter=["DC"],
     )
-    rows = [r for r in rows if r.uname == "FTI"]
-    get_spread_value(rows[0])
+    # rows = [r for r in rows if r.uname == "FTI"]
+    # get_spread_value(rows[0])
+    for row in rows:
+        asyncio.get_event_loop().run_until_complete(find_spread_values(row))
+
+    # """
+    # 2024-02-28 21:00:00+00:00
+    # 2024-02-28 23:45:00+00:00
+    # error with schedule:
+
+    # FTI:
+    # FCE:
+    # MFA:
+    # MFC:
+    # CN:
+    # TWN:
+    # SGP:
+    # IU:
+    # M6A:
+    # UC:
+    # FEF:
+    # """
     # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
 
     # for i, row in enumerate(rows):

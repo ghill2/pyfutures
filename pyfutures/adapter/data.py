@@ -15,12 +15,12 @@ from nautilus_trader.model.instruments.base import Instrument
 
 from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
-from pyfutures.client.enums import BarSize
-from pyfutures.client.enums import WhatToShow
 from pyfutures.adapter.parsing import AdapterParser
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.historic import InteractiveBrokersBarClient
+from pyfutures.client.enums import BarSize
+from pyfutures.client.enums import WhatToShow
+from pyfutures.client.historic import InteractiveBrokersHistoricClient
 
 
 class InteractiveBrokersDataClient(LiveMarketDataClient):
@@ -53,7 +53,7 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         )
         self._client = client
 
-        self._historic = InteractiveBrokersBarClient(
+        self._historic = InteractiveBrokersHistoricClient(
             client=client,
             # use_cache=False,  # TODO add config
         )
