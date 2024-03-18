@@ -1,6 +1,6 @@
 from nautilus_trader.model.identifiers import InstrumentId
 
-from pyfutures.continuous.config import RollConfig
+from nautilus_trader.continuous.config import RollConfig
 
 
 class TestRollConfig:

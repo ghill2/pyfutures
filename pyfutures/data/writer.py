@@ -16,12 +16,6 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import DataType
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
-from nautilus_trader.serialization.arrow.serializer import register_arrow
-
-from pyfutures.continuous.Z.multiple_bar import MultipleBar
 from pyfutures.data.schemas import BAR_TABLE_SCHEMA
 from pyfutures.data.schemas import QUOTE_TABLE_SCHEMA
 from pyfutures.data.schemas import DataFrameSchema
@@ -168,38 +162,38 @@ class QuoteTickParquetWriter(ParquetWriter):
         self._write_table_with_metadata(table=table, metadata=metadata, append=append)
 
 
-class MultipleBarParquetWriter(ParquetWriter):
-    def __init__(
-        self,
-        path: Path | str,
-    ):
-        super().__init__(path=path)
+# class MultipleBarParquetWriter(ParquetWriter):
+#     def __init__(
+#         self,
+#         path: Path | str,
+#     ):
+#         super().__init__(path=path)
 
-    def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
-        prices = [MultipleBar.from_dict(d) for d in df.to_dict(orient="records")]
-        self.write_objects(prices)
+#     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
+#         prices = [MultipleBar.from_dict(d) for d in df.to_dict(orient="records")]
+#         self.write_objects(prices)
 
-    def write_objects(self, data: list[MultipleBar], append: bool = False) -> None:
-        register_arrow(
-            data_cls=MultipleBar,
-            schema=MultipleBar.schema(),
-            encoder=make_dict_serializer(schema=MultipleBar.schema()),
-            decoder=make_dict_deserializer(data_cls=MultipleBar),
-        )
-        batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
-        self.write_table(pa.Table.from_batches([batch]), append=append)
+#     def write_objects(self, data: list[MultipleBar], append: bool = False) -> None:
+#         register_arrow(
+#             data_cls=MultipleBar,
+#             schema=MultipleBar.schema(),
+#             encoder=make_dict_serializer(schema=MultipleBar.schema()),
+#             decoder=make_dict_deserializer(data_cls=MultipleBar),
+#         )
+#         batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
+#         self.write_table(pa.Table.from_batches([batch]), append=append)
 
-    @staticmethod
-    def to_table(data: list[MultipleBar]) -> pa.Table:
-        register_arrow(
-            data_cls=MultipleBar,
-            schema=MultipleBar.schema(),
-            encoder=make_dict_serializer(schema=MultipleBar.schema()),
-            decoder=make_dict_deserializer(data_cls=MultipleBar),
-        )
-        batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
-        return batch
+#     @staticmethod
+#     def to_table(data: list[MultipleBar]) -> pa.Table:
+#         register_arrow(
+#             data_cls=MultipleBar,
+#             schema=MultipleBar.schema(),
+#             encoder=make_dict_serializer(schema=MultipleBar.schema()),
+#             decoder=make_dict_deserializer(data_cls=MultipleBar),
+#         )
+#         batch = ArrowSerializer.serialize(data=data, data_cls=MultipleBar)
+#         return batch
 
-    def write_table(self, table: pa.Table, append: bool = False):
-        assert table.schema.remove_metadata().equals(MultipleBar.schema())
-        self._write_table_with_metadata(table=table, metadata={}, append=append)
+#     def write_table(self, table: pa.Table, append: bool = False):
+#         assert table.schema.remove_metadata().equals(MultipleBar.schema())
+#         self._write_table_with_metadata(table=table, metadata={}, append=append)

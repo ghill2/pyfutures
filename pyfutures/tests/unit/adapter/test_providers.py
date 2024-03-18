@@ -8,7 +8,7 @@ from nautilus_trader.adapters.interactive_brokers.client import InteractiveBroke
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
-from pyfutures.continuous.cycle import RollCycle
+from nautilus_trader.continuous.cycle import RollCycle
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
 

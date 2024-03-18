@@ -10,8 +10,8 @@ from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.parsing import AdapterParser
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RollCycle
+from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.cycle import RollCycle
 
 
 class InteractiveBrokersInstrumentProvider(InstrumentProvider):

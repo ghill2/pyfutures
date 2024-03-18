@@ -35,11 +35,11 @@ from pytower.strategies.master import sort_key
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapter.parsing import create_contract
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.config import ContractChainConfig
-from pyfutures.continuous.config import RollConfig
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RollCycle
+from nautilus_trader.continuous.chain import ContractChain
+from nautilus_trader.continuous.config import ContractChainConfig
+from nautilus_trader.continuous.config import RollConfig
+from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle_range import RangedRollCycle
 from pyfutures.data.files import ParquetFile
 from pyfutures.schedule.schedule import MarketSchedule
@@ -447,7 +447,6 @@ class IBTestProviderStubs:
 
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
-                instrument_id=row.instrument_id,
                 hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months)
                 if "," in row.hold_cycle
                 else RollCycle(row.hold_cycle, skip_months=row.missing_months),

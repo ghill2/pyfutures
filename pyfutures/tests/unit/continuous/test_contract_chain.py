@@ -32,10 +32,10 @@ from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.test_kit.stubs.component import TestComponentStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.config import ContractChainConfig
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.cycle import RollCycle
+from nautilus_trader.continuous.chain import ContractChain
+from nautilus_trader.continuous.config import ContractChainConfig
+from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.cycle import RollCycle
 from pyfutures.continuous.providers import ContractProvider
 
 

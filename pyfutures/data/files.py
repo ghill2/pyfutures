@@ -26,12 +26,10 @@ from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 from nautilus_trader.persistence.funcs import urisafe_instrument_id
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.Z.multiple_bar import MultipleBar
+from nautilus_trader.continuous.contract_month import ContractMonth
 from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.conversion import bar_to_bar
 from pyfutures.data.writer import BarParquetWriter
-from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.writer import ParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter
 
@@ -215,19 +213,6 @@ class ParquetFile:
             assert len(data) > 0
             return data
 
-        elif self.cls is MultipleBar:
-            df = pd.read_parquet(self.path)
-            assert not df.empty
-            records = df.to_dict(orient="records")
-            return [MultipleBar.from_dict(d) for d in records]
-
-            prices = []
-            for batch in pq.ParquetFile(self.path).iter_batches():
-                deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
-                prices.extend(deserialized)
-
-            return prices
-
     @property
     def num_rows(self) -> int:
         return pq.ParquetFile(str(self)).metadata.num_rows
@@ -240,8 +225,6 @@ class ParquetFile:
             return BarParquetWriter(path=self.path, instrument=instrument, bar_type=self.bar_type)
         elif self.cls is QuoteTick:
             return QuoteTickParquetWriter(path=self.path, instrument=instrument)
-        elif self.cls is MultipleBar:
-            return MultipleBarParquetWriter(path=self.path, instrument=instrument)
         else:
             raise RuntimeError(f"Writer for cls {self.cls} not supported")
 
@@ -251,8 +234,6 @@ class ParquetFile:
             return QuoteTick
         elif value.lower() == "bar":
             return Bar
-        elif value.lower() == "multiplebar":
-            return MultipleBar
         else:
             raise RuntimeError(f"Incompatible type {value}")
 
@@ -437,3 +418,21 @@ class ParquetFile:
 #     MULTIPLE = 3
 #     FX = 4
 #     EQUITY = 5
+
+
+        # elif self.cls is MultipleBar:
+        #     df = pd.read_parquet(self.path)
+        #     assert not df.empty
+        #     records = df.to_dict(orient="records")
+        #     return [MultipleBar.from_dict(d) for d in records]
+
+            # prices = []
+            # for batch in pq.ParquetFile(self.path).iter_batches():
+            #     deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
+            #     prices.extend(deserialized)
+
+            # return prices
+            # elif self.cls is MultipleBar:
+        #     return MultipleBarParquetWriter(path=self.path, instrument=instrument)
+        # elif value.lower() == "multiplebar":
+        #     return MultipleBar

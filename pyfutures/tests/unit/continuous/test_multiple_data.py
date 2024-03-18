@@ -20,7 +20,7 @@
 
 # from pyfutures import PACKAGE_ROOT
 # from pyfutures.continuous.chain import ContractChain
-# from pyfutures.continuous.config import ContractChainConfig
+# from nautilus_trader.continuous.config import ContractChainConfig
 # from pyfutures.continuous.contract_month import ContractMonth
 # from pyfutures.continuous.cycle import RollCycle
 # from pyfutures.continuous.data import MultipleData

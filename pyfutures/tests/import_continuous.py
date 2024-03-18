@@ -2,173 +2,25 @@ import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.enums import BarAggregation
-from nautilus_trader.model.enums import bar_aggregation_to_str
-from nautilus_trader.persistence.wranglers import BarDataWrangler
-
-from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.contract_month import MONTH_LIST
-from pyfutures.continuous.contract_month import ContractMonth
-from pyfutures.continuous.Z.data import MultipleData
-from pyfutures.continuous.Z.multiple_bar import MultipleBar
-from pyfutures.continuous.providers import ContractProvider
-from pyfutures.continuous.wrangler import MultiplePriceWrangler
-from pyfutures.data.files import ParquetFile
-from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.tests.test_kit import MULTIPLE_PRICES_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
+from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
+from nautilus_trader.continuous.contract_month import ContractMonth
 
-
-def load_bars(row: dict) -> list[Bar]:
-    bars = []
-
-    # read minute bars
-    files = IBTestProviderStubs.bar_files(
-        row.trading_class,
-        row.symbol,
-        BarAggregation.MINUTE,
+def validate(row: dict) -> None:
+    bars = row.contract_bars
+    
+    letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
+    end_month = ContractMonth(f"2023{letter_month}")
+    
+    print(f"Validating {row.trading_class}: end_month={end_month} {len(bars)} bars...")
+    
+    wrangler = ContinuousBarWrangler(
+        config=row.chain_config,
+        end_month=end_month,
     )
-
-    print(f"Reading minute bars... {len(files)} files")
-    for file in files:
-        bars.extend(file.read_objects())
-
-    # read hourly bars
-    files = IBTestProviderStubs.bar_files(
-        row.trading_class,
-        row.symbol,
-        BarAggregation.HOUR,
-    )
-    print(f"Reading hourly bars... {len(files)} files")
-    for file in files:
-        bars.extend(file.read_objects())
-
-    # read daily bars
-    files = IBTestProviderStubs.bar_files(
-        row.trading_class,
-        row.symbol,
-        BarAggregation.DAY,
-    )
-
-    print(f"Reading daily bars... {len(files)} files")
-    for file in files:
-        df = file.read(timestamp_delta=(row.settlement_time, row.timezone))
-        assert len(df) > 0
-        wrangler = BarDataWrangler(bar_type=file.bar_type, instrument=row.base_instrument)
-        bars.extend(wrangler.process(data=df))
-
-    #########################################################
-
-    assert len(bars) > 0
-
-    bars = sorted(
-        bars,
-        key=lambda x: (
-            x.ts_init,
-            ContractMonth(x.bar_type.instrument_id.symbol.value.split("=")[-1]) in row.config.priced_cycle,  # carry bar first
-            MONTH_LIST.index(x.bar_type.instrument_id.symbol.value[-1]) * -1,  # forward then current bar
-        ),
-    )
-
-    aggregations = {bar_aggregation_to_str(bar.bar_type.spec.aggregation) for bar in bars}
-    # assert len(aggregations) == 3
-
-    print(f"{len(bars)} bars")
-    return bars
-
-
-def process_row(row: dict, skip: bool = True, debug: bool = False) -> None:
-    print(f"Processing {row.trading_class}")
-
-    files = {
-        BarAggregation.DAY: ParquetFile(
-            parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
-            cls=MultipleBar,
-        ),
-        BarAggregation.HOUR: ParquetFile(
-            parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{row.instrument_id}-1-HOUR-MID-EXTERNAL"),
-            cls=MultipleBar,
-        ),
-        BarAggregation.MINUTE: ParquetFile(
-            parent=MULTIPLE_PRICES_FOLDER,
-            bar_type=BarType.from_str(f"{row.instrument_id}-1-MINUTE-MID-EXTERNAL"),
-            cls=MultipleBar,
-        ),
-    }
-
-    if skip and any(file.path.exists() for file in files.values()):
-        print(f"Skipping {row.trading_class}")
-        return
-    print(f"Processing {row.trading_class}")
-
-    instrument_provider = ContractProvider(
-        approximate_expiry_offset=row.config.approximate_expiry_offset,
-        base=row.base_instrument,
-    )
-    chain = ContractChain(
-        bar_type=files[BarAggregation.DAY].bar_type,
-        config=row.config,
-        instrument_provider=instrument_provider,
-        ignore_expiry_date=True,
-    )
-
-    continuous_data = [
-        MultipleData(
-            bar_type=files[BarAggregation.DAY].bar_type,
-            chain=chain,
-        ),
-        MultipleData(
-            bar_type=files[BarAggregation.HOUR].bar_type,
-            chain=chain,
-        ),
-        MultipleData(
-            bar_type=files[BarAggregation.MINUTE].bar_type,
-            chain=chain,
-        ),
-    ]
-
-    bar_types = [data.bar_type for data in continuous_data]
-    assert len(bar_types) == 3
-
-    wrangler = MultiplePriceWrangler(
-        continuous_data=continuous_data,
-        end_month=ContractMonth("2024F"),
-        debug=debug,
-    )
-
-    bars = load_bars(row)
-
-    prices = wrangler.process_bars(bars)
-
-    bar_types = [data.bar_type for data in continuous_data]
-    assert len(bar_types) == 3
-
-    # write prices parquet and csv
-    for data in continuous_data:
-        aggregation = data.bar_type.spec.aggregation
-        file = files[aggregation]
-        path = str(file.path)
-        writer = MultipleBarParquetWriter(path=path)
-
-        prices_ = prices[data.bar_type]
-
-        end_year = prices_[-1].current_month.year
-        if end_year != 2023:
-            print(f"data.prices[-1].current_month.year != 2023 {row.symbol}")
-            raise RuntimeError
-
-        print(f"Writing {bar_aggregation_to_str(aggregation)} prices... " f"{len(prices_)} items {path}")
-        # write parquet
-        writer.write_objects(data=prices_)
-
-        # # write csv
-        # path = file.path.with_suffix(".csv")
-        # df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
-        # df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
-        # df.to_csv(path, index=False)
-
-
+    wrangler.validate(bars)
+    
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
         # filter=["ECO"],
@@ -177,7 +29,7 @@ if __name__ == "__main__":
         # ],
     )
 
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(process_row)(row, skip=True, debug=False) for row in rows)
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])
@@ -365,3 +217,32 @@ if __name__ == "__main__":
 #             )
 
 #     return bars
+
+# bar_types = [data.bar_type for data in continuous_data]
+    # assert len(bar_types) == 3
+
+    # # write prices parquet and csv
+    # for data in continuous_data:
+    #     aggregation = data.bar_type.spec.aggregation
+    #     file = files[aggregation]
+    #     path = str(file.path)
+    #     writer = MultipleBarParquetWriter(path=path)
+
+    #     prices_ = prices[data.bar_type]
+
+    #     end_year = prices_[-1].current_month.year
+    #     if end_year != 2023:
+    #         print(f"data.prices[-1].current_month.year != 2023 {row.symbol}")
+    #         raise RuntimeError
+
+    #     print(f"Writing {bar_aggregation_to_str(aggregation)} prices... " f"{len(prices_)} items {path}")
+    #     # write parquet
+    #     writer.write_objects(data=prices_)
+
+        # # write csv
+        # path = file.path.with_suffix(".csv")
+        # df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
+        # df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
+        # df.to_csv(path, index=False)
+
+# def write(row: dict, skip: bool = True, debug: bool = False) -> None:

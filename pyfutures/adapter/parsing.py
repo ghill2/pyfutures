@@ -32,7 +32,7 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 
 from pyfutures.client.parsing import ClientParser
-from pyfutures.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.contract_month import ContractMonth
 
 
 order_side_to_order_action: dict[str, str] = {
