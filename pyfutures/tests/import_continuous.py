@@ -1,25 +1,20 @@
-import pandas as pd
 import joblib
-from nautilus_trader.model.data import Bar
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.enums import BarAggregation
-from pyfutures.tests.test_kit import MULTIPLE_PRICES_FOLDER
-from pyfutures.tests.test_kit import IBTestProviderStubs
-from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
+import pandas as pd
 from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
 from nautilus_trader.core.datetime import unix_nanos_to_dt
+from nautilus_trader.model.data import Bar
+
+from pyfutures.tests.test_kit import IBTestProviderStubs
+
 
 def validate(row: dict) -> None:
-    
-    print(row.chain_config.roll_config.roll_offset)
-    exit()
     bars = row.contract_bars
-    
+
     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
     df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
     df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
-    
-    
+
     with pd.option_context(
         "display.max_rows",
         None,
@@ -32,20 +27,19 @@ def validate(row: dict) -> None:
         df = df[df.month == "2017U"]
         print(df)
         print(len(df))
-    
+
     letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
     end_month = ContractMonth(f"2023{letter_month}")
-    
+
     print(f"Validating {row.trading_class}: end_month={end_month} {len(bars)} bars...")
-    
+
     wrangler = ContinuousBarWrangler(
         config=row.chain_config,
         end_month=end_month,
     )
     wrangler.validate(bars)
-    
-    
-    
+
+
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
         filter=["167"],
@@ -241,30 +235,30 @@ if __name__ == "__main__":
 #     return bars
 
 # bar_types = [data.bar_type for data in continuous_data]
-    # assert len(bar_types) == 3
+# assert len(bar_types) == 3
 
-    # # write prices parquet and csv
-    # for data in continuous_data:
-    #     aggregation = data.bar_type.spec.aggregation
-    #     file = files[aggregation]
-    #     path = str(file.path)
-    #     writer = MultipleBarParquetWriter(path=path)
+# # write prices parquet and csv
+# for data in continuous_data:
+#     aggregation = data.bar_type.spec.aggregation
+#     file = files[aggregation]
+#     path = str(file.path)
+#     writer = MultipleBarParquetWriter(path=path)
 
-    #     prices_ = prices[data.bar_type]
+#     prices_ = prices[data.bar_type]
 
-    #     end_year = prices_[-1].current_month.year
-    #     if end_year != 2023:
-    #         print(f"data.prices[-1].current_month.year != 2023 {row.symbol}")
-    #         raise RuntimeError
+#     end_year = prices_[-1].current_month.year
+#     if end_year != 2023:
+#         print(f"data.prices[-1].current_month.year != 2023 {row.symbol}")
+#         raise RuntimeError
 
-    #     print(f"Writing {bar_aggregation_to_str(aggregation)} prices... " f"{len(prices_)} items {path}")
-    #     # write parquet
-    #     writer.write_objects(data=prices_)
+#     print(f"Writing {bar_aggregation_to_str(aggregation)} prices... " f"{len(prices_)} items {path}")
+#     # write parquet
+#     writer.write_objects(data=prices_)
 
-        # # write csv
-        # path = file.path.with_suffix(".csv")
-        # df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
-        # df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
-        # df.to_csv(path, index=False)
+# # write csv
+# path = file.path.with_suffix(".csv")
+# df = MultiplePriceParquetWriter.to_table(data=prices_).to_pandas()
+# df["timestamp"] = df.ts_event.apply(unix_nanos_to_dt)
+# df.to_csv(path, index=False)
 
 # def write(row: dict, skip: bool = True, debug: bool = False) -> None:
