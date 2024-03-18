@@ -1,9 +1,11 @@
+import calendar
+import holidays
 import logging
-from datetime import timezone
+
 from pathlib import Path
 
 import pandas as pd
-import pytz
+from pytz import timezone
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
@@ -53,41 +55,7 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
     return df
 
 
-def find_missing_sessions(row):
-    path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
-    df = pd.read_parquet(path)
 
-    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
-    start_time = end_time - pd.Timedelta(days=128)
-    schedule = row.liquid_schedule
-    open_times = schedule.to_open_range(
-        start_date=start_time,
-        end_date=end_time,
-    )
-
-    for i, open_time in enumerate(open_times):
-        # open_time = open_times[3]
-        end = open_time + pd.Timedelta(hours=1)
-        start = open_time
-        assert start.tzinfo == timezone.utc
-        assert end.tzinfo == timezone.utc
-        for t in df.timestamp:
-            assert t.tzinfo == pytz.UTC
-
-        with pd.option_context(
-            "display.max_rows",
-            None,
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-        ):
-            df = df[(df.timestamp >= start) & (df.timestamp < end)]
-            print(df)
-            if df.empty:
-                print(f"No data for session {row.uname}. {start} > {end}")
-            print(open_time)
-            exit()
 
 
 def get_spread_value(row):
@@ -205,7 +173,64 @@ async def find_spread_values(row):
         print(df)
         df.to_parquet(path, index=False)
 
+def find_missing_sessions(row):
+    
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    
+    path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
+    df = pd.read_parquet(path)
 
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    schedule = row.liquid_schedule
+    open_times = schedule.to_open_range(
+        start_date=start_time,
+        end_date=end_time,
+    )
+
+    for i, open_time in enumerate(open_times):
+        # open_time = open_times[3]
+        end = open_time + pd.Timedelta(hours=1)
+        start = open_time
+        # assert start.tzinfo == timezone.utc
+        # assert end.tzinfo == timezone.utc
+        # for t in df.timestamp:
+        #     assert t.tzinfo == pytz.UTC
+        
+        timezone_to_country_code = {
+            timezone("US/Central"):"US",
+            timezone("US/Eastern"):"US",
+            timezone("GB-Eire"):"UK",
+            timezone("Japan"):"JP",
+        }
+        
+        code = timezone_to_country_code[row.timezone]
+        hols = holidays.CountryHoliday(code, years=[2023, 2024])  # Adjust years as needed
+        with pd.option_context(
+            "display.max_rows",
+            None,
+            "display.max_columns",
+            None,
+            "display.width",
+            None,
+        ):
+            filt = df[(df.timestamp >= start) & (df.timestamp < end)]
+            # print(open_time, filt.empty)
+            if filt.empty:
+                holiday = hols.get(start.date())
+                
+                if holiday is None:
+                    print(
+                        f"No data for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
+                    )
+                else:
+                    print(
+                        f"Holiday {holiday} for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
+                    )
+                    
+            
+            
 if __name__ == "__main__":
     """
     DC bars
@@ -218,7 +243,7 @@ if __name__ == "__main__":
     
     """
     rows = IBTestProviderStubs.universe_rows(
-        filter=["DC"],
+        filter=["167"],
     )
     # rows = [r for r in rows if r.uname == "FTI"]
     # get_spread_value(rows[0])
