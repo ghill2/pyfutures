@@ -182,6 +182,12 @@ class Connection:
     async def start(self) -> bool:
         self._log.debug("Starting...")
 
+    async def create_connection(self, host, port):
+        """
+        In a separate function for mocking / testing purposes
+        """
+        return await asyncio.open_connection(self.host, self.port)
+
     async def connect(self, timeout_seconds: int = 5) -> None:
         """
         Called by the user after instantiation
@@ -204,7 +210,7 @@ class Connection:
         # connect socket
         self._log.debug("Connecting socket...")
         try:
-            self._reader, self._writer = await asyncio.open_connection(self.host, self.port)
+            self._reader, self._writer = await self.create_connection(self.host, self.port)
         except ConnectionRefusedError as e:
             self._log.error(f"ConnectionRefusedError: Socket connection failed, check TWS is open {e!r}")
             return

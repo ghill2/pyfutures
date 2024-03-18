@@ -1,11 +1,13 @@
 import asyncio
 from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 import pytest
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.mock_server import MockServer
 from pyfutures.tests.unit.client.stubs import ClientStubs
+import functools
 
 
 # PROBLEMS:
@@ -17,6 +19,79 @@ from pyfutures.tests.unit.client.stubs import ClientStubs
 #
 # possibly expand this test to cover all methods on the client
 #
+#
+class MockStreamReader(asyncio.StreamReader):
+    def __init__(self, loop=None):
+        super().__init__(loop=loop)
+        self._message_queue = asyncio.Queue()
+
+    async def readline(self, size=-1):
+        print("READLINE")
+        if self._message_queue.empty():
+            return await super().readline(size)
+        else:
+            return await self._message_queue.get()
+
+    async def readuntil(self, separator, size=-1):
+        print("READUNTIL")
+        while self._message_queue.empty():  # Wait until data is available
+            await asyncio.sleep(0)  # Yield control to other tasks
+            return await self._message_queue.get()
+
+    async def read(self, n=-1):
+        print("READ")
+        asyncio.sleep(50)
+
+    def put_message(self, message):
+        self._message_queue.put_nowait(message)
+
+
+class MockStreamWriter(asyncio.StreamWriter):
+    def __init__(self, transport, protocol, reader=None, loop=None):
+        super().__init__(transport, protocol, reader, loop)
+        # self._message_queue = reader._message_queue
+        self._reader = reader
+
+    def write(self, data):
+        print("WRITE CALLED")
+        data = b"\x00\x00\x00*176\x0020240308 13:30:34 Greenwich Mean Time\x00"
+
+        # schedule read bytes after this current execution path
+        asyncio.create_task(self._reader._message_queue.put_nowait(data))
+
+    async def drain(self):
+        # No actual writing needed, just wait for the queue to drain
+        # while not self._message_queue.empty():
+        # await asyncio.sleep(0)
+        pass
+
+    # def get_messages(self):
+    #     messages = []
+    #     while not self._message_queue.empty():
+    #         messages.append(self._message_queue.get_nowait())
+    #     return messages
+    #
+
+
+@pytest.mark.asyncio()
+async def test_mock_server(mocker, event_loop):
+    print(event_loop)
+    client = ClientStubs.client(loop=event_loop, request_timeout_seconds=10)
+
+    async def mock_create_connection(*args, **kwargs):
+        """
+        The testing version of asyncio.open_connection() - asyncio/streams.py
+        """
+        print("EVENT_LOOP")
+        print(event_loop)
+        reader = MockStreamReader(loop=event_loop)
+        writer = MockStreamWriter(None, None, reader, loop=event_loop)
+        return reader, writer
+
+    # client._connection.create_connection = AsyncMock(side_effect=lambda *args, **kwargs: mock_create_connection(event_loop))
+    client._connection.create_connection = AsyncMock(side_effect=mock_create_connection)
+    # mocker.patch.object(client._connection, "create_connection", side_effect=mock_create_connection)
+    await client.connect()
 
 
 @pytest.mark.asyncio()
