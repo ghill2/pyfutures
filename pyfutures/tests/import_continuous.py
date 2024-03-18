@@ -1,3 +1,4 @@
+import pandas as pd
 import joblib
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
@@ -6,9 +7,25 @@ from pyfutures.tests.test_kit import MULTIPLE_PRICES_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
 from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 def validate(row: dict) -> None:
     bars = row.contract_bars
+    
+    df = pd.DataFrame(Bar.to_dict(b) for b in bars)
+    df.timestamp = df.ts_init.apply(unix_nanos_to_dt)
+    df.month = df.bar_type.apply(str).str.split("=").get(-1).str.split(".").get(0)
+    
+    with pd.option_context(
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.width",
+        None,
+    ):
+        print(len(df))
+        exit()
     
     letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
     end_month = ContractMonth(f"2023{letter_month}")
@@ -21,12 +38,11 @@ def validate(row: dict) -> None:
     )
     wrangler.validate(bars)
     
+    
+    
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["ECO"],
-        # skip=[
-        #     "EBM",
-        # ],
+        filter=["167"],
     )
 
     results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)

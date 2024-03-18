@@ -452,7 +452,7 @@ class IBTestProviderStubs:
                 else RollCycle(row.hold_cycle, skip_months=row.missing_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
-                approximate_expiry_offset=row.expiry_offset,
+                approximate_expiry_offset=row.expiry_offset + 1,  # TODO: need to update csv: not accounting for expiry day as valid trading day anymore
                 carry_offset=row.carry_offset,
                 skip_months=row.missing_months,
             ),
