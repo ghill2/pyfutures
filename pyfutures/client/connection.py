@@ -99,43 +99,6 @@ class Connection:
     async def _listen(self) -> None:
         assert self._reader is not None
 
-        buf = b""
-        try:
-            while True:
-                try:
-                    data = await self._reader.read(4096)
-                    # self._log.debug(f"<-- {data}")
-                except ConnectionResetError as e:
-                    self._log.debug(f"TWS closed the connection {e!r}...")
-                    self._is_connected.clear()
-                    return
-
-                if len(data) == 0:
-                    self._log.debug("0 bytes received from server, connect has been dropped")
-                    self._is_connected.clear()
-                    return
-
-                buf += data
-
-                while len(buf) > 0:
-                    (size, msg, buf) = comm.read_msg(buf)
-                    self._log.debug(f"<-- {size}: {msg}")
-
-                    if msg:
-                        try:
-                            self._handle_msg(msg)
-                        except Exception as e:
-                            self._log.exception("_listen callback exception, _listen task still running...", e)
-                        await asyncio.sleep(0)
-
-                    else:
-                        self._log.debug("more incoming packet(s) are needed ")
-                        break
-
-                await asyncio.sleep(0)
-        except Exception as e:
-            self._log.exception("_listen task exception, _listen task cancelled", e)
-
     # async def _handle_discconnect(self) -> None:
     #     """
     #     Called when the socket has been disconnected for some reason, for example,
@@ -175,12 +138,12 @@ class Connection:
         except Exception as e:
             self._log.exception("_connect_monitor task exception, task cancelled", e)
 
-    @property
-    def is_connected(self) -> bool:
-        return self._is_connected.is_set()
-
-    async def start(self) -> bool:
-        self._log.debug("Starting...")
+    # @property
+    # def is_connected(self) -> bool:
+    #     return self._is_connected.is_set()
+    #
+    # async def start(self) -> bool:
+    #     self._log.debug("Starting...")
 
     async def create_connection(self, host, port):
         """
@@ -234,17 +197,6 @@ class Connection:
         except asyncio.TimeoutError as e:
             self._log.error(f"Handshake failed {e!r}")
 
-    def sendMsg(self, msg: bytes) -> None:
-        if not self.is_connected:
-            self._log.error("A message was sent when the Connection was disconnected.")
-            return
-        self._sendMsg(msg)
-
-    def _sendMsg(self, msg: bytes) -> None:
-        self._log.debug(f"--> {msg}")
-        self._writer.write(msg)
-        self.loop.create_task(self._writer.drain())
-
     async def _send_handshake(self) -> None:
         msg = b"v%d..%d" % (self._min_version, self._max_version)
         msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
@@ -278,34 +230,3 @@ class Connection:
                 for sub in self._subscriptions.values():
                     sub.subscribe()
             self._is_connected.set()
-
-    def _prefix(self, msg: bytes):
-        return struct.pack(">I", len(msg)) + msg
-
-    @classmethod
-    async def start_tws(cls):
-        print("Starting tws...")
-        if cls.is_tws_running():
-            await cls.kill_tws()
-        os.system("sh /opt/ibc/twsstartmacos.sh")
-
-        while not cls.is_tws_running():
-            print("Waiting for tws to open...")
-            await asyncio.sleep(1)
-
-    @classmethod
-    async def kill_tws(cls):
-        print("Killing tws...")
-        os.system("killall -m java")
-        os.system("killall -m Trader Workstation 10.26")
-        while cls.is_tws_running():
-            print("Waiting for tws to close...")
-            await asyncio.sleep(1)
-
-    @staticmethod
-    def is_tws_running() -> bool:
-        for process in psutil.process_iter(["pid", "name"]):
-            name = process.info["name"].lower()
-            if name == "java" or name.startswith("Trader Workstation"):
-                return True
-        return False
