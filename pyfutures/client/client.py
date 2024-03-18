@@ -25,6 +25,7 @@ from ibapi.execution import Execution as IBExecution
 from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
+from pyfutures.client.objects import ClientRequest
 
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
@@ -96,8 +97,8 @@ class InteractiveBrokersClient(Connection):
         # self._eclient.clientId = client_id
 
         self._parser = ClientParser()
-        super().__init__(loop=loop)
-        self._reader._decoder.wrapper = self
+        super().__init__(loop=loop, client=self)
+        # self._reader._decoder.wrapper = self
 
         # Connection
 

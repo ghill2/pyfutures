@@ -20,14 +20,16 @@ from pyfutures.client.enums import Duration
 from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
 
+from pyfutures.logger import LoggerAttributes
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 from pyfutures.tests.demo.client.gateway import Gateway
 from pyfutures.tests.demo.client.stubs import ClientStubs
 
 
-from pyfutures.adapter.enums import WhatToShow
+# from pyfutures.adapter.enums import WhatToShow
 
 # Requirements: ensure Docker Desktop is running on OSX
 # or get docker CLI version working by manually running the docker daemon.
@@ -58,9 +60,11 @@ _log = LoggerAdapter.from_name(name="test_connection.py")
 
 @pytest.mark.asyncio()
 async def test_connect(event_loop):
-    print("test_connect")
-    client = ClientStubs.client(client_id=10, loop=event_loop)
-    await client.connect()
+    LoggerAttributes.level = logging.DEBUG
+    print("TEST")
+    client = ClientStubs.client(loop=event_loop)
+    print("CONNECT")
+    await client.connect(client_id=10)
 
 
 @pytest.mark.asyncio()
