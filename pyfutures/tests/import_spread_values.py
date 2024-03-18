@@ -3,6 +3,7 @@ from datetime import timezone
 from pathlib import Path
 
 import pandas as pd
+import pytz
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
@@ -65,18 +66,28 @@ def find_missing_sessions(row):
     )
 
     for i, open_time in enumerate(open_times):
+        # open_time = open_times[3]
         end = open_time + pd.Timedelta(hours=1)
         start = open_time
         assert start.tzinfo == timezone.utc
         assert end.tzinfo == timezone.utc
-        assert df.timestamp.dt.tzinfo == timezone.utc
+        for t in df.timestamp:
+            assert t.tzinfo == pytz.UTC
 
-        df = df[(df.timestamp >= start) and (df.timestamp < end)]
-        print(df)
-
-        exit()
-        if df.empty:
-            print(f"No data for session {i + 1}/{len(open_times)} {row.uname}. {start} > {end}")
+        with pd.option_context(
+            "display.max_rows",
+            None,
+            "display.max_columns",
+            None,
+            "display.width",
+            None,
+        ):
+            df = df[(df.timestamp >= start) & (df.timestamp < end)]
+            print(df)
+            if df.empty:
+                print(f"No data for session {row.uname}. {start} > {end}")
+            print(open_time)
+            exit()
 
 
 def get_spread_value(row):

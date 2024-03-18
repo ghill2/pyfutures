@@ -83,6 +83,8 @@ class RequestsCache(BaseCache):
         if not isinstance(value, (list, Exception)):
             raise RuntimeError(f"Unsupported type {type(value).__name__}")
 
+        self.path.mkdir(parents=True, exist_ok=True)
+
         if isinstance(value, list):
             df = self._parser.bar_data_to_dataframe(value)
             df.to_parquet(self._parquet_path(key), index=False)
@@ -90,7 +92,6 @@ class RequestsCache(BaseCache):
         elif isinstance(value, ClientException):
             value = value.to_dict()
 
-        self.path.mkdir(parents=True, exist_ok=True)
         with open(self._pickle_path(key), "wb") as f:
             pickle.dump(value, f)
 

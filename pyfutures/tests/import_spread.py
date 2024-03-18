@@ -34,10 +34,10 @@ async def write_spread(write: bool = False):
     )
 
     rows = IBTestProviderStubs.universe_rows(
-        filter=["DC"],
+        # filter=["DC"],
     )
 
-    cache = RequestsCache(Path.home() / "Desktop" / "download_cache2")
+    cache = RequestsCache(Path.home() / "Desktop" / "download_cache3")
     cache.purge_errors(asyncio.TimeoutError)
 
     for row in rows:
@@ -62,7 +62,7 @@ async def write_spread(write: bool = False):
                     what_to_show=what_to_show,
                     duration=Duration(seconds_in_hour, Frequency.SECOND),
                     end_time=open_time + pd.Timedelta(hours=1),
-                    cache=None,
+                    cache=cache,
                     as_dataframe=True,
                     delay=0.5,
                 )
@@ -74,7 +74,7 @@ async def write_spread(write: bool = False):
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(write_spread(write=True))
+    asyncio.get_event_loop().run_until_complete(write_spread(write=False))
 
 
 # async def write_spread(write: bool = False):

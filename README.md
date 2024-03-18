@@ -13,14 +13,17 @@ API > Settings > Download Orders on Connection > Disabled
 API > Settings > Send instrument-specific attributes for dual-mode API client in > UTC format  
 
 # TODO
-we don't need two caches for details and requests
-implement cache and delay for quote and trade ticks on client
-handle now in client to avoid cache missing data
-if end_time >= pd.Timestamp.utcnow():
-    cache = None
-else:
-    cache = self._cache
-handle error in connection:
+
+* add assertion to endtime in request data methods in client
+
+* implement cache and delay for quote and trade ticks on client
+
+request_bars is already using the cache and delays if not cached. need to do for quotes and trades.
+
+* handle error in connection:
+
+If this error is received by the connection the client should be set to disconnected.
+
     b'\x00\x00\x00n4\x002\x00-1\x002110\x00Connectivity between Trader Workstation and server is broken. It will be restored automatically.\x00\x00'
     1970-01-01T00:00:00 [DBG] Connection : <-- b'\x00\x00\x00n4\x002\x00-1\x002110\x00Connectivity between Trader Workstation and server is broken. It will be restored automatically.\x00\x00'
 1970-01-01T00:00:00 [INF] Connection : API connection ready, server version 176
@@ -43,6 +46,7 @@ support cycle masking by year/month
 support seasonal contracts with duplicate trading classes
 support year range hold cycle cycle rules (EBM)
 
+* we don't need two caches for details and requests
 
 # Re-connect
 
