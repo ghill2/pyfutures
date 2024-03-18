@@ -1,16 +1,13 @@
 import asyncio
 import functools
 import logging
-import queue
 import time
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
 
 import eventkit
 import pandas as pd
-from ibapi import comm
 from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.client import EClient
 from ibapi.commission_report import CommissionReport as IBCommissionReport
@@ -24,12 +21,10 @@ from ibapi.common import OrderId
 from ibapi.common import TickAttribBidAsk
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
-from ibapi.decoder import Decoder
 from ibapi.execution import Execution as IBExecution
 from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
-from ibapi.wrapper import EWrapper
 
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
@@ -38,8 +33,6 @@ from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.objects import ClientException
-from pyfutures.client.objects import ClientRequest
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.client.objects import IBErrorEvent
 from pyfutures.client.objects import IBExecutionEvent
@@ -51,7 +44,7 @@ from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
 
 
-class InteractiveBrokersClient(EWrapper):
+class InteractiveBrokersClient(Connection):
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
@@ -66,12 +59,8 @@ class InteractiveBrokersClient(EWrapper):
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
-        host: str = "127.0.0.1",
-        port: int = 4002,
-        client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
-        override_timeout: bool = False,  # overrides timeout for all request even if given, useful for testing
     ):
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
@@ -92,27 +81,28 @@ class InteractiveBrokersClient(EWrapper):
                 logging.getLogger(name).setLevel(api_log_level)
 
         self._request_timeout_seconds = request_timeout_seconds
-        self._override_timeout = override_timeout
-        if override_timeout:
-            assert isinstance(self._request_timeout_seconds, (float, int))
+        # self._override_timeout = override_timeout
+        # if override_timeout:
+        # assert isinstance(self._request_timeout_seconds, (float, int))
 
-        self._connection = Connection(loop=loop, host=host, port=port, client_id=client_id, subscriptions=self._subscriptions)
-        self._connection.register_handler(self._handle_msg)
+        # self._connection = Connection(loop=loop, host=host, port=port, client_id=client_id, subscriptions=self._subscriptions)
+        # self._connection.register_handler(self._handle_msg)
 
-        self._eclient = EClient(wrapper=None)
+        self._eclient = EClient(wrapper=self)
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
-        self._eclient.conn = self  # where to send the messages: eclient -> sendMsg
-        self._eclient.clientId = client_id
+        # self._eclient.conn = self  # where to send the messages: eclient -> sendMsg
+        # self._eclient.clientId = client_id
 
-        self._decoder = Decoder(wrapper=self, serverVersion=176)
-
-        self._outgoing_msg_task: asyncio.Task | None = None
-        self._outgoing_msg_queue = queue.Queue()
-
-        self._reset()
         self._parser = ClientParser()
+        super().__init__(loop=loop)
+        self._reader._decoder.wrapper = self
+
+        # Connection
+
+        # register a callback to execute when the event is set
+        # self._connection._is_connected.wait(self._on_connected)
 
     @property
     def subscriptions(self) -> list[ClientSubscription]:
@@ -128,93 +118,29 @@ class InteractiveBrokersClient(EWrapper):
 
     ################################################################################################
     # Connection
+    #
+    # async def _on_connect(self):
+    #     """
+    #     Executed when the handshake succeeds
+    #     """
+    #
 
-    async def connect(self, timeout_seconds: int = 5) -> None:
-        self._outgoing_msg_task = self._loop.create_task(
-            coro=self._process_outgoing_msg_queue(),
-            name="outgoing_message_queue",
-        )
+    # async def connect(self, timeout_seconds: int = 5) -> None:
+    #     await self._connection.connect(timeout_seconds=timeout_seconds)
 
-        await self._connection.connect(timeout_seconds=timeout_seconds)
+    # def _handle_msg(self, msg: bytes) -> None:
 
-    def sendMsg(self, msg: bytes) -> None:
-        # messages output from self.eclient are sent here
-        self._outgoing_msg_queue.put(msg)
-
-    async def _process_outgoing_msg_queue(self) -> None:
-        while True:
-            if self.connection.is_connected:
-                while not self._outgoing_msg_queue.empty():
-                    msg: bytes = self._outgoing_msg_queue.get()
-                    self._connection.sendMsg(msg)
-                await asyncio.sleep(0)
-            else:
-                self._log.debug("Stopping outgoing messages, the client is disconnected. Waiting for 5 seconds...")
-                await asyncio.sleep(5)
-
-    def _handle_msg(self, msg: bytes) -> None:
-        fields = comm.read_fields(msg)
-        self._decoder.interpret(fields)
-
-    def _reset(self) -> None:
-        self._request_id_seq = -10
-
-        if self._outgoing_msg_task is not None:
-            self._outgoing_msg_task.cancel()
-        self._outgoing_msg_task = None
-
-        self._connection._reset()
-
-    def _stop(self) -> None:
-        self._reset()
-
-    ################################################################################################
-    # Responses
-
-    def _next_request_id(self) -> int:
-        current = self._request_id_seq
-        self._request_id_seq -= 1
-        return current
-
-    def _create_request(
-        self,
-        id: int,
-        data: list | dict | None = None,
-        timeout_seconds: int | None = None,
-    ) -> ClientRequest:
-        assert isinstance(id, int)
-
-        if self._override_timeout:
-            timeout_seconds = self._request_timeout_seconds
-        else:
-            timeout_seconds = timeout_seconds or self._request_timeout_seconds
-
-        request = ClientRequest(
-            id=id,
-            data=data,
-            timeout_seconds=timeout_seconds,
-        )
-
-        self._requests[id] = request
-
-        return request
-
-    async def _wait_for_request(self, request: ClientRequest) -> Any:
-        try:
-            await asyncio.wait_for(request, timeout=request.timeout_seconds)
-        except asyncio.TimeoutError:
-            del self._requests[request.id]
-            raise
-
-        result = request.result()
-
-        del self._requests[request.id]
-
-        if isinstance(result, ClientException):
-            self._log.error(result.message)
-            raise result
-
-        return result
+    # def _reset(self) -> None:
+    #     self._request_id_seq = -10
+    #
+    #     if self._outgoing_msg_task is not None:
+    #         self._outgoing_msg_task.cancel()
+    #     self._outgoing_msg_task = None
+    #
+    #     self._connection._reset()
+    #
+    # def _stop(self) -> None:
+    #     self._reset()
 
     ################################################################################################
     # Error
