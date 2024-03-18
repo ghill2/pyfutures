@@ -330,7 +330,9 @@ class IBTestProviderStubs:
         }
         # converters override dtypes
         df = pd.read_excel(file, dtype=dtype, engine="openpyxl")
-
+        df = df[df.roll_offset == -3]
+        print(df)
+        exit()
         def parse_bool(s):
             if s in ["TRUE", "True"]:
                 return True

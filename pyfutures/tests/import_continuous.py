@@ -10,11 +10,15 @@ from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 def validate(row: dict) -> None:
+    
+    print(row.chain_config.roll_config.roll_offset)
+    exit()
     bars = row.contract_bars
     
     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
-    df.timestamp = df.ts_init.apply(unix_nanos_to_dt)
-    df.month = df.bar_type.apply(str).str.split("=").get(-1).str.split(".").get(0)
+    df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
+    df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
+    
     
     with pd.option_context(
         "display.max_rows",
@@ -24,8 +28,10 @@ def validate(row: dict) -> None:
         "display.width",
         None,
     ):
+        # 167=2017U has no timestamps in roll window 2017-09-16 00:00:00+00:00 to 2017-09-17 00:00:00+00:00
+        df = df[df.month == "2017U"]
+        print(df)
         print(len(df))
-        exit()
     
     letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
     end_month = ContractMonth(f"2023{letter_month}")
