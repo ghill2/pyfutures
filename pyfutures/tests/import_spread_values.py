@@ -206,7 +206,7 @@ def find_missing_sessions(row):
         }
         
         code = timezone_to_country_code[row.timezone]
-        hols = holidays.CountryHoliday(code, years=[2023, 2024])  # Adjust years as neededss
+        hols = holidays.CountryHoliday(code, years=[2023, 2024])  # Adjust years as needed
         with pd.option_context(
             "display.max_rows",
             None,
