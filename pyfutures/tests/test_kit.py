@@ -102,6 +102,7 @@ class UniverseRow:
     market_schedule: MarketSchedule
     liquid_schedule: MarketSchedule
     start_month: ContractMonth
+    end_month: ContractMonth
     chain_config: ContractChainConfig
     quote_home_instrument: Instrument
     instrument: FuturesContract
@@ -287,6 +288,7 @@ class IBTestProviderStubs:
             "data_start_minute": str,
             "data_start_day": str,
             "start_month": str,
+            "end_month": str,
             "skip_months": str,
             "data_completes": str,  # pd.BooleanDtype()
             "price_magnifier": pd.Int64Dtype(),
@@ -354,7 +356,8 @@ class IBTestProviderStubs:
         assert df.price_magnifier.notna().all()
         assert df.quote_currency.notna().all()
 
-        df["start_month"] = df.start.apply(ContractMonth)
+        df["start_month"] = df.start_month.apply(ContractMonth)
+        df["end_month"] = df.end_month.apply(ContractMonth)
         df["data_start_day"] = df.data_start_day.apply(ContractMonth)
         df["data_start_minute"] = df.data_start_minute.apply(ContractMonth)
         df["timezone"] = df.timezone.apply(pytz.timezone)

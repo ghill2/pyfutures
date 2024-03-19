@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.model.enums import BarAggregation
 
 
@@ -14,6 +15,8 @@ class PortaraData:
     def get_paths(
         data_symbol: str,
         aggregation: BarAggregation,
+        start_month: ContractMonth | None = None,
+        end_month: ContractMonth | None = None,
     ) -> list[Path]:
         if aggregation == BarAggregation.DAY:
             folder = PORTARA_DATA_FOLDER / "DAY" / data_symbol
@@ -21,6 +24,12 @@ class PortaraData:
         elif aggregation == BarAggregation.MINUTE:
             folder = PORTARA_DATA_FOLDER / "MINUTE" / data_symbol
             paths = list(folder.glob("*.txt")) + list(folder.glob("*.b01"))
+
+        paths = [
+            p
+            for p in paths
+            if (start_month is None or ContractMonth(p.stem[-5:]) >= start_month) and (end_month is None or ContractMonth(p.stem[-5:]) <= end_month)
+        ]
 
         assert len(paths) > 0
         return sorted(paths)
@@ -118,6 +127,10 @@ class PortaraData:
         df = df[df.columns[:6]]
 
         df.volume = 1_000_000.0
+
+        # from nautilus_trader.core.datetime import UNIX_EPOCH
+        # df = df[df.timestamp >= (pd.Timestamp(0, utc=True) + pd.Timedelta(days=2))]
+
         df.set_index("timestamp", inplace=True)
 
         return df

@@ -2,13 +2,13 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.functions import bar_aggregation_from_str
 from nautilus_trader.persistence.wranglers import BarDataWrangler
 
-from nautilus_trader.continuous.contract_month import ContractMonth
 from pyfutures.data.portara import PortaraData
 from pyfutures.tests.test_kit import CATALOG
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -64,27 +64,34 @@ rows = IBTestProviderStubs.universe_rows(
 
 def import_daily_bars():
     for row in rows:
-        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        # paths = sorted(set(files_d1))
+        paths = PortaraData.get_paths(
+            row.data_symbol,
+            aggregation=BarAggregation.DAY,
+            start_month=row.start_month,
+            end_month=row.end_month,
+        )
         for path in paths:
             yield joblib.delayed(process_daily_bars)(row, path)
 
 
 def import_instruments():
     for row in rows:
-        paths = PortaraData.get_paths(row.data_symbol, BarAggregation.DAY)
-        # files_m1 = PortaraData.get_paths(row.data_symbol, BarAggregation.MINUTE)
-        # paths = sorted(set(files_d1 + files_m1))
+        paths = PortaraData.get_paths(
+            row.data_symbol,
+            aggregation=BarAggregation.DAY,
+            start_month=row.start_month,
+            end_month=row.end_month,
+        )
 
         months = {ContractMonth(path.stem[-5:]) for path in paths}
+
         for month in months:
             yield joblib.delayed(process_instruments)(row, month)
 
 
 if __name__ == "__main__":
-    joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
     joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_bars())
+    joblib.Parallel(n_jobs=-1, backend="loky")(import_instruments())
     # joblib.Parallel(n_jobs=-1, backend="loky")(import_daily_quotes())
 
 
