@@ -12,8 +12,7 @@ class AdjustedPrices:
     def __init__(
         self,
         maxlen: int,
-        bar_type: BarType,  # bar type that triggers the adjustment
-        manual: bool = False,
+        bar_type: BarType,
     ):
         super().__init__()
 
