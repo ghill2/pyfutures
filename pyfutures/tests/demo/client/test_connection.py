@@ -65,6 +65,7 @@ async def test_connect(event_loop):
     client = ClientStubs.client(loop=event_loop)
     print("CONNECT")
     await client.connect(client_id=10)
+    await client.request_account_summary()
 
 
 @pytest.mark.asyncio()

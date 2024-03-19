@@ -4,6 +4,9 @@ import struct
 from asyncio.streams import StreamReader
 from asyncio.streams import StreamReaderProtocol
 from asyncio.streams import StreamWriter
+from asyncio.protocols import Protocol
+
+# transport -> _SelectorSocketTransport > asyncio/selector_events
 from typing import Any
 
 from ibapi import comm
@@ -14,6 +17,20 @@ from pyfutures.client.objects import ClientRequest
 from pyfutures.logger import LoggerAdapter
 # from pyfutures.client.client import InteractiveBrokersClient
 #
+
+
+class MyProtocol(Protocol):
+    def connection_made(self, transport):
+        print("connection made")
+
+    def data_received(self, data):
+        print("data received")
+
+    def eof_received(self):
+        print("eof received")
+
+    def connection_lost(self, exc):
+        print("connection lost")
 
 
 class Connection:
@@ -93,43 +110,51 @@ class Connection:
     ################################################################################################
     # Read
     #
-    async def read(self):
+    async def read(self, buf):
         """
         called from the _read_task() continuously after handshake / is_connected
         and from the connect() for the handshake
         """
-        buf = b""
-        while True:
-            try:
-                data = await self._reader.read(4096)
-                print("DATA")
-                print(data)
-                # self._log.debug(f"<-- {data}")
-            except ConnectionResetError as e:
-                self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
-                self._is_connected.clear()
-                return
+        pass
+        # while True:
+        #     # data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+        #     await self._reader._wait_for_data("read")
+        #     self._log.debug(f"<-- {self._reader._buffer}")
+        #     await asyncio.sleep(0)
 
-            if len(data) == 0:
-                self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
-                self._is_connected.clear()
-                raise Exception("")
-
-            buf += data
-
-            while len(buf) > 0:
-                (size, msg, buf) = comm.read_msg(buf)
-                self._log.debug(f"<-- {size}: {msg}")
-
-                if msg:
-                    fields = comm.read_fields(msg)
-                    await asyncio.sleep(0)
-                    return fields
-                else:
-                    self._log.debug("more incoming packet(s) are needed ")
-                    break
-
-            await asyncio.sleep(0)
+    # async def read(self, buf):
+    #     """
+    #     called from the _read_task() continuously after handshake / is_connected
+    #     and from the connect() for the handshake
+    #     """
+    #     try:
+    #         data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+    #         self._log.debug(f"<-- {data}")
+    #     except ConnectionResetError as e:
+    #         self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
+    #         self._is_connected.clear()
+    #         return
+    #
+    #     if len(data) == 0:
+    #         self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
+    #         self._is_connected.clear()
+    #         raise Exception("")
+    #
+    #     buf += data
+    #
+    #     while len(buf) > 0:
+    #         (size, msg, buf) = comm.read_msg(buf)
+    #         self._log.debug(f"<-- {size}: {msg}")
+    #
+    #         if msg:
+    #             fields = comm.read_fields(msg)
+    #             await asyncio.sleep(0)
+    #             return fields
+    #         else:
+    #             self._log.debug("more incoming packet(s) are needed ")
+    #             break
+    #
+    # await asyncio.sleep(0)
 
     # async def read(self):
     #     """
@@ -168,10 +193,9 @@ class Connection:
         """
         while True:
             try:
-                await self._read_lock.acquire()
                 print("READ TASK READ")
-                fields = await self.read()
-                self._read_lock.release()
+                buf = b""
+                fields = await self.read(buf=buf)
                 self._decoder.interpret(fields)
                 await asyncio.sleep(0)
             except Exception as e:
@@ -179,12 +203,18 @@ class Connection:
 
     ################################################################################################
     # Connect
-    @staticmethod
-    async def open_connection(host, port):
+    # @staticmethod
+    async def open_connection(self, host, port):
         """
         So the connection can be mocked more easily
         """
-        return await asyncio.open_connection(host, port)
+        # asyncio.open_connection()
+        # self._reader = StreamReader(loop=self._loop)
+        self._protocol = MyProtocol()
+        self._transport, _ = await self._loop.create_connection(lambda: self._protocol, host, port)
+        # self._writer = StreamWriter(self._transport, self._protocol, self._reader, self._loop)
+        return self._protocol, self._transport
+        # return await asyncio.open_connection(host, port)
 
     async def connect(
         self,
@@ -209,13 +239,18 @@ class Connection:
             coro=self._write_task(),
             name="_write_task",
         )
+        # await self._connect_start_tasks(client_id, timeout_seconds)
 
+    async def _connect_start_tasks(self, client_id, timeout_seconds):
+        """
+        extension of connect
+        separated into a different function to mock
+        """
         self._connect_task = self._loop.create_task(self.connect_task(client_id, timeout_seconds), name="connect")
         self._read_task = self._loop.create_task(self.read_task(), name="read")
 
     async def reconnect(self, client_id):
         await self._is_connecting_lock.acquire()
-        await self._read_lock.acquire()
 
         self._request_id_seq = -10
 
@@ -233,7 +268,8 @@ class Connection:
 
         # read and process handshake response
         self._log.debug("- Waiting for handshake response")
-        fields = await self.read()
+        buf = b""
+        fields = await self.read(buf=buf)
         id = int(fields[0])
 
         if id != 176:
@@ -245,7 +281,8 @@ class Connection:
         startapi_req = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
         self._write(startapi_req)
         self._log.debug("- Waiting for StartAPI response...")
-        fields = await self.read()
+        buf = b""
+        fields = await self.read(buf=buf)
         id = int(fields[0])
 
         if id != 15:
@@ -258,7 +295,6 @@ class Connection:
                 sub.subscribe()
 
         self._is_connecting_lock.release()
-        self._read_lock.release()
 
         self._is_connected.set()
         self._log.info("- Connected Successfully...")
@@ -307,7 +343,7 @@ class Connection:
         # msg = b"API\x00\x00\x00\x00\tv176..176"
         self._log.debug(f"--> {repr(msg)}")
         self._writer.write(msg)
-        self._loop.create_task(self._writer.drain())
+        # self._loop.create_task(self._writer.drain())
 
     ################################################################################################
     # Write - Requests

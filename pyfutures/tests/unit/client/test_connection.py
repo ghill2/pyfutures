@@ -86,7 +86,7 @@ class MockSocket:
 
 
 @pytest.mark.asyncio()
-async def test_connect(mocker):
+async def test_connect_2(mocker):
     client = UnitClientStubs.client(request_timeout_seconds=20)
 
     UNIT = False
@@ -116,6 +116,28 @@ async def test_connect(mocker):
     print(summary)
 
     # await asyncio.sleep(20)
+
+
+@pytest.mark.asyncio()
+async def test_connect():
+    client = UnitClientStubs.client(request_timeout_seconds=20)
+    # client.conn._wait_for_request - AsyncMock(side_effect=lambda request: request)
+    # client.conn._connect_start_tasks - AsyncMock()
+    await client.connect()
+    fut = await client.request_account_summary()
+
+    buf = b""
+    fields = await client.conn.read(buf=buf)
+    print(fields)
+    buf = b""
+    fields = await client.conn.read(buf=buf)
+    print(fields)
+    buf = b""
+    fields = await client.conn.read(buf=buf)
+    print(fields)
+    buf = b""
+    fields = await client.conn.read(buf=buf)
+    print(fields)
 
 
 # NOTE: mocker fixture required to avoid hanging
