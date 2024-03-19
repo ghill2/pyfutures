@@ -7,6 +7,8 @@ from ibapi.execution import Execution as IBExecution
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from nautilus_trader.model.enums import AssetClass
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 from nautilus_trader.model.objects import Currency
@@ -158,4 +160,52 @@ class AdapterStubs:
                     exchange="CME",
                 ),
             ),
+        )
+    
+    @staticmethod
+    def continuous_bar(self):
+        return ContinuousBar(
+            bar_type=BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL"),
+            current_bar=Bar(
+                bar_type=BarType.from_str("MES=2021X.SIM-1-DAY-MID-EXTERNAL"),
+                open=Price.from_str("1.1"),
+                high=Price.from_str("1.3"),
+                low=Price.from_str("1.0"),
+                close=Price.from_str("1.2"),
+                volume=Quantity.from_int(1),
+                ts_init=0,
+                ts_event=0,
+            ),
+            forward_bar=Bar(
+                bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
+                open=Price.from_str("2.1"),
+                high=Price.from_str("2.3"),
+                low=Price.from_str("2.0"),
+                close=Price.from_str("2.2"),
+                volume=Quantity.from_int(2),
+                ts_init=0,
+                ts_event=0,
+            ),
+            previous_bar=Bar(
+                bar_type=BarType.from_str("MES=2021V.SIM-1-DAY-MID-EXTERNAL"),
+                open=Price.from_str("3.1"),
+                high=Price.from_str("3.3"),
+                low=Price.from_str("3.0"),
+                close=Price.from_str("3.2"),
+                volume=Quantity.from_int(3),
+                ts_init=0,
+                ts_event=0,
+            ),
+            carry_bar=Bar(
+                bar_type=BarType.from_str("MES=2021Z.SIM-1-DAY-MID-EXTERNAL"),
+                open=Price.from_str("4.1"),
+                high=Price.from_str("4.3"),
+                low=Price.from_str("4.0"),
+                close=Price.from_str("4.2"),
+                volume=Quantity.from_int(4),
+                ts_init=0,
+                ts_event=0,
+            ),
+            ts_event=0,
+            ts_init=0,
         )

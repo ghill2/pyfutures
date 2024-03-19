@@ -38,7 +38,7 @@ class AdjustedPrices:
     def __next__(self):
         return next(self.values)
 
-    def on_continuous_bar(self, bar: ContinuousBar) -> float | None:
+    def on_continuous_bar(self, bar: ContinuousBar) -> None:
         
         if self._last is None or self._last.current_bar.bar_type == bar.current_bar.bar_type:
             self.values.append(float(bar.close))
