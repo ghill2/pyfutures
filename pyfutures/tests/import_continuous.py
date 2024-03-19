@@ -1,8 +1,5 @@
-import pandas as pd
 from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
-from nautilus_trader.core.datetime import unix_nanos_to_dt
-from nautilus_trader.model.data import Bar
 
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
@@ -10,21 +7,21 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 def validate(row: dict) -> None:
     bars = row.contract_bars
 
-    with pd.option_context(
-        "display.max_rows",
-        None,
-        "display.max_columns",
-        None,
-        "display.width",
-        None,
-    ):
-        # 167=2017U has no timestamps in roll window 2017-09-16 00:00:00+00:00 to 2017-09-17 00:00:00+00:00
-        df = pd.DataFrame(Bar.to_dict(b) for b in bars)
-        df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
-        df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
-        df = df[df.month == "2008F"]
-        print(df)
-        print(len(df))
+    # with pd.option_context(
+    #     "display.max_rows",
+    #     None,
+    #     "display.max_columns",
+    #     None,
+    #     "display.width",
+    #     None,
+    # ):
+    #     # 167=2017U has no timestamps in roll window 2017-09-16 00:00:00+00:00 to 2017-09-17 00:00:00+00:00
+    #     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
+    #     df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
+    #     df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
+    #     df = df[df.month == "2008F"]
+    #     print(df)
+    #     print(len(df))
 
     if row.uname == "EBM":
         letter_month = "Z"

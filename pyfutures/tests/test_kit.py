@@ -332,7 +332,7 @@ class IBTestProviderStubs:
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
         ignored = [
             # "EBM",
-            "YIW",
+            # "YIW",
         ]
         df = df[~df.trading_class.isin(ignored)]
 
