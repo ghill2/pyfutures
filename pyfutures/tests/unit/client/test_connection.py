@@ -3,13 +3,20 @@ import logging
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from pyfutures.client.connection import Connection
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.logger import LoggerAttributes
-from pyfutures.tests.unit.client.mock_server import MockServer
-from pyfutures.tests.unit.client.stubs import ClientStubs
+
+# from pyfutures.tests.unit.client.mock_server import MockServer
+from pyfutures.tests.unit.client.stubs import UnitClientStubs
+import async_solipsism
+
+from async_solipsism.socket import Socket
+from async_solipsism.socket import Queue
 
 
 # pytestmark = pytest.mark.unit
@@ -37,6 +44,80 @@ from pyfutures.tests.unit.client.stubs import ClientStubs
 LoggerAttributes.level = logging.DEBUG
 
 
+class MockSocket:
+    def __init__(self):
+        self._queue = asyncio.Queue()  # Queue to store data
+        self.respond = asyncio.Event()
+        self.should_wait = False
+
+    def write(self, msg: bytes):
+        """
+        For the handshake, responses cannot be queued using this function
+        as this is called from inside the connect() function,
+        the responses can only be added to the queue after the entire connect() method has run
+        they have to be queued before
+        """
+        # Simulate writing data (you might implement additional logic here)
+        print(f"MockSocket: Writing data: {msg}")
+
+    async def drain(self):
+        pass
+
+    async def read(self, _):
+        while True:
+            while not self._queue.empty():
+                data = await self._queue.get()
+                return data
+            # await asyncio.sleep(0)
+
+    async def put(self, messages: list | bytes):
+        # Add data to the queue
+        if isinstance(messages, bytes):
+            messages = [messages]
+
+        for msg in messages:
+            await self._queue.put(msg)
+
+    # async def set_wait_mode(self):
+    #     """
+    #         should_block ->
+    #     """
+    #
+
+
+@pytest.mark.asyncio()
+async def test_connect(mocker):
+    client = UnitClientStubs.client(request_timeout_seconds=20)
+
+    UNIT = False
+
+    if UNIT:
+        socket = MockSocket()
+        client.conn.open_connection = AsyncMock(return_value=(socket, socket))
+    else:
+        socket = AsyncMock()
+
+    ## when sending a client request, return the future immediately so it can be handled in the test function
+    # def mock_wait_for_request(request):
+    #     print(request)
+    #     return request
+    #
+    # client._wait_for_request - AsyncMock(side_effect=mock_wait_for_request)
+    # mock the reader and writer with a test implementation
+    #
+    await socket.put(b"\x00\x00\x00*176\x0020240308 13:30:34 Greenwich Mean Time\x00")
+    await socket.put(b"\x00\x00\x00\x0f15\x001\x00DU1234567\x00")
+
+    await client.connect()
+    print("after connect")
+    # await asyncio.sleep(0)
+
+    summary = await client.request_account_summary()
+    print(summary)
+
+    # await asyncio.sleep(20)
+
+
 # NOTE: mocker fixture required to avoid hanging
 
 
@@ -49,7 +130,7 @@ async def test_reconnection_on_empty_byte(mocker):
     When the client receives an empty byte, the client should attempt reconnect
     also tests for reconnecting subscriptions
     """
-    connection = ClientStubs.connection(client_id=1)
+    connection = UnitClientStubs.connection(client_id=1)
     mock_server = MockServer()
     mocker.patch(
         "asyncio.open_connection",
@@ -74,7 +155,7 @@ async def test_reconnection_on_empty_byte(mocker):
 @pytest.mark.timeout(0.5)
 @pytest.mark.asyncio()
 async def test_reconnection_on_conn_reset_error(mocker):
-    connection = ClientStubs.connection(client_id=1)
+    connection = UnitClientStubs.connection(client_id=1)
     mock_server = MockServer()
     mocker.patch(
         "asyncio.open_connection",
