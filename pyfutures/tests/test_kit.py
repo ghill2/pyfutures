@@ -9,6 +9,11 @@ from pathlib import Path
 import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
+from nautilus_trader.continuous.chain import ContractChain
+from nautilus_trader.continuous.config import ContractChainConfig
+from nautilus_trader.continuous.config import RollConfig
+from nautilus_trader.continuous.contract_month import ContractMonth
+from nautilus_trader.continuous.cycle import RollCycle
 from nautilus_trader.core.data import Data
 from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
 from nautilus_trader.model.data import Bar
@@ -31,13 +36,9 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
+
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapter.parsing import create_contract
-from nautilus_trader.continuous.chain import ContractChain
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.config import RollConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle_range import RangedRollCycle
 from pyfutures.data.files import ParquetFile
 from pyfutures.schedule.schedule import MarketSchedule
@@ -221,20 +222,6 @@ class UniverseRow:
         for chunk in result:
             data.extend(capsule_to_list(chunk))
 
-        timestamps = {x.ts_init for x in data}
-        for timestamp in timestamps:
-            data.append(
-                QuoteTick(
-                    instrument_id=InstrumentId.from_str("EXECUTION.SIM"),
-                    bid_price=Price.from_int(1),
-                    ask_price=Price.from_int(1),
-                    bid_size=Quantity.from_int(1),
-                    ask_size=Quantity.from_int(1),
-                    ts_init=timestamp,
-                    ts_event=timestamp,
-                )
-            )
-
         return data
 
     @property
@@ -326,7 +313,7 @@ class IBTestProviderStubs:
         }
         # converters override dtypes
         df = pd.read_excel(file, dtype=dtype, engine="openpyxl")
-        
+
         def parse_bool(s):
             if s in ["TRUE", "True"]:
                 return True
@@ -345,7 +332,7 @@ class IBTestProviderStubs:
         # df = df[(df.trading_class != "EBM") & (df.trading_class != "YIW")]
         ignored = [
             # "EBM",
-            # "YIW",
+            "YIW",
         ]
         df = df[~df.trading_class.isin(ignored)]
 
