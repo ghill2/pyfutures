@@ -5,6 +5,7 @@ from nautilus_trader.serialization.arrow.serializer import make_dict_deserialize
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
 
+from pyfutures.tests.test_kit import CATALOG
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -39,6 +40,7 @@ def validate(row: dict) -> None:
     )
 
     bars: list[ContinuousBar] = wrangler.process(bars)
+    print(len(bars))
 
     register_arrow(
         data_cls=ContinuousBar,
@@ -47,18 +49,16 @@ def validate(row: dict) -> None:
         decoder=make_dict_deserializer(data_cls=ContinuousBar),
     )
 
-    # CATALOG.write_data(bars)
-
-    # CATALOG.write_chunk(
-    #     data=bars,
-    #     data_cls=ContinuousBar,
-    #     instrument_id=row.chain_config.bar_type,
-    # )
+    CATALOG.write_chunk(
+        data=bars,
+        data_cls=ContinuousBar,
+        instrument_id=str(row.chain_config.bar_type),
+    )
 
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        filter=["XK"],
+        # filter=["XK"],
         # skip=["NIFTY"],
     )
     # items = [r.chain_config.roll_config.approximate_expiry_offset for r in rows]

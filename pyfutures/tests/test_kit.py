@@ -9,17 +9,16 @@ from pathlib import Path
 import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
+from nautilus_trader.continuous.bar import ContinuousBar
 from nautilus_trader.continuous.chain import ContractChain
 from nautilus_trader.continuous.config import ContractChainConfig
 from nautilus_trader.continuous.config import RollConfig
 from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.continuous.cycle import RollCycle
 from nautilus_trader.core.data import Data
-from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import QuoteTick
-from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.enums import InstrumentClass
@@ -35,6 +34,9 @@ from nautilus_trader.model.objects import Currency
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
+from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
+from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
+from nautilus_trader.serialization.arrow.serializer import register_arrow
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
 from pyfutures import PACKAGE_ROOT
@@ -203,27 +205,26 @@ class UniverseRow:
         return files
 
     @property
-    def backend_session(self) -> DataBackendSession:
-        # create data
-        session: DataBackendSession = CATALOG.backend_session(
+    def data(self) -> list[Data]:
+        register_arrow(
+            data_cls=ContinuousBar,
+            schema=ContinuousBar.schema(),
+            encoder=make_dict_serializer(schema=ContinuousBar.schema()),
+            decoder=make_dict_deserializer(data_cls=ContinuousBar),
+        )
+        bars = CATALOG.query(
+            data_cls=ContinuousBar,
+            # bar_types=[str(self.bar_type)],
+            instrument_ids=[str(self.bar_type(aggregation=BarAggregation.DAY))],
+        )
+        quotes = CATALOG.query(
             data_cls=QuoteTick,
             instrument_ids=[self.quote_home_instrument.id.value],  # fx rates
         )
-        session: DataBackendSession = CATALOG.backend_session(
-            data_cls=Bar,
-            instrument_ids=[self.instrument.id.symbol.value],  # contract bars
-            session=session,
+        return sorted(
+            bars + quotes,
+            key=lambda x: (x.ts_init, not isinstance(x, ContinuousBar)),
         )
-        return session
-
-    @property
-    def data(self) -> list[Data]:
-        result = self.backend_session.to_query_result()
-        data = []
-        for chunk in result:
-            data.extend(capsule_to_list(chunk))
-
-        return data
 
     @property
     def instruments(self) -> list[Instrument]:
@@ -550,3 +551,15 @@ class IBTestProviderStubs:
     #     glob_str = f"{trading_class}={symbol}=FUT*{aggregation}-MID*.parquet"
     #     files = cls._get_files(parent=ADJUSTED_PRICES_FOLDER, glob=glob_str)
     #     return files
+
+
+# @property
+# def backend_session(self) -> DataBackendSession:
+#     # create data
+
+#     session: DataBackendSession = CATALOG.backend_session(
+#         data_cls=Bar,
+#         instrument_ids=[self.instrument.id.symbol.value],  # contract bars
+#         session=session,
+#     )
+#     return session
