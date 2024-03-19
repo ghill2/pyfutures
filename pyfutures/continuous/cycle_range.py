@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from typing import Generator
 from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.continuous.cycle import RollCycle
 
@@ -87,7 +87,7 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.next_month(current=current)
 
-        raise RuntimeError
+        raise RuntimeError()
 
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         for i, r in enumerate(self.ranges):
@@ -99,4 +99,10 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.previous_month(current=current)
 
-        raise RuntimeError
+        raise RuntimeError()
+    
+    def iterate(self, start: ContractMonth, end: ContractMonth) -> Generator[None, None, ContractMonth]:
+        assert start in self
+        while start < end:
+            yield start
+            start = self.next_month(start)

@@ -28,8 +28,12 @@ def validate(row: dict) -> None:
     #     df = df[df.month == "2017U"]
     #     print(df)
     #     print(len(df))
-
-    letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
+    
+    if row.uname == "EBM":
+        letter_month = "Z"
+    else:
+        letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
+        
     end_month = ContractMonth(f"2023{letter_month}")
 
     print(f"Validating {row.trading_class}: end_month={end_month} {len(bars)} bars...")
@@ -42,11 +46,14 @@ def validate(row: dict) -> None:
 
 
 if __name__ == "__main__":
+    
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["167"],
+        # filter=["ZW"],
     )
-
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
+    # items = [r.chain_config.roll_config.approximate_expiry_offset for r in rows]
+    for row in rows:
+        validate(row)
+    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])
