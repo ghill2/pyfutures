@@ -45,7 +45,7 @@ from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
 
 
-class InteractiveBrokersClient(Connection):
+class InteractiveBrokersClient:
     _request_id_map = {
         # position request id is reserve for order
         # -1 reserve for no id from IB
@@ -68,80 +68,49 @@ class InteractiveBrokersClient(Connection):
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
+
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
         # Config
         self._loop = loop
-        self._requests = {}
-        self._subscriptions = {}
-        self._executions = {}  # hot cache
+        self._request_timeout_seconds = request_timeout_seconds
 
         names = logging.Logger.manager.loggerDict
         for name in names:
             if "ibapi" in name:
                 logging.getLogger(name).setLevel(api_log_level)
 
-        self._request_timeout_seconds = request_timeout_seconds
-        # self._override_timeout = override_timeout
-        # if override_timeout:
-        # assert isinstance(self._request_timeout_seconds, (float, int))
+        self._parser = ClientParser()
 
-        # self._connection = Connection(loop=loop, host=host, port=port, client_id=client_id, subscriptions=self._subscriptions)
-        # self._connection.register_handler(self._handle_msg)
+        self.conn = Connection(loop=loop, decoder_wrapper=self)
+        # convenience methods
+        self._next_request_id = self.conn._next_request_id
+        self._create_request = self.conn._create_request
+        self._wait_for_request = self.conn._wait_for_request
+
+        self.connect = self.conn.connect
+        self._requests = self.conn._requests
+        self._subscriptions = self.conn._subscriptions
+        self._executions = self.conn._executions
 
         self._eclient = EClient(wrapper=self)
+        self._eclient.conn = self.conn  # redirect Eclient.conn.sendMsg() to our Connection()
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
-        # self._eclient.conn = self  # where to send the messages: eclient -> sendMsg
-        # self._eclient.clientId = client_id
 
-        self._parser = ClientParser()
-        super().__init__(loop=loop, client=self)
-        # self._reader._decoder.wrapper = self
+    async def connect(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 4002,
+        client_id: int = 1,
+        timeout_seconds: int = 5,
+    ):
+        await self.conn.connect(host=host, port=port, client_id=client_id)
 
-        # Connection
-
-        # register a callback to execute when the event is set
-        # self._connection._is_connected.wait(self._on_connected)
-
-    @property
-    def subscriptions(self) -> list[ClientSubscription]:
-        return self._subscriptions.values()
-
-    @property
-    def requests(self) -> list[ClientRequest]:
-        return self._requests.values()
-
-    @property
-    def connection(self) -> Connection:
-        return self._connection
-
-    ################################################################################################
-    # Connection
-    #
-    # async def _on_connect(self):
-    #     """
-    #     Executed when the handshake succeeds
-    #     """
-    #
-
-    # async def connect(self, timeout_seconds: int = 5) -> None:
-    #     await self._connection.connect(timeout_seconds=timeout_seconds)
-
-    # def _handle_msg(self, msg: bytes) -> None:
-
-    # def _reset(self) -> None:
-    #     self._request_id_seq = -10
-    #
-    #     if self._outgoing_msg_task is not None:
-    #         self._outgoing_msg_task.cancel()
-    #     self._outgoing_msg_task = None
-    #
-    #     self._connection._reset()
-    #
-    # def _stop(self) -> None:
-    #     self._reset()
+    # @property
+    # def connection(self) -> Connection:
+    #     return self._connection
 
     ################################################################################################
     # Error
@@ -246,10 +215,7 @@ class InteractiveBrokersClient(Connection):
     async def _request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
         self._log.debug(f"Requesting contract details for {contract=}")
 
-        request = self._create_request(
-            id=self._next_request_id(),
-            data=[],
-        )
+        request = self.conn._create_request(id=self.conn._next_request_id(), data=[], timeout_seconds=self.request_timeout_seconds)
 
         self._eclient.reqContractDetails(reqId=request.id, contract=contract)
 
@@ -619,6 +585,7 @@ class InteractiveBrokersClient(Connection):
         request_id = self._request_id_map["positions"]
         request = self._create_request(
             id=request_id,
+            timeout_seconds=self._request_timeout_seconds,
             data=[],
         )
 
@@ -777,17 +744,20 @@ class InteractiveBrokersClient(Connection):
         The data is returned by accountSummary().
 
         """
+
         request = self._create_request(
             id=self._next_request_id(),
+            timeout_seconds=self._request_timeout_seconds,
             data={},
         )
 
+        print("reqaccountsummary")
         self._eclient.reqAccountSummary(
             reqId=request.id,
             groupName="All",
             tags=AccountSummaryTags.AllTags,
         )
-
+        print("wait for request")
         return await self._wait_for_request(request)
 
     def accountSummary(
@@ -842,6 +812,7 @@ class InteractiveBrokersClient(Connection):
         )
         request = self._create_request(
             id=self._next_request_id(),
+            timeout_seconds=self._request_timeout_seconds,
         )
 
         try:
@@ -929,6 +900,7 @@ class InteractiveBrokersClient(Connection):
 
         request = self._create_request(
             id=self._next_request_id(),
+            timeout_seconds=self._request_timeout_seconds,
             data=[],
         )
 
@@ -977,6 +949,7 @@ class InteractiveBrokersClient(Connection):
 
         request = self._create_request(
             id=self._next_request_id(),
+            timeout_seconds=self._request_timeout_seconds,
             data=[],
         )
 
@@ -1263,6 +1236,7 @@ class InteractiveBrokersClient(Connection):
         request_id = self._request_id_map["accounts"]
         request = self._create_request(
             id=request_id,
+            timeout_seconds=self._request_timeout_seconds,
         )
         self._eclient.reqManagedAccts()
 
@@ -1326,6 +1300,7 @@ class InteractiveBrokersClient(Connection):
 
         request = self._create_request(
             id="portfolio",
+            timeout_seconds=self._request_timeout_seconds,
             data=[],
         )
 
@@ -1413,6 +1388,7 @@ class InteractiveBrokersClient(Connection):
     async def request_historical_schedule(self, contract: IBContract, durationStr: str | None = None) -> ListOfHistoricalSessions:
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
+            timeout_seconds=self._request_timeout_seconds,
         )
 
         self._log.debug(f"reqHistoricalData: {request.id=}, {contract=}")
