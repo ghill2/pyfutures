@@ -784,6 +784,7 @@ class InteractiveBrokersClient:
         request.data["account"] = account
         request.data["currency"] = currency
         request.data[tag] = value
+        print("accountSummary endding..")
 
     def accountSummaryEnd(self, reqId: int):
         """
