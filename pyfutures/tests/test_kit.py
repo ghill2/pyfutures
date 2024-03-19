@@ -31,8 +31,6 @@ from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
-from pytower.strategies.master import sort_key
-
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapter.parsing import create_contract
 from nautilus_trader.continuous.chain import ContractChain
@@ -187,7 +185,6 @@ class UniverseRow:
             instrument_ids=[self.instrument.id.symbol.value],
         )
         bars = [b for b in bars if b.bar_type.spec.price_type == PriceType.MID]
-        bars = sorted(bars, key=sort_key)
         assert len(bars) > 0
         return bars
 
@@ -238,7 +235,6 @@ class UniverseRow:
                 )
             )
 
-        data = sorted(data, key=sort_key)
         return data
 
     @property
