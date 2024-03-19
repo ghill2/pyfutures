@@ -11,22 +11,23 @@ from pyfutures.tests.test_kit import IBTestProviderStubs
 def validate(row: dict) -> None:
     bars = row.contract_bars
 
-    df = pd.DataFrame(Bar.to_dict(b) for b in bars)
-    df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
-    df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
+    
 
-    with pd.option_context(
-        "display.max_rows",
-        None,
-        "display.max_columns",
-        None,
-        "display.width",
-        None,
-    ):
-        # 167=2017U has no timestamps in roll window 2017-09-16 00:00:00+00:00 to 2017-09-17 00:00:00+00:00
-        df = df[df.month == "2017U"]
-        print(df)
-        print(len(df))
+    # with pd.option_context(
+    #     "display.max_rows",
+    #     None,
+    #     "display.max_columns",
+    #     None,
+    #     "display.width",
+    #     None,
+    # ):
+    #     # 167=2017U has no timestamps in roll window 2017-09-16 00:00:00+00:00 to 2017-09-17 00:00:00+00:00
+    #     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
+    #     df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
+    #     df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
+    #     df = df[df.month == "2017U"]
+    #     print(df)
+    #     print(len(df))
 
     letter_month = row.chain_config.roll_config.hold_cycle.value[-1]
     end_month = ContractMonth(f"2023{letter_month}")
@@ -42,7 +43,7 @@ def validate(row: dict) -> None:
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        filter=["167"],
+        # filter=["167"],
     )
 
     results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)

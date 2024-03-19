@@ -18,6 +18,7 @@ def process(
     paths: list[Path],
     row: namedtuple,
 ) -> None:
+    
     # create adusted prices
     paths = sorted(paths)
 
