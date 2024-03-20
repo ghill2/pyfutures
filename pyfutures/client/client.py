@@ -32,7 +32,7 @@ from pyfutures.client.objects import ClientException
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
 from pyfutures.client.cache import RequestsCache
-from pyfutures.client.protocol import IBProtocol
+from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
@@ -45,6 +45,7 @@ from pyfutures.client.objects import IBPortfolioEvent
 from pyfutures.client.objects import IBPositionEvent
 from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
+from ibapi.decoder import Decoder
 
 
 class InteractiveBrokersClient:
@@ -62,6 +63,9 @@ class InteractiveBrokersClient:
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
+        host: str = "127.0.0.1",
+        port: int = 4002,
+        client_id: int = 1,
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
     ):
@@ -88,40 +92,28 @@ class InteractiveBrokersClient:
 
         self._parser = ClientParser()
 
-        self._protocol = IBProtocol(loop=loop, client=self)
-        self.conn = self._protocol
-        # convenience methods
-        # self._next_request_id = self.conn._next_request_id
-        # self._create_request = self.conn._create_request
-        # self._wait_for_request = self.conn._wait_for_request
-
-        # self.connect = self.conn.connect
-        # self._requests = self.conn._requests
-        # self._subscriptions = self.conn._subscriptions
-        # self._executions = self.conn._executions
+        self.conn = Connection(
+            loop=loop,
+            host=host,
+            port=port,
+            client_id=client_id,
+            subscriptions=self._subscriptions,
+            fields_received_callback=self._fields_received_callback,
+        )
+        self._decoder = Decoder(serverVersion=176, wrapper=self)
 
         self._eclient = EClient(wrapper=self)
-        self._eclient.conn = self._protocol  # redirect Eclient.conn.sendMsg() to our Connection()
+        self._eclient.conn = self.conn  # redirect Eclient.conn.sendMsg() to our Connection()
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
 
-    async def connect(
-        self,
-        host: str = "127.0.0.1",
-        port: int = 4002,
-        client_id: int = 1,
-        timeout_seconds: int = 5,
-    ):
-        # connects the socket
-        self._transport = await self._loop.create_connection(lambda: self._protocol, host, port)
-        # sends handshake + startapi
-        await self._protocol.connect(client_id)
+    async def connect(self):
+        await self.conn._connect()
 
-    # @property
-    # def connection(self) -> Connection:
-    #     return self._connection
-    #
+    def _fields_received_callback(self, fields):
+        self._decoder.interpret(fields)
+
     def _next_request_id(self) -> int:
         current = self._request_id_seq
         self._request_id_seq -= 1
@@ -483,7 +475,7 @@ class InteractiveBrokersClient:
     def nextValidId(self, orderId: int):
         self._log.debug(f"nextValidId {orderId}")
 
-        _waiter = self._protocol._is_connected_waiter
+        _waiter = self.conn.protocol._is_connected_waiter
         if _waiter is not None:
             if not _waiter.cancelled():
                 _waiter.set_result(None)

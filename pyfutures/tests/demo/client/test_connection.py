@@ -63,9 +63,9 @@ async def test_connect(event_loop):
     event_loop.set_debug(True)
     LoggerAttributes.level = logging.DEBUG
     client = ClientStubs.client(loop=event_loop)
-    await client.connect(client_id=10)
+    await client.connect()
     await client.request_account_summary()
-    # await asyncio.sleep(20)
+    await asyncio.sleep(1000)
 
 
 @pytest.mark.asyncio()

@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.protocol import IBProtocol
+from pyfutures.client.protocol import Protocol
 from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.logger import LoggerAdapter
 
