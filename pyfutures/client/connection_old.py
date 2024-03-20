@@ -11,8 +11,7 @@ from typing import Any
 
 from ibapi import comm
 
-from pyfutures.client.objects import ClientException
-from pyfutures.client.objects import ClientRequest
+
 from pyfutures.logger import LoggerAdapter
 # from pyfutures.client.client import InteractiveBrokersClient
 #
@@ -100,51 +99,51 @@ class Connection:
     ################################################################################################
     # Read
     #
-    async def read(self, buf):
-        """
-        called from the _read_task() continuously after handshake / is_connected
-        and from the connect() for the handshake
-        """
-        pass
-        # while True:
-        #     # data = await self._reader.readuntil(b"\x00\x00\x00\x00")
-        #     await self._reader._wait_for_data("read")
-        #     self._log.debug(f"<-- {self._reader._buffer}")
-        #     await asyncio.sleep(0)
-
-    async def read(self, buf):
-        """
-        called from the _read_task() continuously after handshake / is_connected
-        and from the connect() for the handshake
-        """
-        try:
-            data = await self._reader.readuntil(b"\x00\x00\x00\x00")
-            self._log.debug(f"<-- {data}")
-        except ConnectionResetError as e:
-            self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
-            self._is_connected.clear()
-            return
-
-        if len(data) == 0:
-            self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
-            self._is_connected.clear()
-            raise Exception("")
-
-        buf += data
-
-        while len(buf) > 0:
-            (size, msg, buf) = comm.read_msg(buf)
-            self._log.debug(f"<-- {size}: {msg}")
-
-            if msg:
-                fields = comm.read_fields(msg)
-                await asyncio.sleep(0)
-                return fields
-            else:
-                self._log.debug("more incoming packet(s) are needed ")
-                break
-
-    await asyncio.sleep(0)
+    # async def read(self, buf):
+    #     """
+    #     called from the _read_task() continuously after handshake / is_connected
+    #     and from the connect() for the handshake
+    #     """
+    #     pass
+    #     # while True:
+    #     #     # data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+    #     #     await self._reader._wait_for_data("read")
+    #     #     self._log.debug(f"<-- {self._reader._buffer}")
+    #     #     await asyncio.sleep(0)
+    #
+    # async def read(self, buf):
+    #     """
+    #     called from the _read_task() continuously after handshake / is_connected
+    #     and from the connect() for the handshake
+    #     """
+    #     try:
+    #         data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+    #         self._log.debug(f"<-- {data}")
+    #     except ConnectionResetError as e:
+    #         self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
+    #         self._is_connected.clear()
+    #         return
+    #
+    #     if len(data) == 0:
+    #         self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
+    #         self._is_connected.clear()
+    #         raise Exception("")
+    #
+    #     buf += data
+    #
+    #     while len(buf) > 0:
+    #         (size, msg, buf) = comm.read_msg(buf)
+    #         self._log.debug(f"<-- {size}: {msg}")
+    #
+    #         if msg:
+    #             fields = comm.read_fields(msg)
+    #             await asyncio.sleep(0)
+    #             return fields
+    #         else:
+    #             self._log.debug("more incoming packet(s) are needed ")
+    #             break
+    #
+    # await asyncio.sleep(0)
 
     # async def read(self):
     #     """
