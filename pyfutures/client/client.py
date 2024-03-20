@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import eventkit
 import pandas as pd
@@ -26,11 +27,12 @@ from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
 from pyfutures.client.objects import ClientRequest
+from pyfutures.client.objects import ClientException
 
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
 from pyfutures.client.cache import RequestsCache
-from pyfutures.client.connection import Connection
+from pyfutures.client.protocol import IBProtocol
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
@@ -63,6 +65,9 @@ class InteractiveBrokersClient:
         api_log_level: int = logging.ERROR,
         request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
     ):
+        self._loop = loop
+        self._request_timeout_seconds = request_timeout_seconds
+
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
@@ -71,9 +76,10 @@ class InteractiveBrokersClient:
 
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
-        # Config
-        self._loop = loop
-        self._request_timeout_seconds = request_timeout_seconds
+        self._requests = {}
+        self._subscriptions = {}
+        self._executions = {}  # hot cache
+        self._request_id_seq = -10  # reset on every connect
 
         names = logging.Logger.manager.loggerDict
         for name in names:
@@ -82,19 +88,20 @@ class InteractiveBrokersClient:
 
         self._parser = ClientParser()
 
-        self.conn = Connection(loop=loop, decoder_wrapper=self)
+        self._protocol = IBProtocol(loop=loop, client=self)
+        self.conn = self._protocol
         # convenience methods
-        self._next_request_id = self.conn._next_request_id
-        self._create_request = self.conn._create_request
-        self._wait_for_request = self.conn._wait_for_request
+        # self._next_request_id = self.conn._next_request_id
+        # self._create_request = self.conn._create_request
+        # self._wait_for_request = self.conn._wait_for_request
 
-        self.connect = self.conn.connect
-        self._requests = self.conn._requests
-        self._subscriptions = self.conn._subscriptions
-        self._executions = self.conn._executions
+        # self.connect = self.conn.connect
+        # self._requests = self.conn._requests
+        # self._subscriptions = self.conn._subscriptions
+        # self._executions = self.conn._executions
 
         self._eclient = EClient(wrapper=self)
-        self._eclient.conn = self.conn  # redirect Eclient.conn.sendMsg() to our Connection()
+        self._eclient.conn = self._protocol  # redirect Eclient.conn.sendMsg() to our Connection()
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
@@ -106,11 +113,48 @@ class InteractiveBrokersClient:
         client_id: int = 1,
         timeout_seconds: int = 5,
     ):
-        await self.conn.connect(host=host, port=port, client_id=client_id)
+        # connects the socket
+        self._transport = await self._loop.create_connection(lambda: self._protocol, host, port)
+        # sends handshake + startapi
+        await self._protocol.connect(client_id)
 
     # @property
     # def connection(self) -> Connection:
     #     return self._connection
+    #
+    def _next_request_id(self) -> int:
+        current = self._request_id_seq
+        self._request_id_seq -= 1
+        return current
+
+    def _create_request(
+        self,
+        id: int,
+        timeout_seconds: int,
+        data: list | dict | None = None,
+    ) -> ClientRequest:
+        assert isinstance(id, int)
+        request = ClientRequest(id=id, data=data, timeout_seconds=timeout_seconds)
+
+        self._requests[id] = request
+
+        return request
+
+    async def _wait_for_request(self, request: ClientRequest) -> Any:
+        try:
+            await asyncio.wait_for(request, timeout=request.timeout_seconds)
+        except asyncio.TimeoutError:
+            del self._requests[request.id]
+            raise
+        result = request.result()
+
+        del self._requests[request.id]
+
+        if isinstance(result, ClientException):
+            self._log.error(result.message)
+            raise result
+
+        return result
 
     ################################################################################################
     # Error
@@ -439,6 +483,11 @@ class InteractiveBrokersClient:
     def nextValidId(self, orderId: int):
         self._log.debug(f"nextValidId {orderId}")
 
+        _waiter = self._protocol._is_connected_waiter
+        if _waiter is not None:
+            if not _waiter.cancelled():
+                _waiter.set_result(None)
+
         request_id = self._request_id_map["next_order_id"]
         request = self._requests.get(request_id)
         if request is None:
@@ -751,13 +800,11 @@ class InteractiveBrokersClient:
             data={},
         )
 
-        print("reqaccountsummary")
         self._eclient.reqAccountSummary(
             reqId=request.id,
             groupName="All",
             tags=AccountSummaryTags.AllTags,
         )
-        print("wait for request")
         return await self._wait_for_request(request)
 
     def accountSummary(
@@ -784,7 +831,6 @@ class InteractiveBrokersClient:
         request.data["account"] = account
         request.data["currency"] = currency
         request.data[tag] = value
-        print("accountSummary endding..")
 
     def accountSummaryEnd(self, reqId: int):
         """
