@@ -1,194 +1,374 @@
 import asyncio
-import os
+import queue
 import struct
-from collections.abc import Coroutine
+from asyncio.streams import StreamReader
+from asyncio.streams import StreamReaderProtocol
+from asyncio.streams import StreamWriter
+from asyncio.protocols import Protocol
 
-import psutil
+# transport -> _SelectorSocketTransport > asyncio/selector_events
+from typing import Any
+
 from ibapi import comm
 
+from pyfutures.client.objects import ClientException
+from pyfutures.client.objects import ClientRequest
 from pyfutures.logger import LoggerAdapter
+# from pyfutures.client.client import InteractiveBrokersClient
+#
 
 
-# this bug is still present on the gnznz fork:
-# https://github.com/UnusualAlpha/ib-gateway-docker/issues/88
+class MyProtocol(Protocol):
+    def connection_made(self, transport):
+        print("connection made")
+
+    def data_received(self, data):
+        print("data received")
+
+    def eof_received(self):
+        print("eof received")
+
+    def connection_lost(self, exc):
+        print("connection lost")
 
 
-# class Connection:
-#
-#
-#     def __init__(
-#         self,
-#         loop: asyncio.AbstractEventLoop,
-#         host: str,
-#         port: int,
-#         client_id: int,
-#         subscriptions: dict = {},
-#     ):
-#         self.loop = loop
-#         self.host = host
-#         self.port = port
-#         self._subscriptions = subscriptions
-#         self.client_id = client_id
-#
-#         self._log = LoggerAdapter.from_name(name=type(self).__name__)
-#         # self._handlers = set()
-#
-#         # attributes that reset
-#         # self._reader, self._writer = (None, None)
-#         # self._handshake_message_ids = []
-#
-#
-#     def _reset(self) -> bool:
-#         self._log.debug("Initializing...")
-#
-#         # self._is_connected.clear()
-#         # self._handshake_message_ids.clear()
-#         self._reader, self._writer = (None, None)
-#
-#         self._log.debug("Initializing listen task...")
-#         if self._listen_task is not None:
-#             self._listen_task.cancel()
-#         self._listen_task = None
-#
-#         # close the writer
-#         try:
-#             if self._writer is not None and not self._writer.is_closing():
-#                 self._writer.write_eof()
-#                 self._writer.close()
-#                 # await self._writer.wait_closed()
-#         except RuntimeError as e:
-#             if "unable to perform operation on" in str(e) and "closed=True" in str(e):
-#                 pass
-#             else:
-#                 raise
-#
-#         self._log.debug("Successfully Initialized...")
+class Connection:
+    """
+    Market data connection test
+    https://www.interactivebrokers.com/cgi-bin/conn_test.pl
 
-# def register_handler(self, handler: Coroutine) -> None:
-#     self._handlers.add(handler)
+    IB maintenance periods:
+    https://www.interactivebrokers.com/en/software/systemStatus.php
 
-# async def _listen(self) -> None:
-#     assert self._reader is not None
+    Europe:
+        Saturday - Thursday:
+            - 05:45 - 06:45 CET
+            - 04:45 - 05:45 UTC
 
-# async def _handle_discconnect(self) -> None:
-#     """
-#     Called when the socket has been disconnected for some reason, for example,
-#     due to a schedule restart or during IB nightly reset.
-#     """
-#     self._log.debug("Handling disconnect.")
-#
-#     self._connect_monitor_task.cancel()
-#     self._connect_monitor_task = None
-#
-# reconnect subscriptions
-# for sub in self._subscriptions:
-#     sub.cancel()
+        Friday:
+            - 23:00 - 03:00 ET
+            - 18:00 - 22:00 UTC
 
-# def _handle_msg(self, msg: bytes) -> None:
-#     if self.is_connected:
-#         for handler in self._handlers:
-#             handler(msg)
-#     else:
-#         self._process_handshake(msg)
+    North America:
+        Saturday - Thursday:
+            - 23:45 - 00:45 ET
+            - 18:45 - 19:00 UTC
+        Friday:
+            - 23:00 - 03:00 ET
+            - 18:00 - 22:00 UTC
 
-#     async def _connect_monitor(self, timeout_seconds: float | int = 5.0) -> None:
-#         """
-#         Monitors the socket connection for disconnections.
-#         """
-#         self._log.debug("Connect Monitor task started...")
-#         try:
-#             while True:
-# ;        except Exception as e:
-#             self._log.exception("_connect_monitor task exception, task cancelled", e)
+    View socket connections:
+        lsof -i :<port_number>
+    Analyze buffer bytestrings sent and received on the socket:
+        sudo tcpdump -i lo0 -n port 4002 -X
 
-# @property
-# def is_connected(self) -> bool:
-#     return self._is_connected.is_set()
-#
-# async def start(self) -> bool:
-#     self._log.debug("Starting...")
+    To have the Decoder in the connection and not the client with separate logging:
 
-# async def create_connection(self, host, port):
-#     """
-#     In a separate function for mocking / testing purposes
-#     """
-#     return await asyncio.open_connection(self.host, self.port)
-#
-# async def connect(self, timeout_seconds: int = 5) -> None:
-#     """
-#     Called by the user after instantiation
-#     """
+    - If using Connection as an inherited base class (InteractiveBrokersClient(Connection))
+      -- Access to client for Decoder and subscriptions without additional configuration
+      -- Separate connection logger
+      -- ibapi calls client.conn.sendMsg() -> this needs a wrapper and feels hacky...
 
-# if self._connect_monitor_task is None:
-# self._connect_monitor_task = self.loop.create_task(self._connect_monitor(timeout_seconds=timeout_seconds))
+    - If using Connection as client.conn = Connection()
+      -- connection needs a reference to the client to pass to the decoder, eg Connection(wrapper=self) in the client is necessary
+      -- self._subscriptions can optionally be handled in the client by registering a callback to the Connection.is_connected event
+      -- or subscriptions can be pass down from the client
+      -- no wrapper class needed client.conn.sendMsg()
 
-# await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
+    - If using Connection as a MixIn:
+      -- Decoder has access to client and Connection has access to subscriptions
+      -- connection needs its own logger ? ...
+      -- client.conn.sendMsg() needs a wrapper...
 
-# async def _connect(self) -> None:
-#     """
-#     Called by watch_dog and manually with connect() by the user
-#     NOTE: do not call handshake here so we can test connect and handshake separately
-#     """
-# self._log.debug(f"Connecting on client_id {self.client_id}...")
+    """
 
-# self._reset()
+    def __init__(self, loop, decoder_wrapper):
+        # Connect
+        self._loop = loop
+        self._connect_task: asyncio.Task | None = None
+        self._is_connected = asyncio.Event()
+        self._is_connecting_lock = asyncio.Lock()
 
-# connect socket
-# self._log.debug("Connecting socket...")
-# try:
-#     self._reader, self._writer = await self.create_connection(self.host, self.port)
-# except ConnectionRefusedError as e:
-#     self._log.error(f"ConnectionRefusedError: Socket connection failed, check TWS is open {e!r}")
-#     return
-# self._log.debug(f"Socket connected. {self._reader} {self._writer}")
+        # Reader
+        self._read_task: asyncio.Task | None = None
+        self._read_lock = asyncio.Lock()
 
-# start listen task
-# self._log.debug("Starting listen task...")
-# self._listen_task = self.loop.create_task(self._listen(), name="listen")
-# self._log.info("Listen task started")
+        # Writer
+        self.write_task: asyncio.Task | None = None
+        self._write_queue = queue.Queue()
 
-# async def _handshake(self, timeout_seconds: float | int = 5.0) -> None:
-#     self._log.debug("Performing handshake...")
-#
-#     try:
-#         self._log.debug("Sending handshake message...")
-#         await self._send_handshake()
-#         self._log.debug("Waiting for handshake response")
-#         await asyncio.wait_for(self._is_connected.wait(), timeout_seconds)
-#         self._log.info("API connection ready, server version 176")
-#
-#     except asyncio.TimeoutError as e:
-#         self._log.error(f"Handshake failed {e!r}")
-#
-# async def _send_handshake(self) -> None:
-#     msg = b"v%d..%d" % (self._min_version, self._max_version)
-#     msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
-#     msg = b"API\x00" + msg
-#     self._sendMsg(msg)
-#
-# def _process_handshake(self, msg: bytes):
-#     self._log.debug(f"Processing handshake message {msg}")
-#
-#     msg = msg.decode(errors="backslashreplace")
-#     fields = msg.split("\0")
-#     fields.pop()
-#
-#     id = int(fields[0])
-#     self._handshake_message_ids.append(id)
-#     # self._log.debug(str(self._handshake_message_ids))
-#     # self._log.debug(str(all(id in self._handshake_message_ids for id in (176, 15, 9))))
-#
-#     if self._handshake_message_ids == [176] and len(fields) == 2:
-#         version, _ = fields
-#         assert int(version) == 176
-#         self._log.debug("Sending startApi message...")
-#         # <Start Api Req Code><Version><ClientId> -> struct.pack
-#         msg = b"71\x002\x00" + str(self.client_id).encode() + b"\x00\x00"
-#         msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
-#         self._sendMsg(msg)
-#     elif all(id in self._handshake_message_ids for id in (176, 15)):
-#         # reconnect subscriptions
-#         if len(self._subscriptions) > 0:
-#             self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
-#             for sub in self._subscriptions.values():
-#                 sub.subscribe()
+    ################################################################################################
+    # Read
+    #
+    async def read(self, buf):
+        """
+        called from the _read_task() continuously after handshake / is_connected
+        and from the connect() for the handshake
+        """
+        pass
+        # while True:
+        #     # data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+        #     await self._reader._wait_for_data("read")
+        #     self._log.debug(f"<-- {self._reader._buffer}")
+        #     await asyncio.sleep(0)
+
+    async def read(self, buf):
+        """
+        called from the _read_task() continuously after handshake / is_connected
+        and from the connect() for the handshake
+        """
+        try:
+            data = await self._reader.readuntil(b"\x00\x00\x00\x00")
+            self._log.debug(f"<-- {data}")
+        except ConnectionResetError as e:
+            self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
+            self._is_connected.clear()
+            return
+
+        if len(data) == 0:
+            self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
+            self._is_connected.clear()
+            raise Exception("")
+
+        buf += data
+
+        while len(buf) > 0:
+            (size, msg, buf) = comm.read_msg(buf)
+            self._log.debug(f"<-- {size}: {msg}")
+
+            if msg:
+                fields = comm.read_fields(msg)
+                await asyncio.sleep(0)
+                return fields
+            else:
+                self._log.debug("more incoming packet(s) are needed ")
+                break
+
+    await asyncio.sleep(0)
+
+    # async def read(self):
+    #     """
+    #     called from the _read_task() continuously after handshake / is_connected
+    #     and from the connect() for the handshake
+    #     """
+    #
+    #     while True:
+    #         buf = b""
+    #         try:
+    #             print("WAITING AT READER READ")
+    #             data = await self._reader.read(4096)
+    #             print("DATA")
+    #             print(data)
+    #         except ConnectionResetError as e:
+    #             self._log.error("ConnectionResetError: Clearing _is_connected immediately, reconnecting soon...")
+    #             self._is_connected.clear()
+    #             raise
+    #
+    #         if len(data) == 0:
+    #             self._log.error("Empty Bytestring Received: Clearing _is_connected immediately, reconnecting soon...")
+    #             self._is_connected.clear()
+    #             raise Exception("")
+    #
+    #         buf += data
+    #         (size, msg, buf) = comm.read_msg(buf)
+    #         print("msg")
+    #         print(msg)
+    #         fields = comm.read_fields(msg)
+    #         self._log.debug(f"<-- {fields}")
+    #         return fields
+    #
+    async def read_task(self):
+        """
+        starts before initial connect
+        """
+        while True:
+            try:
+                print("READ TASK READ")
+                buf = b""
+                fields = await self.read(buf=buf)
+                self._decoder.interpret(fields)
+                await asyncio.sleep(0)
+            except Exception as e:
+                self._log.exception("_read task exception", e)
+
+    ################################################################################################
+    # Connect
+    # @staticmethod
+    async def open_connection(self, host, port):
+        """
+        So the connection can be mocked more easily
+        """
+        # asyncio.open_connection()
+        # self._reader = StreamReader(loop=self._loop)
+        # self._protocol = MyProtocol()
+        self._transport, _ = await self._loop.create_connection(lambda: self._protocol, host, port)
+        # self._writer = StreamWriter(self._transport, self._protocol, self._reader, self._loop)
+        return self._protocol, self._transport
+        # return await asyncio.open_connection(host, port)
+
+    async def connect(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 4002,
+        client_id: int = 1,
+        timeout_seconds: int = 5,
+    ):
+        """Connect for the first time"""
+        if self._is_connected.is_set():
+            return
+
+        self._reader, self._writer = await self.open_connection(host, port)
+        print("open connection")
+        print(self._reader)
+        print(self._writer)
+        # self._writer = StreamWriter(self._transport, self._protocol, self._reader, self._loop)
+
+        await self.reconnect(client_id=client_id)
+
+        self._write_task = self._loop.create_task(
+            coro=self._write_task(),
+            name="_write_task",
+        )
+        # await self._connect_start_tasks(client_id, timeout_seconds)
+
+    async def _connect_start_tasks(self, client_id, timeout_seconds):
+        """
+        extension of connect
+        separated into a different function to mock
+        """
+        self._connect_task = self._loop.create_task(self.connect_task(client_id, timeout_seconds), name="connect")
+        self._read_task = self._loop.create_task(self.read_task(), name="read")
+
+    async def reconnect(self, client_id):
+        await self._is_connecting_lock.acquire()
+
+        self._request_id_seq = -10
+
+        # self._log.info("===========================")
+        self._log.debug("Connecting...")
+
+        # send handshake request
+        self._log.debug("- Sending handshake request...")
+        # _min_version = 176
+        # _max_version = 176
+        # msg = b"v%d..%d" % (_min_version, _max_version)
+        # handshake_req = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
+        # handshake_req = b"API\x00" + handshake_req
+        self._write(handshake_req)
+
+        # read and process handshake response
+        self._log.debug("- Waiting for handshake response")
+        buf = b""
+        fields = await self.read(buf=buf)
+        id = int(fields[0])
+
+        if id != 176:
+            return
+
+        # send startApi request
+        self._log.debug("- Sending StartAPI request...")
+        msg = b"71\x002\x00" + str(client_id).encode() + b"\x00\x00"
+        startapi_req = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
+        self._write(startapi_req)
+        self._log.debug("- Waiting for StartAPI response...")
+        buf = b""
+        fields = await self.read(buf=buf)
+        id = int(fields[0])
+
+        if id != 15:
+            return
+
+        # reconnect subscriptions
+        if len(self._subscriptions) > 0:
+            self._log.debug(f"- Reconnecting subscriptions {self._subscriptions=}")
+            for sub in self._subscriptions.values():
+                sub.subscribe()
+
+        self._is_connecting_lock.release()
+
+        self._is_connected.set()
+        self._log.info("- Connected Successfully...")
+        # self._log.info("===========================")
+
+    async def connect_task(self, client_id, timeout_seconds):
+        """
+        starts when connect() is called
+        """
+        # await self._is_connecting_lock.acquire()
+        while True:
+            if self._is_connected.is_set():
+                await asyncio.sleep(5)
+                continue
+
+            try:
+                await asyncio.wait_for(self.reconnect(client_id), timeout=timeout_seconds)
+            except Exception as e:
+                self._log.exception("_connect task exception", e)
+            # else:
+            # await self._is_connecting_lock.release()
+
+    ################################################################################################
+    # Write - Queue
+
+    async def _write_task(self):
+        """
+        process outgoing msg queue
+        if the client is connected, send the message, if it is not connected, do nothing
+        """
+        print("write_task")
+        print(self._write_queue)
+        while not self._write_queue.empty():
+            if self._is_connected.is_set():
+                msg: bytes = self._write_queue.get()
+                self._write(msg)
+            else:
+                self._log.warning("Message tried to send when the client is disconnected. Waiting until the client is reconnected...")
+                await self._is_connected.wait()
+
+    def _write(self, msg: bytes):
+        """
+        write, bypass the queue (for handshake)
+        """
+        # self._log.debug(f"--> generated: {repr(msg)}")
+        # msg = b"API\x00\x00\x00\x00\tv176..176"
+        self._log.debug(f"--> {repr(msg)}")
+        self._writer.write(msg)
+        # self._loop.create_task(self._writer.drain())
+
+    ################################################################################################
+    # Write - Requests
+    #
+
+    # def _next_request_id(self) -> int:
+    #     current = self._request_id_seq
+    #     self._request_id_seq -= 1
+    #     return current
+    #
+    # def _create_request(
+    #     self,
+    #     id: int,
+    #     timeout_seconds: int,
+    #     data: list | dict | None = None,
+    # ) -> ClientRequest:
+    #     assert isinstance(id, int)
+    #     request = ClientRequest(id=id, data=data, timeout_seconds=timeout_seconds)
+    #
+    #     self._requests[id] = request
+    #
+    #     return request
+    #
+    # async def _wait_for_request(self, request: ClientRequest) -> Any:
+    #     try:
+    #         await asyncio.wait_for(request, timeout=request.timeout_seconds)
+    #     except asyncio.TimeoutError:
+    #         del self._requests[request.id]
+    #         raise
+    #     result = request.result()
+    #
+    #     del self._requests[request.id]
+    #
+    #     if isinstance(result, ClientException):
+    #         self._log.error(result.message)
+    #         raise result
+    #
+    #     return result

@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.connection import Connection
+from pyfutures.client.protocol import IBProtocol
 from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.logger import LoggerAdapter
 
@@ -51,15 +51,15 @@ class ClientStubs:
             api_log_level=api_log_level,
         )
 
-    @staticmethod
-    def connection(
-        loop: asyncio.AbstractEventLoop,  # has to use pytest asyncio event_loop
-        client_id: int,
-    ) -> Connection:
-        return Connection(
-            loop=loop or asyncio.get_event_loop(),
-        )
-
+    # @staticmethod
+    # def connection(
+    #     loop: asyncio.AbstractEventLoop,  # has to use pytest asyncio event_loop
+    #     client_id: int,
+    # ) -> Connection:
+    #     return Connection(
+    #         loop=loop or asyncio.get_event_loop(),
+    #     )
+    #
     @classmethod
     def historic(cls) -> InteractiveBrokersHistoricClient:
         return InteractiveBrokersHistoricClient(

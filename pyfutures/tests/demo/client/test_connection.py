@@ -60,12 +60,12 @@ _log = LoggerAdapter.from_name(name="test_connection.py")
 
 @pytest.mark.asyncio()
 async def test_connect(event_loop):
+    event_loop.set_debug(True)
     LoggerAttributes.level = logging.DEBUG
-    print("TEST")
     client = ClientStubs.client(loop=event_loop)
-    print("CONNECT")
     await client.connect(client_id=10)
     await client.request_account_summary()
+    # await asyncio.sleep(20)
 
 
 @pytest.mark.asyncio()
