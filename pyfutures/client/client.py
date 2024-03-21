@@ -67,7 +67,7 @@ class InteractiveBrokersClient:
         port: int = 4002,
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
-        request_timeout_seconds: float | int | None = None,  # default timeout for requests if not given
+        request_timeout_seconds: float | int | None = 5,  # default timeout for requests if not given
     ):
         self._loop = loop
         self._request_timeout_seconds = request_timeout_seconds

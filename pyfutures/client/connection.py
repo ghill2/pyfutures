@@ -22,6 +22,7 @@ class Connection:
         client_id: int = 1,
     ):
         self._loop = loop
+        self._subscriptions = subscriptions
         self.host = host
         self.port = port
 
@@ -43,7 +44,7 @@ class Connection:
 
     async def _connect(self):
         self._log.info("Connecting...")
-        await self._loop.create_connection(lambda: self.protocol, self.host, self.port)
+        await self.create_connection(self._loop, self.protocol, self.host, self.port)
         await self.protocol.perform_handshake()
 
         # reconnect subscriptions
@@ -55,6 +56,13 @@ class Connection:
         if self.reconnect_task is not None:
             self.reconnect_task.cancel()
             self._log.info("Reconnect task cancelled...")
+
+    @staticmethod
+    async def create_connection(loop, protocol, host, port):
+        """
+        Leave in a separate class so it can be easily Mocked,
+        """
+        await loop.create_connection(lambda: protocol, host, port)
 
     async def _reconnect_task(self):
         interval = 5
