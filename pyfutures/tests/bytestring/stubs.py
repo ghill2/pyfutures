@@ -94,15 +94,15 @@ class MockServerSubproc:
                 if not buf:
                     continue
 
-                if buf == b"MOCK_SERVER READY\n":
+                if buf == b"MOCK_SERVER READY":
                     self._server_ready_waiter.set_result(None)
                     self._log.debug("mock_server ready...")
 
-                if buf == b"BYTESTRINGS READY\n":
+                if buf == b"BYTESTRINGS READY":
                     self._log.debug("Bytestrings ready...")
                     self._bytestrings_ready_waiter.set_result(None)
 
-                self._log.debug(b"mock_server read: " + buf, color=4)
+                self._log.debug(buf, color=4)
         except Exception as e:
             self._log.exception("mock_server_subproc read_stout_task exception", e)
 
@@ -115,7 +115,7 @@ class MockServerSubproc:
                 if not buf:
                     continue
 
-                self._log.error(buf, color=4)
+                self._log.error(buf, color=3)
         except Exception as e:
             self._log.exception("mock_server_subproc read_stderr_task exception", e)
 
@@ -178,8 +178,6 @@ class BytestringClientStubs(metaclass=SingletonMeta):
         parent = PACKAGE_ROOT / "tests" / "bytestring" / "txt"
         bytestrings_path = parent / f"{caller_filename}={caller_fn_name}={fn_hash}.pkl"
 
-        _log_bytestrings(bytestrings_path)
-
         if self._mode == "unit":
             if self._mock_server_subproc is None:
                 # create mock_server subproc and wait until ready
@@ -187,6 +185,7 @@ class BytestringClientStubs(metaclass=SingletonMeta):
                 await self._mock_server_subproc.start()
 
             # load bytestrings for the test and wait until they have loaded
+            _log_bytestrings(bytestrings_path)
             await self._mock_server_subproc.load_bytestrings(path=str(bytestrings_path))
 
         if self._mode == "demo":

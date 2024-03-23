@@ -69,7 +69,7 @@ class Protocol(asyncio.Protocol):
         self._log.debug("========== RESPONSE ==========")
         self._log.debug(f"<-- {data}")
         if self._bstream is not None:
-            self._bstream.append(("READ", data))
+            self._bstream[-1][1].append(data)
             export_data(self._bpath, self._bstream)
 
         bufs = parse_buffer(data)
@@ -91,7 +91,7 @@ class Protocol(asyncio.Protocol):
         self._transport.write(msg)
 
         if self._bstream is not None:
-            self._bstream.append(("WRITE", msg))
+            self._bstream.append((msg, []))
             export_data(self._bpath, self._bstream)
 
     async def perform_handshake(self):
