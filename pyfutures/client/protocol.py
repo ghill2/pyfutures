@@ -7,6 +7,7 @@ import struct
 from typing import Callable
 from pathlib import Path
 from pyfutures import PACKAGE_ROOT
+import os
 
 
 def create_handshake() -> bytes:
@@ -32,7 +33,7 @@ class Protocol(asyncio.Protocol):
         self._fields_received_callback = fields_received_callback
 
         self._log = LoggerAdapter.from_name(name=type(self).__name__)
-        self.export = False
+        self._file = None
 
     def connection_made(self, transport):
         self._transport = transport
@@ -41,8 +42,12 @@ class Protocol(asyncio.Protocol):
     def data_received(self, data):
         self._log.debug("========== RESPONSE ==========")
         self._log.debug(f"<-- {data}")
-        if self.export:
-            self.file.write(f"('IN', {data})")
+        print(self._file)
+        if self._file is not None:
+            self._file.write(f"READ {data}\n")
+            # data is only written when fileobject.close() is executed (on a graceful close)
+            # this forces data to be written immediately
+            os.fsync(self._file.fileno())
         start = 0
         while start < len(data) - 1:
             size = struct.unpack("!I", data[start : start + 4])[0]
@@ -63,10 +68,12 @@ class Protocol(asyncio.Protocol):
         self._connection_lost_callback()
 
     def write(self, msg: bytes):
+        # self._file.write("yes i did write ")
         self._log.debug(f"--> {repr(msg)}")
-        if self.export:
-            self.file.write(f"('OUT', {msg})")
         self._transport.write(msg)
+        if self._file is not None:
+            self._file.write(f"WRITE {msg}\n")
+            os.fsync(self._file.fileno())
 
     async def perform_handshake(self):
         self.write(create_handshake())
@@ -80,11 +87,19 @@ class Protocol(asyncio.Protocol):
             self._is_connected_waiter = None
 
     def export_bytestrings(self, path: Path):
-        self.export = True
-        self.file = open(path, "w")  # Open the file in write mode
-        self.file.write("BYTES = [")
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        if path.exists():
+            self._log.warning("Previous bytestring file detected, removing file...")
+            path.unlink()
+
+        self._file = open(path, "a")
 
     def __del__(self):
-        if self.export:
-            self.file.write("\n]")
-            self.file.close()
+        if self._file is not None:
+            self._file.close()
