@@ -10,8 +10,8 @@ def pytest_addoption(parser):
 def mode(request):
     unit = request.config.getoption("--unit")
     demo = request.config.getoption("--demo")
-
-    assert unit and demo, "--unit --demo are mutually exclusive"
+    if unit and demo:
+        raise ValueError("--unit --demo are mutually exclusive")
     if unit:
         return "unit"
     if demo:

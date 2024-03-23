@@ -52,9 +52,13 @@ from pyfutures.tests.bytestring.stubs import BytestringClientStubs
 
 @pytest.mark.asyncio()
 async def test_connect(event_loop, mode):
-    client = await BytestringClientStubs.client(mode, loop=event_loop)
+    client = await BytestringClientStubs(mode=mode, loop=event_loop).client(
+        loop=event_loop
+    )
     LoggerAttributes.level = logging.DEBUG
     await client.connect()
-    await client.request_account_summary()
+    # await client.request_account_summary()
+    print("asyncio sleeping...")
     await asyncio.sleep(1000)
+
     # to tear down, send an EOF
