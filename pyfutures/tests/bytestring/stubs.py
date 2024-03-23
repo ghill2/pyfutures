@@ -20,6 +20,8 @@ class MockServerSubproc:
         self._read_stdout_task: asyncio.Task | None = None
         self._read_stderr_task: asyncio.Task | None = None
         self._proc: asyncio.Process | None = None
+        self._server_ready_waiter = None
+        self._bytestrings_ready_waiter = None
 
     async def start(self):
         path = PACKAGE_ROOT / "tests" / "bytestring" / "mock_server.py"
@@ -31,9 +33,9 @@ class MockServerSubproc:
             stderr=subprocess.PIPE,
         )
 
-        # self.on_subproc_exit_task = self._loop.create_task(
-        #     self._on_subproc_exit_task(), name="mock_server_subproc on_process_exited"
-        # )
+        self.on_subproc_exit_task = self._loop.create_task(
+            self._on_subproc_exit_task(), name="mock_server_subproc on_process_exited"
+        )
         self._read_stdout_task = self._loop.create_task(
             self.read_stdout_task(), name="mock_server_subproc read_stdout_task"
         )
@@ -41,21 +43,31 @@ class MockServerSubproc:
             self.read_stderr_task(), name="mock_server_subproc read_stderr_task"
         )
 
+        # wait until the server socket is ready
+        self._server_ready_waiter = self._loop.create_future()
+        self._log.debug("Waiting for mock_server to ready...")
+        try:
+            await self._server_ready_waiter
+        finally:
+            self._server_ready_waiter = None
+
         return self._proc
+
+    async def load_bytestrings(self, path: str):
+        self._proc.stdin.write(path.encode("utf-8"))
+        await self._proc.stdin.drain()
+
+        self._bytestrings_ready_waiter = self._loop.create_future()
+        self._log.debug("Waiting for mock_server to ready...")
+        try:
+            await self._bytestrings_ready_waiter
+        finally:
+            self._bytestrings_ready_waiter = None
 
     # Tasks
     async def _on_subproc_exit_task(self):
-        print("on subproc exit task")
-
-        # not using await self._proc.wait() intentionally
-        # as it does not let other tasks run
-        #
-        # if the mock_server exits while the main process is running
-        # exit the main process
-        # while self._proc.transport._returncode is None:
-        # await asyncio.sleep(0)
         await self._proc.wait()
-        self._log.debug("mock server exited...")
+        self._log.debug("mock_server exited...")
         exit()
 
     async def read_stdout_task(self):
@@ -63,11 +75,18 @@ class MockServerSubproc:
             while True:
                 await asyncio.sleep(0)
                 # do not use stdout.readline()
-                buf = await self._proc.stdout.read(256)
-
+                buf = await self._proc.stdout.readline()
                 if not buf:
                     continue
-                self._log.debug(buf.decode("utf-8"), color=4)
+
+                msg = buf.decode("utf-8")
+                if msg == "MOCK_SERVER READY\n":
+                    self._server_ready_waiter.set_result(None)
+
+                if msg == "BYTESTRINGS READY\n":
+                    self._bytestrings_ready_waiter.set_result(None)
+
+                self._log.debug(msg, color=4)
         except Exception as e:
             self._log.exception("mock_server_subproc read_stderr exception", e)
 
@@ -75,17 +94,13 @@ class MockServerSubproc:
         try:
             while True:
                 await asyncio.sleep(0)
-                buf = await self._proc.stderr.read(256)
+                buf = await self._proc.stderr.readline()
                 if not buf:
                     continue
 
                 self._log.error(buf.decode("utf-8"), color=4)
         except Exception as e:
             self._log.exception("mock_server_subproc read_stderr exception", e)
-
-    async def write_stdin(self, msg: str):
-        self._proc.stdin.write(msg.encode("utf-8"))
-        await self._proc.stdin.drain()
 
 
 class SingletonMeta(type):
@@ -147,10 +162,12 @@ class BytestringClientStubs(metaclass=SingletonMeta):
 
         if self._mode == "unit":
             if self._mock_server_subproc is None:
+                # create mock_server subproc and wait until ready
                 self._mock_server_subproc = MockServerSubproc(loop=self._loop)
                 await self._mock_server_subproc.start()
-                await asyncio.sleep(3)
-            # await self._mock_server_subproc.write_stdin(str(bytestrings_path))
+
+            # load bytestrings for the test and wait until they have loaded
+            await self._mock_server_subproc.load_bytestrings(path=str(bytestrings_path))
 
         if self._mode == "demo":
             self._client.conn.protocol.export_bytestrings(path=bytestrings_path)
