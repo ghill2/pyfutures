@@ -40,7 +40,9 @@ LEVEL_TO_STR = {
 
 def init_logging(log_level: int = logging.DEBUG):
     # initializes all loggers with specified custom format and log level
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"  # Example log format
+    log_format = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"  # Example log format
+    )
     formatter = logging.Formatter(log_format)
     handler = logging.StreamHandler()  # Output to console
     handler.setFormatter(formatter)
@@ -75,16 +77,16 @@ class LoggerAdapter:
     def __init__(
         self,
         name: str,
-        id: str,
-        level: int,
-        path: Path,
-        bypass: bool,
+        id: str = "N/A",
+        level: int = logging.DEBUG,
+        path: Path | None = None,
+        prefix: Callable = None,
     ) -> None:
         self.id = id
         self.name = name
         self.level = level
         self.path = path
-        self.bypass = bypass
+        self.prefix = prefix
 
         self.logger = logging.Logger(name=name)
 
@@ -109,14 +111,24 @@ class LoggerAdapter:
         cls._timestamp_ns = timestamp_ns
 
     @classmethod
-    def from_name(cls, name: str) -> LoggerAdapter:
-        return cls(
-            name=name,
-            id=LoggerAttributes.id,
-            level=LoggerAttributes.level,
-            path=LoggerAttributes.path,
-            bypass=LoggerAttributes.bypass,
-        )
+    def from_attrs(cls, name: str, *args, **kwargs) -> LoggerAdapter:
+        """
+        Creates a LoggerAdapter instance from provided attributes,
+        accepting any additional arguments or keyword arguments.
+        """
+
+        # Gather attributes from LoggerAttributes class
+        attrs_dict = {
+            "id": getattr(LoggerAttributes, "id"),
+            "level": getattr(LoggerAttributes, "level"),
+            "path": getattr(LoggerAttributes, "path"),
+        }
+
+        # Combine with any provided kwargs, giving priority to kwargs
+        attrs_dict.update(kwargs)
+
+        # Create the LoggerAdapter instance
+        return cls(name=name, *args, **attrs_dict)
 
     def debug(
         self,
@@ -133,9 +145,9 @@ class LoggerAdapter:
         message: str,
         color: int = NORMAL,
     ):
-        if self.bypass:
-            return
-        message: str = self._format_line(message=message, level=logging.INFO, color=color)
+        message: str = self._format_line(
+            message=message, level=logging.INFO, color=color
+        )
         self.logger.info(message)
 
     def warning(
@@ -143,9 +155,9 @@ class LoggerAdapter:
         message,
         color: int = YELLOW,
     ):
-        if self.bypass:
-            return
-        message: str = self._format_line(message=message, level=logging.WARNING, color=color)
+        message: str = self._format_line(
+            message=message, level=logging.WARNING, color=color
+        )
         self.logger.warning(message)
 
     def error(
@@ -186,6 +198,20 @@ class LoggerAdapter:
                 return os.sep.join(components[i:])
         return path  # Return original path if not found
 
+    def _default_prefix(self, level, color):
+        t = self._unix_nanos_to_iso8601(time.time_ns())
+        l = LEVEL_TO_STR[level]
+        caller_frame = sys._getframe(3)
+        filepath = caller_frame.f_code.co_filename
+        filepath = self._format_path(filepath)
+        line_number = caller_frame.f_lineno
+        func_name = caller_frame.f_code.co_name
+        if color is None:
+            return f"{t} [{l}] {filepath}::{func_name}::{line_number} [{l}] {self.name} {self.id}:"
+        else:
+            c = LOG_COLOR_TO_COLOR[color]
+            return f"\x1b[1m{t}\x1b[0m {c} [{l}] {filepath}::{func_name}::{line_number} {self.name} {self.id}:\x1b[0m"
+
     def _format_line(
         self,
         message: str,
@@ -207,22 +233,18 @@ class LoggerAdapter:
             })
         }
         """
-        t = self._unix_nanos_to_iso8601(time.time_ns())
-        l = LEVEL_TO_STR[level]
-
-        caller_frame = inspect.currentframe().f_back.f_back
-        filepath = caller_frame.f_code.co_filename
-        filepath = self._format_path(filepath)
-        line_number = caller_frame.f_lineno
-        func_name = caller_frame.f_code.co_name
 
         msg = message
+        if self.prefix is not None:
+            prefix = self.prefix(level)
+        else:
+            prefix = self._default_prefix(level, color)
 
         if color is None:
-            return f"{t} [{l}] {filepath}::{func_name}::{line_number} [{l}] {self.name} {self.id}: {msg}"
+            return f"{prefix}{msg}"
         else:
             c = LOG_COLOR_TO_COLOR[color]
-            return f"\x1b[1m{t}\x1b[0m {c} [{l}] {filepath}::{func_name}::{line_number} {self.name} {self.id}: {msg}\x1b[0m"
+            return f"{prefix}{c}{msg}\x1b[0m"
 
         # return f"{self.timestamp} WARNING {self._trading_class} {message}"
 
@@ -238,67 +260,3 @@ class LoggerAdapter:
         iso8601_str = dt.isoformat()
 
         return iso8601_str
-
-
-# class DynamicAttributeFormatter(logging.Formatter):
-
-#     timestamp_ns = 0
-#     log_: str
-
-#     def __init__(
-#         self,
-#         trading_class: str,
-#     ):
-#         super().__init__(
-#             fmt=f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"
-#         )
-#         self.trading_class = trading_class
-
-#     def format(self, record):
-#         setattr(record, self.custom_attribute, self.get_custom_attribute_value())
-#         return super().format(record)
-
-#     def _format_line(
-#         self,
-#         message: str,
-#         level: str,
-#         color: LogColor,
-#     ) -> str:
-#         """
-#         pub fn get_colored(&mut self) -> &str {
-#             self.colored.get_or_insert_with(|| {
-#                 format!(
-#                     "\x1b[1m{}\x1b[0m {}[{}] {}.{}: {}\x1b[0m\n",
-#                     self.timestamp,
-#                     &self.line.color.to_string(),
-#                     self.line.level,
-#                     self.trader_id,
-#                     &self.line.component,
-#                     &self.line.message
-#                 )
-#             })
-#         }
-#         """
-
-#         t = self._unix_nano_to_iso8601(self._timestamp_ns)
-#         c = LOG_COLOR_TO_COLOR[color]
-#         l = level
-#         id = "TRADER-001"
-#         comp = "TRADER-001"
-#         msg = message
-#         return f"\x1b[1m{t}\x1b[0m {c}[{l}] {id}.{comp}: {msg}\x1b[0m"  # \n
-
-#         # return f"{self.timestamp} WARNING {self._trading_class} {message}"
-
-#     @staticmethod
-#     def _unix_nano_to_iso8601(nanoseconds):
-#         # Convert nanoseconds to seconds
-#         seconds = nanoseconds / 1e9
-
-#         # Create a datetime object from the seconds
-#         dt = datetime.datetime.utcfromtimestamp(seconds)
-
-#         # Format the datetime object as an ISO 8601 string
-#         iso8601_str = dt.isoformat()
-
-#         return iso8601_str

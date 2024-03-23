@@ -28,7 +28,7 @@ import socket
 #     async def __init__(self):
 #         # TODO: dont call from init when I change caching
 #         self._reader, self._writer = await asyncio.open_connection(self.host, self.port)
-#         self._log = LoggerAdapter.from_name(name=type(self).__name__)
+#         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 #
 #     # Using subprocess async poll to exit parent process from child process for tests
 #     # async def _read_task(self):
@@ -68,7 +68,7 @@ import socket
 #
 #     def __init__(self):
 #         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         self._log = LoggerAdapter.from_name(name=type(self).__name__)
+#         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 #
 #     def load_bytestrings(self, fn_hash: int):
 #         self._sock.connect((self.host, self.port))
@@ -89,7 +89,7 @@ import socket
 #     """
 #
 #     def __init__(self):
-#         self._log = LoggerAdapter.from_name(name=type(self).__name__)
+#         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 #
 #     async def connect(self):
 #         self.reader, self.writer = await asyncio.open_connection("127.0.0.1", 9999)

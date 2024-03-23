@@ -20,7 +20,7 @@ from pyfutures.tests.unit.client.stubs import ClientStubs
 async def write_spread(write: bool = False):
     LoggerAttributes.level = logging.INFO
 
-    log = LoggerAdapter.from_name("WriteSpread")
+    log = LoggerAdapter.from_attrs("WriteSpread")
 
     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
     start_time = end_time - pd.Timedelta(days=128)

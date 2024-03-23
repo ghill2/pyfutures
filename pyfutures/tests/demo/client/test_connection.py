@@ -55,7 +55,7 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 
 from pyfutures.logger import LoggerAdapter
 
-_log = LoggerAdapter.from_name(name="test_connection.py")
+_log = LoggerAdapter.from_attrs(name="test_connection.py")
 
 
 @pytest.mark.asyncio()
