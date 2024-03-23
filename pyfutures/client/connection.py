@@ -28,7 +28,7 @@ class Connection:
 
         self.reconnect_task: asyncio.Task | None = None
 
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
         self.protocol = Protocol(
             loop=loop,
             client_id=client_id,
@@ -40,7 +40,9 @@ class Connection:
 
     def _connection_lost_callback(self):
         print("connection lost callback")
-        self.reconnect_task = self._loop.create_task(self._reconnect_task(), name="reconnect")
+        self.reconnect_task = self._loop.create_task(
+            self._reconnect_task(), name="reconnect"
+        )
 
     async def _connect(self):
         self._log.info("Connecting...")
@@ -72,7 +74,9 @@ class Connection:
                 await self._connect()
                 return  # cancel task
             except Exception as e:
-                self._log.exception(f"Reconnect Failed... Retrying in {interval} seconds", e)
+                self._log.exception(
+                    f"Reconnect Failed... Retrying in {interval} seconds", e
+                )
                 await asyncio.sleep(interval)
 
     def sendMsg(self, msg: bytes) -> None:

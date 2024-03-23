@@ -30,7 +30,7 @@ from pyfutures.logger import LoggerAdapter
 #         self._subscriptions = subscriptions
 #         self.client_id = client_id
 #
-#         self._log = LoggerAdapter.from_name(name=type(self).__name__)
+#         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 #         # self._handlers = set()
 #
 #         # attributes that reset

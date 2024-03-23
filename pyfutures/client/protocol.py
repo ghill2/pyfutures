@@ -31,20 +31,33 @@ def create_start_api(client_id) -> bytes:
     return msg
 
 
+def parse_buffer(data):
+    """Used by mock_server and Protocol"""
+    bufs = []
+    start = 0
+    while start < len(data) - 1:
+        size = struct.unpack("!I", data[start : start + 4])[0]
+        end = start + 4 + size
+        buf = struct.unpack("!%ds" % size, data[start + 4 : end])[0]
+        bufs.append(buf)
+        start = end
+    return bufs
+
+
 class Protocol(asyncio.Protocol):
     def __init__(
         self,
         loop,
-        client_id,
         connection_lost_callback: Callable,
         fields_received_callback: Callable,
+        client_id: int = 1,
     ):
         self._loop = loop
         self.client_id = client_id
         self._connection_lost_callback = connection_lost_callback
         self._fields_received_callback = fields_received_callback
 
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
         self._bpath = None
         self._bstream = None
 
@@ -56,16 +69,11 @@ class Protocol(asyncio.Protocol):
         self._log.debug("========== RESPONSE ==========")
         self._log.debug(f"<-- {data}")
         if self._bstream is not None:
-            self._bstream[-1] = ("READ", data)
+            self._bstream.append(("READ", data))
             export_data(self._bpath, self._bstream)
 
-        start = 0
-        while start < len(data) - 1:
-            size = struct.unpack("!I", data[start : start + 4])[0]
-            self._log.debug(f"read_msg: size: {size}")
-            end = start + 4 + size
-            buf = struct.unpack("!%ds" % size, data[start + 4 : end])[0]
-            start = end
+        bufs = parse_buffer(data)
+        for buf in bufs:
             fields = buf.split(b"\0")
             fields = tuple(fields[0:-1])
             self._log.debug(f"<--- {fields}")
@@ -83,7 +91,7 @@ class Protocol(asyncio.Protocol):
         self._transport.write(msg)
 
         if self._bstream is not None:
-            self._bstream[-1] = ("WRITE", msg)
+            self._bstream.append(("WRITE", msg))
             export_data(self._bpath, self._bstream)
 
     async def perform_handshake(self):
@@ -92,6 +100,7 @@ class Protocol(asyncio.Protocol):
 
         self._is_connected_waiter = self._loop.create_future()
         try:
+            self._log.debug("Waiting until connected...")
             await self._is_connected_waiter
         finally:
             self._log.info("- Connected Successfully...")

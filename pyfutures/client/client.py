@@ -67,7 +67,9 @@ class InteractiveBrokersClient:
         port: int = 4002,
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
-        request_timeout_seconds: float | int | None = 5,  # default timeout for requests if not given
+        request_timeout_seconds: float
+        | int
+        | None = 5,  # default timeout for requests if not given
     ):
         self._loop = loop
         self._request_timeout_seconds = request_timeout_seconds
@@ -78,7 +80,7 @@ class InteractiveBrokersClient:
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
 
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 
         self._requests = {}
         self._subscriptions = {}
@@ -103,7 +105,9 @@ class InteractiveBrokersClient:
         self._decoder = Decoder(serverVersion=176, wrapper=self)
 
         self._eclient = EClient(wrapper=self)
-        self._eclient.conn = self.conn  # redirect Eclient.conn.sendMsg() to our Connection()
+        self._eclient.conn = (
+            self.conn
+        )  # redirect Eclient.conn.sendMsg() to our Connection()
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176
@@ -248,10 +252,16 @@ class InteractiveBrokersClient:
         details: list[IBContractDetails] = await func(contract=contract)
         return details
 
-    async def _request_contract_details(self, contract: IBContract) -> list[IBContractDetails]:
+    async def _request_contract_details(
+        self, contract: IBContract
+    ) -> list[IBContractDetails]:
         self._log.debug(f"Requesting contract details for {contract=}")
 
-        request = self.conn._create_request(id=self.conn._next_request_id(), data=[], timeout_seconds=self.request_timeout_seconds)
+        request = self.conn._create_request(
+            id=self.conn._next_request_id(),
+            data=[],
+            timeout_seconds=self.request_timeout_seconds,
+        )
 
         self._eclient.reqContractDetails(reqId=request.id, contract=contract)
 
@@ -266,7 +276,9 @@ class InteractiveBrokersClient:
 
         return details_list[-1].contractMonth
 
-    async def request_front_contract_details(self, contract: IBContract) -> IBContractDetails | None:
+    async def request_front_contract_details(
+        self, contract: IBContract
+    ) -> IBContractDetails | None:
         self._log.debug(
             f"Requesting front contract for: {contract.symbol}, {contract.tradingClass}",
         )
@@ -403,7 +415,9 @@ class InteractiveBrokersClient:
         formatDate=2, returns timestamp as integer seconds from epoch (UTC)
         """
         start_time = end_time - duration.to_timedelta()
-        self._log.info(f"{start_time} | {end_time} | {bar_size} | {duration} | {what_to_show} | {contract}")
+        self._log.info(
+            f"{start_time} | {end_time} | {bar_size} | {duration} | {what_to_show} | {contract}"
+        )
 
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
@@ -431,7 +445,9 @@ class InteractiveBrokersClient:
             raise
 
         if len(bars) > 0:
-            self._log.info(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}")
+            self._log.info(
+                f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}"
+            )
         else:
             self._log.info("---> Downloaded 0 bars.")
 
@@ -453,7 +469,9 @@ class InteractiveBrokersClient:
         bar.timestamp = self._parser.parse_datetime(bar.date)
         request.data.append(bar)
 
-    def historicalDataEnd(self, reqId: int, start: str, end: str):  # : Override the EWrapper
+    def historicalDataEnd(
+        self, reqId: int, start: str, end: str
+    ):  # : Override the EWrapper
         request = self._requests.get(reqId)
         if request is None:
             return  # no request found for request_id
@@ -723,7 +741,9 @@ class InteractiveBrokersClient:
 
         self._executions[execution.execId] = event  # hot cache
 
-    def commissionReport(self, commissionReport: IBCommissionReport):  # : Override the EWrapper
+    def commissionReport(
+        self, commissionReport: IBCommissionReport
+    ):  # : Override the EWrapper
         """
         The commissionReport() callback is triggered as follows:
 
@@ -818,7 +838,9 @@ class InteractiveBrokersClient:
             return  # no response found for request_id
 
         if request.data.get("account") is not None:
-            assert request.data["account"] == account  # multiple accounts not support yet
+            assert (
+                request.data["account"] == account
+            )  # multiple accounts not support yet
 
         request.data["account"] = account
         request.data["currency"] = currency
@@ -877,7 +899,9 @@ class InteractiveBrokersClient:
         if request is None:
             return  # no response found for request_id
 
-        head_timestamp: pd.Timestamp = pd.to_datetime(headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True)
+        head_timestamp: pd.Timestamp = pd.to_datetime(
+            headTimestamp, format="%Y%m%d-%H:%M:%S", utc=True
+        )
         request.set_result(head_timestamp)
 
     ################################################################################################
@@ -958,7 +982,9 @@ class InteractiveBrokersClient:
 
         return await self._wait_for_request(request)
 
-    def historicalTicksBidAsk(self, reqId: int, ticks: ListOfHistoricalTickBidAsk, done: bool):
+    def historicalTicksBidAsk(
+        self, reqId: int, ticks: ListOfHistoricalTickBidAsk, done: bool
+    ):
         self._log.debug(f"historicalTicksBidAsk {len(ticks)} ticks")
 
         request = self._requests.get(reqId)
@@ -1006,7 +1032,9 @@ class InteractiveBrokersClient:
 
         return await self._wait_for_request(request)
 
-    def historicalTicksLast(self, reqId: int, ticks: ListOfHistoricalTickLast, done: bool):
+    def historicalTicksLast(
+        self, reqId: int, ticks: ListOfHistoricalTickLast, done: bool
+    ):
         """
         Returns historical tick data when whatToShow=TRADES.
         """
@@ -1046,7 +1074,9 @@ class InteractiveBrokersClient:
         cancel = functools.partial(
             self._unsubscribe,
             request_id=request_id,
-            cancel_func=functools.partial(self._eclient.cancelTickByTickData, reqId=request_id),
+            cancel_func=functools.partial(
+                self._eclient.cancelTickByTickData, reqId=request_id
+            ),
         )
 
         subscription = ClientSubscription(
@@ -1136,7 +1166,11 @@ class InteractiveBrokersClient:
         request_id = self._next_request_id()
 
         cancel = functools.partial(
-            self._unsubscribe, request_id=request_id, cancel_func=functools.partial(self._eclient.cancelRealTimeBars, reqId=request_id)
+            self._unsubscribe,
+            request_id=request_id,
+            cancel_func=functools.partial(
+                self._eclient.cancelRealTimeBars, reqId=request_id
+            ),
         )
 
         subscribe = functools.partial(
@@ -1176,7 +1210,11 @@ class InteractiveBrokersClient:
         )
 
         cancel = functools.partial(
-            self._unsubscribe, request_id=request_id, cancel_func=functools.partial(self._eclient.cancelHistoricalData, reqId=request_id)
+            self._unsubscribe,
+            request_id=request_id,
+            cancel_func=functools.partial(
+                self._eclient.cancelHistoricalData, reqId=request_id
+            ),
         )
 
         subscribe = functools.partial(
@@ -1424,7 +1462,9 @@ class InteractiveBrokersClient:
     ################################################################################################
     # Realtime historical schedule
 
-    async def request_historical_schedule(self, contract: IBContract, durationStr: str | None = None) -> ListOfHistoricalSessions:
+    async def request_historical_schedule(
+        self, contract: IBContract, durationStr: str | None = None
+    ) -> ListOfHistoricalSessions:
         request: ClientRequest = self._create_request(
             id=self._next_request_id(),
             timeout_seconds=self._request_timeout_seconds,
@@ -1461,7 +1501,10 @@ class InteractiveBrokersClient:
             self._log.error(f"No request found for {reqId}")
             return
 
-        data = [(session.refDate, session.startDateTime, session.endDateTime) for session in sessions]
+        data = [
+            (session.refDate, session.startDateTime, session.endDateTime)
+            for session in sessions
+        ]
 
         df = pd.DataFrame(data, columns=["day", "start", "end"])
 

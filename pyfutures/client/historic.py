@@ -21,7 +21,7 @@ class InteractiveBrokersHistoricClient:
         client: InteractiveBrokersClient,
     ):
         self._client = client
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
         self._parser = ClientParser()
 
     async def request_bars(
@@ -66,7 +66,9 @@ class InteractiveBrokersHistoricClient:
 
         i = 0
         while end_time > start_time:
-            self._log.info(f"{contract} | {end_time - interval} -> {end_time} | use_cache={cache}")
+            self._log.info(
+                f"{contract} | {end_time - interval} -> {end_time} | use_cache={cache}"
+            )
 
             bars: list[BarData] = await self._client.request_bars(
                 contract=contract,
@@ -86,7 +88,9 @@ class InteractiveBrokersHistoricClient:
             assert pd.Series(b.timestamp for b in total_bars).is_monotonic_increasing
 
             if len(bars) > 0:
-                self._log.debug(f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}. Total = {len(total_bars)}")
+                self._log.debug(
+                    f"---> Downloaded {len(bars)} bars. {bars[0].timestamp} {bars[-1].timestamp}. Total = {len(total_bars)}"
+                )
             else:
                 self._log.debug(f"---> Downloaded 0 bars. Total = {len(total_bars)}")
 
@@ -95,11 +99,15 @@ class InteractiveBrokersHistoricClient:
             i += 1
 
             if limit is not None and len(total_bars) >= limit:
-                total_bars = list(total_bars)[-limit:]  # last x number of bars in the list
+                total_bars = list(total_bars)[
+                    -limit:
+                ]  # last x number of bars in the list
                 break
 
         if as_dataframe:
-            return pd.DataFrame([self._parser.bar_data_to_dict(obj) for obj in total_bars])
+            return pd.DataFrame(
+                [self._parser.bar_data_to_dict(obj) for obj in total_bars]
+            )
 
         return total_bars
 
@@ -163,7 +171,9 @@ class InteractiveBrokersHistoricClient:
             assert pd.Series(q.timestamp for q in results).is_monotonic_increasing
 
         if as_dataframe:
-            return pd.DataFrame([self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results])
+            return pd.DataFrame(
+                [self._parser.historical_tick_bid_ask_to_dict(obj) for obj in results]
+            )
 
         return results
 

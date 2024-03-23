@@ -25,7 +25,12 @@ CREATE_CONFIG = {
     "AttachStdin": False,
     "AttachStdout": False,
     "AttachStderr": False,
-    "Env": [f"TWS_USERID={tws_userid}", f"TWS_PASSWORD={tws_password}", "TRADING_MODE=paper", "READ_ONLY_API=yes"],
+    "Env": [
+        f"TWS_USERID={tws_userid}",
+        f"TWS_PASSWORD={tws_password}",
+        "TRADING_MODE=paper",
+        "READ_ONLY_API=yes",
+    ],
     "Cmd": None,
     "Image": "ghcr.io/gnzsnz/ib-gateway:stable",
     "Volumes": None,
@@ -56,7 +61,7 @@ class Gateway:
 
     def __init__(self, log_level: int = logging.DEBUG):
         self._container: aiodocker.containers.DockerContainer | None = None
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
 
     async def create_container(self):
         """
@@ -70,7 +75,9 @@ class Gateway:
         if c:
             await self.stop()
 
-        c = await _docker.containers.create(name=self.CONTAINER_NAME, config=CREATE_CONFIG)
+        c = await _docker.containers.create(
+            name=self.CONTAINER_NAME, config=CREATE_CONFIG
+        )
 
         return c
 
@@ -82,7 +89,9 @@ class Gateway:
         # to prevent aiodocker from erroring, datetime is converted to seconds epoch
         now = datetime.now()
         now_seconds_epoch = int(now.timestamp())
-        async for chunk in c.log(follow=True, stdout=True, stderr=True, since=now_seconds_epoch):
+        async for chunk in c.log(
+            follow=True, stdout=True, stderr=True, since=now_seconds_epoch
+        ):
             if "IBC: Login has completed" in chunk:
                 # self._log.info(chunk)
                 self._log.info("Gateway Started and Ready... Continuing...")

@@ -57,8 +57,8 @@ async def test_connect(event_loop, mode):
     )
     LoggerAttributes.level = logging.DEBUG
     await client.connect()
-    # await client.request_account_summary()
-    print("asyncio sleeping...")
-    await asyncio.sleep(1000)
+    await client.request_account_summary()
+
+    await asyncio.sleep(5)
 
     # to tear down, send an EOF

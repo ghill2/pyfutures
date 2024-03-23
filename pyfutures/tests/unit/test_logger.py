@@ -37,13 +37,13 @@ class TestLogger:
         assert log.path == Path("test.log")
         assert isinstance(log.logger, logging.Logger)
 
-    def test_from_name(self):
+    def test_from_attrs(self):
         LoggerAttributes.name = "test_name"
         LoggerAttributes.id = "test_id"
         LoggerAttributes.level = logging.DEBUG
         LoggerAttributes.path = Path("test.log")
 
-        log = LoggerAdapter.from_name(
+        log = LoggerAdapter.from_attrs(
             name="test_name",
         )
         assert log.name == "test_name"

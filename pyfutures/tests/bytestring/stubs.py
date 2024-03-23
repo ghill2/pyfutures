@@ -11,12 +11,26 @@ from pathlib import Path
 from pyfutures.logger import LoggerAdapter
 from pyfutures.logger import init_logging
 import logging
+import pickle
+
+# TOMORROW: it seems to hang when i do --demo 1 try, then --unit 1 try, then --unit again..
+# try comparing bytestrings after 1st unit and then 2nd unit ? maybe its rewriting
+
+
+def _log_bytestrings(path):
+    print("==== BYTESTRINGS ====")
+    _bstream = pickle.load(open(path, "rb"))
+    for line in _bstream:
+        print(line[0], line[1])
+    print("==== =========== ====")
 
 
 class MockServerSubproc:
     def __init__(self, loop):
         self._loop = loop
-        self._log = LoggerAdapter.from_name(name=type(self).__name__)
+        self._log = LoggerAdapter.from_attrs(
+            name=type(self).__name__, prefix=lambda _: ""
+        )
         self._read_stdout_task: asyncio.Task | None = None
         self._read_stderr_task: asyncio.Task | None = None
         self._proc: asyncio.Process | None = None
@@ -76,31 +90,34 @@ class MockServerSubproc:
                 await asyncio.sleep(0)
                 # do not use stdout.readline()
                 buf = await self._proc.stdout.readline()
+                buf = buf.rstrip(b"\n")
                 if not buf:
                     continue
 
-                msg = buf.decode("utf-8")
-                if msg == "MOCK_SERVER READY\n":
+                if buf == b"MOCK_SERVER READY\n":
                     self._server_ready_waiter.set_result(None)
+                    self._log.debug("mock_server ready...")
 
-                if msg == "BYTESTRINGS READY\n":
+                if buf == b"BYTESTRINGS READY\n":
+                    self._log.debug("Bytestrings ready...")
                     self._bytestrings_ready_waiter.set_result(None)
 
-                self._log.debug(msg, color=4)
+                self._log.debug(b"mock_server read: " + buf, color=4)
         except Exception as e:
-            self._log.exception("mock_server_subproc read_stderr exception", e)
+            self._log.exception("mock_server_subproc read_stout_task exception", e)
 
     async def read_stderr_task(self):
         try:
             while True:
                 await asyncio.sleep(0)
                 buf = await self._proc.stderr.readline()
+                buf = buf.rstrip(b"\n")
                 if not buf:
                     continue
 
-                self._log.error(buf.decode("utf-8"), color=4)
+                self._log.error(buf, color=4)
         except Exception as e:
-            self._log.exception("mock_server_subproc read_stderr exception", e)
+            self._log.exception("mock_server_subproc read_stderr_task exception", e)
 
 
 class SingletonMeta(type):
@@ -130,17 +147,11 @@ class BytestringClientStubs(metaclass=SingletonMeta):
 
     async def client(self, *args, **kwargs):
         if self._client is None:
-            self._client = InteractiveBrokersClient(port=8890, *args, **kwargs)
+            port = 4002 if self._mode == "demo" else 8890
+            self._client = InteractiveBrokersClient(port=port, *args, **kwargs)
 
         self._loop.set_debug(True)
-        # names = logging.Logger.manager.loggerDict
         init_logging()
-        # logging.getLogger("asyncio").setLevel(logging.DEBUG)
-        # for name in names:
-        # print(name)
-        # if "ibapi" in name:
-        # logging.getLogger(name).setLevel(api_log_level)
-
         caller_frame = sys._getframe(1)
 
         # ensure caller function name begins with test_
@@ -149,16 +160,25 @@ class BytestringClientStubs(metaclass=SingletonMeta):
 
         # hash parent function source code
         source = inspect.getsource(caller_frame)
-        clean_fn_string = "\n".join(
-            line.strip() for line in source.splitlines() if not line.startswith("#")
-        )
+
+        # remove empty lines and leading trailing whitespace
+        lines = [line.strip() for line in source.splitlines() if line != ""]
+        # remove async sleep and comments
+        lines = [
+            line
+            for line in lines
+            if not line.startswith("#") and not line.startswith("await asyncio.sleep(")
+        ]
+        clean_fn_string = "\n".join(lines)
         # Hash the cleaned string using a cryptographic hash function (e.g., SHA-256)
         fn_hash = hashlib.sha256(clean_fn_string.encode("utf-8")).hexdigest()
 
         # Get the filepath of the bytestrings for the current test
         caller_filename = Path(inspect.getfile(caller_frame)).stem
         parent = PACKAGE_ROOT / "tests" / "bytestring" / "txt"
-        bytestrings_path = parent / f"{caller_filename}={caller_fn_name}={fn_hash}.py"
+        bytestrings_path = parent / f"{caller_filename}={caller_fn_name}={fn_hash}.pkl"
+
+        _log_bytestrings(bytestrings_path)
 
         if self._mode == "unit":
             if self._mock_server_subproc is None:
