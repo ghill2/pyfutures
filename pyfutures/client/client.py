@@ -67,9 +67,8 @@ class InteractiveBrokersClient:
         port: int = 4002,
         client_id: int = 1,
         api_log_level: int = logging.ERROR,
-        request_timeout_seconds: float
-        | int
-        | None = 5,  # default timeout for requests if not given
+        # default timeout for requests if not given
+        request_timeout_seconds: float | int | None = 5,
     ):
         self._loop = loop
         self._request_timeout_seconds = request_timeout_seconds
@@ -105,9 +104,13 @@ class InteractiveBrokersClient:
         self._decoder = Decoder(serverVersion=176, wrapper=self)
 
         self._eclient = EClient(wrapper=self)
-        self._eclient.conn = (
-            self.conn
-        )  # redirect Eclient.conn.sendMsg() to our Connection()
+        self._eclient.clientId = client_id
+        self.conn.protocol.startApi = self._eclient.startApi
+        self._eclient.sendMsg = self.conn.protocol.sendMsg
+        # self._eclient.conn = (
+        #     self.conn
+        # )  # redirect Eclient.conn.sendMsg() to our Connection()
+
         # not using eclient socket so always True to pass all messages
         self._eclient.isConnected = lambda: True
         self._eclient.serverVersion = lambda: 176

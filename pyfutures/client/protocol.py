@@ -9,11 +9,8 @@ from pathlib import Path
 from pyfutures import PACKAGE_ROOT
 import os
 import pickle
-
-
-def export_data(path, data):
-    with open(path, "wb") as f:
-        pickle.dump(data, f)
+import json
+from pprint import pprint
 
 
 def create_handshake() -> bytes:
@@ -58,7 +55,6 @@ class Protocol(asyncio.Protocol):
         self._fields_received_callback = fields_received_callback
 
         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
-        self._bpath = None
         self._bstream = None
 
     def connection_made(self, transport):
@@ -68,14 +64,13 @@ class Protocol(asyncio.Protocol):
     def data_received(self, data):
         self._log.debug("========== RESPONSE ==========")
         self._log.debug(f"<-- {data}")
-        if self._bstream is not None:
-            self._bstream[-1][1].append(data)
-            export_data(self._bpath, self._bstream)
-
         bufs = parse_buffer(data)
         for buf in bufs:
             fields = buf.split(b"\0")
             fields = tuple(fields[0:-1])
+            if self._bstream is not None:
+                ascii_fields = [f.decode("ascii") for f in fields]
+                self._bstream[-1][1].append(ascii_fields)
             self._log.debug(f"<--- {fields}")
             self._fields_received_callback(fields)
 
@@ -86,19 +81,36 @@ class Protocol(asyncio.Protocol):
         self._log.exception("connection lost", exc)
         self._connection_lost_callback()
 
+    def sendMsg(self, msg: str):
+        """
+        this function overrides eclient.sendMsg()
+        it receives output from all ibapi requests methods
+        and startApi
+        """
+        self._log.debug(f"--> sendMsg: {repr(msg)}")
+        msg_bytes = comm.make_msg(msg)
+        if self._bstream is not None:
+            ascii_fields = msg.split("\x00")
+            self._bstream.append([ascii_fields, []])
+
+        self.write(msg_bytes)
+
     def write(self, msg: bytes):
         self._log.debug(f"--> {repr(msg)}")
         self._transport.write(msg)
 
-        if self._bstream is not None:
-            self._bstream.append((msg, []))
-            export_data(self._bpath, self._bstream)
-
     async def perform_handshake(self):
+        # Handshake:
+        # bytes are created directly inside ibapi._client connect()
         self.write(create_handshake())
         self.write(create_start_api(self.client_id))
 
+        if self._bstream is not None:
+            self._bstream.append([["handshake"], []])
+            self._bstream.append([["startapi"], []])
+
         self._is_connected_waiter = self._loop.create_future()
+
         try:
             self._log.debug("Waiting until connected...")
             await self._is_connected_waiter
@@ -106,11 +118,18 @@ class Protocol(asyncio.Protocol):
             self._log.info("- Connected Successfully...")
             self._is_connected_waiter = None
 
+    def enable_bytestrings(self):
+        self._bstream: list[[str, list[str]]] = []
+
     def export_bytestrings(self, path: Path):
+        pprint(self._bstream, indent=4)
         path = Path(path)
+        if path.exists():
+            return
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._bpath = path
-        self._bstream = []
+        self._log.debug(f"Exporting bytestrings to: {path}")
+        with open(path, "w") as f:
+            json.dump(self._bstream, f, indent=4)
 
     # def export_bytestrings(self, path: Path):
     #     if self._file is not None:

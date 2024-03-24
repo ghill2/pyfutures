@@ -15,6 +15,7 @@ from pyfutures.client.enums import WhatToShow
 from pyfutures.tests.demo.client.stubs import ClientStubs
 
 
+# REDUNDANT: request_first_quote_tick executes this
 @pytest.mark.asyncio()
 async def test_request_head_timestamp_single(event_loop):
     client = ClientStubs.client(loop=event_loop)
@@ -146,30 +147,3 @@ async def test_request_bars(event_loop):
 
     assert all(isinstance(bar, BarData) for bar in bars)
     assert len(bars) > 0
-
-
-# @pytest.mark.asyncio()
-# async def test_client_handles_errors(event_loop):
-#     """If an error is raised within the callback responses, the client should show the errors in the log"""
-#     client = ClientStubs.client(loop=event_loop)
-#     await client.connect()
-#     #
-#     # def side_effect(**kwargs):
-#     # client.historicalData(reqId=1, bar=BarData())
-#
-#     # send_mock = Mock(side_effect=side_effect)
-#     # client._client.reqHistoricalData = send_mock
-#     # error_mock()
-#     #
-#     contract = IBContract()
-#     contract.secType = "CONTFUT"
-#     contract.exchange = "CME"
-#     contract.symbol = "DA"
-#
-#     await client.request_bars(
-#         contract=contract,
-#         bar_size=BarSize._1_MINUTE,
-#         what_to_show=WhatToShow.TRADES,
-#         duration=Duration(step=1, freq=Frequency.DAY),
-#         end_time=pd.Timestamp.utcnow() - pd.Timedelta(days=1).floor("1D"),
-#     )
