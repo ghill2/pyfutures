@@ -138,30 +138,74 @@ class TestInteractiveBrokersClient:
     async def test_request_account_summary(self):
         # Arrange
         def send_mocked_response(*args, **kwargs):
-            self.client.accountSummary(-10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP")
+            self.client.accountSummary(
+                -10, "DU1234567", "AccountType", "INDIVIDUAL", "GBP"
+            )
             self.client.accountSummary(-10, "DU1234567", "Cushion", "0.452835", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "DayTradesRemaining", "-1", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "LookAheadNextChange", "1700073900", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "AccruedCash", "-16475.82", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "AvailableFunds", "549199.02", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "BuyingPower", "2327966.81", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "EquityWithLoanValue", "1160657.83", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "ExcessLiquidity", "582033.62", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "FullAvailableFunds", "548302.62", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "FullExcessLiquidity", "581218.71", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "FullInitMarginReq", "711135.25", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "FullMaintMarginReq", "678261.07", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "GrossPositionValue", "0.00", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "InitMarginReq", "710238.85", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "LookAheadAvailableFunds", "549199.02", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "LookAheadExcessLiquidity", "582033.62", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "LookAheadInitMarginReq", "710238.85", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "LookAheadMaintMarginReq", "677446.17", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "MaintMarginReq", "677446.17", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "NetLiquidation", "1285310.14", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "PreviousDayEquityWithLoanValue", "1208301.71", "GBP")
+            self.client.accountSummary(
+                -10, "DU1234567", "DayTradesRemaining", "-1", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "LookAheadNextChange", "1700073900", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "AccruedCash", "-16475.82", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "AvailableFunds", "549199.02", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "BuyingPower", "2327966.81", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "EquityWithLoanValue", "1160657.83", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "ExcessLiquidity", "582033.62", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "FullAvailableFunds", "548302.62", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "FullExcessLiquidity", "581218.71", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "FullInitMarginReq", "711135.25", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "FullMaintMarginReq", "678261.07", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "GrossPositionValue", "0.00", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "InitMarginReq", "710238.85", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "LookAheadAvailableFunds", "549199.02", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "LookAheadExcessLiquidity", "582033.62", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "LookAheadInitMarginReq", "710238.85", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "LookAheadMaintMarginReq", "677446.17", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "MaintMarginReq", "677446.17", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "NetLiquidation", "1285310.14", "GBP"
+            )
+            self.client.accountSummary(
+                -10, "DU1234567", "PreviousDayEquityWithLoanValue", "1208301.71", "GBP"
+            )
             self.client.accountSummary(-10, "DU1234567", "SMA", "1228550.96", "GBP")
-            self.client.accountSummary(-10, "DU1234567", "TotalCashValue", "1301785.97", "GBP")
+            self.client.accountSummary(
+                -10, "DU1234567", "TotalCashValue", "1301785.97", "GBP"
+            )
             self.client.accountSummaryEnd(-10)
 
         send_mock = Mock(side_effect=send_mocked_response)
@@ -208,6 +252,11 @@ class TestInteractiveBrokersClient:
 
     @pytest.mark.asyncio()
     async def test_request_next_order_id(self):
+        """
+        ibapi for next order_id
+        convert to bytestring tests
+        """
+
         # Arrange
         def send_mocked_response(*args, **kwargs):
             self.client.nextValidId(4)
@@ -462,8 +511,12 @@ class TestInteractiveBrokersClient:
         # Assert
         assert len(quotes) == 2
         assert all(isinstance(q, HistoricalTickBidAsk) for q in quotes)
-        assert quotes[0].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
-        assert quotes[1].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert quotes[0].timestamp == pd.Timestamp(
+            "2023-11-15 17:29:50+00:00", tz="UTC"
+        )
+        assert quotes[1].timestamp == pd.Timestamp(
+            "2023-11-15 17:29:50+00:00", tz="UTC"
+        )
         assert send_mock.call_args_list[0][1] == dict(
             reqId=-10,
             contract=contract,
@@ -504,8 +557,12 @@ class TestInteractiveBrokersClient:
         # Assert
         assert len(trades) == 2
         assert all(isinstance(q, HistoricalTickLast) for q in trades)
-        assert trades[0].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
-        assert trades[1].timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        assert trades[0].timestamp == pd.Timestamp(
+            "2023-11-15 17:29:50+00:00", tz="UTC"
+        )
+        assert trades[1].timestamp == pd.Timestamp(
+            "2023-11-15 17:29:50+00:00", tz="UTC"
+        )
         assert send_mock.call_args_list[0][1] == dict(
             reqId=-10,
             contract=contract,

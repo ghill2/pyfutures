@@ -79,12 +79,12 @@ class Connection:
                 )
                 await asyncio.sleep(interval)
 
-    def sendMsg(self, msg: bytes) -> None:
-        """
-        messages output from self.eclient are sent here
-        """
-        self.protocol.write(msg)
-
+    # def sendMsg(self, msg: bytes) -> None:
+    #     """
+    #     messages output from self.eclient are sent here
+    #     """
+    #     self.protocol.write(msg)
+    #
     def close(self):
         """
         Not implemented / untested
