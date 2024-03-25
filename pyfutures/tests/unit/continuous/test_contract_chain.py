@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import TestClock
 from nautilus_trader.model.identifiers import InstrumentId
