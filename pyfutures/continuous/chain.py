@@ -4,6 +4,7 @@ from nautilus_trader.model.identifiers import InstrumentId
 
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.events import RollEvent
 
 
 class ContractChain(Actor):
@@ -69,6 +70,17 @@ class ContractChain(Actor):
 
         now = self._clock.timestamp_ns()
         self.rolls.loc[len(self.rolls)] = (now, self.current_month)
+
+        event = RollEvent(
+            ts_init=self._clock.timestamp_ns(),
+            from_instrument_id=self.previous_contract_id,
+            to_instrument_id=self.current_contract_id,
+        )
+
+        self.msgbus.publish(
+            topic=f"events.roll.{self.bar_type.instrument_id}",
+            msg=event,
+        )
 
     def roll_window(
         self,

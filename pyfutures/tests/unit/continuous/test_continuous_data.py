@@ -162,7 +162,7 @@ class TestContinuousData:
         ]
 
     @pytest.mark.skip
-    def test_publish_on_unique_current_bar(self):
+    def test_publish_and_store_on_unique_current_bar(self):
         pass
 
     def test_adjustment_appends_on_unique_current_bar(self):

@@ -49,6 +49,10 @@ class TestContractChain:
             clock=self.clock,
         )
 
+    @pytest.mark.skip
+    def test_publish_roll_event(self):
+        pass
+
     def test_initialize_sets_expected_attributes(self):
         # Arrange & Act
         self.chain.start()

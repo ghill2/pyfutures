@@ -26,6 +26,7 @@ class ContinuousData(Actor):
         self.chain = chain
         self.adjusted = deque(maxlen=None)
         self.topic = f"data.bars.{self.bar_type}"
+        self.current_bars = deque(maxlen=None)
 
         self._last_current: Bar | None = None
 
@@ -86,6 +87,9 @@ class ContinuousData(Actor):
             self.adjusted.append(float(self.current_bar.close))
 
             assert self.current_bar is not None  # design-time error
+
+            self.current_bars.append(self.current_bar)
+
             self.msgbus.publish(
                 topic=self.topic,
                 msg=self.current_bar,
