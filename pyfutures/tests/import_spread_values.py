@@ -1,19 +1,7 @@
-import calendar
-import holidays
-import logging
-
-from pathlib import Path
-
 import pandas as pd
-from pytz import timezone
 
-from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.enums import BarSize
-from pyfutures.client.enums import WhatToShow
-from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
-from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
 def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame:
@@ -55,233 +43,225 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
     return df
 
 
-
-
-
 def get_spread_value(row):
-    bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
+    print(row.uname)
+    with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", None):
+        bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
 
-    ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
+        ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
 
-    df = _merge_dataframe(bid_df, ask_df)
+        df = _merge_dataframe(bid_df, ask_df)
 
-    schedule = row.liquid_schedule
+        schedule = row.liquid_schedule
 
-    with pd.option_context(
-        "display.max_rows",
-        None,
-        "display.max_columns",
-        None,
-        "display.width",
-        None,
-    ):
-        df["local"] = df.timestamp.dt.tz_convert("MET")
-        df["dayofweek"] = df.local.dt.dayofweek
+        start_time = df.timestamp.iloc[0].floor(pd.Timedelta(days=1))
+        end_time = pd.Timestamp.utcnow().ceil(pd.Timedelta(days=1))
 
-        # previous_len = len(df)
-        # mask = schedule.is_open_list(list(df.timestamp))
-        # mask = df.timestamp.apply(schedule.is_open)
-        # df = df[mask]
-        # assert not df.empty
+        open_times = schedule.to_open_range(
+            start_date=start_time,
+            end_date=end_time,
+        )
 
-        df = df.iloc[-3000:]
-        print(df)
+        spread_values = []
+        for i, open_time in enumerate(open_times):
+            close_time = open_time + pd.Timedelta(hours=1)
+            mask = (df.timestamp >= open_time) & (df.timestamp < close_time)
+            ndf = df[mask]
 
-        # Group by date and hour
-        grouped = df.groupby(pd.Grouper(key="timestamp", freq="H"))
-
-        values = []
-        for group_key, df in grouped:
-            if df.empty:
+            if ndf.empty:
+                # print(f"{row.uname} {open_time}: No session")
                 continue
+
+            df["local"] = df.timestamp.dt.tz_convert("MET")
 
             random_row = df.sample().iloc[0]
             average_spread = random_row.ask - random_row.bid
-            values.append(average_spread)
+            spread_values.append(average_spread)
+            # print(f"{row.uname} {open_time}: {average_spread:.2f}")
 
-        average_spread: float = pd.Series(values).mean()
+        assert len(spread_values) > 0
+
+        average_spread: float = pd.Series(spread_values).mean()
         i = 7
         if average_spread == 0.0:
-            print(f"{row.trading_class}: {average_spread:.{i}f} failed")
+            print(f"{row.uname}: {average_spread:.{i}f} failed")
         else:
-            print(f"{row.trading_class}: {average_spread:.{i}f}")
+            print(f"{row.uname}: {average_spread:.{i}f}")
 
 
-async def find_spread_values(row):
-    schedule = row.liquid_schedule
-    client: InteractiveBrokersClient = ClientStubs.client(
-        request_timeout_seconds=60 * 10,
-        override_timeout=False,
-        api_log_level=logging.ERROR,
-    )
-
-    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
-    start_time = end_time - pd.Timedelta(days=128)
-    open_times = schedule.to_open_range(
-        start_date=start_time,
-        end_date=end_time,
-    )
-    open_times = [t for t in open_times if t.dayofweek == 2]
-    open_time = open_times[::-1][0]
-
-    await client.connect()
-    await client.request_market_data_type(4)
-
-    historic = InteractiveBrokersHistoricClient(
-        client=client,
-    )
-    seconds_in_hour: int = 60 * 60
-    seconds_in_day: int = seconds_in_hour * 24
-
-    df = await historic.request_bars(
-        contract=row.contract_cont,
-        bar_size=BarSize._5_SECOND,
-        what_to_show=WhatToShow.BID,
-        start_time=open_time.floor(pd.Timedelta(days=1)),
-        end_time=open_time.ceil(pd.Timedelta(days=1)),
-        cache=None,
-        as_dataframe=True,
-        delay=0.5,
-    )
-
-    # df = await historic.request_quotes(
-    #     contract=row.contract_cont,
-    #     # start_time=open_time.floor(pd.Timedelta(days=1)),
-    #     start_time=open_time.floor(pd.Timedelta(days=1)),
-    #     end_time=open_time.ceil(pd.Timedelta(days=1)),
-    #     cache=None,
-    #     as_dataframe=True,
-    #     delay=0.5,
-    # )
-
-    with pd.option_context(
-        "display.max_rows",
-        None,
-        "display.max_columns",
-        None,
-        "display.width",
-        None,
-    ):
-        if df.empty:
-            print("empty")
-            return
-
-        df["local"] = df.timestamp.dt.tz_convert(row.timezone)
-        df["dayofweek"] = df.local.dt.dayofweek
-        path = Path.home() / "Desktop/DC.parquet"
-        print(open_time, open_time.dayofweek)
-        print(df)
-        df.to_parquet(path, index=False)
-
-def find_missing_sessions(row):
-    
-    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
-    start_time = end_time - pd.Timedelta(days=128)
-    
-    path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
-    df = pd.read_parquet(path)
-
-    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
-    start_time = end_time - pd.Timedelta(days=128)
-    schedule = row.liquid_schedule
-    open_times = schedule.to_open_range(
-        start_date=start_time,
-        end_date=end_time,
-    )
-
-    for i, open_time in enumerate(open_times):
-        # open_time = open_times[3]
-        end = open_time + pd.Timedelta(hours=1)
-        start = open_time
-        # assert start.tzinfo == timezone.utc
-        # assert end.tzinfo == timezone.utc
-        # for t in df.timestamp:
-        #     assert t.tzinfo == pytz.UTC
-        
-        timezone_to_country_code = {
-            timezone("US/Central"):"US",
-            timezone("US/Eastern"):"US",
-            timezone("GB-Eire"):"UK",
-            timezone("Japan"):"JP",
-        }
-        
-        code = timezone_to_country_code[row.timezone]
-        hols = holidays.CountryHoliday(code, years=[2023, 2024])  # Adjust years as needed
-        with pd.option_context(
-            "display.max_rows",
-            None,
-            "display.max_columns",
-            None,
-            "display.width",
-            None,
-        ):
-            filt = df[(df.timestamp >= start) & (df.timestamp < end)]
-            # print(open_time, filt.empty)
-            if filt.empty:
-                holiday = hols.get(start.date())
-                
-                if holiday is None:
-                    print(
-                        f"No data for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
-                    )
-                else:
-                    print(
-                        f"Holiday {holiday} for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
-                    )
-                    
-            
-            
 if __name__ == "__main__":
-    """
-    DC bars
-    15:30 > 16:00
-    16:00 > 22:00
-    DC quotes
-    # 15:29:55+01:00 > 20:54:58+01:00
-    
-    KE
-    
-    """
     rows = IBTestProviderStubs.universe_rows(
-        filter=["167"],
+        filter=["RP"],
+        # skip=["RP", "RY", "6L", "6M", "6Z", "6A", "6C", "6S", "E7", "6E", "6B", "6J", "M6A", "M6E"],
     )
-    # rows = [r for r in rows if r.uname == "FTI"]
+
+    for row in rows:
+        get_spread_value(row)
+
+    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
+
     # get_spread_value(rows[0])
-    find_missing_sessions(rows[0])
     # for row in rows:
     #     asyncio.get_event_loop().run_until_complete(find_missing_sessions(row))
 
-    # """
-    # 2024-02-28 21:00:00+00:00
-    # 2024-02-28 23:45:00+00:00
-    # error with schedule:
+    # rows = [r for r in rows if r.uname == "FTI"]
+    # get_spread_value(rows[0])
+    # find_missing_sessions(rows[0])
 
-    # FTI:
-    # FCE:
-    # MFA:
-    # MFC:
-    # CN:
-    # TWN:
-    # SGP:
-    # IU:
-    # M6A:
-    # UC:
-    # FEF:
-    # """
-    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
 
-    # for i, row in enumerate(rows):
-    # 0     2023-11-01 18:19:00+00:00  1698862740  380.75  380.75  380.00  380.75     -1  -100        -1
+# def find_missing_sessions(row):
 
-    # load bars as dataframe
+#     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+#     start_time = end_time - pd.Timedelta(days=128)
 
-    # filter bars in liquid hours
+#     path = SPREAD_FOLDER / f"{row.uname}_BID.parquet"
+#     df = pd.read_parquet(path)
 
-    # return dataframe for each hour
+#     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+#     start_time = end_time - pd.Timedelta(days=128)
+#     schedule = row.liquid_schedule
+#     open_times = schedule.to_open_range(
+#         start_date=start_time,
+#         end_date=end_time,
+#     )
 
-    # return a random row in the dataframe for each dataframe
+#     for i, open_time in enumerate(open_times):
+#         # open_time = open_times[3]
+#         end = open_time + pd.Timedelta(hours=1)
+#         start = open_time
+#         # assert start.tzinfo == timezone.utc
+#         # assert end.tzinfo == timezone.utc
+#         # for t in df.timestamp:
+#         #     assert t.tzinfo == pytz.UTC
 
-    # average all random rows
+#         timezone_to_country_code = {
+#             timezone("US/Central"):"US",
+#             timezone("US/Eastern"):"US",
+#             timezone("GB-Eire"):"UK",
+#             timezone("Japan"):"JP",
+#         }
+
+#         code = timezone_to_country_code[row.timezone]
+#         hols = holidays.CountryHoliday(code, years=[2023, 2024])  # Adjust years as needed
+#         with pd.option_context(
+#             "display.max_rows",
+#             None,
+#             "display.max_columns",
+#             None,
+#             "display.width",
+#             None,
+#         ):
+#             filt = df[(df.timestamp >= start) & (df.timestamp < end)]
+#             # print(open_time, filt.empty)
+#             if filt.empty:
+#                 holiday = hols.get(start.date())
+
+#                 if holiday is None:
+#                     print(
+#                         f"No data for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
+#                     )
+#                 else:
+#                     print(
+#                         f"Holiday {holiday} for session {i}/{len(open_times)}: {calendar.day_name[open_time.dayofweek]} {row.uname}. {start} > {end}"
+#                     )
+
+# async def find_spread_values(row):
+#     schedule = row.liquid_schedule
+#     client: InteractiveBrokersClient = ClientStubs.client(
+#         request_timeout_seconds=60 * 10,
+#         override_timeout=False,
+#         api_log_level=logging.ERROR,
+#     )
+
+#     end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+#     start_time = end_time - pd.Timedelta(days=128)
+#     open_times = schedule.to_open_range(
+#         start_date=start_time,
+#         end_date=end_time,
+#     )
+#     open_times = [t for t in open_times if t.dayofweek == 2]
+#     open_time = open_times[::-1][0]
+
+#     await client.connect()
+#     await client.request_market_data_type(4)
+
+#     historic = InteractiveBrokersHistoricClient(
+#         client=client,
+#     )
+#     seconds_in_hour: int = 60 * 60
+#     seconds_in_day: int = seconds_in_hour * 24
+
+#     df = await historic.request_bars(
+#         contract=row.contract_cont,
+#         bar_size=BarSize._5_SECOND,
+#         what_to_show=WhatToShow.BID,
+#         start_time=open_time.floor(pd.Timedelta(days=1)),
+#         end_time=open_time.ceil(pd.Timedelta(days=1)),
+#         cache=None,
+#         as_dataframe=True,
+#         delay=0.5,
+#     )
+
+#     # df = await historic.request_quotes(
+#     #     contract=row.contract_cont,
+#     #     # start_time=open_time.floor(pd.Timedelta(days=1)),
+#     #     start_time=open_time.floor(pd.Timedelta(days=1)),
+#     #     end_time=open_time.ceil(pd.Timedelta(days=1)),
+#     #     cache=None,
+#     #     as_dataframe=True,
+#     #     delay=0.5,
+#     # )
+
+#     with pd.option_context(
+#         "display.max_rows",
+#         None,
+#         "display.max_columns",
+#         None,
+#         "display.width",
+#         None,
+#     ):
+#         if df.empty:
+#             print("empty")
+#             return
+
+#         df["local"] = df.timestamp.dt.tz_convert(row.timezone)
+#         df["dayofweek"] = df.local.dt.dayofweek
+#         path = Path.home() / "Desktop/DC.parquet"
+#         print(open_time, open_time.dayofweek)
+#         print(df)
+#         df.to_parquet(path, index=False)
+
+# """
+# 2024-02-28 21:00:00+00:00
+# 2024-02-28 23:45:00+00:00
+# error with schedule:
+
+# FTI:
+# FCE:
+# MFA:
+# MFC:
+# CN:
+# TWN:
+# SGP:
+# IU:
+# M6A:
+# UC:
+# FEF:
+# """
+
+
+# for i, row in enumerate(rows):
+# 0     2023-11-01 18:19:00+00:00  1698862740  380.75  380.75  380.00  380.75     -1  -100        -1
+
+# load bars as dataframe
+
+# filter bars in liquid hours
+
+# return dataframe for each hour
+
+# return a random row in the dataframe for each dataframe
+
+# average all random rows
 
 
 # def get_spread_value(row):

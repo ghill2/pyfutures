@@ -33,13 +33,12 @@ async def write_spread(write: bool = False):
         api_log_level=logging.ERROR,
     )
 
-    rows = IBTestProviderStubs.universe_rows(
-        # filter=["DC"],
-    )
-
     cache = RequestsCache(Path.home() / "Desktop" / "download_cache3")
     cache.purge_errors(asyncio.TimeoutError)
 
+    rows = IBTestProviderStubs.universe_rows(
+        filter=["6A"],
+    )
     for row in rows:
         schedule = row.liquid_schedule
 
