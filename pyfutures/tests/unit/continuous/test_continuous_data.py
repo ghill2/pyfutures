@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pandas as pd
 import pytest
 from nautilus_trader.backtest.engine import BacktestEngine
@@ -160,6 +162,27 @@ class TestContinuousData:
             "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
             "data.bars.MES=2021U.SIM-1-DAY-MID-EXTERNAL",
         ]
+
+    def test_current_bar_schedules_timer(self):
+        # Arrange
+        data = [
+            ("MES=2021H.SIM", "2021-03-09"),
+            ("MES=2021M.SIM", "2021-03-09"),
+            ("MES=2021H.SIM", "2021-03-10"),
+        ]
+
+        bars = self._create_bars(data)
+        self.engine.add_data(bars)
+        handle_mock = Mock()
+        self.data._handle_time_event = handle_mock
+
+        # Act
+        self.engine.run()
+
+        # Assert
+        handle_mock.assert_called_once()
+        time_event = handle_mock.call_args_list[0][0][0]
+        assert time_event.ts_event == 1615248002000000000
 
     @pytest.mark.skip
     def test_publish_and_store_on_unique_current_bar(self):

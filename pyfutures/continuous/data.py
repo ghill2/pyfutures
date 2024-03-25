@@ -1,9 +1,10 @@
 from collections import deque
 
-import pandas as pd
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.component import TimeEvent
+from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
+from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
@@ -54,20 +55,21 @@ class ContinuousData(Actor):
     def previous_bar(self) -> Bar:
         return self.cache.bar(self.previous_bar_type, 0)
 
+    def handle_bar(self, bar: Bar) -> None:
+        if bar.bar_type != self.current_bar_type:
+            return
+
+        # schedule the timer to process the module after x seconds
+        # to wait for other bars to arrive
+        self.clock.set_time_alert_ns(
+            name=f"chain_{self.bar_type}_{UUID4()}",
+            alert_time_ns=self.clock.timestamp_ns() + secs_to_nanos(2),
+            callback=self._handle_time_event,
+        )
+
     def on_start(self) -> None:
         assert len(self.chain.rolls) > 0
         self._manage_subscriptions()
-
-        interval = self.bar_type.spec.timedelta
-        now = unix_nanos_to_dt(self.clock.timestamp_ns())
-        start_time = now.floor(interval) - interval + pd.Timedelta(seconds=5)
-
-        self.clock.set_timer(
-            name=f"chain_{self.bar_type}",
-            interval=interval,
-            start_time=start_time,
-            callback=self._handle_time_event,
-        )
 
     def _handle_time_event(self, event: TimeEvent) -> None:
         is_expired = self.clock.utc_now() >= self.chain.expiry_date
@@ -136,3 +138,14 @@ class ContinuousData(Actor):
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
+
+    # interval = self.bar_type.spec.timedelta
+    # now = unix_nanos_to_dt(self.clock.timestamp_ns())
+    # start_time = now.floor(interval) - interval + pd.Timedelta(seconds=5)
+
+    # self.clock.set_timer(
+    #     name=f"chain_{self.bar_type}",
+    #     interval=interval,
+    #     start_time=start_time,
+    #     callback=self._handle_time_event,
+    # )

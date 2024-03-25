@@ -78,7 +78,7 @@ class ContractChain(Actor):
         )
 
         self.msgbus.publish(
-            topic=f"events.roll.{self.bar_type.instrument_id}",
+            topic=f"events.roll.{self.instrument_id}",
             msg=event,
         )
 
