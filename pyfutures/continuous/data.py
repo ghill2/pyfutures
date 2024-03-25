@@ -22,23 +22,23 @@ class ContinuousData(Actor):
     ):
         super().__init__()
         self.bar_type = bar_type
-        self._chain = ContractChain(config=chain_config, clock=self._clock)
+        self.chain = ContractChain(config=chain_config)
 
     @property
     def current_bar_type(self) -> BarType:
-        return self._make_bar_type(self._chain.current_contract_id)
+        return self._make_bar_type(self.chain.current_contract_id)
 
     @property
     def previous_bar_type(self) -> BarType:
-        return self._make_bar_type(self._chain.previous_contract_id)
+        return self._make_bar_type(self.chain.previous_contract_id)
 
     @property
     def forward_bar_type(self) -> BarType:
-        return self._make_bar_type(self._chain.forward_contract_id)
+        return self._make_bar_type(self.chain.forward_contract_id)
 
     @property
     def carry_bar_type(self) -> BarType:
-        return self._make_bar_type(self._chain.current_contract_id)
+        return self._make_bar_type(self.chain.current_contract_id)
 
     @property
     def current_bar(self) -> Bar:
@@ -57,7 +57,7 @@ class ContinuousData(Actor):
         return self.cache.bar(self.previous_bar_type, 0)
 
     def on_start(self) -> None:
-        self._chain.start()
+        self.chain.start(clock=self.clock)
 
         interval = self.bar_type.spec.timedelta
         now = unix_nanos_to_dt(self.clock.timestamp_ns())
@@ -74,10 +74,10 @@ class ContinuousData(Actor):
         # manage subscriptions
         # TODO: self._update_subscriptions()
 
-        is_expired = self.clock.utc_now() >= self._chain.expiry_date
+        is_expired = self.clock.utc_now() >= self.chain.expiry_date
         if is_expired:
             raise ContractExpired(
-                f"The chain failed to roll from {self._chain.current_month} to {self._chain.forward_month} before expiry date {self._chain.expiry_date}",
+                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
             )
 
         self._attempt_roll()
@@ -95,12 +95,12 @@ class ContinuousData(Actor):
         if current_timestamp != forward_timestamp:
             return
 
-        in_roll_window = (current_timestamp >= self._chain.roll_date) and (current_timestamp < self._chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
 
         if not in_roll_window:
             return
 
-        self._chain.roll()
+        self.chain.roll()
         self._manage_subscriptions()
 
     def _manage_subscriptions(self) -> None:

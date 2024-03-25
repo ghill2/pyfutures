@@ -25,7 +25,7 @@ from pyfutures.continuous.data import ContractExpired
 
 
 class TestContinuousData:
-    def setup(self):
+    def setup_method(self):
         config = BacktestEngineConfig(
             logging=LoggingConfig(bypass_logging=True),
             run_analysis=False,
@@ -56,7 +56,6 @@ class TestContinuousData:
                 TestInstrumentProvider.future(
                     symbol=f"MES=2021{letter_month}",
                     venue="SIM",
-                    exchange="SIM",
                 )
             )
 
@@ -66,12 +65,13 @@ class TestContinuousData:
             start_month=ContractMonth("2021H"),
         )
 
-        self._continuous_data = ContinuousData(
+        self.data = ContinuousData(
             bar_type=bar_type,
             chain_config=chain_config,
         )
 
-        self.engine.add_actor(self._continuous_data)
+        self.engine.add_actor(self.data)
+        self.msgbus = self.engine.kernel.msgbus
 
     def test_contract_expired_raises(self):
         # Arrange
@@ -87,6 +87,50 @@ class TestContinuousData:
         # Act & Assert
         with pytest.raises(ContractExpired):
             self.engine.run()
+
+    def test_initialize_sets_expected_attributes(self):
+        # Arrange & Act
+
+        # Assert
+        assert self.data.current_bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.previous_bar_type == BarType.from_str("MES=2020Z.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.forward_bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.carry_bar_type == BarType.from_str("MES=2021J.SIM-1-DAY-MID-EXTERNAL")
+
+        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
+        assert sub_topics == [
+            "data.bars.MES=2021H.SIM-1-DAY-MID-EXTERNAL",
+            "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
+        ]
+
+    def test_roll_sets_expected_attributes(self):
+        # Arrange
+
+        data = [
+            ("MES=2021H.SIM", "2021-03-09"),
+            ("MES=2021M.SIM", "2021-03-09"),
+            ("MES=2021H.SIM", "2021-03-10"),
+            ("MES=2021M.SIM", "2021-03-10"),
+            ("MES=2021M.SIM", "2021-03-11"),  # rolled
+        ]
+
+        bars = self._create_bars(data)
+        self.engine.add_data(bars)
+
+        # Act
+        self.engine.run()
+
+        # Assert
+        assert self.data.current_bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.previous_bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.forward_bar_type == BarType.from_str("MES=2021U.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.carry_bar_type == BarType.from_str("MES=2021N.SIM-1-DAY-MID-EXTERNAL")
+
+        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
+        assert sub_topics == [
+            "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
+            "data.bars.MES=2021U.SIM-1-DAY-MID-EXTERNAL",
+        ]
 
     def _create_bars(self, data: list[tuple]) -> list[Bar]:
         return [

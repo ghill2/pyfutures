@@ -1,18 +1,17 @@
 import pandas as pd
-from nautilus_trader.common.component import Clock
-from nautilus_trader.common.component import Logger
+from nautilus_trader.common.actor import Actor
 from nautilus_trader.model.identifiers import InstrumentId
 
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
 
 
-class ContractChain:
+class ContractChain(Actor):
     def __init__(
         self,
         config: ContractChainConfig,
-        clock: Clock,
     ):
+        super().__init__()
         self.instrument_id = config.instrument_id
         self.rolls = pd.DataFrame(columns=["timestamp", "to_month"])
         self.current_month: ContractMonth | None = None
@@ -37,10 +36,7 @@ class ContractChain:
         assert self.carry_offset == 1 or self.carry_offset == -1
         assert self.start_month in self.hold_cycle
 
-        self._log = Logger(name=type(self).__name__)
-        self._clock = clock
-
-    def start(self) -> None:
+    def on_start(self) -> None:
         self.roll(to_month=self.start_month)
 
     def roll(
@@ -72,7 +68,8 @@ class ContractChain:
             f"Rolled {self.previous_contract_id} > {self.current_contract_id}",
         )
 
-        self.rolls.loc[len(self.rolls)] = (self._clock.utc_now(), self.current_month)
+        now = self._clock.timestamp_ns()
+        self.rolls.loc[len(self.rolls)] = (now, self.current_month)
 
     def roll_window(
         self,

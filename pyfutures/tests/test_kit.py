@@ -441,7 +441,6 @@ class IBTestProviderStubs:
             axis=1,
         )
 
-        # BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL")
         df["chain_config"] = df.apply(
             lambda row: ContractChainConfig(
                 instrument_id=row.instrument_id,
