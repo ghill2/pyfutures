@@ -12,6 +12,7 @@ from pyfutures.tests.bytestring.mock_server_subproc import MockServerSubproc
 from typing import Dict
 from pytest import StashKey, CollectReport
 import pickle
+from _pytest.mark import Mark
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
@@ -32,7 +33,14 @@ def pytest_runtest_makereport(item, call):
 
 # to handle non default client params:
 # https://stackoverflow.com/a/77674640
-#
+def get_marker(request, name) -> Mark:
+    markers = list(request.node.iter_markers(name))
+    if len(markers) > 1:
+        pytest.fail(f"Found multiple markers for {name}")
+    return markers[0]
+
+
+##########
 def _log_bytestrings(path):
     print("==== BYTESTRINGS ====")
     _bstream = pickle.load(open(path, "rb"))
@@ -79,7 +87,7 @@ async def mock_server_subproc(event_loop, mode):
 
 
 @pytest_asyncio.fixture(scope="session")
-async def bytestring_client(event_loop, mode):
+async def bytestring_client(request, event_loop, mode):
     event_loop.set_debug(True)
     init_logging()
     port = 8890 if mode == "unit" else 4002
@@ -94,6 +102,9 @@ async def client(request, bytestring_client, mock_server_subproc, mode):
     bytestring_path = parent / f"{test_filename}={test_fn_name}.json"
 
     if mock_server_subproc is not None:  # --unit
+        assert (
+            bytestring_path.exists()
+        ), f"Bytestrings do not exist at path: {bytestring_path}"
         # load bytestrings for the test and wait until they have loaded
         # _log_bytestrings(bytestring_path)
         await mock_server_subproc.load_bytestrings(path=str(bytestring_path))
@@ -105,12 +116,6 @@ async def client(request, bytestring_client, mock_server_subproc, mode):
 
         bytestring_client.conn.protocol.enable_bytestrings()
 
-        # def teardown_on_success():
-        #     if request.node.result.passed:
-        #         bytestring_client.conn.protocol.export_bytestrings(path=bytestring_path)
-        #
-        # request.addfinalizer(teardown_on_success)
-        #
     yield bytestring_client
 
     if mode == "export":
@@ -122,11 +127,3 @@ async def client(request, bytestring_client, mock_server_subproc, mode):
 
         if report["call"].outcome == "passed":
             bytestring_client.conn.protocol.export_bytestrings(path=bytestring_path)
-
-        # if report["setup"].failed:
-        #     print("setting up a test failed or skipped", request.node.nodeid)
-        # elif ("call" not in report) or report["call"].failed:
-        #     print("executing test failed or skipped", request.node.nodeid)
-        #
-        # report = request.config.pluginmanager.getplugin("pytest").lastitem.report
-        # if report.passed:

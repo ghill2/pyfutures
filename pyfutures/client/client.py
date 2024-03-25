@@ -260,10 +260,10 @@ class InteractiveBrokersClient:
     ) -> list[IBContractDetails]:
         self._log.debug(f"Requesting contract details for {contract=}")
 
-        request = self.conn._create_request(
-            id=self.conn._next_request_id(),
+        request = self._create_request(
+            id=self._next_request_id(),
             data=[],
-            timeout_seconds=self.request_timeout_seconds,
+            timeout_seconds=self._request_timeout_seconds,
         )
 
         self._eclient.reqContractDetails(reqId=request.id, contract=contract)

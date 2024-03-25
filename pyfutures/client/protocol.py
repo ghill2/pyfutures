@@ -63,7 +63,7 @@ class Protocol(asyncio.Protocol):
 
     def data_received(self, data):
         self._log.debug("========== RESPONSE ==========")
-        self._log.debug(f"<-- {data}")
+        self._log.debug(f"<-- {pprint(data)}")
         bufs = parse_buffer(data)
         for buf in bufs:
             fields = buf.split(b"\0")
