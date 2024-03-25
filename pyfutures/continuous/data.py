@@ -85,19 +85,21 @@ class ContinuousData(Actor):
             self._adjust()
 
         is_last = self._last_current is not None and self._last_current == self.current_bar
-        if not is_last:
-            self.adjusted.append(float(self.current_bar.close))
-
-            assert self.current_bar is not None  # design-time error
-
-            self.current_bars.append(self.current_bar)
-
-            self.msgbus.publish(
-                topic=self.topic,
-                msg=self.current_bar,
-            )
-
         self._last_current = self.current_bar
+
+        if is_last:
+            return
+
+        self.adjusted.append(float(self.current_bar.close))
+
+        assert self.current_bar is not None  # design-time error
+
+        self.current_bars.append(self.current_bar)
+
+        self.msgbus.publish(
+            topic=self.topic,
+            msg=self.current_bar,
+        )
 
     def _should_roll(self) -> bool:
         current_bar = self.cache.bar(self.current_bar_type)
@@ -131,6 +133,15 @@ class ContinuousData(Actor):
         self.unsubscribe_bars(self.previous_bar_type)
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
+
+    def _update_instruments(self) -> None:
+        """
+        How to make sure we have the real expiry date from the contract when it calculates?
+        The roll attempts needs the expiry date of the current contract.
+        The forward contract always cached, therefore the expiry date of the current contract
+            will be available directly after a roll.
+        Cache the contracts after every roll, and run them on a timer too.
+        """
 
     def _make_bar_type(self, instrument_id: InstrumentId) -> BarType:
         return BarType(

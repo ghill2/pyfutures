@@ -38,28 +38,7 @@ async def write_spread(write: bool = False):
 
     rows = IBTestProviderStubs.universe_rows(
         filter=[
-            "6B",
-            "6C",
-            "6E",
-            "6J",
-            "6M",
-            "6N",
-            "6S",
-            "6Z",
-            "E7",
-            "GC",
-            "HG",
-            "M6A",
-            "M6E",
-            "MGC",
-            "MHG",
-            "PA",
-            "PL",
-            "RP",
-            "RY",
-            "SI",
-            "SIL",
-            "",
+            "6L",
         ],
     )
     for row in rows:
