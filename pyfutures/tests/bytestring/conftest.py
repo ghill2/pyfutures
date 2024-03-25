@@ -13,6 +13,24 @@ from typing import Dict
 from pytest import StashKey, CollectReport
 import pickle
 from _pytest.mark import Mark
+from ibapi.contract import Contract as IBContract
+
+
+####
+
+
+def create_dc_cont_contract() -> IBContract:
+    contract = IBContract()
+    contract.tradingClass = "DC"
+    contract.symbol = "DA"
+    contract.exchange = "CME"
+    contract.secType = "CONTFUT"
+    return contract
+
+
+@pytest.fixture(scope="session")
+def dc_cont_contract():
+    return create_dc_cont_contract()
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
@@ -82,7 +100,6 @@ async def mock_server_subproc(event_loop, mode):
         mock_server_subproc = MockServerSubproc(loop=event_loop)
         await mock_server_subproc.start()
         return mock_server_subproc
-        # tear down
     return None
 
 

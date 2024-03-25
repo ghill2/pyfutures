@@ -6,6 +6,7 @@ import sys
 from pyfutures import PACKAGE_ROOT
 from pyfutures.logger import LoggerAdapter
 import pytest
+from contextlib import suppress
 
 
 class MockServerSubproc:
@@ -41,12 +42,12 @@ class MockServerSubproc:
         )
 
         # wait until the server socket is ready
-        self._server_ready_waiter = self._loop.create_future()
-        self._log.debug("Waiting for mock_server to ready...")
-        try:
-            await self._server_ready_waiter
-        finally:
-            self._server_ready_waiter = None
+        # self._server_ready_waiter = self._loop.create_future()
+        # self._log.debug("Waiting for mock_server to ready...")
+        # try:
+        #     await self._server_ready_waiter
+        # finally:
+        #     self._server_ready_waiter = None
 
         return self._proc
 
@@ -55,24 +56,21 @@ class MockServerSubproc:
         await self._proc.stdin.drain()
 
         self._bytestrings_ready_waiter = self._loop.create_future()
-        self._log.debug("Waiting for mock_server to ready...")
+        self._log.debug("Loading Bytestrings...")
         try:
             await self._bytestrings_ready_waiter
         finally:
             self._bytestrings_ready_waiter = None
 
-    async def cleanup(self):
-        self.on_subproc_exit_task.cancel()
-        self._read_stdout_task.cancel()
-        self._read_stderr_task.cancel()
-        self._loop.stop()
-
     # Tasks
     async def _on_subproc_exit_task(self):
-        await self._proc.wait()
-        self._log.debug("mock_server exited...")
-        self.cleanup()
-        # pytest.fail("Test failed due to condition in MyClass")
+        try:
+            await self._proc.wait()
+            self._log.error("mock_server exited - CANCELLING ALL TASKS...")
+            for task in asyncio.all_tasks():
+                task.cancel()
+        except Exception as e:
+            self._log.exception("mock_server_subproc on_subproc_exit_task exception", e)
 
     async def read_stdout_task(self):
         try:
@@ -83,10 +81,9 @@ class MockServerSubproc:
                 buf = buf.rstrip(b"\n")
                 if not buf:
                     continue
-
                 if buf == b"MOCK_SERVER READY":
-                    self._server_ready_waiter.set_result(None)
-                    self._log.debug("mock_server ready...")
+                    self._bytestrings_ready_waiter.set_result(None)
+                    self._log.debug("mock_server - bytestrings ready...")
 
                 if buf == b"BYTESTRINGS READY":
                     self._log.debug("Bytestrings ready...")

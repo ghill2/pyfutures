@@ -77,8 +77,11 @@ class Protocol(asyncio.Protocol):
     def eof_received(self):
         self._log.error("eof received")
 
+        if self._bstream is not None:
+            self._bstream[-1][1].append(["eof"])
+
     def connection_lost(self, exc):
-        self._log.exception("connection lost", exc)
+        self._log.error("connection lost")
         self._connection_lost_callback()
 
     def sendMsg(self, msg: str):
@@ -88,11 +91,12 @@ class Protocol(asyncio.Protocol):
         and startApi
         """
         self._log.debug(f"--> sendMsg: {repr(msg)}")
-        msg_bytes = comm.make_msg(msg)
+
         if self._bstream is not None:
             ascii_fields = msg.split("\x00")
             self._bstream.append([ascii_fields, []])
 
+        msg_bytes = comm.make_msg(msg)
         self.write(msg_bytes)
 
     def write(self, msg: bytes):
@@ -109,14 +113,14 @@ class Protocol(asyncio.Protocol):
             self._bstream.append([["handshake"], []])
             self._bstream.append([["startapi"], []])
 
-        self._is_connected_waiter = self._loop.create_future()
-
-        try:
-            self._log.debug("Waiting until connected...")
-            await self._is_connected_waiter
-        finally:
-            self._log.info("- Connected Successfully...")
-            self._is_connected_waiter = None
+        # self._is_connected_waiter = self._loop.create_future()
+        # try:
+        #
+        #     await self._is_connected_waiter
+        # finally:
+        #     self._log.info("- Connected Successfully...")
+        #     self._is_connected_waiter = None
+        #
 
     def enable_bytestrings(self):
         self._bstream: list[[str, list[str]]] = []

@@ -501,10 +501,11 @@ class InteractiveBrokersClient:
     def nextValidId(self, orderId: int):
         self._log.debug(f"nextValidId {orderId}")
 
-        _waiter = self.conn.protocol._is_connected_waiter
-        if _waiter is not None:
-            if not _waiter.cancelled():
-                _waiter.set_result(None)
+        self.conn.is_connected.set()
+        # _waiter = self.conn.._is_connected_waiter
+        # if _waiter is not None:
+        #     if not _waiter.cancelled():
+        #         _waiter.set_result(None)
 
         request_id = self._request_id_map["next_order_id"]
         request = self._requests.get(request_id)

@@ -40,70 +40,76 @@ def stdout(buf):
 
 
 class BytestreamReplay:
-    def __init__(self, data):
+    def __init__(self, data, mock_server):
         self._data = data
+        self._mock_server = mock_server
         self._bpos = 0
 
     def current(self):
         return self._data[self._bpos]
 
-    def send_responses(self, writer):
+    async def send_responses(self, writer):
         """
         Sends all response / read bufs for the associated write
         """
         req_res = self._data[self._bpos]
         for res_fields in req_res[1]:
-            # add null separators
-            msg = ""
-            for field in res_fields:
-                msg = msg + comm.make_field(field)
-            msg = comm.make_msg(msg)  # add struct prefix
-            writer.write(msg)
+            # for field in res_fields:
+            # stdout(field.encode("ascii"))
+            if res_fields[0] == "eof":
+                server = self._mock_server.server
+                server.close()
+                writer.write_eof()
+                await server.wait_closed()
+            else:
+                # add null separators
+                msg = ""
+                for field in res_fields:
+                    msg = msg + comm.make_field(field)
+                msg = comm.make_msg(msg)  # add struct prefix
+                writer.write(msg)
         self._bpos = self._bpos + 1
 
 
-class IO:
+class MockServer:
     def __init__(self) -> None:
         self._breplay: BytestreamReplay | None = None
+
         self._handshake_recv = asyncio.Event()
         self._startapi_recv = asyncio.Event()
+        # when handshake+startapi have been received
         self._is_connected = asyncio.Event()
 
-    async def read_stdin_task(self):
-        try:
-            while True:
-                await asyncio.sleep(0)
-                data = await self.stdin.read(4096)
-                if not data:
-                    continue
-                stdout(b"mock_server stdin: " + data)
-                path = Path(data.decode("utf-8"))
-                # bytestream = pickle.load(open(path, "rb"))
-                with open(path) as file:
-                    bytestream = json.load(file)
-                len_bytestream_b = str(len(bytestream)).encode("utf-8")
-                stdout(b"Loaded " + len_bytestream_b + b" requests to replay...")
-                self._breplay = BytestreamReplay(data=bytestream)
-                self._handshake_recv.clear()
-                self._startapi_recv.clear()
-                self._is_connected.clear()
-                stdout(b"BYTESTRINGS READY")
-        except Exception:
-            print(traceback.print_exc())
-            exit()
+        self.server = None
 
-    async def setup_stdin_stdout(self):
-        loop = asyncio.get_event_loop()
-        reader = asyncio.StreamReader()
-        protocol = asyncio.StreamReaderProtocol(reader)
-        await loop.connect_read_pipe(lambda: protocol, sys.stdin)
-        w_transport, w_protocol = await loop.connect_write_pipe(
-            asyncio.streams.FlowControlMixin, sys.stdout
+    async def restart_serve_forever(self):
+        """
+        Creates and serves the forever until
+        A coroutine initiates a server restart
+        """
+        # while True:
+        stdout(b"(re)Starting subproc Server...")
+        # Stop the current server
+        # if self.server is not None:
+        # self.server.close()
+        # await self.server.wait_closed()
+
+        # Clear connection status flags
+        self._handshake_recv.clear()
+        self._startapi_recv.clear()
+        self._is_connected.clear()
+
+        #
+        stdout(b"mock_server started on port 8890")
+        self.server = await asyncio.start_server(
+            self.handle_client, "localhost", 8890, reuse_port=True, start_serving=False
         )
-        global STDOUT
-        STDOUT = asyncio.StreamWriter(w_transport, w_protocol, reader, loop)
-        self.stdin = reader
-        return reader
+        await asyncio.sleep(1)
+
+        try:
+            await self.server.serve_forever()
+        except asyncio.CancelledError:
+            await self.restart_serve_forever()
 
     async def handle_client(self, reader, writer):
         """
@@ -127,19 +133,19 @@ class IO:
                         ascii_fields = [f.decode("ascii") for f in fields]
                         assert ascii_fields == _breplay_current
 
-                        self._breplay.send_responses(writer)
+                        await self._breplay.send_responses(writer)
                 else:
                     buf = data
                     handshake_bytes = b"API\x00\x00\x00\x00\tv176..176"
                     if buf.startswith(handshake_bytes):
                         assert self._breplay.current()[0] == ["handshake"]
-                        self._breplay.send_responses(writer)
+                        await self._breplay.send_responses(writer)
                         buf = buf.removeprefix(handshake_bytes)
                         self._handshake_recv.set()
                     # stdout(b"remaining buf for start API is: " + buf)
                     if buf.startswith(b"\x00\x00\x00") and b"71\x002\x00" in buf:
                         assert self._breplay.current()[0] == ["startapi"]
-                        self._breplay.send_responses(writer)
+                        await self._breplay.send_responses(writer)
                         self._startapi_recv.set()
 
                     if self._handshake_recv.is_set() and self._startapi_recv.is_set():
@@ -149,23 +155,58 @@ class IO:
             exit()
 
 
+async def read_stdin_task(reader, mock_server):
+    try:
+        while True:
+            await asyncio.sleep(0)
+            data = await reader.read(4096)
+            if not data:
+                continue
+            stdout(b"mock_server stdin: " + data)
+            path = Path(data.decode("utf-8"))
+            with open(path) as file:
+                bytestream = json.load(file)
+            len_bytestream_b = str(len(bytestream)).encode("utf-8")
+            stdout(b"Loaded " + len_bytestream_b + b" requests to replay...")
+            mock_server._breplay = BytestreamReplay(
+                data=bytestream, mock_server=mock_server
+            )
+
+            # subprocess started but server has not been instantiated on the first read
+            while mock_server.server is None:
+                await asyncio.sleep(0)
+
+            # wait until server is accepting new connections
+            while not mock_server.server.is_serving():
+                await asyncio.sleep(0)
+
+            stdout(b"BYTESTRINGS READY")
+    except Exception:
+        print(traceback.print_exc())
+        exit()
+
+
 async def main():
-    io = IO()
-    await io.setup_stdin_stdout()
-    stdout(b"Subprocess Started...")
-    port = 8890
-
-    asyncio.create_task(io.read_stdin_task(), name="mock_server read_stdin_task")
-
-    server = await asyncio.start_server(
-        io.handle_client,
-        "localhost",
-        port,
-        reuse_port=True,
+    # setup stdin stdout
+    loop = asyncio.get_event_loop()
+    reader = asyncio.StreamReader()
+    protocol = asyncio.StreamReaderProtocol(reader)
+    await loop.connect_read_pipe(lambda: protocol, sys.stdin)
+    w_transport, w_protocol = await loop.connect_write_pipe(
+        asyncio.streams.FlowControlMixin, sys.stdout
     )
-    stdout(b"mock_server started on port {port}...")
-    stdout(b"MOCK_SERVER READY")
-    await server.serve_forever()
+    global STDOUT
+    STDOUT = asyncio.StreamWriter(w_transport, w_protocol, reader, loop)
+
+    # instantiate server and serve forever
+    mock_server = MockServer()
+
+    # start task to read and react from stdin
+    asyncio.create_task(
+        read_stdin_task(reader, mock_server), name="mock_server read_stdin_task"
+    )
+
+    await mock_server.restart_serve_forever()
 
 
 if __name__ == "__main__":

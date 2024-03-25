@@ -25,6 +25,8 @@ class Connection:
         self._subscriptions = subscriptions
         self.host = host
         self.port = port
+        self.is_connected = asyncio.Event()
+        self._is_connected_lock = asyncio.Lock()
 
         self.reconnect_task: asyncio.Task | None = None
 
@@ -36,28 +38,36 @@ class Connection:
             fields_received_callback=fields_received_callback,
         )
 
-        self._is_connected_waiter = None
+        # self._is_connected_waiter = None
 
     def _connection_lost_callback(self):
         print("connection lost callback")
+        self.is_connected.clear()
         self.reconnect_task = self._loop.create_task(
             self._reconnect_task(), name="reconnect"
         )
 
     async def _connect(self):
-        self._log.info("Connecting...")
-        await self.create_connection(self._loop, self.protocol, self.host, self.port)
-        await self.protocol.perform_handshake()
+        async with self._is_connected_lock:
+            self._log.info("Connecting...")
+            await self.create_connection(
+                self._loop, self.protocol, self.host, self.port
+            )
+            await self.protocol.perform_handshake()
 
-        # reconnect subscriptions
-        if len(self._subscriptions) > 0:
-            self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
-            for sub in self._subscriptions.values():
-                sub.subscribe()
+            self._log.debug("Waiting until connected...")
+            await asyncio.wait_for(self.is_connected.wait(), timeout=5)
+            self._log.info("- Connected Successfully...")
 
-        if self.reconnect_task is not None:
-            self.reconnect_task.cancel()
-            self._log.info("Reconnect task cancelled...")
+            # reconnect subscriptions
+            if len(self._subscriptions) > 0:
+                self._log.debug(f"Reconnecting subscriptions {self._subscriptions=}")
+                for sub in self._subscriptions.values():
+                    sub.subscribe()
+
+            if self.reconnect_task is not None:
+                self.reconnect_task.cancel()
+                self._log.info("Reconnect task cancelled...")
 
     @staticmethod
     async def create_connection(loop, protocol, host, port):
