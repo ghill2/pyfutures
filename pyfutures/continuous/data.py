@@ -101,6 +101,7 @@ class ContinuousData(Actor):
             return
 
         self._chain.roll()
+        self._manage_subscriptions()
 
     def _manage_subscriptions(self) -> None:
         """
