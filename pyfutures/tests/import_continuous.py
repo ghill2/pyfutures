@@ -21,9 +21,12 @@ def validate(row: dict) -> None:
     #     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
     #     df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
     #     df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
-    #     df = df[(df.month == "2004K") | (df.month == "2004K")]
-    #     # print(df)
-    #     # print(len(df))
+
+    #     start, end = row.chain.roll_window(ContractMonth("2004G"))
+    #     roll_window_mask = (df.timestamp >= start) & (df.timestamp < end)
+    #     month_mask = (df.month == "2004G") | (df.month == "2004Q")
+    #     df = df[roll_window_mask & month_mask]
+    #     print(df)
 
     print(f"Validating {row.trading_class}: end_month={row.end_month} {len(bars)} bars...")
 
@@ -50,14 +53,16 @@ def validate(row: dict) -> None:
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        filter=["ECO"],
+        # filter=["ECO"],
         # skip=["NIFTY"],
     )
     # items = [r.chain_config.roll_config.approximate_expiry_offset for r in rows]
-    for row in rows:
-        validate(row)
+    # for row in rows:
+    #     validate(row)
 
-    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
+    import joblib
+
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])

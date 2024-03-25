@@ -424,35 +424,40 @@ class IBTestProviderStubs:
         )
 
         df["skip_months"] = df.skip_months.apply(
-            lambda x: list(
-                map(
-                    ContractMonth,
-                    x.replace(" ", "").split(",") if not isinstance(x, float) else [],
-                )
-            )
+            lambda x: None if isinstance(x, float) else [ContractMonth(s) for s in x.replace(" ", "").split(",")]
         )
 
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
-                hold_cycle=RangedRollCycle.from_str(row.hold_cycle) if "," in row.hold_cycle else RollCycle(row.hold_cycle),
+                hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.skip_months)
+                if "," in row.hold_cycle
+                else RollCycle(row.hold_cycle, skip_months=row.skip_months),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
                 carry_offset=row.carry_offset,
-                # skip_months=row.missing_months,
+                skip_months=row.skip_months,
             ),
             axis=1,
         )
+
         # BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL")
         df["chain_config"] = df.apply(
             lambda row: ContractChainConfig(
                 instrument_id=row.instrument_id,
                 roll_config=row.roll_config,
                 start_month=row.start_month,
-                skip_months=row.skip_months,
             ),
             axis=1,
         )
+
+        # df["chain"] = df.apply(
+        #     lambda row: ContractChain(
+        #         config=row.chain_config,
+        #         clock=TestComponentStubs.clock(),
+        #     ),
+        #     axis=1,
+        # )
 
         df["price_precision"] = df.apply(
             lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),

@@ -29,14 +29,6 @@ class ContinuousBarWrangler:
         self._start_month = self._chain_config.start_month
         assert self._end_month > self._start_month
 
-        self._roll_config = self._chain_config.roll_config
-        self._approximate_expiry_offset = self._roll_config.approximate_expiry_offset
-        self._roll_offset = self._roll_config.roll_offset
-
-        self._priced_cycle = self._chain_config.roll_config.priced_cycle
-        self._carry_offset = self._chain_config.roll_config.carry_offset
-        self._hold_cycle = self._chain_config.roll_config.hold_cycle
-
         self._chain = ContractChain(
             config=self._chain_config,
             clock=TestComponentStubs.clock(),
@@ -68,15 +60,17 @@ class ContinuousBarWrangler:
                 timestamps_by_month[month] = set()
             timestamps_by_month[month].add(bar.ts_init)
 
-        hold_months = self._hold_cycle.get_months(self._start_month, self._end_month)
+        hold_months = self._chain.hold_cycle.get_months(self._start_month, self._end_month)
 
         missing = [m.value for m in [*hold_months, self._end_month] if timestamps_by_month.get(m.value) is None]
 
         symbol = self._chain_config.instrument_id.symbol.value
+
         if len(missing) > 0:
             raise ValueError(f"Data validation failed: {symbol} has no timestamps in months {missing}")
 
         for current_month in hold_months:
+            # print(f"Validating {symbol}={current_month}")
             start, end = self._chain.roll_window(month=current_month)
             start_ns = dt_to_unix_nanos(start)
             end_ns = dt_to_unix_nanos(end)
@@ -89,7 +83,7 @@ class ContinuousBarWrangler:
                 )
 
             # check forward contract timestamps exist in roll window
-            forward_month = self._hold_cycle.next_month(current_month)
+            forward_month = self._chain.hold_cycle.next_month(current_month)
             forward_timestamps = {t for t in timestamps_by_month[forward_month.value] if t >= start_ns and t < end_ns}
             if len(forward_timestamps) == 0:
                 raise ValueError(

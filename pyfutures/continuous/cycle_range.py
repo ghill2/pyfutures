@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Generator
 from dataclasses import dataclass
 
 from pyfutures.continuous.contract_month import ContractMonth
@@ -87,7 +86,7 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.next_month(current=current)
 
-        raise RuntimeError
+        raise RuntimeError  # design-time error
 
     def previous_month(self, current: ContractMonth) -> ContractMonth:
         for i, r in enumerate(self.ranges):
@@ -99,10 +98,12 @@ class RangedRollCycle:
             if current in r:
                 return r.cycle.previous_month(current=current)
 
-        raise RuntimeError
+        raise RuntimeError  # design-time error
 
-    def iterate(self, start: ContractMonth, end: ContractMonth) -> Generator[None, None, ContractMonth]:
+    def get_months(self, start: ContractMonth, end: ContractMonth) -> set[ContractMonth]:
+        months = set()
         assert start in self
         while start < end:
-            yield start
+            months.add(start)
             start = self.next_month(start)
+        return months

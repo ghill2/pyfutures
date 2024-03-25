@@ -4,10 +4,16 @@ from pyfutures.continuous.contract_month import ContractMonth
 
 
 class RollCycle:
-    def __init__(self, value: str):
+    def __init__(
+        self,
+        value: str,
+        skip_months: list[ContractMonth] | None = None,
+    ):
         assert isinstance(value, str)
 
         self.value = "".join(sorted(value))
+
+        self._skip_months = skip_months or []
 
     def next_month(self, current: ContractMonth) -> ContractMonth:
         """
@@ -32,6 +38,9 @@ class RollCycle:
             letter_month = self.value[self.value.index(letter_month) + 1]
 
         month = ContractMonth(f"{year}{letter_month}")
+
+        while month in self._skip_months:
+            month = self.next_month(current=month)
 
         return month
 
@@ -58,6 +67,9 @@ class RollCycle:
             letter_month = self.value[self.value.index(letter_month) - 1]
 
         month = ContractMonth(f"{year}{letter_month}")
+
+        while month in self._skip_months:
+            month = self.next_month(current=month)
 
         return month
 
@@ -105,15 +117,15 @@ class RollCycle:
 
     def get_months(self, start: ContractMonth, end: ContractMonth) -> set[ContractMonth]:
         months = set()
-        if start.letter_month not in self.value:
-            start = self._closest_next(start)
+        assert start in self
         while start < end:
             months.add(start)
             start = self.next_month(start)
         return months
 
     def __getstate__(self):
-        return (self.value,)
+        return (self.value, self._skip_months)
 
     def __setstate__(self, state):
         self.value = state[0]
+        self._skip_months = state[1]
