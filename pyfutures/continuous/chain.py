@@ -30,7 +30,6 @@ class ContractChain(Actor):
         self.hold_cycle = config.roll_config.hold_cycle
         self.approximate_expiry_offset = config.roll_config.approximate_expiry_offset
         self.start_month = config.start_month
-        self.config = config
 
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1

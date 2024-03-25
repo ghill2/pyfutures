@@ -1,3 +1,5 @@
+from collections import deque
+
 import pandas as pd
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.component import TimeEvent
@@ -7,7 +9,6 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
 
 from pyfutures.continuous.chain import ContractChain
-from pyfutures.continuous.config import ContractChainConfig
 
 
 class ContractExpired(Exception):
@@ -18,11 +19,14 @@ class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
-        chain_config: ContractChainConfig,
+        chain: ContractChain,
     ):
         super().__init__()
         self.bar_type = bar_type
-        self.chain = ContractChain(config=chain_config)
+        self.chain = chain
+        self.adjusted = deque(maxlen=None)
+
+        self._last_current: Bar | None = None
 
     @property
     def current_bar_type(self) -> BarType:
@@ -38,26 +42,19 @@ class ContinuousData(Actor):
 
     @property
     def carry_bar_type(self) -> BarType:
-        return self._make_bar_type(self.chain.current_contract_id)
+        return self._make_bar_type(self.chain.carry_contract_id)
 
     @property
     def current_bar(self) -> Bar:
         return self.cache.bar(self.current_bar_type, 0)
 
     @property
-    def forward_bar(self) -> Bar:
-        return self.cache.bar(self.forward_bar_type, 0)
-
-    @property
-    def carry_bar(self) -> Bar:
-        return self.cache.bar(self.carry_bar_type, 0)
-
-    @property
     def previous_bar(self) -> Bar:
         return self.cache.bar(self.previous_bar_type, 0)
 
     def on_start(self) -> None:
-        self.chain.start(clock=self.clock)
+        assert len(self.chain.rolls) > 0
+        self._manage_subscriptions()
 
         interval = self.bar_type.spec.timedelta
         now = unix_nanos_to_dt(self.clock.timestamp_ns())
@@ -71,37 +68,47 @@ class ContinuousData(Actor):
         )
 
     def _handle_time_event(self, event: TimeEvent) -> None:
-        # manage subscriptions
-        # TODO: self._update_subscriptions()
-
         is_expired = self.clock.utc_now() >= self.chain.expiry_date
         if is_expired:
             raise ContractExpired(
                 f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
             )
 
-        self._attempt_roll()
+        should_roll: bool = self._should_roll()
+        if should_roll:
+            self.chain.roll()
+            self._manage_subscriptions()
+            self._adjust()
 
-    def _attempt_roll(self) -> None:
+        is_last = self._last_current is not None and self._last_current == self.current_bar
+        if not is_last:
+            self.adjusted.append(float(self.current_bar.close))
+
+        self._last_current = self.current_bar
+
+    def _should_roll(self) -> bool:
         current_bar = self.cache.bar(self.current_bar_type)
         forward_bar = self.cache.bar(self.forward_bar_type)
 
         if current_bar is None or forward_bar is None:
-            return
+            return False
 
         forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
         current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
 
         if current_timestamp != forward_timestamp:
-            return
+            return False
 
         in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
 
-        if not in_roll_window:
-            return
+        return in_roll_window
 
-        self.chain.roll()
-        self._manage_subscriptions()
+    def _adjust(self):
+        adjustment_value = float(self.current_bar.close) - float(self.previous_bar.close)
+        self.adjusted = deque(
+            [x + adjustment_value for x in self.adjusted],
+            maxlen=self.adjusted.maxlen,
+        )
 
     def _manage_subscriptions(self) -> None:
         """

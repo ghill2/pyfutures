@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from pytower import PACKAGE_ROOT
-
 import datetime
+import inspect
 import logging
+import os
 import re
 import sys
+import time
 import traceback
 from pathlib import Path
-import time
-import inspect
-import os
 
 
 NORMAL = 0
@@ -103,9 +101,10 @@ class LoggerAdapter:
             )
             self.logger.addHandler(handler)
 
-    # @classmethod
-    # def set_timestamp_ns(cls, timestamp_ns: int) -> None:
-    #     cls._timestamp_ns = timestamp_ns
+    @classmethod
+    def set_timestamp_ns(cls, timestamp_ns: int) -> None:
+        # required to set the timestamp from nautilus trader
+        cls._timestamp_ns = timestamp_ns
 
     @classmethod
     def from_name(cls, name: str) -> LoggerAdapter:
