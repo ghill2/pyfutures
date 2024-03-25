@@ -2,13 +2,13 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.enums import BarAggregation
 from nautilus_trader.model.enums import PriceType
 from nautilus_trader.model.functions import bar_aggregation_from_str
 from nautilus_trader.persistence.wranglers import BarDataWrangler
 
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.portara import PortaraData
 from pyfutures.tests.test_kit import CATALOG
 from pyfutures.tests.test_kit import IBTestProviderStubs

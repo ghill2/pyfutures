@@ -1,9 +1,10 @@
 import pandas as pd
 from nautilus_trader.common.component import Clock
 from nautilus_trader.common.component import Logger
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class ContractChain:
@@ -39,6 +40,8 @@ class ContractChain:
         self._start_month = config.start_month
         assert self._start_month in self._hold_cycle
 
+        self._skip_months = config.skip_months or []
+
     def start(self) -> None:
         self.roll(to_month=self._start_month)
 
@@ -51,6 +54,9 @@ class ContractChain:
         Rolls to the next month in the hold cycle if no `ContractMonth` is passed.
         """
         to_month = to_month or self._hold_cycle.next_month(self.current_month)
+
+        while to_month in self._skip_months:
+            to_month = self._hold_cycle.next_month(self.current_month)
 
         self.current_month = to_month
         self.previous_month = self._hold_cycle.previous_month(self.current_month)
@@ -71,7 +77,7 @@ class ContractChain:
             f"Rolled {self.previous_contract_id} > {self.current_contract_id}",
         )
 
-        # self.rolls.loc[len(self.rolls)] = (self._clock.utc_now(), self.current_month)
+        self.rolls.loc[len(self.rolls)] = (self._clock.utc_now(), self.current_month)
 
     def roll_window(
         self,

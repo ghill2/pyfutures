@@ -1,11 +1,9 @@
 from collections import deque
 
 import pandas as pd
-from nautilus_trader.common.actor import Actor
-from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.data import DataType
-from nautilus_trader.continuous.bar import ContinuousBar
+
+from pyfutures.continuous.bar import ContinuousBar
 
 
 class AdjustedPrices:
@@ -39,10 +37,9 @@ class AdjustedPrices:
         return next(self.values)
 
     def on_continuous_bar(self, bar: ContinuousBar) -> None:
-        
         if self._last is None or self._last.current_bar.bar_type == bar.current_bar.bar_type:
             self.values.append(float(bar.close))
             return
-        
+
         adjustment_value = float(bar.current_bar.close) - float(bar.previous_bar.close)
         self.values = deque([x + adjustment_value for x in self.values], maxlen=self.maxlen)

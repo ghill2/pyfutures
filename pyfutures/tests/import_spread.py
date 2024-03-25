@@ -37,7 +37,30 @@ async def write_spread(write: bool = False):
     cache.purge_errors(asyncio.TimeoutError)
 
     rows = IBTestProviderStubs.universe_rows(
-        filter=["6A"],
+        filter=[
+            "6B",
+            "6C",
+            "6E",
+            "6J",
+            "6M",
+            "6N",
+            "6S",
+            "6Z",
+            "E7",
+            "GC",
+            "HG",
+            "M6A",
+            "M6E",
+            "MGC",
+            "MHG",
+            "PA",
+            "PL",
+            "RP",
+            "RY",
+            "SI",
+            "SIL",
+            "",
+        ],
     )
     for row in rows:
         schedule = row.liquid_schedule
@@ -72,8 +95,71 @@ async def write_spread(write: bool = False):
                 df.to_parquet(path, index=False)
 
 
+async def find_spread_values():
+    """
+    6A: 8.30 > 16.00
+    6B: 8.30 > 16.00
+    """
+    row = IBTestProviderStubs.universe_rows(
+        filter=["6C"],
+    )[0]
+    schedule = row.liquid_schedule
+    client: InteractiveBrokersClient = ClientStubs.client(
+        request_timeout_seconds=60 * 10,
+        override_timeout=False,
+        api_log_level=logging.ERROR,
+    )
+
+    end_time = pd.Timestamp.utcnow().floor(pd.Timedelta(days=1)) - pd.Timedelta(days=1)
+    start_time = end_time - pd.Timedelta(days=128)
+    open_times = schedule.to_open_range(
+        start_date=start_time,
+        end_date=end_time,
+    )
+    open_times = [t for t in open_times if t.dayofweek == 3]
+    open_time = open_times[::-1][0]
+
+    await client.connect()
+    await client.request_market_data_type(4)
+
+    seconds_in_hour: int = 60 * 60
+    seconds_in_day: int = seconds_in_hour * 24
+
+    df = await client.request_bars(
+        contract=row.contract_cont,
+        bar_size=BarSize._5_SECOND,
+        what_to_show=WhatToShow.BID,
+        duration=Duration(seconds_in_day, Frequency.SECOND),
+        end_time=open_time.ceil(pd.Timedelta(hours=1)),
+        cache=None,
+        as_dataframe=True,
+        delay=0.5,
+    )
+    # df = await historic.request_quotes(
+    #     contract=row.contract_cont,
+    #     # start_time=open_time.floor(pd.Timedelta(days=1)),
+    #     start_time=open_time.floor(pd.Timedelta(days=1)),
+    #     end_time=open_time.ceil(pd.Timedelta(days=1)),
+    #     cache=None,
+    #     as_dataframe=True,
+    #     delay=0.5,
+    # )
+    with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", None):
+        if df.empty:
+            print("empty")
+            return
+
+        df["local"] = df.timestamp.dt.tz_convert(row.timezone)
+        df["dayofweek"] = df.local.dt.dayofweek
+        # path = Path.home() / "Desktop/DC.parquet"
+        print(open_time, open_time.dayofweek)
+        print(df)
+        # df.to_parquet(path, index=False)
+
+
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(write_spread(write=True))
+    # asyncio.get_event_loop().run_until_complete(find_spread_values())
 
 
 # async def write_spread(write: bool = False):

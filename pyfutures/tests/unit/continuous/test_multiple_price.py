@@ -1,13 +1,14 @@
 import pickle
 
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.price import MultiplePrice
 from nautilus_trader.model.objects import Price
 from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
+
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.price import MultiplePrice
 
 
 class TestMultiplePrice:

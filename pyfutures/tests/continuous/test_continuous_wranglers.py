@@ -3,11 +3,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from nautilus_trader import PACKAGE_ROOT
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.config import RollConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.cycle import RollCycle
-from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.nautilus_pyo3 import DataBackendSession
 from nautilus_trader.core.nautilus_pyo3 import NautilusDataType
@@ -17,6 +12,12 @@ from nautilus_trader.model.data import capsule_to_list
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
+
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.config import RollConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.wranglers import ContinuousBarWrangler
 
 
 class TestContinuousWrangler:

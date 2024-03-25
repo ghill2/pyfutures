@@ -6,8 +6,8 @@ from nautilus_trader.common.enums import LogLevel
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.objects import Price
 
-from nautilus_trader.continuous.config import FuturesChainConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.config import FuturesChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 init_logging(level_stdout=LogLevel.DEBUG)

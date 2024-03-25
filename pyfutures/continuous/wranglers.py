@@ -1,17 +1,11 @@
-from nautilus_trader.backtest.engine import BacktestEngine
-from nautilus_trader.backtest.engine import BacktestEngineConfig
-from nautilus_trader.config import LoggingConfig
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.data import ContinuousData
 from nautilus_trader.core.correctness import PyCondition
 from nautilus_trader.core.datetime import dt_to_unix_nanos
-from nautilus_trader.model.currencies import USD
 from nautilus_trader.model.data import Bar
-from nautilus_trader.model.enums import AccountType
-from nautilus_trader.model.enums import OmsType
-from nautilus_trader.model.objects import Money
-from nautilus_trader.tests.test_kit.providers import TestInstrumentProvider
+from nautilus_trader.test_kit.stubs.component import TestComponentStubs
+
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class ContinuousBarWrangler:
@@ -41,52 +35,12 @@ class ContinuousBarWrangler:
 
         self._priced_cycle = self._chain_config.roll_config.priced_cycle
         self._carry_offset = self._chain_config.roll_config.carry_offset
-
         self._hold_cycle = self._chain_config.roll_config.hold_cycle
 
-        self._chain = ContinuousData(config=self._chain_config)
-
-    def process(
-        self,
-        bars: list[Bar],
-    ) -> list[Bar]:
-        bars = sorted(bars, key=lambda x: x.ts_init)
-        self.validate(bars)
-
-        config = BacktestEngineConfig(
-            logging=LoggingConfig(bypass_logging=True),
-            run_analysis=False,
+        self._chain = ContractChain(
+            config=self._chain_config,
+            clock=TestComponentStubs.clock(),
         )
-        engine = BacktestEngine(config=config)
-
-        engine.add_data(bars, validate=False)
-
-        venue = bars[0].bar_type.instrument_id.venue
-        engine.add_venue(
-            venue=venue,
-            oms_type=OmsType.HEDGING,
-            account_type=AccountType.MARGIN,
-            base_currency=USD,
-            starting_balances=[Money(1_000_000, USD)],
-        )
-
-        results = []
-        engine.kernel.msgbus.subscribe(
-            topic=f"data.bars.{self._chain.bar_type}",
-            handler=results.append,
-        )
-
-        engine.add_actor(self._chain)
-
-        symbol = bars[0].bar_type.instrument_id.symbol.value
-        contracts = TestInstrumentProvider.future(
-            symbol=symbol,
-            venue=venue.value,
-        )
-        engine.add_instruments(contracts)
-        engine.run()
-
-        engine.dispose()
 
     def validate(self, bars: list[Bar]) -> None:
         """
@@ -118,10 +72,7 @@ class ContinuousBarWrangler:
 
         missing = [m.value for m in [*hold_months, self._end_month] if timestamps_by_month.get(m.value) is None]
 
-        symbol = "=".join(
-            self._chain_config.bar_type.instrument_id.symbol.value.split("=")[:-2],
-        )
-
+        symbol = self._chain_config.instrument_id.symbol.value
         if len(missing) > 0:
             raise ValueError(f"Data validation failed: {symbol} has no timestamps in months {missing}")
 
@@ -151,3 +102,45 @@ class ContinuousBarWrangler:
                 raise ValueError(
                     f"Data validation failed: {symbol}: {current_month} and {forward_month} have no matching timestamps in roll window {start} to {end}",
                 )
+
+    # def process(
+    #     self,
+    #     bars: list[Bar],
+    # ) -> list[Bar]:
+    #     bars = sorted(bars, key=lambda x: x.ts_init)
+    #     self.validate(bars)
+
+    #     config = BacktestEngineConfig(
+    #         logging=LoggingConfig(bypass_logging=True),
+    #         run_analysis=False,
+    #     )
+    #     engine = BacktestEngine(config=config)
+
+    #     engine.add_data(bars, validate=False)
+
+    #     venue = bars[0].bar_type.instrument_id.venue
+    #     engine.add_venue(
+    #         venue=venue,
+    #         oms_type=OmsType.HEDGING,
+    #         account_type=AccountType.MARGIN,
+    #         base_currency=USD,
+    #         starting_balances=[Money(1_000_000, USD)],
+    #     )
+
+    #     results = []
+    #     engine.kernel.msgbus.subscribe(
+    #         topic=f"data.bars.{self._chain.bar_type}",
+    #         handler=results.append,
+    #     )
+
+    #     engine.add_actor(self._chain)
+
+    #     symbol = bars[0].bar_type.instrument_id.symbol.value
+    #     contracts = TestInstrumentProvider.future(
+    #         symbol=symbol,
+    #         venue=venue.value,
+    #     )
+    #     engine.add_instruments(contracts)
+    #     engine.run()
+
+    #     engine.dispose()

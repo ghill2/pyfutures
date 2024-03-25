@@ -472,6 +472,11 @@ class InteractiveBrokersClient(EWrapper):
         """
         formatDate=1, returns timestamp in the exchange timezone
         formatDate=2, returns timestamp as integer seconds from epoch (UTC)
+        Two additional parameters to reqHistoricalData() calls are “useRTH” and “formatDate.”
+        If useRTH is set to 0, all data available during the time span requested is returned,
+        even data bars covering time intervals where the market in question was outside of its “Regular Trading Hours” (RTH).
+        If useRTH has a non-zero value, only data within the “Regular Trading Hours” of the product in question is returned,
+        even if the time span requested falls partially or completely outside of them.
         """
         start_time = end_time - duration.to_timedelta()
         self._log.info(f"{start_time} | {end_time} | {bar_size} | {duration} | {what_to_show} | {contract}")
@@ -491,7 +496,7 @@ class InteractiveBrokersClient(EWrapper):
                 durationStr=str(duration),
                 barSizeSetting=str(bar_size),
                 whatToShow=what_to_show.name,
-                useRTH=1,
+                useRTH=0,  # Data from regular trading hours (1), or all available hours (0) useRTH=1 returns data inside liquid hours only?
                 formatDate=2,
                 keepUpToDate=False,
                 chartOptions=[],
@@ -908,7 +913,6 @@ class InteractiveBrokersClient(EWrapper):
         self,
         contract: IBContract,
         what_to_show: WhatToShow,
-        use_rth: bool = True,
     ) -> pd.Timestamp | None:
         self._log.debug(
             f"Requesting head timestamp for {contract.symbol} {contract.exchange} {contract.conId}",
@@ -922,7 +926,7 @@ class InteractiveBrokersClient(EWrapper):
                 reqId=request.id,
                 contract=contract,
                 whatToShow=what_to_show.name,
-                useRTH=use_rth,
+                useRTH=0,
                 formatDate=1,
             )
 
@@ -1206,7 +1210,7 @@ class InteractiveBrokersClient(EWrapper):
             contract=contract,
             barSize="",  # currently being ignored
             whatToShow=what_to_show.name,
-            useRTH=True,
+            useRTH=0,
             realTimeBarsOptions=[],
         )
 
@@ -1248,7 +1252,7 @@ class InteractiveBrokersClient(EWrapper):
             durationStr=bar_size.to_duration().value,
             barSizeSetting=str(bar_size),
             whatToShow=what_to_show.value,
-            useRTH=True,
+            useRTH=0,
             formatDate=1,
             keepUpToDate=True,
             chartOptions=[],
@@ -1498,7 +1502,7 @@ class InteractiveBrokersClient(EWrapper):
             # durationStr="5 D",
             barSizeSetting="1 day",
             whatToShow="SCHEDULE",
-            useRTH=1,
+            useRTH=0,
             formatDate=2,
             keepUpToDate=False,
             chartOptions=[],

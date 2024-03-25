@@ -2,9 +2,10 @@ from typing import Annotated, Literal
 
 from msgspec import Meta
 from nautilus_trader.common.config import NautilusConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.cycle import RollCycle
 from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
 
 
 # An integer constrained to values <= 0
@@ -50,8 +51,11 @@ class ContractChainConfig(NautilusConfig, frozen=True):
         The configuration for the rolls
     start_month : ContractMonth
         The starting month to roll to when started
+    skip_months : list[ContractMonth], optional
+        The months to skip in the hold cycle
     """
 
     instrument_id: InstrumentId
     roll_config: RollConfig
     start_month: ContractMonth
+    skip_months: list[ContractMonth] | None

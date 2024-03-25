@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class RollCycle:

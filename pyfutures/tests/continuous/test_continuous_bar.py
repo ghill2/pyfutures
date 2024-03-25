@@ -1,6 +1,5 @@
 import pickle
 
-from nautilus_trader.continuous.bar import ContinuousBar
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
@@ -9,6 +8,8 @@ from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
 from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
 from nautilus_trader.serialization.arrow.serializer import register_arrow
+
+from pyfutures.continuous.bar import ContinuousBar
 
 
 class TestContinuousBar:

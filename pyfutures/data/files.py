@@ -24,9 +24,8 @@ from nautilus_trader.model.identifiers import Venue
 from nautilus_trader.model.instruments.base import Instrument
 from nautilus_trader.persistence.catalog.parquet import ParquetDataCatalog
 from nautilus_trader.persistence.funcs import urisafe_instrument_id
-from nautilus_trader.serialization.arrow.serializer import ArrowSerializer
 
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.core.datetime import unix_nanos_to_dt_vectorized
 from pyfutures.data.conversion import bar_to_bar
 from pyfutures.data.writer import BarParquetWriter
@@ -420,19 +419,19 @@ class ParquetFile:
 #     EQUITY = 5
 
 
-        # elif self.cls is MultipleBar:
-        #     df = pd.read_parquet(self.path)
-        #     assert not df.empty
-        #     records = df.to_dict(orient="records")
-        #     return [MultipleBar.from_dict(d) for d in records]
+# elif self.cls is MultipleBar:
+#     df = pd.read_parquet(self.path)
+#     assert not df.empty
+#     records = df.to_dict(orient="records")
+#     return [MultipleBar.from_dict(d) for d in records]
 
-            # prices = []
-            # for batch in pq.ParquetFile(self.path).iter_batches():
-            #     deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
-            #     prices.extend(deserialized)
+# prices = []
+# for batch in pq.ParquetFile(self.path).iter_batches():
+#     deserialized = ArrowSerializer.deserialize(data_cls=MultipleBar, batch=batch)
+#     prices.extend(deserialized)
 
-            # return prices
-            # elif self.cls is MultipleBar:
-        #     return MultipleBarParquetWriter(path=self.path, instrument=instrument)
-        # elif value.lower() == "multiplebar":
-        #     return MultipleBar
+# return prices
+# elif self.cls is MultipleBar:
+#     return MultipleBarParquetWriter(path=self.path, instrument=instrument)
+# elif value.lower() == "multiplebar":
+#     return MultipleBar

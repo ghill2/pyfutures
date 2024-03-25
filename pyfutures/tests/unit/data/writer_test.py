@@ -17,7 +17,7 @@ from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.test_kit.stubs.data import TestDataStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.data.writer import BarParquetWriter
 from pyfutures.data.writer import MultipleBarParquetWriter
 from pyfutures.data.writer import QuoteTickParquetWriter

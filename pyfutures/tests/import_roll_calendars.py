@@ -4,9 +4,9 @@ import joblib
 import pandas as pd
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 
-from nautilus_trader.continuous.chain import ContractChain
+from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.chain2 import TestContractProvider
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 

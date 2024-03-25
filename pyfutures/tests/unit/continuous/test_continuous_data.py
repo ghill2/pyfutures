@@ -18,8 +18,8 @@
 # from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 # from nautilus_trader.model.identifiers import InstrumentId
 # from pyfutures.continuous.chain import ContractChain
-# from nautilus_trader.continuous.config import ContractChainConfig
-# from nautilus_trader.continuous.config import RollConfig
+# from pyfutures.continuous.config import ContractChainConfig
+# from pyfutures.continuous.config import RollConfig
 # from pyfutures.continuous.contract_month import ContractMonth
 # from pyfutures.continuous.data import MultipleData
 

@@ -3,9 +3,9 @@ import pickle
 import pandas as pd
 import pytest
 
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle_range import RangedRollCycle
-from nautilus_trader.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle_range import RollCycleRange
 
 

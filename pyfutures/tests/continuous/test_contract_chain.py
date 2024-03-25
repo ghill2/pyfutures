@@ -2,12 +2,6 @@ import pandas as pd
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.backtest.engine import BacktestEngineConfig
 from nautilus_trader.config import LoggingConfig
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.config import RollConfig
-from nautilus_trader.continuous.contract_month import LETTER_MONTHS
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.cycle import RollCycle
-from nautilus_trader.continuous.data import ContinuousData
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.model.currencies import USD
 from nautilus_trader.model.data import Bar
@@ -19,6 +13,13 @@ from nautilus_trader.model.objects import Money
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
+
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.config import RollConfig
+from pyfutures.continuous.contract_month import LETTER_MONTHS
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.data import ContinuousData
 
 
 class TestContractChain:

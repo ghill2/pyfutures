@@ -1,12 +1,13 @@
 import pandas as pd
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.component import TimeEvent
-from nautilus_trader.continuous.chain import ContractChain
-from nautilus_trader.continuous.config import ContractChainConfig
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.identifiers import InstrumentId
+
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
 
 
 class ContractExpired(Exception):

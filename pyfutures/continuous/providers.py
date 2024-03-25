@@ -4,7 +4,7 @@ from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.instruments.futures_contract import FuturesContract
 
-from nautilus_trader.continuous.contract_month import ContractMonth
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 class ContractProvider(InstrumentProvider):

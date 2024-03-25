@@ -1,11 +1,4 @@
-import joblib
-from nautilus_trader.continuous.bar import ContinuousBar
-from nautilus_trader.continuous.wranglers import ContinuousBarWrangler
-from nautilus_trader.serialization.arrow.serializer import make_dict_deserializer
-from nautilus_trader.serialization.arrow.serializer import make_dict_serializer
-from nautilus_trader.serialization.arrow.serializer import register_arrow
-
-from pyfutures.tests.test_kit import CATALOG
+from pyfutures.continuous.wranglers import ContinuousBarWrangler
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -28,7 +21,7 @@ def validate(row: dict) -> None:
     #     df = pd.DataFrame(Bar.to_dict(b) for b in bars)
     #     df["timestamp"] = df.ts_init.apply(unix_nanos_to_dt)
     #     df["month"] = df.bar_type.apply(str).str.split("=").str.get(-1).str.split(".").str.get(0)
-    #     df = df[(df.month == "1999U") | (df.month == "1999U")]
+    #     df = df[(df.month == "2004K") | (df.month == "2004K")]
     #     # print(df)
     #     # print(len(df))
 
@@ -38,34 +31,33 @@ def validate(row: dict) -> None:
         config=row.chain_config,
         end_month=row.end_month,
     )
+    wrangler.validate(bars)
+    # bars: list[ContinuousBar] = wrangler.process(bars)
 
-    bars: list[ContinuousBar] = wrangler.process(bars)
-    print(len(bars))
+    # register_arrow(
+    #     data_cls=ContinuousBar,
+    #     schema=ContinuousBar.schema(),
+    #     encoder=make_dict_serializer(schema=ContinuousBar.schema()),
+    #     decoder=make_dict_deserializer(data_cls=ContinuousBar),
+    # )
 
-    register_arrow(
-        data_cls=ContinuousBar,
-        schema=ContinuousBar.schema(),
-        encoder=make_dict_serializer(schema=ContinuousBar.schema()),
-        decoder=make_dict_deserializer(data_cls=ContinuousBar),
-    )
-
-    CATALOG.write_chunk(
-        data=bars,
-        data_cls=ContinuousBar,
-        instrument_id=str(row.chain_config.bar_type),
-    )
+    # CATALOG.write_chunk(
+    #     data=bars,
+    #     data_cls=ContinuousBar,
+    #     instrument_id=str(row.chain_config.bar_type),
+    # )
 
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["XK"],
+        filter=["ECO"],
         # skip=["NIFTY"],
     )
     # items = [r.chain_config.roll_config.approximate_expiry_offset for r in rows]
-    # for row in rows:
-    #     validate(row)
+    for row in rows:
+        validate(row)
 
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
+    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])

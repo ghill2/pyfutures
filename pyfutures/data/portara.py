@@ -3,8 +3,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from nautilus_trader.continuous.contract_month import ContractMonth
 from nautilus_trader.model.enums import BarAggregation
+
+from pyfutures.continuous.contract_month import ContractMonth
 
 
 PORTARA_DATA_FOLDER = Path("/Users/g1/Desktop/portara data george")

@@ -9,12 +9,6 @@ from pathlib import Path
 import pandas as pd
 import pytz
 from ibapi.contract import Contract as IBContract
-from nautilus_trader.continuous.bar import ContinuousBar
-from nautilus_trader.continuous.chain import ContractChain
-from nautilus_trader.continuous.config import ContractChainConfig
-from nautilus_trader.continuous.config import RollConfig
-from nautilus_trader.continuous.contract_month import ContractMonth
-from nautilus_trader.continuous.cycle import RollCycle
 from nautilus_trader.core.data import Data
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
@@ -41,6 +35,12 @@ from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.adapter.parsing import create_contract
+from pyfutures.continuous.bar import ContinuousBar
+from pyfutures.continuous.chain import ContractChain
+from pyfutures.continuous.config import ContractChainConfig
+from pyfutures.continuous.config import RollConfig
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.cycle_range import RangedRollCycle
 from pyfutures.data.files import ParquetFile
 from pyfutures.schedule.schedule import MarketSchedule
@@ -423,7 +423,7 @@ class IBTestProviderStubs:
             axis=1,
         )
 
-        df["missing_months"] = df.missing_months.apply(
+        df["skip_months"] = df.skip_months.apply(
             lambda x: list(
                 map(
                     ContractMonth,
@@ -434,23 +434,22 @@ class IBTestProviderStubs:
 
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
-                hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.missing_months)
-                if "," in row.hold_cycle
-                else RollCycle(row.hold_cycle, skip_months=row.missing_months),
+                hold_cycle=RangedRollCycle.from_str(row.hold_cycle) if "," in row.hold_cycle else RollCycle(row.hold_cycle),
                 priced_cycle=RollCycle(row.priced_cycle),
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
                 carry_offset=row.carry_offset,
-                skip_months=row.missing_months,
+                # skip_months=row.missing_months,
             ),
             axis=1,
         )
-
+        # BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL")
         df["chain_config"] = df.apply(
             lambda row: ContractChainConfig(
-                bar_type=BarType.from_str(f"{row.instrument_id}-1-DAY-MID-EXTERNAL"),
+                instrument_id=row.instrument_id,
                 roll_config=row.roll_config,
                 start_month=row.start_month,
+                skip_months=row.skip_months,
             ),
             axis=1,
         )
