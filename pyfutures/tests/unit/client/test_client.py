@@ -296,6 +296,7 @@ class TestInteractiveBrokersClient:
         pass
 
     @pytest.mark.asyncio()
+    @pytest.mark.lock()
     async def test_request_open_orders(self):
         # Arrange
         def send_mocked_response(*args, **kwargs):

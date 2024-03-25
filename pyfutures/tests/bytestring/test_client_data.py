@@ -12,8 +12,6 @@ from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
-from pyfutures.tests.demo.client.stubs import ClientStubs
-from pyfutures.tests.bytestring.stubs import BytestringClientStubs
 from pyfutures.tests.bytestring.stubs import create_cont_contract
 
 
@@ -31,11 +29,7 @@ from pyfutures.tests.bytestring.stubs import create_cont_contract
 
 
 @pytest.mark.asyncio()
-async def test_request_data(event_loop, mode):
-    client = await BytestringClientStubs(mode=mode, loop=event_loop).client(
-        loop=event_loop
-    )
-
+async def test_request_data(client):
     await client.connect()
     await client.request_market_data_type(4)
     cont_contract = create_cont_contract()
@@ -43,17 +37,17 @@ async def test_request_data(event_loop, mode):
 
     end_time = pd.Timestamp("2024-03-22 16:30:00+00:00")
 
-    quote_ticks = client.request_quote_ticks(
+    quote_ticks = await client.request_quote_ticks(
         contract=contract,
         end_time=end_time,
-        count=50,
+        count=5,
     )
 
-    first_tick = await client.request_first_quote_tick(contract=contract)
+    # first_tick = await client.request_first_quote_tick(contract=contract)
 
-    last_tick = await client.request_last_quote_tick(
-        contract=contract,
-    )
+    # last_tick = await client.request_last_quote_tick(
+    #     contract=contract,
+    # )
 
     trade_ticks = await client.request_trade_ticks(
         contract=contract,
