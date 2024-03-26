@@ -36,6 +36,8 @@ class ContinuousData(Actor):
         self.hold_cycle = config.hold_cycle
         self.approximate_expiry_offset = config.approximate_expiry_offset
         self.start_month = start_month
+        self.continuous = deque(maxlen=maxlen)
+        self.adjusted: list[float] = []
 
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
@@ -43,14 +45,6 @@ class ContinuousData(Actor):
         
         self._maxlen = maxlen
         self._timer_name = f"chain_{self.bar_type}"
-    
-    @property
-    def continuous_bars(self) -> list[ContinuousBar]:
-        return self._load_continuous_bars()
-    
-    @property
-    def adjusted(self) -> list[float]:
-        return self._load_adjusted()
     
     @property
     def current_bar_type(self) -> BarType:
@@ -169,78 +163,6 @@ class ContinuousData(Actor):
         roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
         return (roll_date, expiry_date)
     
-    def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
-        self._update_cache(bar)
-    
-    def _update_cache(self, bar: ContinuousBar) -> None:
-        
-        # append continuous bar to the cache
-        bars = self._load_continuous_bars()
-        bars.append(bar)
-        bars = bars[-self._maxlen:]
-        assert len(bars) <= self._maxlen
-        
-        self._save_continuous_bars(bars)
-        
-        # update the adjusted series to the cache
-        adjusted: list[float] = self._calculate_adjusted(bars)
-        self._save_adjusted(adjusted)
-    
-    def _load_continuous_bars(self) -> list[ContinuousBar]:
-        key = str(self.bar_type)
-        data: bytes | None = self.cache.get(key)
-        if data is None:
-            return []
-        data: list[dict] = pickle.loads(data)
-        return [ContinuousBar.from_dict(b) for b in data]
-        
-    def _save_continuous_bars(self, bars: list[ContinuousBar]) -> None:
-        bars: list[dict] = [ContinuousBar.to_dict(b) for b in bars]
-        data: bytes = pickle.dumps(bars)
-        key = str(self.bar_type)
-        self.cache.add(key, data)
-    
-    def _calculate_adjusted(self, bars: list[ContinuousBar]) -> list[float]:
-        """
-        creating the adjusted from the continuous bars
-        iterate over continuous bars backwards
-        when it rolls shift the prices by the adjustment value from the bar after the roll
-        """
-        if len(bars) == 0:
-            return []
-        elif len(bars) == 1:
-            return [float(bars[0].current_bar.close)]
-        
-        values = deque()
-        values.appendleft(bars[-1])
-        
-        adjustment_value = 0
-        
-        for i in range(0, len(bars) - 1, -1):
-            
-            current = bars[i]
-            forward = bars[i + 1]
-            
-            has_rolled = current.current_month != forward.current_month
-            if has_rolled:
-                adjustment_value = float(current.current_bar.close) - float(current.previous_bar.close)
-                
-            values.appendleft(
-                float(current.current_bar.close) + adjustment_value
-            )
-            
-        return list(values)
-    
-    def _save_adjusted(self, adjusted: list[float]) -> None:
-        data: bytes = pickle.dumps(adjusted)
-        key = f"{self.bar_type}a"
-        self.cache.add(key, data)
-        
-    def _load_adjusted(self) -> list[float]:
-        key = f"{self.bar_type}a"
-        data: bytes = self.cache.get(key, data)
-        return pickle.loads(data)
-        
     def _manage_subscriptions(self) -> None:
         """
         Update the subscriptions after the roll.
@@ -277,7 +199,91 @@ class ContinuousData(Actor):
             will be available directly after a roll.
         Cache the contracts after every roll, and run them on a timer too.
         """
+    
+    def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
+        # most outer layer method for testing purposes
+        self.continuous.append(bar)
+        self.adjusted = continuous_to_adjusted(list(self.continuous))
+        pass
+    
+def continuous_to_adjusted(bars: list[ContinuousBar]) -> list[float]:
+    """
+    creating the adjusted from the continuous bars
+    iterate over continuous bars backwards
+    when it rolls shift the prices by the adjustment value from the bar after the roll
+    """
+    if len(bars) == 0:
+        return []
+    elif len(bars) == 1:
+        return [float(bars[0].current_bar.close)]
+    
+    values = deque()
+    values.appendleft(bars[-1])
+    
+    adjustment_value = 0
+    
+    for i in range(0, len(bars) - 1, -1):
         
+        current = bars[i]
+        forward = bars[i + 1]
+        
+        has_rolled = current.current_month != forward.current_month
+        if has_rolled:
+            adjustment_value = float(current.current_bar.close) - float(current.previous_bar.close)
+            
+        values.appendleft(
+            float(current.current_bar.close) + adjustment_value
+        )
+        
+    return list(values)
+
+class CachedDeque(deque):
+    pass
+        
+class CachedData:
+    """
+    probably not required? it should save to the cache on_stop
+    """
+    
+    def _update_cache(self, bar: ContinuousBar) -> None:
+        
+        # append continuous bar to the cache
+        bars = self._load_continuous_bars()
+        bars.append(bar)
+        bars = bars[-self._maxlen:]
+        assert len(bars) <= self._maxlen
+        
+        self._save_continuous_bars(bars)
+        
+        # update the adjusted series to the cache
+        adjusted: list[float] = self._calculate_adjusted(bars)
+        self._save_adjusted(adjusted)
+    
+    def _load_continuous_bars(self) -> list[ContinuousBar]:
+        key = str(self.bar_type)
+        data: bytes | None = self.cache.get(key)
+        if data is None:
+            return []
+        data: list[dict] = pickle.loads(data)
+        return [ContinuousBar.from_dict(b) for b in data]
+        
+    def _save_continuous_bars(self, bars: list[ContinuousBar]) -> None:
+        bars: list[dict] = [ContinuousBar.to_dict(b) for b in bars]
+        data: bytes = pickle.dumps(bars)
+        key = str(self.bar_type)
+        self.cache.add(key, data)
+    
+    def _save_adjusted(self, adjusted: list[float]) -> None:
+        data: bytes = pickle.dumps(adjusted)
+        key = f"{self.bar_type}a"
+        self.cache.add(key, data)
+        
+    def _load_adjusted(self) -> list[float]:
+        key = f"{self.bar_type}a"
+        data: bytes = self.cache.get(key, data)
+        return pickle.loads(data)
+        
+
         
     # interval = self.bar_type.spec.timedelta
     # now = unix_nanos_to_dt(self.clock.timestamp_ns())

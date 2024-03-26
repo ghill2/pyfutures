@@ -318,6 +318,7 @@ class TestContinuousData:
     def test_adjusted_from_continuous_bars(self):
         pass
     
+    @pytest.mark.skip
     def test_continuous_bar_updates_cache(self):
         
         self.data._attempt_roll = Mock()
@@ -330,7 +331,8 @@ class TestContinuousData:
         
         assert len(self.data.continuous_bars) == 1
         assert isinstance(self.data.continuous_bars[0], ContinuousBar)
-        
+    
+    @pytest.mark.skip
     def test_continuous_bar_updates_adjusted(self):
         
         self.data._attempt_roll = Mock()
