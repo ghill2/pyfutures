@@ -202,9 +202,22 @@ class TestContinuousData:
         handle_mock.assert_called_once()
         time_event = handle_mock.call_args_list[0][0][0]
         assert time_event.ts_event == 1615248002000000000
-        
+    
+    
+    @pytest.mark.skip
+    def test_continuous_bar_cached(self):
+        pass
+    
+    @pytest.mark.skip
+    def test_adjusted_from_continuous_bars(self):
+        pass
+    
     @pytest.mark.skip
     def test_publish_and_store_on_unique_current_bar(self):
+        pass
+    
+    @pytest.mark.skip
+    def test_manage_subscriptions(self):
         pass
 
     def test_adjustment_appends_on_unique_current_bar(self):

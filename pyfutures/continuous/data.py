@@ -112,7 +112,10 @@ class ContinuousData(Actor):
         bars.append(bar)
         bars = bars[-self._maxlen:]
         assert len(bars) <= self._maxlen
-        self._save_continuous_bars()
+        
+        self._save_continuous_bars(bars)
+        adjusted: list[float] = self._calculate_adjusted(bars)
+        self._save_adjusted(adjusted)
     
     def _load_continuous_bars(self) -> list[ContinuousBar]:
         key = str(self.bar_type)
@@ -125,6 +128,19 @@ class ContinuousData(Actor):
         data: bytes = pickle.dumps(bars)
         
         key = str(self.bar_type)
+        self.cache.set(key, data)
+    
+    def _calculate_adjusted(self, bars: list[ContinuousBar]) -> list[float]:
+        """
+        remaking the adjusted from the continuous bars
+        iterate over continuous bars backwards
+        when it rolls shift the prices by the adjustment value from the bar after the roll
+        """
+        pass
+    
+    def _save_adjusted(self, adjusted: list[float]) -> None:
+        data: bytes = pickle.dumps(adjusted)
+        key = f"{self.bar_type}a"
         self.cache.set(key, data)
         
     def _should_roll(self) -> bool:
@@ -143,15 +159,6 @@ class ContinuousData(Actor):
         in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
 
         return in_roll_window
-    
-    @property
-    def adjusted(self) -> list[float]:
-        """
-        remaking the adjusted from the continuous bars
-        iterate over continuous bars backwards
-        when it rolls shift the prices by the adjustment value from the bar after the roll
-        """
-        bars = self._load_continuous_bars()
         
         # adjustment_value = float(self.current_bar.close) - float(self.previous_bar.close)
         # self.adjusted = deque(
