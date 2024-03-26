@@ -14,6 +14,40 @@ API > Settings > Send instrument-specific attributes for dual-mode API client in
 
 # TODO
 
+* How does the data module startup to the required state?
+- the data module creates current bars from per contract bars
+- per contract bars need to be requested in the on_start method
+
+OR
+
+- cache the continuous bars
+- on startup, start month of the most recent continuous bar
+- add continuous bar caching to the data module of maxlen
+
+each continuous bar stores it's adjustment value
+
+
+
+
+
+strategy reads from the cache and gets most recent continuous bar
+
+--------------------------
+
+
+Should the data module cache it's data in a database?
+
+
+cache instruments every hour and after each roll?
+create catalog with ib data append on startup, then request the last bit of data
+
+
+
+on startup the strategy looks for the current position in the chain from IB.
+if theres no position it will just open a new position based on the roll calendar
+
+
+
 * add assertion to endtime in request data methods in client
 
 * implement cache and delay for quote and trade ticks on client
