@@ -13,29 +13,12 @@ import json
 from pprint import pprint
 
 
-def parse_buffer(buf: bytes, cb: Callable):
-    """
-    Generator to parse all messages in the data / buffer
-    if the last message is incomplete, returns it
-    """
-
-    processed = 0
-    while processed < len(buf) - 1:
-        try:
-            size = struct.unpack("!I", buf[processed : processed + 4])[0]
-            end = processed + 4 + size
-            msg = struct.unpack("!%ds" % size, buf[processed + 4 : end])[0]
-        except struct.error as e:
-            if str(e).startswith("unpack requires a buffer of"):
-                break
-            else:
-                raise
-        else:
-            cb(msg)
-
-        buf = buf[end:]
-        processed = end
-    return buf
+# def parse_buffer(buf: bytes, cb: Callable):
+#     """
+#     Generator to parse all messages in the data / buffer
+#     if the last message is incomplete, returns it
+#     """
+#
 
 
 def create_handshake() -> bytes:
@@ -89,11 +72,23 @@ class Protocol(asyncio.Protocol):
         self._fields_received_callback(fields)
 
     def data_received(self, data):
-        self._log.debug("========== RESPONSE ==========")
-        self._log.debug(f"<-- {data}")
+        try:
+            self._log.debug("========== RESPONSE ==========")
 
-        self._buffer += data
-        parse_buffer(self._buffer, self.handle_message)
+            self._buffer += data
+
+            self._log.debug(f"<-- buffer: {self._buffer}")
+
+            while self._buffer:
+                _, msg, self._buffer = comm.read_msg(self._buffer)
+                if msg:
+                    self.handle_message(msg)
+                else:
+                    break
+        except Exception as e:
+            self._log.exception("protocol data_received exception: ", e)
+
+        print("EXITED WHILE LOOP")
 
     def eof_received(self):
         self._log.error("eof received")
@@ -134,15 +129,6 @@ class Protocol(asyncio.Protocol):
             self._bstream.append([["handshake"], []])
             self._bstream.append([["startapi"], []])
 
-        # self._is_connected_waiter = self._loop.create_future()
-        # try:
-        #
-        #     await self._is_connected_waiter
-        # finally:
-        #     self._log.info("- Connected Successfully...")
-        #     self._is_connected_waiter = None
-        #
-
     def enable_bytestrings(self):
         self._bstream: list[[str, list[str]]] = []
 
@@ -155,6 +141,37 @@ class Protocol(asyncio.Protocol):
         self._log.debug(f"Exporting bytestrings to: {path}")
         with open(path, "w") as f:
             json.dump(self._bstream, f, indent=4)
+
+        # self._is_connected_waiter = self._loop.create_future()
+        # try:
+        #
+        #     await self._is_connected_waiter
+        # finally:
+        #     self._log.info("- Connected Successfully...")
+        #     self._is_connected_waiter = None
+        #
+        # _buffer = parse_buffer(self._buffer, self.handle_message)
+        # processed = 0
+        # while processed < len(self._buffer) - 1:
+        #     if len(self._buffer) < 4:
+        #         break
+        #     try:
+        #         size = struct.unpack("!I", self._buffer[processed : processed + 4])[0]
+        #
+        #         chunk = self._buffer[processed + 4 : processed + 4 + size]
+        #         print("CHUNK")
+        #         print(chunk)
+        #         msg = struct.unpack("!%ds" % size, chunk)[0]
+        #
+        #     except struct.error as e:
+        #         if str(e).startswith("unpack requires a buffer of"):
+        #             print(e)
+        #         break
+        #     else:
+        #         print("DID NOT ERROR?")
+        #         processed = processed + 4 + size
+        #         self._buffer = self._buffer[processed:]
+        #         self.handle_message(msg)
 
     # def export_bytestrings(self, path: Path):
     #     if self._file is not None:

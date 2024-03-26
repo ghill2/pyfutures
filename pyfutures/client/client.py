@@ -539,10 +539,16 @@ class InteractiveBrokersClient:
         contract = detail.contract
 
         order = IBOrder()
+
+        # TODO?
+        if contract.exchange == "NSE" and contract.symbol == "NIFTY50":
+            order.totalQuantity = 50
+        else:
+            order.totalQuantity = detail.minSize
+
         order.orderId = await self.request_next_order_id()
         order.action = "BUY"
         order.whatIf = True
-        order.totalQuantity = detail.minSize
         order.orderType = "MKT"
         order.contract = contract
 
@@ -676,7 +682,6 @@ class InteractiveBrokersClient:
             f"openOrder {orderId}, orderStatus {orderState.status}, commission: {orderState.commission}{orderState.commissionCurrency}, completedStatus: {orderState.completedStatus}"
         )
         if request := self._requests.get(self._request_id_map["whatif"]):
-            print("IS WHAT IF")
             # if the order originated from request_whatif
             request.set_result(orderState)
             return
