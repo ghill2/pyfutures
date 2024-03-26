@@ -158,6 +158,7 @@ class ContinuousData(Actor):
         
         if current_timestamp >= start and current_timestamp < end:
             self.current_month = self.forward_month  # roll
+            self._manage_subscriptions()
                 
     def _roll_window(
         self,
@@ -169,7 +170,6 @@ class ContinuousData(Actor):
         return (roll_date, expiry_date)
     
     def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
-        self._manage_subscriptions()
         self._update_cache(bar)
     
     def _update_cache(self, bar: ContinuousBar) -> None:
