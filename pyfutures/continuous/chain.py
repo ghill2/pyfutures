@@ -44,11 +44,7 @@ class ContractChain(Actor):
         self.roll(to_month=self.start_month)
     
     def attempt_roll(self, bar: ContinuousBar):
-        is_expired = self.clock.utc_now() >= self.chain.expiry_date
-        if is_expired:
-            raise ContractExpired(
-                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
-            )
+        
         
         should_roll: bool = self._should_roll(bar)
         if should_roll:
@@ -132,13 +128,6 @@ class ContractChain(Actor):
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
     
-    def _update_instruments(self) -> None:
-        """
-        How to make sure we have the real expiry date from the contract when it calculates?
-        The roll attempts needs the expiry date of the current contract.
-        The forward contract always cached, therefore the expiry date of the current contract
-            will be available directly after a roll.
-        Cache the contracts after every roll, and run them on a timer too.
-        """
+    
 
 

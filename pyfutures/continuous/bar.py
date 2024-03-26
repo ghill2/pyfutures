@@ -1,5 +1,5 @@
-import pandas as pd
 from __future__ import annotations
+import pandas as pd
 
 import pyarrow as pa
 from nautilus_trader.core.correctness import PyCondition
@@ -78,7 +78,25 @@ class ContinuousBar(Data):
         if self.previous_bar is None:
             return None
         return ContractMonth(self.previous_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
-
+    
+    @property
+    def expiration_date(self) -> pd.Timestamp:
+        return unix_nanos_to_dt(self.expiration_ns)
+    
+    @property
+    def roll_date(self) -> pd.Timestamp:
+        return unix_nanos_to_dt(self.roll_ns)
+    
+    @property
+    def current_timestamp(self) -> pd.Timestamp:
+        return unix_nanos_to_dt(self.current_bar.ts_init)
+    
+    @property
+    def forward_timestamp(self) -> pd.Timestamp | None:
+        if self.forward_bar is None:
+            return None
+        return unix_nanos_to_dt(self.forward_bar.ts_init)
+    
     @staticmethod
     def schema() -> pa.Schema:
         return pa.schema(

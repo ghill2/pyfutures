@@ -14,45 +14,35 @@ from nautilus_trader.model.identifiers import InstrumentId
 
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.bar import ContinuousBar
+from pyfutures.continuous.contract_month import ContractMonth
+from pyfutures.continuous.config import RollConfig
+
+class ContractExpired(Exception):
+    pass
 
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
-        roll_config: RollConfig,
+        config: RollConfig,
+        start_month: ContractMonth,
         maxlen: int = 250,
     ):
         super().__init__()
         self.bar_type = bar_type
-        self.roll_offset = config.roll_config.roll_offset
-        self.carry_offset = config.roll_config.carry_offset
-        self.priced_cycle = config.roll_config.priced_cycle
-        self.hold_cycle = config.roll_config.hold_cycle
-        self.approximate_expiry_offset = config.roll_config.approximate_expiry_offset
-        self.start_month = config.start_month
+        self.roll_offset = config.roll_offset
+        self.carry_offset = config.carry_offset
+        self.priced_cycle = config.priced_cycle
+        self.hold_cycle = config.hold_cycle
+        self.approximate_expiry_offset = config.approximate_expiry_offset
+        self.start_month = start_month
 
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
         assert self.start_month in self.hold_cycle
         
-        self._last_current: Bar | None = None
         self._maxlen = maxlen
-
-    @property
-    def current_bar_type(self) -> BarType:
-        return self._make_bar_type(self.chain.current_contract_id)
-
-    @property
-    def previous_bar_type(self) -> BarType:
-        return self._make_bar_type(self.chain.previous_contract_id)
-
-    @property
-    def forward_bar_type(self) -> BarType:
-        return self._make_bar_type(self.chain.forward_contract_id)
-
-    @property
-    def carry_bar_type(self) -> BarType:
-        return self._make_bar_type(self.chain.carry_contract_id)
+        self._timer_name = f"chain_{self.bar_type}"
     
     @property
     def continuous_bars(self) -> list[ContinuousBar]:
@@ -62,6 +52,40 @@ class ContinuousData(Actor):
     def adjusted(self) -> list[float]:
         return self._load_adjusted()
     
+    @property
+    def current_bar_type(self) -> BarType:
+        return self._make_bar_type(self.current_month)
+
+    @property
+    def previous_month(self) -> ContractMonth:
+        return self.hold_cycle.previous_month(self.current_month)
+    @property
+    def previous_bar_type(self) -> BarType:
+        return self._make_bar_type(self.previous_month)
+    
+    @property
+    def forward_month(self) -> ContractMonth:
+        return self.hold_cycle.next_month(self.current_month)
+        
+    @property
+    def forward_bar_type(self) -> BarType:
+        return self._make_bar_type(self.forward_month)
+    
+    @property
+    def carry_month(self) -> ContractMonth:
+        if self.carry_offset == 1:
+            return self.priced_cycle.next_month(self.current_month)
+        elif self.carry_offset == -1:
+            return self.priced_cycle.previous_month(self.current_month)
+        
+    @property
+    def carry_bar_type(self) -> BarType:
+        return self._make_bar_type(self.carry_month)
+    
+    def on_start(self) -> None:
+        self.current_month = self.start_month
+        self._manage_subscriptions()
+        
     def handle_bar(self, bar: Bar) -> None:
         """
         schedule the timer to process the module after x seconds on current or forward bar
@@ -73,52 +97,78 @@ class ContinuousData(Actor):
         if not is_current and not is_forward:
             return
         
-        name = f"chain_{self.bar_type}"
-        if name in self.clock.timer_names:
+        if self._timer_name in self.clock.timer_names:
             return
         
         self.clock.set_time_alert_ns(
-            name=name,
+            name=self._timer_name,
             alert_time_ns=self.clock.timestamp_ns() + secs_to_nanos(2),
-            callback=self._handle_time_event,
+            callback=self._time_event_callback,
         )
-
-    def on_start(self) -> None:
-        assert len(self.chain.rolls) > 0
-        self._manage_subscriptions()
     
-    @property
-    def current_month(self):
-        
-        bars = self.continuous_bars
-        if len(bars) == 0:
-            return self._start_month
-        return self.continuous_bars[-1].current_month
-        
-    def _handle_time_event(self, event: TimeEvent) -> None:
+    def _time_event_callback(self, event: TimeEvent) -> None:
+        if self._timer_name in self.clock.timer_names:
+            self.clock.cancel_timer(self._timer_name)
+        self._handle_time_event(event)
+    
+    def _handle_time_event(self, _: TimeEvent) -> None:
         
         current_bar = self.cache.bar(self.current_bar_type)
         if current_bar is None:
             return
         
-        expiry_date = self.current_month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
-        roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
+        self._attempt_roll()
         
+        start, end = self._roll_window(self.current_month)
         continuous_bar = ContinuousBar(
             bar_type=self.bar_type,
-            current_bar=current_bar,
+            current_bar=self.cache.bar(self.current_bar_type),
             forward_bar=self.cache.bar(self.forward_bar_type),
             previous_bar=self.cache.bar(self.previous_bar_type),
             carry_bar=self.cache.bar(self.carry_bar_type),
             ts_init=self.clock.timestamp_ns(),
             ts_event=self.clock.timestamp_ns(),
-            expiration_ns=dt_to_unix_nanos(expiry_date),
-            roll_ns=dt_to_unix_nanos(expiry_date),
+            expiration_ns=dt_to_unix_nanos(end),
+            roll_ns=dt_to_unix_nanos(start),
         )
+        
         self._handle_continuous_bar(continuous_bar)
         
+    def _attempt_roll(self) -> None:
+        
+        start, end = self._roll_window(self.current_month)
+        
+        is_expired = self.clock.utc_now() >= end
+        if is_expired:
+            raise ContractExpired(
+                f"The chain failed to roll from {self.current_month} to {self.forward_month} before expiry date {end}",
+            )
+            
+        current_bar = self.cache.bar(self.current_bar_type)
+        forward_bar = self.cache.bar(self.forward_bar_type)
+        
+        if forward_bar is None:
+            return
+        
+        current_timestamp = unix_nanos_to_dt(current_bar.ts_init)
+        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_init)
+        
+        if current_timestamp != forward_timestamp:
+            return
+        
+        if current_timestamp >= start and current_timestamp < end:
+            self.current_month = self.forward_month  # roll
+                
+    def _roll_window(
+        self,
+        month: ContractMonth,
+    ) -> tuple[pd.Timestamp, pd.Timestamp]:
+        # TODO: for live environment the expiry date from the contract should be used
+        expiry_date = month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
+        return (roll_date, expiry_date)
+    
     def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
-        self.chain.attempt_roll(bar)
         self._manage_subscriptions()
         self._update_cache(bar)
     
@@ -202,13 +252,33 @@ class ContinuousData(Actor):
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
 
-    def _make_bar_type(self, instrument_id: InstrumentId) -> BarType:
+    def _make_bar_type(self, month: ContractMonth) -> BarType:
         return BarType(
-            instrument_id=instrument_id,
+            instrument_id=self.format_instrument_id(month),
             bar_spec=self.bar_type.spec,
             aggregation_source=self.bar_type.aggregation_source,
         )
-
+    
+    def format_instrument_id(self, month: ContractMonth) -> InstrumentId:
+        """
+        Format the InstrumentId for contract given the ContractMonth.
+        """
+        symbol = self.bar_type.instrument_id.symbol.value
+        venue = self.bar_type.instrument_id.venue.value
+        return InstrumentId.from_str(
+            f"{symbol}={month.year}{month.letter_month}.{venue}",
+        )
+    
+    def _update_instruments(self) -> None:
+        """
+        How to make sure we have the real expiry date from the contract when it calculates?
+        The roll attempts needs the expiry date of the current contract.
+        The forward contract always cached, therefore the expiry date of the current contract
+            will be available directly after a roll.
+        Cache the contracts after every roll, and run them on a timer too.
+        """
+        
+        
     # interval = self.bar_type.spec.timedelta
     # now = unix_nanos_to_dt(self.clock.timestamp_ns())
     # start_time = now.floor(interval) - interval + pd.Timedelta(seconds=5)
@@ -244,3 +314,4 @@ class ContinuousData(Actor):
 
         # if is_last:
         #     return
+        # self._last_current: Bar | None = None

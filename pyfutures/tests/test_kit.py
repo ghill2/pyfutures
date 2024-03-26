@@ -436,7 +436,6 @@ class IBTestProviderStubs:
                 roll_offset=row.roll_offset,
                 approximate_expiry_offset=row.expiry_offset,
                 carry_offset=row.carry_offset,
-                skip_months=row.skip_months,
             ),
             axis=1,
         )

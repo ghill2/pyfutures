@@ -52,6 +52,7 @@ class LoggerAttributes:
     id: str = ""
     level: int = logging.DEBUG
     path: Path | None = None
+    bypass: bool = False
 
 
 class StripANSIFileHandler(logging.FileHandler):
@@ -74,17 +75,18 @@ class LoggerAdapter:
     def __init__(
         self,
         name: str,
-        id: str = "N/A",
-        level: int = logging.DEBUG,
-        path: Path | None = None,
+        id: str,
+        level: int,
+        path: Path,
+        bypass: bool,
     ) -> None:
         self.id = id
         self.name = name
         self.level = level
         self.path = path
+        self.bypass = bypass
 
         self.logger = logging.Logger(name=name)
-        # super().__init__(name=name)
 
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(self.level)
@@ -110,9 +112,10 @@ class LoggerAdapter:
     def from_name(cls, name: str) -> LoggerAdapter:
         return cls(
             name=name,
-            id=getattr(LoggerAttributes, "id"),
-            level=getattr(LoggerAttributes, "level"),
-            path=getattr(LoggerAttributes, "path"),
+            id=LoggerAttributes.id,
+            level=LoggerAttributes.level,
+            path=LoggerAttributes.path,
+            bypass=LoggerAttributes.bypass,
         )
 
     def debug(
@@ -120,6 +123,8 @@ class LoggerAdapter:
         message: str,
         color: int = NORMAL,
     ):
+        if self.bypass:
+            return
         message = self._format_line(message=message, level=logging.DEBUG, color=color)
         self.logger.debug(message)
 
@@ -128,6 +133,8 @@ class LoggerAdapter:
         message: str,
         color: int = NORMAL,
     ):
+        if self.bypass:
+            return
         message: str = self._format_line(message=message, level=logging.INFO, color=color)
         self.logger.info(message)
 
@@ -136,6 +143,8 @@ class LoggerAdapter:
         message,
         color: int = YELLOW,
     ):
+        if self.bypass:
+            return
         message: str = self._format_line(message=message, level=logging.WARNING, color=color)
         self.logger.warning(message)
 
@@ -144,6 +153,8 @@ class LoggerAdapter:
         message: str,
         color: int = RED,
     ):
+        if self.bypass:
+            return
         message: str = self._format_line(message=message, level=logging.ERROR, color=color)
         self.logger.error(message)
 
@@ -152,6 +163,8 @@ class LoggerAdapter:
         message: str,
         ex,
     ):
+        if self.bypass:
+            return
         ex_string = f"{type(ex).__name__}({ex})"
         ex_type, ex_value, ex_traceback = sys.exc_info()
         stack_trace = traceback.format_exception(ex_type, ex_value, ex_traceback)

@@ -38,8 +38,6 @@ class RollConfig(NautilusConfig, frozen=True):
     roll_offset: NonPositiveInt
     approximate_expiry_offset: int
     carry_offset: Literal[1, -1]
-    skip_months: list[ContractMonth] | None = None
-
 
 class ContractChainConfig(NautilusConfig, frozen=True):
     """
