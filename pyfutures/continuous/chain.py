@@ -5,7 +5,11 @@ from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.events import RollEvent
+from pyfutures.continuous.bar import ContinuousBar
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 
+class ContractExpired(Exception):
+    pass
 
 class ContractChain(Actor):
     def __init__(
@@ -38,7 +42,34 @@ class ContractChain(Actor):
 
     def on_start(self) -> None:
         self.roll(to_month=self.start_month)
+    
+    def attempt_roll(self, bar: ContinuousBar):
+        is_expired = self.clock.utc_now() >= self.chain.expiry_date
+        if is_expired:
+            raise ContractExpired(
+                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
+            )
+        
+        should_roll: bool = self._should_roll(bar)
+        if should_roll:
+            self.roll()
+            
+    def _should_roll(self, bar: ContinuousBar) -> bool:
+        
+        if bar.forward_bar is None:
+            return False
+            
+        forward_timestamp = unix_nanos_to_dt(bar.forward_bar.ts_init)
+        current_timestamp = unix_nanos_to_dt(bar.current_bar.ts_init)
 
+        if current_timestamp != forward_timestamp:
+            return False
+
+        in_roll_window = (current_timestamp >= self.chain.roll_date) \
+                            and (current_timestamp < self.chain.expiry_date)
+
+        return in_roll_window
+    
     def roll(
         self,
         to_month: ContractMonth | None = None,
@@ -62,7 +93,7 @@ class ContractChain(Actor):
         self.carry_contract_id = self.format_instrument_id(self.carry_month)
         self.previous_contract_id = self.format_instrument_id(self.previous_month)
 
-        self.roll_date, self.expiry_date = self.roll_window(self.current_month)
+        # self.roll_date, self.expiry_date = self.roll_window(self.current_month)
 
         self._log.debug(
             f"Rolled {self.previous_contract_id} > {self.current_contract_id}",
@@ -100,3 +131,14 @@ class ContractChain(Actor):
         return InstrumentId.from_str(
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
+    
+    def _update_instruments(self) -> None:
+        """
+        How to make sure we have the real expiry date from the contract when it calculates?
+        The roll attempts needs the expiry date of the current contract.
+        The forward contract always cached, therefore the expiry date of the current contract
+            will be available directly after a roll.
+        Cache the contracts after every roll, and run them on a timer too.
+        """
+
+

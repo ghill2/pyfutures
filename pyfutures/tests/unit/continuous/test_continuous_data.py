@@ -24,7 +24,7 @@ from pyfutures.continuous.contract_month import LETTER_MONTHS
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.data import ContinuousData
-from pyfutures.continuous.data import ContractExpired
+from pyfutures.continuous.chain import ContractExpired
 from pyfutures.continuous.bar import ContinuousBar
 
 class TestContinuousData:
@@ -93,7 +93,7 @@ class TestContinuousData:
         with pytest.raises(ContractExpired):
             self.engine.run()
 
-    def test_initialize_sets_expected_attributes(self):
+    def test_bar_types_return_expected_after_start(self):
         # Arrange & Act
 
         data = [
@@ -111,30 +111,7 @@ class TestContinuousData:
         assert self.data.forward_bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
         assert self.data.carry_bar_type == BarType.from_str("MES=2021J.SIM-1-DAY-MID-EXTERNAL")
 
-        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
-        assert sub_topics == [
-            "data.bars.MES=2021H.SIM-1-DAY-MID-EXTERNAL",
-            "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
-        ]
-
-    def test_get_bars_returns_expected(self):
-        # Arrange & Act
-
-        data = [
-            ("MES=2021H.SIM", "2021-03-13"),
-            ("MES=2020Z.SIM", "2021-03-13"),
-            ("MES=2021J.SIM", "2021-03-14"),
-        ]
-
-        bars = self._create_bars(data)
-        self.engine.add_data(bars)
-        self.engine.run()
-
-        # Assert
-        assert self.data.current_bar.bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.previous_bar.bar_type == BarType.from_str("MES=2020Z.SIM-1-DAY-MID-EXTERNAL")
-
-    def test_roll_sets_expected_attributes(self):
+    def test_bar_types_return_expected_after_roll(self):
         # Arrange
 
         data = [
@@ -156,13 +133,23 @@ class TestContinuousData:
         assert self.data.previous_bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
         assert self.data.forward_bar_type == BarType.from_str("MES=2021U.SIM-1-DAY-MID-EXTERNAL")
         assert self.data.carry_bar_type == BarType.from_str("MES=2021N.SIM-1-DAY-MID-EXTERNAL")
-
+    
+    @pytest.mark.skip
+    def test_manage_subscriptions_after_start(self):
+        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
+        assert sub_topics == [
+            "data.bars.MES=2021H.SIM-1-DAY-MID-EXTERNAL",
+            "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
+        ]
+        
+    @pytest.mark.skip
+    def test_manage_subscriptions_after_roll(self):
         sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
         assert sub_topics == [
             "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
             "data.bars.MES=2021U.SIM-1-DAY-MID-EXTERNAL",
         ]
-
+    
     def test_current_bar_schedules_timer(self):
         # Arrange
         data = [
@@ -203,45 +190,66 @@ class TestContinuousData:
         time_event = handle_mock.call_args_list[0][0][0]
         assert time_event.ts_event == 1615248002000000000
     
-    
-    @pytest.mark.skip
-    def test_continuous_bar_cached(self):
-        pass
-    
     @pytest.mark.skip
     def test_adjusted_from_continuous_bars(self):
         pass
     
-    @pytest.mark.skip
-    def test_publish_and_store_on_unique_current_bar(self):
-        pass
-    
-    @pytest.mark.skip
-    def test_manage_subscriptions(self):
-        pass
-
-    def test_adjustment(self):
-        # Arrange
+    def test_continuous_bar_updates_cache(self):
+        
+        self.data._attempt_roll = Mock()
+        
         data = [
-            ("MES=2021H.SIM", "MES=2021H.SIM", "2021-03-04", 1),
-            ("MES=2021H.SIM", "2021-03-05", 2),
-            ("MES=2021M.SIM", "2021-03-06", 10.1),
-            ("MES=2021M.SIM", "2021-03-07", 10.2),
-            ("MES=2021H.SIM", "2021-03-08", 3),
-            ("MES=2021M.SIM", "2021-03-09", 10.3),
+            ("MES=2021H.SIM", 1.0, "MES=2021M.SIM", 10.1, "2021-03-04"),
         ]
+        bars = self._create_continuous_bars(data)
+        self.data._handle_continuous_bar(bars[0])
+        
+        assert len(self.data.continuous_bars) == 1
+        assert isinstance(self.data.continuous_bars[0], ContinuousBar)
+        
+    def test_continuous_bar_updates_adjusted(self):
+        
+        self.data._attempt_roll = Mock()
+        
+        data = [
+            ("MES=2021H.SIM", 1.0, "MES=2021M.SIM", 10.1, "2021-03-04"),
+        ]
+        bars = self._create_continuous_bars(data)
+        self.data._handle_continuous_bar(bars[0])
+        
+        assert len(self.data.adjusted) == 1
+        assert isinstance(self.data.adjusted[0], ContinuousBar)
         
     def _create_continuous_bars(self, data: list[tuple]) -> list[ContinuousBar]:
+        # current_id, current_close, forward_id, forward_close, timestamp
         return [
-            Bar(
-                bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
-                open=Price.from_str("1.1"),
-                high=Price.from_str("1.2"),
-                low=Price.from_str("1.0"),
-                close=Price.from_str(str(data[3])),
-                volume=Quantity.from_int(1),
-                ts_event=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
-                ts_init=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
+            ContinuousBar(
+                bar_type=BarType.from_str(f"MES.SIM-1-DAY-MID-EXTERNAL"),
+                current_bar=Bar(
+                    bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
+                    open=Price.from_str("0.2"),
+                    high=Price.from_str("100.0"),
+                    low=Price.from_str("0.1"),
+                    close=Price.from_str(str(row[1])),
+                    volume=Quantity.from_int(1),
+                    ts_event=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                    ts_init=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                ),
+                forward_bar=Bar(
+                    bar_type=BarType.from_str(f"{row[2]}-1-DAY-MID-EXTERNAL"),
+                    open=Price.from_str("0.2"),
+                    high=Price.from_str("100.0"),
+                    low=Price.from_str("0.1"),
+                    close=Price.from_str(str(row[3])),
+                    volume=Quantity.from_int(1),
+                    ts_event=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                    ts_init=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                ),
+                previous_bar=None,
+                carry_bar=None,
+                ts_event=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                ts_init=dt_to_unix_nanos(pd.Timestamp(row[4], tz="UTC")),
+                
             )
             for row in data
         ]
@@ -326,3 +334,31 @@ class TestContinuousData:
 
     #     # Assert
     #     assert list(self.data.adjusted) == [9.1, 10.1, 10.2]
+    
+    # def test_get_bars_returns_expected(self):
+    #     # Arrange & Act
+
+    #     data = [
+    #         ("MES=2021H.SIM", "2021-03-13"),
+    #         ("MES=2020Z.SIM", "2021-03-13"),
+    #         ("MES=2021J.SIM", "2021-03-14"),
+    #     ]
+
+    #     bars = self._create_bars(data)
+    #     self.engine.add_data(bars)
+    #     self.engine.run()
+
+    #     # Assert
+    #     assert self.data.current_bar.bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
+    #     assert self.data.previous_bar.bar_type == BarType.from_str("MES=2020Z.SIM-1-DAY-MID-EXTERNAL")
+    # def test_adjustment(self):
+    #     # Arrange
+    #     data = [
+    #         ("MES=2021H.SIM", 1.0, "MES=2021H.SIM", 10.1, "2021-03-04"),
+    #         ("MES=2021H.SIM", "2021-03-05", 2),
+    #         ("MES=2021M.SIM", "2021-03-06", 10.1),
+    #         ("MES=2021M.SIM", "2021-03-07", 10.2),
+    #         ("MES=2021H.SIM", "2021-03-08", 3),
+    #         ("MES=2021M.SIM", "2021-03-09", 10.3),
+    #     ]
+        

@@ -1,3 +1,4 @@
+import pandas as pd
 from __future__ import annotations
 
 import pyarrow as pa
@@ -7,6 +8,7 @@ from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 from pyfutures.continuous.contract_month import ContractMonth
 
@@ -21,6 +23,8 @@ class ContinuousBar(Data):
         carry_bar: Bar | None,
         ts_event: int,
         ts_init: int,
+        expiration_ns: int,
+        roll_ns: int,
     ):
         PyCondition.type(bar_type, BarType, "bar_type")
         PyCondition.type(current_bar, Bar, "current_bar")
@@ -30,6 +34,8 @@ class ContinuousBar(Data):
         PyCondition.type_or_none(carry_bar, Bar, "carry_bar")
         PyCondition.type(ts_event, int, "ts_event")
         PyCondition.type(ts_init, int, "ts_init")
+        PyCondition.type(expiration_ns, int, "expiration_ns")
+        PyCondition.type(roll_ns, int, "roll_ns")
 
         self.bar_type = bar_type
         self.instrument_id = bar_type.instrument_id
@@ -37,6 +43,9 @@ class ContinuousBar(Data):
         self.forward_bar = forward_bar
         self.carry_bar = carry_bar
         self.previous_bar = previous_bar
+        self.expiration_ns = expiration_ns
+        self.roll_ns = roll_ns
+        
         self._ts_event = ts_event
         self._ts_init = ts_init
 
@@ -107,8 +116,10 @@ class ContinuousBar(Data):
                 pa.field("carry_volume", pa.string(), nullable=True),
                 pa.field("carry_ts_event", pa.uint64(), nullable=True),
                 pa.field("carry_ts_init", pa.uint64(), nullable=True),
-                pa.field("ts_event", pa.uint64(), nullable=True),
-                pa.field("ts_init", pa.uint64(), nullable=True),
+                pa.field("ts_event", pa.uint64()),
+                pa.field("ts_init", pa.uint64()),
+                pa.field("expiration_ns", pa.uint64()),
+                pa.field("roll_ns", pa.uint64()),
             ],
         )
 
@@ -150,6 +161,8 @@ class ContinuousBar(Data):
             "carry_ts_init": obj.carry_bar.ts_init if obj.carry_bar is not None else None,
             "ts_event": obj.ts_event,
             "ts_init": obj.ts_init,
+            "expiration_ns": obj.expiration_ns,
+            "roll_ns": obj.roll_ns,
         }
 
     @staticmethod
@@ -205,6 +218,8 @@ class ContinuousBar(Data):
             else None,
             ts_event=values["ts_event"],
             ts_init=values["ts_init"],
+            expiration_ns=values["expiration_ns"],
+            roll_ns=values["roll_ns"],
         )
 
     def __getstate__(self) -> tuple:
@@ -216,6 +231,8 @@ class ContinuousBar(Data):
             self.carry_bar,
             self._ts_init,
             self._ts_event,
+            self.expiration_ns,
+            self.roll_ns,
         )
 
     def __setstate__(self, state):
@@ -226,6 +243,8 @@ class ContinuousBar(Data):
         self.carry_bar = state[4]
         self._ts_event = state[5]
         self._ts_init = state[6]
+        self.expiration_ns = state[7]
+        self.roll_ns = state[8]
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ContinuousBar):
@@ -238,6 +257,8 @@ class ContinuousBar(Data):
             and self.carry_bar == other.carry_bar
             and self._ts_event == other.ts_event
             and self._ts_init == other.ts_init
+            and self.expiration_ns == other.expiration_ns
+            and self.roll_ns == other.roll_ns
         )
 
     def __repr__(self):
@@ -249,5 +270,32 @@ class ContinuousBar(Data):
             f"previous_bar={self.previous_bar}, "
             f"carry_bar={self.carry_bar}, "
             f"ts_event={self.ts_event}, "
-            f"ts_init={self.ts_init})"
+            f"ts_init={self.ts_init}, "
+            f"expiration_ns={self.expiration_ns}, "
+            f"roll_ns={self.roll_ns})"
         )
+    
+    def in_roll_window(self) -> bool:
+        
+        if bar.forward_bar is None:
+            return False
+            
+        forward_timestamp = unix_nanos_to_dt(self.forward_bar.ts_init)
+        current_timestamp = unix_nanos_to_dt(self.current_bar.ts_init)
+
+        if current_timestamp != forward_timestamp:
+            return False
+
+        in_roll_window = (current_timestamp >= self.chain.roll_date) \
+                            and (current_timestamp < self.chain.expiry_date)
+
+        return in_roll_window
+        
+    def roll_window(
+        self,
+        month: ContractMonth,
+    ) -> tuple[pd.Timestamp, pd.Timestamp]:
+        # TODO: for live environment the expiry date from the contract should be used
+        expiry_date = month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
+        return (roll_date, expiry_date)

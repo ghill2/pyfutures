@@ -1,10 +1,12 @@
 from collections import deque
+import pandas as pd
 import pickle
 
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.component import TimeEvent
 from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
+from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.uuid import UUID4
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
@@ -13,19 +15,26 @@ from nautilus_trader.model.identifiers import InstrumentId
 from pyfutures.continuous.chain import ContractChain
 from pyfutures.continuous.bar import ContinuousBar
 
-class ContractExpired(Exception):
-    pass
-
 class ContinuousData(Actor):
     def __init__(
         self,
         bar_type: BarType,
-        chain: ContractChain,
+        roll_config: RollConfig,
         maxlen: int = 250,
     ):
         super().__init__()
         self.bar_type = bar_type
-        self.chain = chain
+        self.roll_offset = config.roll_config.roll_offset
+        self.carry_offset = config.roll_config.carry_offset
+        self.priced_cycle = config.roll_config.priced_cycle
+        self.hold_cycle = config.roll_config.hold_cycle
+        self.approximate_expiry_offset = config.roll_config.approximate_expiry_offset
+        self.start_month = config.start_month
+
+        assert self.roll_offset <= 0
+        assert self.carry_offset == 1 or self.carry_offset == -1
+        assert self.start_month in self.hold_cycle
+        
         self._last_current: Bar | None = None
         self._maxlen = maxlen
 
@@ -44,7 +53,15 @@ class ContinuousData(Actor):
     @property
     def carry_bar_type(self) -> BarType:
         return self._make_bar_type(self.chain.carry_contract_id)
-
+    
+    @property
+    def continuous_bars(self) -> list[ContinuousBar]:
+        return self._load_continuous_bars()
+    
+    @property
+    def adjusted(self) -> list[float]:
+        return self._load_adjusted()
+    
     def handle_bar(self, bar: Bar) -> None:
         """
         schedule the timer to process the module after x seconds on current or forward bar
@@ -69,12 +86,23 @@ class ContinuousData(Actor):
     def on_start(self) -> None:
         assert len(self.chain.rolls) > 0
         self._manage_subscriptions()
-
+    
+    @property
+    def current_month(self):
+        
+        bars = self.continuous_bars
+        if len(bars) == 0:
+            return self._start_month
+        return self.continuous_bars[-1].current_month
+        
     def _handle_time_event(self, event: TimeEvent) -> None:
         
         current_bar = self.cache.bar(self.current_bar_type)
         if current_bar is None:
             return
+        
+        expiry_date = self.current_month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
         
         continuous_bar = ContinuousBar(
             bar_type=self.bar_type,
@@ -84,32 +112,27 @@ class ContinuousData(Actor):
             carry_bar=self.cache.bar(self.carry_bar_type),
             ts_init=self.clock.timestamp_ns(),
             ts_event=self.clock.timestamp_ns(),
+            expiration_ns=dt_to_unix_nanos(expiry_date),
+            roll_ns=dt_to_unix_nanos(expiry_date),
         )
         self._handle_continuous_bar(continuous_bar)
         
     def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
+        self.chain.attempt_roll(bar)
+        self._manage_subscriptions()
+        self._update_cache(bar)
+    
+    def _update_cache(self, bar: ContinuousBar) -> None:
         
-        is_expired = self.clock.utc_now() >= self.chain.expiry_date
-        if is_expired:
-            raise ContractExpired(
-                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
-            )
-        
-        
-        should_roll: bool = self._should_roll(bar)
-        if should_roll:
-            self.chain.roll()
-            self._manage_subscriptions()
-            
-        self._append_continuous_bar(bar)
-        
-    def _append_continuous_bar(self, bar: ContinuousBar) -> None:
+        # append continuous bar to the cache
         bars = self._load_continuous_bars()
         bars.append(bar)
         bars = bars[-self._maxlen:]
         assert len(bars) <= self._maxlen
         
         self._save_continuous_bars(bars)
+        
+        # update the adjusted series to the cache
         adjusted: list[float] = self._calculate_adjusted(bars)
         self._save_adjusted(adjusted)
     
@@ -125,21 +148,25 @@ class ContinuousData(Actor):
         bars: list[dict] = [ContinuousBar.to_dict(b) for b in bars]
         data: bytes = pickle.dumps(bars)
         key = str(self.bar_type)
-        self.cache.set(key, data)
+        self.cache.add(key, data)
     
     def _calculate_adjusted(self, bars: list[ContinuousBar]) -> list[float]:
-        
         """
         creating the adjusted from the continuous bars
         iterate over continuous bars backwards
         when it rolls shift the prices by the adjustment value from the bar after the roll
         """
+        if len(bars) == 0:
+            return []
+        elif len(bars) == 1:
+            return [float(bars[0].current_bar.close)]
         
         values = deque()
         values.appendleft(bars[-1])
+        
         adjustment_value = 0
         
-        for i in range(0, len(bars) - 2, -1):
+        for i in range(0, len(bars) - 1, -1):
             
             current = bars[i]
             forward = bars[i + 1]
@@ -157,28 +184,12 @@ class ContinuousData(Actor):
     def _save_adjusted(self, adjusted: list[float]) -> None:
         data: bytes = pickle.dumps(adjusted)
         key = f"{self.bar_type}a"
-        self.cache.set(key, data)
+        self.cache.add(key, data)
         
     def _load_adjusted(self) -> list[float]:
         key = f"{self.bar_type}a"
         data: bytes = self.cache.get(key, data)
         return pickle.loads(data)
-    
-    def _should_roll(self, bar: ContinuousBar) -> bool:
-        
-        if bar.forward_bar is None:
-            return False
-            
-        forward_timestamp = unix_nanos_to_dt(bar.forward_bar.ts_init)
-        current_timestamp = unix_nanos_to_dt(bar.current_bar.ts_init)
-
-        if current_timestamp != forward_timestamp:
-            return False
-
-        in_roll_window = (current_timestamp >= self.chain.roll_date) \
-                            and (current_timestamp < self.chain.expiry_date)
-
-        return in_roll_window
         
     def _manage_subscriptions(self) -> None:
         """
@@ -190,15 +201,6 @@ class ContinuousData(Actor):
         self.unsubscribe_bars(self.previous_bar_type)
         self.subscribe_bars(self.current_bar_type)
         self.subscribe_bars(self.forward_bar_type)
-
-    def _update_instruments(self) -> None:
-        """
-        How to make sure we have the real expiry date from the contract when it calculates?
-        The roll attempts needs the expiry date of the current contract.
-        The forward contract always cached, therefore the expiry date of the current contract
-            will be available directly after a roll.
-        Cache the contracts after every roll, and run them on a timer too.
-        """
 
     def _make_bar_type(self, instrument_id: InstrumentId) -> BarType:
         return BarType(
