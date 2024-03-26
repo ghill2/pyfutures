@@ -27,6 +27,12 @@ from ibapi import comm
 #
 # You cannot combine utf-8 encoded bytestrings and bytestring saved from gateway into a bytestring
 # and send it to stdout to be logged by the main process
+def list_to_ascii_buf(data):
+    buf = b"["
+    for item in data:
+        buf = buf + item.encode("ascii") + b", "
+    buf = buf + b"]"
+    return buf
 
 
 bytestring_dir = PACKAGE_ROOT / "tests" / "bytestring" / "txt"
@@ -82,22 +88,18 @@ class MockServer:
 
         self.server = None
 
+    def reset(self):
+        self._handshake_recv.clear()
+        self._startapi_recv.clear()
+        self._is_connected.clear()
+
     async def restart_serve_forever(self):
         """
         Creates and serves the forever until
         A coroutine initiates a server restart
         """
-        # while True:
         stdout(b"(re)Starting subproc Server...")
-        # Stop the current server
-        # if self.server is not None:
-        # self.server.close()
-        # await self.server.wait_closed()
-
-        # Clear connection status flags
-        self._handshake_recv.clear()
-        self._startapi_recv.clear()
-        self._is_connected.clear()
+        self.reset()
 
         #
         stdout(b"mock_server started on port 8890")
@@ -121,21 +123,34 @@ class MockServer:
                 data = await reader.read(4096)
                 if not data:
                     continue
-                stdout(b"recv: " + data)
 
                 if self._is_connected.is_set():
                     bufs = parse_buffer(data)
                     for buf in bufs:
                         _breplay_current = self._breplay.current()[0]
 
-                        # compare the request against the data
+                        # convert the buf to string fields
                         fields = buf.split(b"\0")
                         ascii_fields = [f.decode("ascii") for f in fields]
+
+                        stdout(
+                            b"recv: " + list_to_ascii_buf(ascii_fields),
+                        )
+                        # log the comparison for debugging purposes
+                        stdout(
+                            str(self._breplay._bpos).encode("ascii")
+                            + b"breplay: "
+                            + list_to_ascii_buf(_breplay_current)
+                        )
+
                         assert ascii_fields == _breplay_current
 
                         await self._breplay.send_responses(writer)
                 else:
                     buf = data
+
+                    stdout(str(self._breplay._bpos).encode("ascii") + b"recv: " + data)
+
                     handshake_bytes = b"API\x00\x00\x00\x00\tv176..176"
                     if buf.startswith(handshake_bytes):
                         assert self._breplay.current()[0] == ["handshake"]
@@ -155,32 +170,42 @@ class MockServer:
             exit()
 
 
+async def load_bytestrings(path: Path, mock_server):
+    mock_server.reset()
+    path = Path(path)
+    with open(path) as file:
+        bytestream = json.load(file)
+    len_bytestream_b = str(len(bytestream)).encode("utf-8")
+    stdout(b"Loaded " + len_bytestream_b + b" requests to replay...")
+    mock_server._breplay = BytestreamReplay(data=bytestream, mock_server=mock_server)
+
+    # subprocess started but server has not been instantiated on the first read
+    while mock_server.server is None:
+        await asyncio.sleep(0)
+
+    # wait until server is accepting new connections
+    while not mock_server.server.is_serving():
+        await asyncio.sleep(0)
+
+
 async def read_stdin_task(reader, mock_server):
     try:
         while True:
             await asyncio.sleep(0)
-            data = await reader.read(4096)
-            if not data:
+            buf = await reader.read(4096)
+            if not buf:
                 continue
-            stdout(b"mock_server stdin: " + data)
-            path = Path(data.decode("utf-8"))
-            with open(path) as file:
-                bytestream = json.load(file)
-            len_bytestream_b = str(len(bytestream)).encode("utf-8")
-            stdout(b"Loaded " + len_bytestream_b + b" requests to replay...")
-            mock_server._breplay = BytestreamReplay(
-                data=bytestream, mock_server=mock_server
-            )
+            stdout(b"mock_server stdin: " + buf)
+            cmd, arg = tuple(buf.split(b"\x00"))
+            cmd = cmd.decode("ascii")
+            if arg is not None:
+                arg = arg.decode("ascii")
+            if cmd == "load_bytestrings":
+                await load_bytestrings(path=arg, mock_server=mock_server)
+            elif cmd == "reset":
+                mock_server.reset()
 
-            # subprocess started but server has not been instantiated on the first read
-            while mock_server.server is None:
-                await asyncio.sleep(0)
-
-            # wait until server is accepting new connections
-            while not mock_server.server.is_serving():
-                await asyncio.sleep(0)
-
-            stdout(b"BYTESTRINGS READY")
+            stdout(b"COMMAND SUCCESS")
     except Exception:
         print(traceback.print_exc())
         exit()

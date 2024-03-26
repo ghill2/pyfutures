@@ -19,18 +19,20 @@ from ibapi.contract import Contract as IBContract
 ####
 
 
-def create_dc_cont_contract() -> IBContract:
+@pytest.fixture
+def dc_contract():
     contract = IBContract()
     contract.tradingClass = "DC"
     contract.symbol = "DA"
     contract.exchange = "CME"
-    contract.secType = "CONTFUT"
+    contract.secType = "FUT"
     return contract
 
 
-@pytest.fixture(scope="session")
-def dc_cont_contract():
-    return create_dc_cont_contract()
+@pytest.fixture
+def dc_cont_contract(dc_contract):
+    dc_contract.secType = "CONTFUT"
+    return dc_contract
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
@@ -88,8 +90,10 @@ def mode(request):
 # https://stackoverflow.com/questions/75161749/scopemismatch-when-i-try-to-make-setup-teardown-pytest-function
 @pytest.fixture(scope="session")
 def event_loop():
+    init_logging()
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
+    loop.set_debug(True)
     yield loop
     loop.close()
 
@@ -103,28 +107,33 @@ async def mock_server_subproc(event_loop, mode):
     return None
 
 
-@pytest_asyncio.fixture(scope="session")
-async def bytestring_client(request, event_loop, mode):
-    event_loop.set_debug(True)
-    init_logging()
-    port = 8890 if mode == "unit" else 4002
-    return InteractiveBrokersClient(loop=event_loop, port=port)
-
-
 @pytest_asyncio.fixture
-async def client(request, bytestring_client, mock_server_subproc, mode):
+async def client(request, event_loop, mock_server_subproc, mode):
+    """
+    Always instantiate a new InteractiveBrokersClient for the test
+    for unit tests, the request ids of the bytestrings need to match the request ids sent from the client during the test
+    If a client is not instantiated new every time, the request ids will increment across tests
+
+    every test function needs to start with connect()
+    as the mock_server is reset to initial state before each test starts
+    """
+    print("================= GETTING CLIENT ==================")
+
     test_filename = Path(request.fspath).stem
     test_fn_name = request.node.originalname
     parent = PACKAGE_ROOT / "tests" / "bytestring" / "txt"
     bytestring_path = parent / f"{test_filename}={test_fn_name}.json"
 
-    if mock_server_subproc is not None:  # --unit
+    if mode == "unit":
         assert (
             bytestring_path.exists()
         ), f"Bytestrings do not exist at path: {bytestring_path}"
-        # load bytestrings for the test and wait until they have loaded
-        # _log_bytestrings(bytestring_path)
-        await mock_server_subproc.load_bytestrings(path=str(bytestring_path))
+        await mock_server_subproc.perform_command(
+            cmd="load_bytestrings", value=str(bytestring_path)
+        )
+
+    port = 8890 if mode == "unit" else 4002
+    bytestring_client = InteractiveBrokersClient(loop=event_loop, port=port)
 
     if mode == "export":
         assert (
@@ -134,6 +143,9 @@ async def client(request, bytestring_client, mock_server_subproc, mode):
         bytestring_client.conn.protocol.enable_bytestrings()
 
     yield bytestring_client
+    # if mode == "unit":
+    # reset / cleanup mock server for the next test
+    # await mock_server_subproc.perform_command(cmd="reset", value="")
 
     if mode == "export":
         report = request.node.stash[phase_report_key]

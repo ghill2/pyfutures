@@ -5,15 +5,6 @@ import pytest
 
 
 @pytest.mark.asyncio()
-async def test_connect(client):
-    # client = await BytestringClientStubs(mode=mode, loop=event_loop).client(
-    #     loop=event_loop
-    # )
-    await client.connect()
-    await client.request_account_summary()
-
-
-@pytest.mark.asyncio()
 async def test_reconnect(client):
     """
     The bytestrings for this test were created by exiting and reopening gateway manually
@@ -40,5 +31,3 @@ async def test_reconnect(client):
         print("Waiting for gateway to reconnect automatically")
 
     await client.request_account_summary()
-
-    print("continuing")

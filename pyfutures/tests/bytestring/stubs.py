@@ -13,15 +13,6 @@ from pyfutures.logger import init_logging
 # try comparing bytestrings after 1st unit and then 2nd unit ? maybe its rewriting
 
 
-def create_cont_contract() -> IBContract:
-    contract = IBContract()
-    contract.tradingClass = "DC"
-    contract.symbol = "DA"
-    contract.exchange = "CME"
-    contract.secType = "CONTFUT"
-    return contract
-
-
 # class SingletonMeta(type):
 #     """
 #     Metaclass that creates a Singleton class.

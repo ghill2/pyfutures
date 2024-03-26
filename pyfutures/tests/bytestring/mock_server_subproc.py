@@ -19,7 +19,7 @@ class MockServerSubproc:
         self._read_stderr_task: asyncio.Task | None = None
         self._proc: asyncio.Process | None = None
         self._server_ready_waiter = None
-        self._bytestrings_ready_waiter = None
+        self._command_waiter = None
 
     async def start(self):
         path = PACKAGE_ROOT / "tests" / "bytestring" / "mock_server.py"
@@ -51,16 +51,16 @@ class MockServerSubproc:
 
         return self._proc
 
-    async def load_bytestrings(self, path: str):
-        self._proc.stdin.write(path.encode("utf-8"))
+    async def perform_command(self, cmd: str, value: str):
+        self._proc.stdin.write(cmd.encode("ascii") + b"\x00" + value.encode("ascii"))
         await self._proc.stdin.drain()
 
-        self._bytestrings_ready_waiter = self._loop.create_future()
-        self._log.debug("Loading Bytestrings...")
+        self._command_waiter = self._loop.create_future()
+        self._log.debug(f"Performing subproc command: {cmd}...")
         try:
-            await self._bytestrings_ready_waiter
+            await self._command_waiter
         finally:
-            self._bytestrings_ready_waiter = None
+            self._command_waiter = None
 
     # Tasks
     async def _on_subproc_exit_task(self):
@@ -82,12 +82,12 @@ class MockServerSubproc:
                 if not buf:
                     continue
                 if buf == b"MOCK_SERVER READY":
-                    self._bytestrings_ready_waiter.set_result(None)
+                    self._command_waiter.set_result(None)
                     self._log.debug("mock_server - bytestrings ready...")
 
-                if buf == b"BYTESTRINGS READY":
-                    self._log.debug("Bytestrings ready...")
-                    self._bytestrings_ready_waiter.set_result(None)
+                if buf == b"COMMAND SUCCESS":
+                    # self._log.debug("Bytestrings ready...")
+                    self._command_waiter.set_result(None)
 
                 self._log.debug(buf, color=4)
         except Exception as e:

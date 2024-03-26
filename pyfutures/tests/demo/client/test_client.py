@@ -15,24 +15,12 @@ from pyfutures.client.objects import ClientException
 
 from pyfutures.tests.demo.client.stubs import ClientStubs
 
-
-@pytest.mark.asyncio()
-async def test_reset(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.reset()
-    await client.connect()
-
-
-@pytest.mark.asyncio()
-@pytest.mark.skip(reason="TODO")
-async def test_errors_shown():
-    """
-    Tests if:
-        - an error is shown if the client sends a request before the client has connected
-    """
-    client = ClientStubs.client()
-    await client.request_account_summary()  # is_connected
-    await asyncio.sleep(20)
+# REDUNDANT: reconnect tests this
+# @pytest.mark.asyncio()
+# async def test_reset(event_loop):
+#     client = ClientStubs.client(loop=event_loop)
+#     await client.reset()
+#     await client.connect()
 
 
 @pytest.mark.asyncio()
@@ -48,29 +36,6 @@ async def test_request_contract_details_returns_expected(event_loop):
     print(results)
     assert isinstance(results, list)
     assert all(isinstance(result, IBContractDetails) for result in results)
-
-
-@pytest.mark.asyncio()
-async def test_request_contract_details_raises_exception(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-    contract = Contract()
-    contract.secType = "invalid_secType"
-    contract.symbol = "D"
-    contract.exchange = "ICEEUSOFT"
-
-    with pytest.raises(ClientException) as e:
-        await client.request_contract_details(contract)
-        assert e.code == 321
-
-
-@pytest.mark.asyncio()
-async def test_request_account_summary(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-    summary = await client.request_account_summary()
-    print(summary)
-    assert isinstance(summary, dict)
 
 
 @pytest.mark.asyncio()

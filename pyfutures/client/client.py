@@ -933,25 +933,27 @@ class InteractiveBrokersClient:
         contract: IBContract,
         use_rth: bool = True,
     ) -> HistoricalTickBidAsk | None:
-        self._log.debug(f"Requesting last quote tick for {contract.symbol}")
+        self._log.debug(f"Requesting first quote tick for {contract.symbol}")
         head_timestamp = await self.request_head_timestamp(
             contract=contract,
             what_to_show=WhatToShow.BID_ASK,
-            use_rth=use_rth,
         )
         self._log.debug(f"--> req_head_timestamp: {head_timestamp}")
         quotes = await self.request_quote_ticks(
             contract=contract,
-            count=1,
-            start_time=head_timestamp,
-            use_rth=use_rth,
+            count=1000,
+            # end_time=head_timestamp + pd.Timedelta(minutes=120),
+            # end_time=head_timestamp + pd.Timedelta(minutes=100000),
+            # end_time=pd.Timestamp.utcnow(),
+            # start_time=head_timestamp,
         )
-        return None if len(quotes) == 0 else quotes[0]
+        # return None if len(quotes) == 0 else quotes[0]
+        return quotes
 
     async def request_quote_ticks(
         self,
         contract: IBContract,
-        # start_time: pd.Timestamp,
+        start_time: pd.Timestamp,
         end_time: pd.Timestamp,
         count: int = 1000,
     ) -> list[HistoricalTickBidAsk]:
@@ -964,9 +966,10 @@ class InteractiveBrokersClient:
         If no time-zone is specified, local time-zone is assumed(deprecated).
         You can also provide yyyymmddd-hh:mm:ss time is in UTC.
         Note that there is a dash between the date and time in UTC notation.
+
         """
         # assert start_time.tz is not None, "Timestamp is not timezone aware"
-        assert end_time.tz is not None, "Timestamp is not timezone aware"
+        # assert end_time.tz is not None, "Timestamp is not timezone aware"
         # assert start_time < end_time
 
         request = self._create_request(
@@ -978,8 +981,8 @@ class InteractiveBrokersClient:
         self._eclient.reqHistoricalTicks(
             reqId=request.id,
             contract=contract,
-            # startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
-            startDateTime="",
+            startDateTime=start_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
+            # startDateTime="",
             endDateTime=end_time.tz_convert("UTC").strftime("%Y%m%d-%H:%M:%S"),
             numberOfTicks=count,  # Max is 1000 per request.
             whatToShow="BID_ASK",
