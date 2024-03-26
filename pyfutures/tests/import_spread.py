@@ -37,9 +37,9 @@ async def write_spread(write: bool = False):
     cache.purge_errors(asyncio.TimeoutError)
 
     rows = IBTestProviderStubs.universe_rows(
-        # filter=[
-        #     "6A",
-        # ],
+        filter=[
+            "6A",
+        ],
     )
     for row in rows:
         schedule = row.liquid_schedule
@@ -52,7 +52,7 @@ async def write_spread(write: bool = False):
         await client.connect()
         await client.request_market_data_type(4)
 
-        for what_to_show in (WhatToShow.BID, WhatToShow.ASK):
+        for what_to_show in (WhatToShow.ASK, WhatToShow.BID):
             df = pd.DataFrame()
             for open_time in open_times:
                 log.info(f"{open_time}")
@@ -80,7 +80,7 @@ async def find_spread_values():
     6B: 8.30 > 16.00
     """
     row = IBTestProviderStubs.universe_rows(
-        filter=["6C"],
+        filter=["6A"],
     )[0]
     schedule = row.liquid_schedule
     client: InteractiveBrokersClient = ClientStubs.client(

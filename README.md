@@ -12,14 +12,37 @@ API > Settings > Socket Port > 4002
 API > Settings > Download Orders on Connection > Disabled  
 API > Settings > Send instrument-specific attributes for dual-mode API client in > UTC format  
 
-# TODO
+# TODO - ContinuousData
 
-* How does the data module startup to the required state?
-- the data module creates current bars from per contract bars
-- per contract bars need to be requested in the on_start method
+on_stop, save continuous and adjusted to cache
+- if an exception is raised while the strategy is running it will stop and save the strategies state
 
-OR
+on_start:
 
+1) find chain position
+    find current position on ib
+    if current position can't be found, open a position based on roll calendar
+
+2) reconcile data
+    get the most recent month from continuous bar from the database
+    set chain to most recent month
+    
+    request bars from previous, carry, forward, current and handle them on the actor
+    
+    if not enough time to roll
+    the actor will roll 
+
+    what if recent month is 
+
+    check that current position matches position on ib
+    create the missing continuous bars upto current time
+
+NOTES:
+    * what if the cached continuous bar history is lost?
+    * what about finding the current position from the cached continuous bar history if ib position is not found?
+
+
+creating missing continuous bars from the cached continuous bars to current time by requesting contract bars
 - cache the continuous bars
 - on startup, start month of the most recent continuous bar
 - add continuous bar caching to the data module of maxlen

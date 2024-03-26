@@ -72,7 +72,7 @@ def get_spread_value(row):
                 # print(f"{row.uname} {open_time}: No session")
                 continue
 
-            df["local"] = df.timestamp.dt.tz_convert("MET")
+            df["local"] = df.timestamp.dt.tz_convert(row.timezone)
 
             random_row = df.sample().iloc[0]
             average_spread = random_row.ask - random_row.bid
@@ -91,13 +91,14 @@ def get_spread_value(row):
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        # filter=["RP"],
-        skip=["6A"],
+        filter=["6A"],
+        # skip=["6A"],
     )
 
     for row in rows:
         get_spread_value(row)
-
+    
+    # import joblib
     # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
 
     # get_spread_value(rows[0])
