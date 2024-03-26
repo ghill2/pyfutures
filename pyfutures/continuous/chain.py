@@ -1,15 +1,17 @@
 import pandas as pd
 from nautilus_trader.common.actor import Actor
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.identifiers import InstrumentId
 
+from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.config import ContractChainConfig
 from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.events import RollEvent
-from pyfutures.continuous.bar import ContinuousBar
-from nautilus_trader.core.datetime import unix_nanos_to_dt
+
 
 class ContractExpired(Exception):
     pass
+
 
 class ContractChain(Actor):
     def __init__(
@@ -42,30 +44,26 @@ class ContractChain(Actor):
 
     def on_start(self) -> None:
         self.roll(to_month=self.start_month)
-    
+
     def attempt_roll(self, bar: ContinuousBar):
-        
-        
         should_roll: bool = self._should_roll(bar)
         if should_roll:
             self.roll()
-            
+
     def _should_roll(self, bar: ContinuousBar) -> bool:
-        
         if bar.forward_bar is None:
             return False
-            
+
         forward_timestamp = unix_nanos_to_dt(bar.forward_bar.ts_init)
         current_timestamp = unix_nanos_to_dt(bar.current_bar.ts_init)
 
         if current_timestamp != forward_timestamp:
             return False
 
-        in_roll_window = (current_timestamp >= self.chain.roll_date) \
-                            and (current_timestamp < self.chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
 
         return in_roll_window
-    
+
     def roll(
         self,
         to_month: ContractMonth | None = None,
@@ -127,7 +125,3 @@ class ContractChain(Actor):
         return InstrumentId.from_str(
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
-    
-    
-
-

@@ -1,14 +1,14 @@
 from __future__ import annotations
-import pandas as pd
 
+import pandas as pd
 import pyarrow as pa
 from nautilus_trader.core.correctness import PyCondition
 from nautilus_trader.core.data import Data
+from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.objects import Price
 from nautilus_trader.model.objects import Quantity
-from nautilus_trader.core.datetime import unix_nanos_to_dt
 
 from pyfutures.continuous.contract_month import ContractMonth
 
@@ -45,7 +45,7 @@ class ContinuousBar(Data):
         self.previous_bar = previous_bar
         self.expiration_ns = expiration_ns
         self.roll_ns = roll_ns
-        
+
         self._ts_event = ts_event
         self._ts_init = ts_init
 
@@ -78,25 +78,41 @@ class ContinuousBar(Data):
         if self.previous_bar is None:
             return None
         return ContractMonth(self.previous_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
-    
+
     @property
     def expiration_date(self) -> pd.Timestamp:
         return unix_nanos_to_dt(self.expiration_ns)
-    
+
     @property
     def roll_date(self) -> pd.Timestamp:
         return unix_nanos_to_dt(self.roll_ns)
-    
+
+    @property
+    def current_close(self) -> float:
+        return float(self.current_bar.close)
+
+    @property
+    def forward_close(self) -> float | None:
+        return float(self.forward_bar.close) if self.forward_bar is not None else None
+
+    @property
+    def previous_close(self) -> float | None:
+        return float(self.previous_bar.close) if self.previous_bar is not None else None
+
+    @property
+    def carry_close(self) -> float | None:
+        return float(self.carry_bar.close) if self.carry_bar is not None else None
+
     @property
     def current_timestamp(self) -> pd.Timestamp:
         return unix_nanos_to_dt(self.current_bar.ts_init)
-    
+
     @property
     def forward_timestamp(self) -> pd.Timestamp | None:
         if self.forward_bar is None:
             return None
         return unix_nanos_to_dt(self.forward_bar.ts_init)
-    
+
     @staticmethod
     def schema() -> pa.Schema:
         return pa.schema(
@@ -292,23 +308,21 @@ class ContinuousBar(Data):
             f"expiration_ns={self.expiration_ns}, "
             f"roll_ns={self.roll_ns})"
         )
-    
+
     def in_roll_window(self) -> bool:
-        
         if bar.forward_bar is None:
             return False
-            
+
         forward_timestamp = unix_nanos_to_dt(self.forward_bar.ts_init)
         current_timestamp = unix_nanos_to_dt(self.current_bar.ts_init)
 
         if current_timestamp != forward_timestamp:
             return False
 
-        in_roll_window = (current_timestamp >= self.chain.roll_date) \
-                            and (current_timestamp < self.chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
 
         return in_roll_window
-        
+
     def roll_window(
         self,
         month: ContractMonth,

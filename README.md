@@ -37,6 +37,8 @@ on_start:
     check that current position matches position on ib
     create the missing continuous bars upto current time
 
+OTHER:
+    if there is a discrepancy between local forecasted position size and broker position size it should flag and we manually check
 NOTES:
     * what if the cached continuous bar history is lost?
     * what about finding the current position from the cached continuous bar history if ib position is not found?
@@ -53,9 +55,10 @@ each continuous bar stores it's adjustment value
 
 
 
-strategy reads from the cache and gets most recent continuous bar
+
 
 --------------------------
+* only cache specific errors in the historic cache
 
 
 Should the data module cache it's data in a database?
