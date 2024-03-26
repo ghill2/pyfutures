@@ -1,12 +1,22 @@
-# @pytest.mark.asyncio()
-# async def test_request_contract_details_raises_exception(event_loop):
-#     client = ClientStubs.client(loop=event_loop)
-#     await client.connect()
-#     contract = Contract()
-#     contract.secType = "invalid_secType"
-#     contract.symbol = "D"
-#     contract.exchange = "ICEEUSOFT"
-#
-#     with pytest.raises(ClientException) as e:
-#         await client.request_contract_details(contract)
-#         assert e.code == 321
+import pytest
+from ibapi.contract import ContractDetails as IBContractDetails
+
+
+from pyfutures.client.objects import ClientException
+
+
+@pytest.mark.asyncio()
+async def test_request_contract_details_raises_exception(client, contract):
+    await client.connect()
+    contract.secType = "invalid_secType"
+    with pytest.raises(ClientException) as e:
+        await client.request_contract_details(contract)
+        assert e.code == 321
+
+
+@pytest.mark.asyncio()
+async def test_request_contract_details_returns_expected(client, contract):
+    await client.connect()
+    results = await client.request_contract_details(contract)
+    assert isinstance(results, list)
+    assert all(isinstance(result, IBContractDetails) for result in results)

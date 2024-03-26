@@ -63,10 +63,8 @@ class BytestreamReplay:
             # for field in res_fields:
             # stdout(field.encode("ascii"))
             if res_fields[0] == "eof":
-                server = self._mock_server.server
-                server.close()
-                writer.write_eof()
-                await server.wait_closed()
+                # writer.write_eof()
+                self._mock_server.shutdown()
             else:
                 # add null separators
                 msg = ""
@@ -87,6 +85,10 @@ class MockServer:
         self._is_connected = asyncio.Event()
 
         self.server = None
+
+    async def shutdown(self):
+        self.server.close()
+        await self.server.wait_closed()
 
     def reset(self):
         self._handshake_recv.clear()
@@ -166,6 +168,7 @@ class MockServer:
                     if self._handshake_recv.is_set() and self._startapi_recv.is_set():
                         self._is_connected.set()
         except Exception:
+            await self.shutdown()
             print(traceback.print_exc())
             exit()
 

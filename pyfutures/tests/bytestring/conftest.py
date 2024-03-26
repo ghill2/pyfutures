@@ -20,7 +20,7 @@ from ibapi.contract import Contract as IBContract
 
 
 @pytest.fixture
-def dc_contract():
+def contract():
     contract = IBContract()
     contract.tradingClass = "DC"
     contract.symbol = "DA"
@@ -30,9 +30,9 @@ def dc_contract():
 
 
 @pytest.fixture
-def dc_cont_contract(dc_contract):
-    dc_contract.secType = "CONTFUT"
-    return dc_contract
+def cont_contract(contract):
+    contract.secType = "CONTFUT"
+    return contract
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures

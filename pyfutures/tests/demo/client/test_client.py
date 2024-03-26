@@ -6,7 +6,6 @@ from unittest.mock import Mock
 
 import pytest
 from ibapi.contract import Contract
-from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.order import Order
 from nautilus_trader.core.uuid import UUID4
 
@@ -21,21 +20,6 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 #     client = ClientStubs.client(loop=event_loop)
 #     await client.reset()
 #     await client.connect()
-
-
-@pytest.mark.asyncio()
-async def test_request_contract_details_returns_expected(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-    contract = Contract()
-    contract.conId = 553444806
-    contract.exchange = "ICEEUSOFT"
-    contract.includeExpired = True
-
-    results = await client.request_contract_details(contract)
-    print(results)
-    assert isinstance(results, list)
-    assert all(isinstance(result, IBContractDetails) for result in results)
 
 
 @pytest.mark.asyncio()
@@ -100,43 +84,6 @@ async def test_request_open_orders(event_loop):
 
 
 @pytest.mark.asyncio()
-async def test_request_positions(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    positions = await asyncio.wait_for(client.request_positions(), 5)
-    print(positions)
-
-
-@pytest.mark.skip(reason="large amount of order infinite loop")
-@pytest.mark.asyncio()
-async def test_request_executions(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    executions = await asyncio.wait_for(client.request_executions(), 5)
-
-    print(executions)
-
-
-@pytest.mark.asyncio()
-async def test_request_accounts(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.request_accounts()
-
-
-@pytest.mark.asyncio()
-async def test_request_historical_schedule(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-
-    contract = Contract()
-    contract.symbol = "SCI"
-    contract.localSymbol = "FEFF27"
-    contract.exchange = "SGX"
-    contract.secType = "FUT"
-    contract.includeExpired = False
-    df = await client.request_historical_schedule(contract=contract)
-    print(df.iloc[:49])
-
-
-@pytest.mark.asyncio()
 async def test_request_timezones(event_loop):
     pass
 
@@ -161,23 +108,5 @@ async def test_subscribe_account_updates(event_loop):
 
 
 @pytest.mark.asyncio()
-async def test_request_portfolio(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.request_portfolio()
-
-
-@pytest.mark.asyncio()
 async def test_request_pnl(event_loop):
     return
-
-
-@pytest.mark.asyncio()
-async def test_request_market_data_type_returns_expected(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    expected_market_data_type = 4
-
-    await client.connect()
-    # market_data_type = await client.request_market_data_type(
-    #     market_data_type=expected_market_data_type
-    # )
-    # assert expected_market_data_type == market_data_type

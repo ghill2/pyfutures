@@ -7,8 +7,54 @@ import time
 
 
 @pytest.mark.asyncio()
+async def test_data_received_max_limit(event_loop):
+    """
+    If the amount of bytes being read by the transport is
+    above a certain amount, data_received method will receive an incomplete / unparsable buffer
+    until the next call to data_received.
+    the incomplete buffer should be detected and stored until the next data_received call, then parsed
+
+    For every message, there should be 1 call of fields_received.
+
+    correctly formatted message = bytestring containing null delimited fields with its size prefix / length added
+    eg: b"<4 bytes / size_prefix>field\x00field\x00field...\x00"
+    eg: b"\x00\x00\x02\xf8field\x00field\x00field\x00"
+
+    Example of what this is testing for::
+        data_received call 1 input:
+            -- multiple correctly formatted messages to reach max limit
+            -- last message = b"\x00\x00\x02\xf8field\x00this field is a str"
+        data_received call 2 input:
+            -- b"ing that has been split between data_received calls\x00"
+    """
+    details_bytes = b"\x00\x00\x02\xf810\x00-60\x00NG\x00FUT\x0020270827-18:30:00\x000\x00\x00NYMEX\x00USD\x00NGU27\x00NG\x00NG\x00269460134\x000.001\x0010000\x00ACTIVETIM,AD,ADJUST,ALERT,ALGO,ALLOC,AVGCOST,BASKET,BENCHPX,COND,CONDORDER,DAY,DEACT,DEACTDIS,DEACTEOD,GAT,GTC,GTD,GTT,HID,ICE,IOC,LIT,LMT,LTH,MIT,MKT,MTL,NGCOMB,NONALGO,OCA,PEGBENCH,SCALE,SCALERST,SIZECHK,SNAPMID,SNAPMKT,SNAPREL,STP,STPLMT,TRAIL,TRAILLIT,TRAILLMT,TRAILMIT,WHATIF\x00NYMEX,QBALGO\x001\x0036552980\x00Henry Hub Natural Gas\x00\x00202709\x00\x00\x00\x00US/Eastern\x0020240325:1800-20240326:1700;20240326:1800-20240327:1700;20240327:1800-20240328:1700;20240329:CLOSED;20240330:CLOSED;20240331:1800-20240401:1700\x0020240326:0930-20240326:1700;20240327:0930-20240327:1700;20240328:0930-20240328:1700;20240329:CLOSED;20240330:CLOSED;20240331:1800-20240401:1700\x00\x00\x000\x002147483647\x00NG\x00IND\x0098,98\x0020270827\x00\x001\x001\x001\x00"
+    first_half_details_bytes = details_bytes[:42]
+
+    first_call_bytes = details_bytes + first_half_details_bytes
+    second_call_bytes = details_bytes[42:]
+
+    fields_received_mock = Mock()
+    protocol = Protocol(
+        loop=event_loop,
+        connection_lost_callback=Mock(),
+        fields_received_callback=fields_received_mock,
+    )
+
+    # Test Case 1
+    protocol.data_received(first_call_bytes)
+    protocol.data_received(second_call_bytes)
+
+    assert fields_received_mock.call_count
+    # the split was on the exchange field index 7, check if they are the same
+    assert (
+        fields_received_mock.call_args_list[0] == fields_received_mock.call_args_list[1]
+    )
+
+
+# TO FINISH
+@pytest.mark.asyncio()
 async def test_data_received_single(event_loop):
-    protocol = Protocol(loop=event_loop, client=None)
+    protocol = Protocol(loop=event_loop)
     protocol._decoder = Mock()
     protocol._decoder.interpret = Mock()
     call_args_list = [
@@ -31,6 +77,7 @@ async def test_data_received_single(event_loop):
     assert protocol._decoder.interpret.call_args_list == call_args_list
 
 
+# TO FINISH
 @pytest.mark.asyncio()
 async def test_data_received_multiple(event_loop):
     """

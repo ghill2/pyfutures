@@ -1,0 +1,95 @@
+[
+    [
+        [
+            "handshake"
+        ],
+        []
+    ],
+    [
+        [
+            "startapi"
+        ],
+        [
+            [
+                "176",
+                "20240326 09:33:11 Greenwich Mean Time"
+            ],
+            [
+                "15",
+                "1",
+                "DU7606863"
+            ],
+            [
+                "9",
+                "1",
+                "530"
+            ],
+            [
+                "4",
+                "2",
+                "-1",
+                "2104",
+                "Market data farm connection is OK:usfarm",
+                ""
+            ],
+            [
+                "4",
+                "2",
+                "-1",
+                "2106",
+                "HMDS data farm connection is OK:euhmds",
+                ""
+            ],
+            [
+                "4",
+                "2",
+                "-1",
+                "2106",
+                "HMDS data farm connection is OK:ushmds",
+                ""
+            ],
+            [
+                "4",
+                "2",
+                "-1",
+                "2158",
+                "Sec-def data farm connection is OK:secdefil",
+                ""
+            ]
+        ]
+    ],
+    [
+        [
+            "9",
+            "8",
+            "-10",
+            "0",
+            "DA",
+            "invalid_secType",
+            "",
+            "0.0",
+            "",
+            "",
+            "CME",
+            "",
+            "",
+            "",
+            "DC",
+            "0",
+            "",
+            "",
+            "",
+            ""
+        ],
+        [
+            [
+                "4",
+                "2",
+                "-10",
+                "321",
+                "Error validating request.-'bQ' : cause - Please enter a valid security type",
+                ""
+            ]
+        ]
+    ]
+]

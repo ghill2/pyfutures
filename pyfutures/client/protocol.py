@@ -13,6 +13,31 @@ import json
 from pprint import pprint
 
 
+def parse_buffer(buf: bytes, cb: Callable):
+    """
+    Generator to parse all messages in the data / buffer
+    if the last message is incomplete, returns it
+    """
+
+    processed = 0
+    while processed < len(buf) - 1:
+        try:
+            size = struct.unpack("!I", buf[processed : processed + 4])[0]
+            end = processed + 4 + size
+            msg = struct.unpack("!%ds" % size, buf[processed + 4 : end])[0]
+        except struct.error as e:
+            if str(e).startswith("unpack requires a buffer of"):
+                break
+            else:
+                raise
+        else:
+            cb(msg)
+
+        buf = buf[end:]
+        processed = end
+    return buf
+
+
 def create_handshake() -> bytes:
     _min_version = 176
     _max_version = 176
@@ -26,19 +51,6 @@ def create_start_api(client_id) -> bytes:
     msg = b"71\x002\x00" + str(client_id).encode() + b"\x00\x00"
     msg = struct.pack("!I%ds" % len(msg), len(msg), msg)  # comm.make_msg
     return msg
-
-
-def parse_buffer(data):
-    """Used by mock_server and Protocol"""
-    bufs = []
-    start = 0
-    while start < len(data) - 1:
-        size = struct.unpack("!I", data[start : start + 4])[0]
-        end = start + 4 + size
-        buf = struct.unpack("!%ds" % size, data[start + 4 : end])[0]
-        bufs.append(buf)
-        start = end
-    return bufs
 
 
 class Protocol(asyncio.Protocol):
@@ -56,23 +68,32 @@ class Protocol(asyncio.Protocol):
 
         self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
         self._bstream = None
+        self._buffer = b""
 
     def connection_made(self, transport):
         self._transport = transport
         print("connection made to: ", transport)
 
+    def handle_message(self, msg: bytes):
+        """
+        receives a single complete message only at a time
+        receives a null separated bytestring
+        message = null separated ascii bytes with size prefix
+        """
+        fields = msg.split(b"\0")
+        fields = tuple(fields[0:-1])
+        if self._bstream is not None:
+            ascii_fields = [f.decode("ascii") for f in fields]
+            self._bstream[-1][1].append(ascii_fields)
+        self._log.debug(f"<--- {fields}")
+        self._fields_received_callback(fields)
+
     def data_received(self, data):
         self._log.debug("========== RESPONSE ==========")
         self._log.debug(f"<-- {data}")
-        bufs = parse_buffer(data)
-        for buf in bufs:
-            fields = buf.split(b"\0")
-            fields = tuple(fields[0:-1])
-            if self._bstream is not None:
-                ascii_fields = [f.decode("ascii") for f in fields]
-                self._bstream[-1][1].append(ascii_fields)
-            self._log.debug(f"<--- {fields}")
-            self._fields_received_callback(fields)
+
+        self._buffer += data
+        parse_buffer(self._buffer, self.handle_message)
 
     def eof_received(self):
         self._log.error("eof received")

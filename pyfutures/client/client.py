@@ -22,12 +22,11 @@ from ibapi.common import OrderId
 from ibapi.common import TickAttribBidAsk
 from ibapi.contract import Contract as IBContract
 from ibapi.contract import ContractDetails as IBContractDetails
+from ibapi.decoder import Decoder
 from ibapi.execution import Execution as IBExecution
 from ibapi.execution import ExecutionFilter
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
-from pyfutures.client.objects import ClientRequest
-from pyfutures.client.objects import ClientException
 
 from pyfutures.client.cache import CachedFunc
 from pyfutures.client.cache import DetailsCache
@@ -36,6 +35,8 @@ from pyfutures.client.connection import Connection
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import WhatToShow
+from pyfutures.client.objects import ClientException
+from pyfutures.client.objects import ClientRequest
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.client.objects import IBErrorEvent
 from pyfutures.client.objects import IBExecutionEvent
@@ -45,7 +46,6 @@ from pyfutures.client.objects import IBPortfolioEvent
 from pyfutures.client.objects import IBPositionEvent
 from pyfutures.client.parsing import ClientParser
 from pyfutures.logger import LoggerAdapter
-from ibapi.decoder import Decoder
 
 
 class InteractiveBrokersClient:
@@ -57,6 +57,7 @@ class InteractiveBrokersClient:
         "accounts": -5,
         "portfolio": -6,
         "orders": -7,
+        "whatif": -8,
         # request id below 10 is where the decrementing sequence starts
     }
 
@@ -129,11 +130,19 @@ class InteractiveBrokersClient:
     def _create_request(
         self,
         id: int,
-        timeout_seconds: int,
         data: list | dict | None = None,
+        timeout_seconds: int | None = None,
     ) -> ClientRequest:
+        """
+        all requests use the default timeout passed at instantiation
+        and can be overriden by args if the client method supports it
+        """
         assert isinstance(id, int)
-        request = ClientRequest(id=id, data=data, timeout_seconds=timeout_seconds)
+        request = ClientRequest(
+            id=id,
+            data=data,
+            timeout_seconds=timeout_seconds or self._request_timeout_seconds,
+        )
 
         self._requests[id] = request
 
@@ -517,6 +526,55 @@ class InteractiveBrokersClient:
 
     ################################################################################################
     # Order querying
+    async def request_whatif(self, detail: IBContractDetails) -> dict:
+        """
+        Places an order with order.whatIf=True
+        used to return expected Margin reqs
+
+        This needs IBContractDetails instead of ContractDetails because
+        If order.totalQuantity is not set to detail.minSize
+        Gateway errors with code 388: Order size 1 is smaller than the minimum required size of 5.
+
+        """
+        contract = detail.contract
+
+        order = IBOrder()
+        order.orderId = await self.request_next_order_id()
+        order.action = "BUY"
+        order.whatIf = True
+        order.totalQuantity = detail.minSize
+        order.orderType = "MKT"
+        order.contract = contract
+
+        request_id = self._request_id_map["whatif"]
+        request = self._create_request(id=request_id, data=[])
+
+        self.place_order(order)
+
+        order_state = await self._wait_for_request(request)
+
+        return dict(
+            trading_class=contract.tradingClass,
+            symbol=contract.symbol,
+            exchange=contract.exchange,
+            currency=contract.currency,
+            initMarginBefore=order_state.initMarginBefore,
+            maintMarginBefore=order_state.maintMarginBefore,
+            equityWithLoanBefore=order_state.equityWithLoanBefore,
+            initMarginChange=order_state.initMarginChange,
+            maintMarginChange=order_state.maintMarginChange,
+            equityWithLoanChange=order_state.equityWithLoanChange,
+            initMarginAfter=order_state.initMarginAfter,
+            maintMarginAfter=order_state.maintMarginAfter,
+            equityWithLoanAfter=order_state.equityWithLoanAfter,
+            commission=order_state.commission,
+            minCommission=order_state.minCommission,
+            maxCommission=order_state.maxCommission,
+            commissionCurrency=order_state.commissionCurrency,
+            warningText=order_state.warningText,
+            completedTime=order_state.completedTime,
+            completedStatus=order_state.completedStatus,
+        )
 
     async def request_open_orders(self) -> list[IBOpenOrderEvent]:
         """
@@ -610,10 +668,18 @@ class InteractiveBrokersClient:
 
         OrderStatusReport
 
+        This endpoint is used for:
+        whatIf, execution events, get_all_orders
+
         """
         self._log.info(
             f"openOrder {orderId}, orderStatus {orderState.status}, commission: {orderState.commission}{orderState.commissionCurrency}, completedStatus: {orderState.completedStatus}"
         )
+        if request := self._requests.get(self._request_id_map["whatif"]):
+            print("IS WHAT IF")
+            # if the order originated from request_whatif
+            request.set_result(orderState)
+            return
 
         if orderState.warningText != "":
             self._log.warning(f"order {orderId} has warning: {orderState.warningText}")
@@ -624,17 +690,16 @@ class InteractiveBrokersClient:
             orderState=orderState,
         )
 
-        request_id = self._request_id_map["orders"]
-        request = self._requests.get(request_id)
-        if request is None:
+        # if its a regular order, emit event for nautilus
+        if not self._requests.get(self._request_id_map["orders"]):
             self.open_order_events.emit(event)
-            return
 
         request.data.append(event)
 
     def openOrderEnd(self):
         """
         self._client.reqOpenOrders callback.
+        NOT called for whatIf orders, or regular orders
         """
         self._log.info("openOrderEnd")
 
@@ -814,7 +879,6 @@ class InteractiveBrokersClient:
         The data is returned by accountSummary().
 
         """
-
         request = self._create_request(
             id=self._next_request_id(),
             timeout_seconds=self._request_timeout_seconds,
