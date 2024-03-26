@@ -240,6 +240,7 @@ class ContinuousData(Actor):
 
     @staticmethod
     def _continuous_to_adjusted(df: pd.DataFrame) -> list[float]:
+        # TODO: handle None values
         """
         current_month, current_close, forward_month, forward_close
         creating the adjusted from the continuous bars
@@ -249,16 +250,11 @@ class ContinuousData(Actor):
         # .fillna(False)
         mask = df.current_month != df.current_month.shift(1)
         mask.iloc[0] = False
-
-        # df["roll"] = mask
-
         values = pd.Series(np.full(len(df), np.nan))
         values.loc[mask] = df.current_price.loc[mask] - df.previous_price.loc[mask]
-
         values = values.shift(-1).bfill().fillna(0)
         df["adj_value"] = values
         df["adjusted"] = df.current_price + df.adj_value
-        print(df)
         return list(df.adjusted)
 
 
