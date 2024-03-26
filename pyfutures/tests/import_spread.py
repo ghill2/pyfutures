@@ -37,9 +37,9 @@ async def write_spread(write: bool = False):
     cache.purge_errors(asyncio.TimeoutError)
 
     rows = IBTestProviderStubs.universe_rows(
-        filter=[
-            "6L",
-        ],
+        # filter=[
+        #     "6A",
+        # ],
     )
     for row in rows:
         schedule = row.liquid_schedule

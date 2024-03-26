@@ -92,7 +92,7 @@ def get_spread_value(row):
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
         # filter=["RP"],
-        skip=["6L", "6A", "SR3"],
+        skip=["6A"],
     )
 
     for row in rows:

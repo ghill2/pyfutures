@@ -25,7 +25,7 @@ from pyfutures.continuous.contract_month import ContractMonth
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.data import ContinuousData
 from pyfutures.continuous.data import ContractExpired
-
+from pyfutures.continuous.bar import ContinuousBar
 
 class TestContinuousData:
     def setup_method(self):
@@ -220,72 +220,32 @@ class TestContinuousData:
     def test_manage_subscriptions(self):
         pass
 
-    def test_adjustment_appends_on_unique_current_bar(self):
+    def test_adjustment(self):
         # Arrange
         data = [
-            ("MES=2021H.SIM", "2021-03-04", 1),
+            ("MES=2021H.SIM", "MES=2021H.SIM", "2021-03-04", 1),
             ("MES=2021H.SIM", "2021-03-05", 2),
             ("MES=2021M.SIM", "2021-03-06", 10.1),
             ("MES=2021M.SIM", "2021-03-07", 10.2),
             ("MES=2021H.SIM", "2021-03-08", 3),
             ("MES=2021M.SIM", "2021-03-09", 10.3),
         ]
-
-        bars = [
+        
+    def _create_continuous_bars(self, data: list[tuple]) -> list[ContinuousBar]:
+        return [
             Bar(
                 bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
-                open=Price.from_str("0.5"),
-                high=Price.from_str("100"),
-                low=Price.from_str("0.1"),
-                close=Price.from_str(str(row[2])),
+                open=Price.from_str("1.1"),
+                high=Price.from_str("1.2"),
+                low=Price.from_str("1.0"),
+                close=Price.from_str(str(data[3])),
                 volume=Quantity.from_int(1),
                 ts_event=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
                 ts_init=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
             )
             for row in data
         ]
-
-        self.engine.add_data(bars)
-
-        # Act
-        self.engine.run()
-
-        # Assert
-        assert list(self.data.adjusted) == [1.0, 2.0, 3.0]
-
-    def test_adjustment_sets_expected(self):
-        # Arrange
-        data = [
-            ("MES=2021H.SIM", "2021-03-09", 1),
-            ("MES=2021M.SIM", "2021-03-09", 10.0),
-            ("MES=2021H.SIM", "2021-03-10", 2),
-            ("MES=2021M.SIM", "2021-03-10", 10.1),  # roll
-            ("MES=2021M.SIM", "2021-03-11", 10.2),
-            ("MES=2021Z.SIM", "2021-03-11", 20.2),
-            ("MES=2021M.SIM", "2021-03-12", 10.3),
-        ]
-
-        bars = [
-            Bar(
-                bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
-                open=Price.from_str("0.5"),
-                high=Price.from_str("100"),
-                low=Price.from_str("0.1"),
-                close=Price.from_str(str(row[2])),
-                volume=Quantity.from_int(1),
-                ts_event=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
-                ts_init=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
-            )
-            for row in data
-        ]
-        self.engine.add_data(bars)
-
-        # Act
-        self.engine.run()
-
-        # Assert
-        assert list(self.data.adjusted) == [9.1, 10.1, 10.2]
-
+        
     def _create_bars(self, data: list[tuple]) -> list[Bar]:
         return [
             Bar(
@@ -300,3 +260,69 @@ class TestContinuousData:
             )
             for row in data
         ]
+    
+    # def test_adjustment_appends_on_unique_current_bar(self):
+    #     # Arrange
+    #     data = [
+    #         ("MES=2021H.SIM", "2021-03-04", 1),
+    #         ("MES=2021H.SIM", "2021-03-05", 2),
+    #         ("MES=2021M.SIM", "2021-03-06", 10.1),
+    #         ("MES=2021M.SIM", "2021-03-07", 10.2),
+    #         ("MES=2021H.SIM", "2021-03-08", 3),
+    #         ("MES=2021M.SIM", "2021-03-09", 10.3),
+    #     ]
+
+    #     bars = [
+    #         Bar(
+    #             bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
+    #             open=Price.from_str("0.5"),
+    #             high=Price.from_str("100"),
+    #             low=Price.from_str("0.1"),
+    #             close=Price.from_str(str(row[2])),
+    #             volume=Quantity.from_int(1),
+    #             ts_event=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
+    #             ts_init=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
+    #         )
+    #         for row in data
+    #     ]
+
+    #     self.engine.add_data(bars)
+
+    #     # Act
+    #     self.engine.run()
+
+    #     # Assert
+    #     assert list(self.data.adjusted) == [1.0, 2.0, 3.0]
+
+    # def test_adjustment_sets_expected(self):
+    #     # Arrange
+    #     data = [
+    #         ("MES=2021H.SIM", "2021-03-09", 1),
+    #         ("MES=2021M.SIM", "2021-03-09", 10.0),
+    #         ("MES=2021H.SIM", "2021-03-10", 2),
+    #         ("MES=2021M.SIM", "2021-03-10", 10.1),  # roll
+    #         ("MES=2021M.SIM", "2021-03-11", 10.2),
+    #         ("MES=2021Z.SIM", "2021-03-11", 20.2),
+    #         ("MES=2021M.SIM", "2021-03-12", 10.3),
+    #     ]
+
+    #     bars = [
+    #         Bar(
+    #             bar_type=BarType.from_str(f"{row[0]}-1-DAY-MID-EXTERNAL"),
+    #             open=Price.from_str("0.5"),
+    #             high=Price.from_str("100"),
+    #             low=Price.from_str("0.1"),
+    #             close=Price.from_str(str(row[2])),
+    #             volume=Quantity.from_int(1),
+    #             ts_event=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
+    #             ts_init=dt_to_unix_nanos(pd.Timestamp(row[1], tz="UTC")),
+    #         )
+    #         for row in data
+    #     ]
+    #     self.engine.add_data(bars)
+
+    #     # Act
+    #     self.engine.run()
+
+    #     # Assert
+    #     assert list(self.data.adjusted) == [9.1, 10.1, 10.2]

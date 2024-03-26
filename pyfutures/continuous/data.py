@@ -72,33 +72,11 @@ class ContinuousData(Actor):
 
     def _handle_time_event(self, event: TimeEvent) -> None:
         
-        is_expired = self.clock.utc_now() >= self.chain.expiry_date
-        if is_expired:
-            raise ContractExpired(
-                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
-            )
-
-        should_roll: bool = self._should_roll()
-        if should_roll:
-            self.chain.roll()
-            self._manage_subscriptions()
-            # self._adjust()
-        
         current_bar = self.cache.bar(self.current_bar_type)
-        is_last = self._last_current is not None and self._last_current == current_bar
-        self._last_current = current_bar
-
-        if is_last:
+        if current_bar is None:
             return
         
-        self._append_continuous_bar()
-        
-    def _append_continuous_bar(self) -> None:
-        
-        current_bar = self.cache.bar(self.current_bar_type)
-        assert current_bar is not None  # design-time error
-        
-        bar = ContinuousBar(
+        continuous_bar = ContinuousBar(
             bar_type=self.bar_type,
             current_bar=current_bar,
             forward_bar=self.cache.bar(self.forward_bar_type),
@@ -107,7 +85,25 @@ class ContinuousData(Actor):
             ts_init=self.clock.timestamp_ns(),
             ts_event=self.clock.timestamp_ns(),
         )
+        self._handle_continuous_bar(continuous_bar)
         
+    def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
+        
+        is_expired = self.clock.utc_now() >= self.chain.expiry_date
+        if is_expired:
+            raise ContractExpired(
+                f"The chain failed to roll from {self.chain.current_month} to {self.chain.forward_month} before expiry date {self.chain.expiry_date}",
+            )
+        
+        
+        should_roll: bool = self._should_roll(bar)
+        if should_roll:
+            self.chain.roll()
+            self._manage_subscriptions()
+            
+        self._append_continuous_bar(bar)
+        
+    def _append_continuous_bar(self, bar: ContinuousBar) -> None:
         bars = self._load_continuous_bars()
         bars.append(bar)
         bars = bars[-self._maxlen:]
@@ -119,52 +115,70 @@ class ContinuousData(Actor):
     
     def _load_continuous_bars(self) -> list[ContinuousBar]:
         key = str(self.bar_type)
-        data: bytes = self.cache.get(key)
+        data: bytes | None = self.cache.get(key)
+        if data is None:
+            return []
         data: list[dict] = pickle.loads(data)
         return [ContinuousBar.from_dict(b) for b in data]
         
     def _save_continuous_bars(self, bars: list[ContinuousBar]) -> None:
         bars: list[dict] = [ContinuousBar.to_dict(b) for b in bars]
         data: bytes = pickle.dumps(bars)
-        
         key = str(self.bar_type)
         self.cache.set(key, data)
     
     def _calculate_adjusted(self, bars: list[ContinuousBar]) -> list[float]:
+        
         """
-        remaking the adjusted from the continuous bars
+        creating the adjusted from the continuous bars
         iterate over continuous bars backwards
         when it rolls shift the prices by the adjustment value from the bar after the roll
         """
-        pass
+        
+        values = deque()
+        values.appendleft(bars[-1])
+        adjustment_value = 0
+        
+        for i in range(0, len(bars) - 2, -1):
+            
+            current = bars[i]
+            forward = bars[i + 1]
+            
+            has_rolled = current.current_month != forward.current_month
+            if has_rolled:
+                adjustment_value = float(current.current_bar.close) - float(current.previous_bar.close)
+                
+            values.appendleft(
+                float(current.current_bar.close) + adjustment_value
+            )
+            
+        return list(values)
     
     def _save_adjusted(self, adjusted: list[float]) -> None:
         data: bytes = pickle.dumps(adjusted)
         key = f"{self.bar_type}a"
         self.cache.set(key, data)
         
-    def _should_roll(self) -> bool:
-        current_bar = self.cache.bar(self.current_bar_type)
-        forward_bar = self.cache.bar(self.forward_bar_type)
-
-        if current_bar is None or forward_bar is None:
+    def _load_adjusted(self) -> list[float]:
+        key = f"{self.bar_type}a"
+        data: bytes = self.cache.get(key, data)
+        return pickle.loads(data)
+    
+    def _should_roll(self, bar: ContinuousBar) -> bool:
+        
+        if bar.forward_bar is None:
             return False
-
-        forward_timestamp = unix_nanos_to_dt(forward_bar.ts_event)
-        current_timestamp = unix_nanos_to_dt(current_bar.ts_event)
+            
+        forward_timestamp = unix_nanos_to_dt(bar.forward_bar.ts_init)
+        current_timestamp = unix_nanos_to_dt(bar.current_bar.ts_init)
 
         if current_timestamp != forward_timestamp:
             return False
 
-        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) \
+                            and (current_timestamp < self.chain.expiry_date)
 
         return in_roll_window
-        
-        # adjustment_value = float(self.current_bar.close) - float(self.previous_bar.close)
-        # self.adjusted = deque(
-        #     [x + adjustment_value for x in self.adjusted],
-        #     maxlen=self.adjusted.maxlen,
-        # )
         
     def _manage_subscriptions(self) -> None:
         """
@@ -221,3 +235,10 @@ class ContinuousData(Actor):
         
         # self.adjusted.append(float(self.current_bar.close))
         # self.topic = f"data.bars.{self.bar_type}"
+        
+        # current_bar = self.cache.bar(self.current_bar_type)
+        # is_last = self._last_current is not None and self._last_current == current_bar
+        # self._last_current = current_bar
+
+        # if is_last:
+        #     return
