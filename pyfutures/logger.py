@@ -9,6 +9,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Callable
 
 
 NORMAL = 0
@@ -86,12 +87,14 @@ class LoggerAdapter:
         name: str,
         id: str = "N/A",
         level: int = logging.DEBUG,
+        bypass: bool = False,
         path: Path | None = None,
         prefix: Callable = None,
     ) -> None:
         self.id = id
         self.name = name
         self.level = level
+        self.bypass = bypass
         self.path = path
         self.prefix = prefix
 
@@ -152,6 +155,9 @@ class LoggerAdapter:
         message: str,
         color: int = NORMAL,
     ):
+        if self.bypass:
+            return
+
         message: str = self._format_line(
             message=message, level=logging.INFO, color=color
         )
@@ -162,6 +168,9 @@ class LoggerAdapter:
         message,
         color: int = YELLOW,
     ):
+        if self.bypass:
+            return
+
         message: str = self._format_line(
             message=message, level=logging.WARNING, color=color
         )
@@ -174,7 +183,9 @@ class LoggerAdapter:
     ):
         if self.bypass:
             return
-        message: str = self._format_line(message=message, level=logging.ERROR, color=color)
+        message: str = self._format_line(
+            message=message, level=logging.ERROR, color=color
+        )
         self.logger.error(message)
 
     def exception(
