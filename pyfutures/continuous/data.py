@@ -59,6 +59,7 @@ class ContinuousData(Actor):
         self._strategy_id = strategy_id
         self._instrument_id = bar_type.instrument_id
         self._reconciliation = reconciliation
+        self.current_month = None
 
     @property
     def current_bar_type(self) -> BarType:
@@ -244,9 +245,18 @@ class ContinuousData(Actor):
             self.roll(self.forward_month)
             
     def roll(self, to_month: ContractMonth) -> None:
+        self._log.info(f"Rolling to month {to_month} from {self.current_month}")
         self.current_month = to_month
+        
+        item = asyncio.run_coroutine_threadsafe(
+            coro=self._update_instruments(),
+            loop=asyncio.get_event_loop(),
+        )
+        item.result()
+        # print(asyncio.get_event_loop().create_task(self._update_instruments()))
         self._manage_subscriptions()
-        self._update_instruments()
+        
+        # asyncio.get_event_loop().run_until_complete(self._update_instruments())
         
     def _roll_window(
         self,
@@ -285,7 +295,7 @@ class ContinuousData(Actor):
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
 
-    def _update_instruments(self) -> None:
+    async def _update_instruments(self) -> None:
         """
         How to make sure we have the real expiry date from the contract when it calculates?
         The roll attempts needs the expiry date of the current contract.
@@ -305,7 +315,7 @@ class ContinuousData(Actor):
         
         for instrument_id in instrument_ids:
             # if self.instrument_provider.find(instrument_id) is None:
-            self.instrument_provider.load(instrument_id)
+            await self.instrument_provider.load_async(instrument_id)
         
         for instrument in self.instrument_provider.list_all():
             if instrument.id not in self.cache:
