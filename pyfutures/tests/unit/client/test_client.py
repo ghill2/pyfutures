@@ -32,15 +32,31 @@ from pyfutures.client.objects import IBErrorEvent
 from pyfutures.client.objects import IBExecutionEvent
 from pyfutures.client.objects import IBOrderStatusEvent
 from pyfutures.client.objects import IBPositionEvent
-from pyfutures.tests.unit.client.stubs import ClientStubs
+from pyfutures.tests.unit.client.stubs import UnitClientStubs
 
 
-pytestmark = pytest.mark.unit
+@pytest.mark.asyncio()
+async def test_request_contract_details_raises_exception():
+    client = UnitClientStubs.client()
+    # Arrange
+    contract = Contract()
+
+    def send_mocked_response(*args, **kwargs):
+        client.error(-10, 321, "test")
+
+    send_mock = Mock(side_effect=send_mocked_response)
+
+    client._eclient.reqContractDetails = send_mock
+
+    # Act & Assert
+    with pytest.raises(ClientException) as e:
+        await client.request_contract_details(contract)
+        assert e.code == 321
 
 
 class TestInteractiveBrokersClient:
     def setup_method(self):
-        self.client = ClientStubs.client()
+        self.client = UnitClientStubs.client()
 
     @pytest.mark.asyncio()
     async def test_eclient_sends_to_client(self):
@@ -101,23 +117,6 @@ class TestInteractiveBrokersClient:
             "reqId": -10,
             "contract": contract,
         }
-
-    @pytest.mark.asyncio()
-    async def test_request_contract_details_raises_exception(self):
-        # Arrange
-        contract = Contract()
-
-        def send_mocked_response(*args, **kwargs):
-            self.client.error(-10, 321, "test")
-
-        send_mock = Mock(side_effect=send_mocked_response)
-
-        self.client._eclient.reqContractDetails = send_mock
-
-        # Act & Assert
-        with pytest.raises(ClientException) as e:
-            await self.client.request_contract_details(contract)
-            assert e.code == 321
 
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()
@@ -296,7 +295,6 @@ class TestInteractiveBrokersClient:
         pass
 
     @pytest.mark.asyncio()
-    @pytest.mark.lock()
     async def test_request_open_orders(self):
         # Arrange
         def send_mocked_response(*args, **kwargs):
