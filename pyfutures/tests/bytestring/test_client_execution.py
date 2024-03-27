@@ -23,7 +23,7 @@ def contract(client):
 
 # @pytest.mark.skip(reason="can fail due to too many orders")
 @pytest.mark.asyncio()
-async def test_place_market_order(client, contract):
+async def test_market_order_filled(client, contract):
     await client.connect()
     detail = await client.request_front_contract_details(contract)
 
@@ -38,36 +38,11 @@ async def test_place_market_order(client, contract):
     order.orderType = "MKT"  # order_type
     order.totalQuantity = detail.minSize
     order.action = "BUY"  # side
+    order.tif = "GTC"
 
     client.place_order(order)
-
-
-# @pytest.mark.skip(reason="can fail due to too many orders")
-@pytest.mark.asyncio()
-async def test_place_limit_order(client, contract):
-    await client.connect()
-    detail = await client.request_front_contract_details(contract)
-
-    order = IBOrder()
-    order.contract = detail.contract
-
-    # LIMIT order
-    order.orderId = await client.request_next_order_id()
-    order.orderRef = str(UUID4())  # client_order_id
-    order.orderType = "LMT"  # order_type
-    order.totalQuantity = detail.minSize
-    order.action = "BUY"  # side
-    # order.lmtPrice = 2400.0  # price
-    # order.tif = "GTC"  # time in force
-
-    client.place_order(order)
-
-
-@pytest.mark.asyncio()
-async def test_request_open_orders(client):
-    await client.connect()
-    orders = await client.request_open_orders()
-    print(orders)
+    await asyncio.sleep(2)
+    print()
 
 
 @pytest.mark.skip(reason="helper")

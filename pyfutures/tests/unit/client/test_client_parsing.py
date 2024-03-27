@@ -10,6 +10,7 @@ from pyfutures.client.parsing import ClientParser
         # request_bars -> BarSize._1_DAY formatDate=2
         ("20231219", pd.Timestamp("2024-04-11 00:00:00", tz="UTC")),
         ("1704897000", pd.Timestamp("2025-04-20 17:35:00", tz="UTC")),
+20240327 10:20:00 US/Central
         # 1704992718
     ],
 )

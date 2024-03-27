@@ -1297,7 +1297,7 @@ class InteractiveBrokersClient:
             barSizeSetting=str(bar_size),
             whatToShow=what_to_show.value,
             useRTH=0,
-            formatDate=1,
+            formatDate=2,
             keepUpToDate=True,
             chartOptions=[],
         )

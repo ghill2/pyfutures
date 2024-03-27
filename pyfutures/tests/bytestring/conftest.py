@@ -7,6 +7,7 @@ import pytest_asyncio
 from pyfutures import PACKAGE_ROOT
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.logger import init_logging
+from pyfutures.logger import init_ib_api_logging
 from pyfutures.tests.bytestring.mock_server_subproc import MockServerSubproc
 
 from typing import Dict
@@ -14,6 +15,7 @@ from pytest import StashKey, CollectReport
 import pickle
 from _pytest.mark import Mark
 from ibapi.contract import Contract as IBContract
+import logging
 
 
 ####
@@ -91,6 +93,7 @@ def mode(request):
 @pytest.fixture(scope="session")
 def event_loop():
     init_logging()
+    init_ib_api_logging(logging.ERROR)
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
     loop.set_debug(True)

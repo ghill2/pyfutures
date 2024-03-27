@@ -21,7 +21,7 @@ class ClientParser:
     @classmethod
     def bar_data_to_dataframe(cls, bars: list[dict]) -> dict:
         return pd.DataFrame([cls.bar_data_to_dict(b) for b in bars])
-    
+
     @classmethod
     def bar_data_from_dict(cls, obj: dict) -> dict:
         bar = BarData()
@@ -35,13 +35,11 @@ class ClientParser:
         bar.wap = obj["wap"]
         bar.barCount = obj["barCount"]
         return bar
-    
+
     @classmethod
     def bar_data_from_dataframe(cls, df: pd.DataFrame) -> list[dict]:
-        return [
-            cls.bar_data_from_dict(d) for d in df.to_dict(orient="records")
-        ]
-    
+        return [cls.bar_data_from_dict(d) for d in df.to_dict(orient="records")]
+
     @classmethod
     def historical_tick_bid_ask_to_dict(cls, obj: HistoricalTickBidAsk) -> dict:
         return {
@@ -55,6 +53,9 @@ class ClientParser:
 
     @staticmethod
     def parse_datetime(value: str) -> pd.Timestamp:
+        print("PARSE DATETIME")
+        print(value)
+        print(type(value))
         if isinstance(value, int):
             # historical ticks int: DDDDDDDDDD
             return pd.to_datetime(value, unit="s", utc=True)
