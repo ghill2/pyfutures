@@ -15,8 +15,6 @@ from pyfutures.adapter.data import InteractiveBrokersDataClient
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.tests.unit.adapter.stubs import AdapterStubs
-
 
 CLIENT = None
 PROVIDER = None

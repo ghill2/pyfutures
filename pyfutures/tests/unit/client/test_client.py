@@ -32,12 +32,12 @@ from pyfutures.client.objects import IBErrorEvent
 from pyfutures.client.objects import IBExecutionEvent
 from pyfutures.client.objects import IBOrderStatusEvent
 from pyfutures.client.objects import IBPositionEvent
-from pyfutures.tests.unit.client.stubs import UnitClientStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 
 @pytest.mark.asyncio()
 async def test_eclient_sends_to_client(self):
-    self.client = UnitClientStubs.client()
+    self.client = ClientStubs.client()
     # Arrange
     self.client.sendMsg = Mock()
 

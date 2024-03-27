@@ -30,9 +30,8 @@ from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
 from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
-from pyfutures.tests.unit.adapter.stubs import AdapterStubs as UnitAdapterStubs
 from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-
+from pyfutures.tests.unit.client.stubs import ClientStubs
 from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.data import ContinuousData
@@ -81,7 +80,10 @@ class AdapterStubs:
         return PROVIDER_CONFIG
 
     @staticmethod
-    def instrument_provider(client: InteractiveBrokersClient) -> InteractiveBrokersInstrumentProvider:
+    def instrument_provider(
+        client: InteractiveBrokersClient | None = None,
+    ) -> InteractiveBrokersInstrumentProvider:
+        client = client or ClientStubs.client()
         config = InteractiveBrokersInstrumentProviderConfig(**PROVIDER_CONFIG)
         provider = InteractiveBrokersInstrumentProvider(client=client, config=config)
         return provider
@@ -265,8 +267,9 @@ class AdapterStubs:
             instrument_provider=cls.instrument_provider(),
         )
         
-    @staticmethod
+    @classmethod
     def trading_node(
+        cls,
         trader_id: TraderId | None = None,
         load_ids: list | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
@@ -277,7 +280,7 @@ class AdapterStubs:
         
         provider_config_dict = dict(
             load_ids=load_ids,
-            **UnitAdapterStubs.provider_config(),
+            **cls.provider_config(),
         )
         provider_config = InteractiveBrokersInstrumentProviderConfig(**provider_config_dict)
 

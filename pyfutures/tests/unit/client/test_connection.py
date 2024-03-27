@@ -12,7 +12,7 @@ from pyfutures.client.objects import ClientSubscription
 from pyfutures.logger import LoggerAttributes
 
 # from pyfutures.tests.unit.client.mock_server import MockServer
-from pyfutures.tests.unit.client.stubs import UnitClientStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
 import async_solipsism
 
 from async_solipsism.socket import Socket
@@ -87,7 +87,7 @@ class MockSocket:
 
 @pytest.mark.asyncio()
 async def test_connect_2(mocker):
-    client = UnitClientStubs.client(request_timeout_seconds=20)
+    client = ClientStubs.client(request_timeout_seconds=20)
 
     UNIT = False
 
@@ -120,7 +120,7 @@ async def test_connect_2(mocker):
 
 @pytest.mark.asyncio()
 async def test_connect():
-    client = UnitClientStubs.client(request_timeout_seconds=20)
+    client = ClientStubs.client(request_timeout_seconds=20)
     # client.conn._wait_for_request - AsyncMock(side_effect=lambda request: request)
     # client.conn._connect_start_tasks - AsyncMock()
     await client.connect()
@@ -152,7 +152,7 @@ async def test_reconnection_on_empty_byte(mocker):
     When the client receives an empty byte, the client should attempt reconnect
     also tests for reconnecting subscriptions
     """
-    connection = UnitClientStubs.connection(client_id=1)
+    connection = ClientStubs.connection(client_id=1)
     mock_server = MockServer()
     mocker.patch(
         "asyncio.open_connection",
@@ -177,7 +177,7 @@ async def test_reconnection_on_empty_byte(mocker):
 @pytest.mark.timeout(0.5)
 @pytest.mark.asyncio()
 async def test_reconnection_on_conn_reset_error(mocker):
-    connection = UnitClientStubs.connection(client_id=1)
+    connection = ClientStubs.connection(client_id=1)
     mock_server = MockServer()
     mocker.patch(
         "asyncio.open_connection",
