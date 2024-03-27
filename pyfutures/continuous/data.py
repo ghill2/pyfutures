@@ -10,7 +10,9 @@ from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
+from nautilus_trader.model.position import Position
 from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import StrategyId
 
 from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.config import RollConfig
@@ -26,7 +28,9 @@ class ContinuousData(Actor):
         self,
         bar_type: BarType,
         config: RollConfig,
-        start_month: ContractMonth,
+        strategy_id: StrategyId,
+        start_month: ContractMonth = None,
+        reconciliation: bool = False,
         maxlen: int = 250,
     ):
         super().__init__()
@@ -42,10 +46,16 @@ class ContinuousData(Actor):
 
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
-        assert self.start_month in self.hold_cycle
-
+        
+        if reconciliation is False:
+            assert self._start_month is not None
+            assert self._start_month in self.hold_cycle
+        
         self._maxlen = maxlen
         self._timer_name = f"chain_{self.bar_type}"
+        self._strategy_id = strategy_id
+        self._instrument_id = bar_type.instrument_id
+        self._reconciliation = reconciliation
 
     @property
     def current_bar_type(self) -> BarType:
@@ -79,9 +89,54 @@ class ContinuousData(Actor):
         return self._make_bar_type(self.carry_month)
 
     def on_start(self) -> None:
-        self.current_month = self.start_month
+        if self._reconciliation:
+            self.cache.load_actor(self)
+            self.reconcile_month()
+            self.reconcile_data()
+        else:
+            self.current_month = self.start_month
         self._manage_subscriptions()
-
+    
+    def reconcile_month(self) -> None:
+        
+        positions = self.cache.positions(
+            strategy_id=self._strategy_id,
+        )
+        if len(positions) == 0 or len(self.continuous) == 0:
+            
+            self.reconcile_month_from_calendar()
+            
+        elif len(positions) == 1:
+            
+            self.reconcile_month_from_position(positions[0])
+            
+        elif len(positions) > 1:
+            raise RuntimeError(f"IB has more than one position for {self._instrument_id}")
+    
+    def reconcile_month_from_position(self, position: Position) -> None:
+            
+        instrument = self.cache.instrument(position.instrument_id)
+        assert instrument is not None
+        
+        position_month = ContractMonth(instrument.id.symbol.value.split("=")[-1])
+        last_month = self.continuous[-1].current_month
+        if position_month == last_month:
+            self.current_month = last_month
+        else:
+            raise RuntimeError(
+                f"Position has month {position_month} but last month of cached data is {last_month}"
+            )
+            
+    def reconcile_month_from_calendar(self) -> None:
+        # TODO
+        # get current_time
+        # use forward month if current time is inside roll window otherwise current_month
+        pass
+    
+    def reconcile_data(self) -> None:
+        assert self.current_month is not None
+        pass
+    
     def handle_bar(self, bar: Bar) -> None:
         """
         schedule the timer to process the module after x seconds on current or forward bar
@@ -185,8 +240,8 @@ class ContinuousData(Actor):
         """
         Format the InstrumentId for contract given the ContractMonth.
         """
-        symbol = self.bar_type.instrument_id.symbol.value
-        venue = self.bar_type.instrument_id.venue.value
+        symbol = self._instrument_id.symbol.value
+        venue = self._instrument_id.venue.value
         return InstrumentId.from_str(
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )

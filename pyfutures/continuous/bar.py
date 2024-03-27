@@ -18,13 +18,13 @@ class ContinuousBar(Data):
         self,
         bar_type: BarType,
         current_bar: Bar,
-        forward_bar: Bar | None,
-        previous_bar: Bar | None,
-        carry_bar: Bar | None,
         ts_event: int,
         ts_init: int,
         expiration_ns: int,
         roll_ns: int,
+        forward_bar: Bar | None = None,
+        previous_bar: Bar | None = None,
+        carry_bar: Bar | None = None,
     ):
         PyCondition.type(bar_type, BarType, "bar_type")
         PyCondition.type(current_bar, Bar, "current_bar")

@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -83,23 +84,32 @@ def get_spread_value(row):
 
         average_spread: float = pd.Series(spread_values).mean()
         i = 7
+        
         if average_spread == 0.0:
             print(f"{row.uname}: {average_spread:.{i}f} failed")
         else:
             print(f"{row.uname}: {average_spread:.{i}f}")
+            
+        return row.uname, average_spread
+            
+        
 
 
 if __name__ == "__main__":
     rows = IBTestProviderStubs.universe_rows(
-        filter=["6A"],
+        # filter=["6A"],
         # skip=["6A"],
     )
 
-    for row in rows:
-        get_spread_value(row)
+    # for row in rows:
+    #     get_spread_value(row)
     
-    # import joblib
-    # results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
+    import joblib
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
+    df = pd.DataFrame(results, columns=["uname", "value"])
+    print(df)
+    path = Path.home() / "Desktop" / "spreads.csv"
+    df.to_csv(path, index=False)
 
     # get_spread_value(rows[0])
     # for row in rows:

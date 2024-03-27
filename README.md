@@ -37,13 +37,29 @@ on_start:
     check that current position matches position on ib
     create the missing continuous bars upto current time
 
+"""
+        get position
+            if position.month == self.continuous[-1]:
+                reconcile missing data
+            else:
+                raise Exception
+        else:
+            use the forward month if in roll window otherwise current month
+            when execution runs next it will use up-to-date forward month data to open position
+        
+        no cached bars?
+        """
+        
 OTHER:
     if there is a discrepancy between local forecasted position size and broker position size it should flag and we manually check
 NOTES:
     * what if the cached continuous bar history is lost?
     * what about finding the current position from the cached continuous bar history if ib position is not found?
 
+-------------------------------------------------
+* add contract month to instrument_id in adapter
 
+-------------------------------------------------
 creating missing continuous bars from the cached continuous bars to current time by requesting contract bars
 - cache the continuous bars
 - on startup, start month of the most recent continuous bar
