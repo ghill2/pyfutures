@@ -47,6 +47,7 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     async def load_async(
         self,
         instrument_id: InstrumentId | IBContract,
+        filters: dict | None = None,
     ) -> None:
         contract: IBContract = self._parse_input(instrument_id)
 

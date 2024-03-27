@@ -304,10 +304,9 @@ class ContinuousData(Actor):
         ]
         
         for instrument_id in instrument_ids:
-            if self.instrument_provider.find(instrument_id) is None:
-                self.instrument_provider.load(self.current_bar_type.instrument_id)
-        print(self.instrument_provider.count)
-        exit()
+            # if self.instrument_provider.find(instrument_id) is None:
+            self.instrument_provider.load(instrument_id)
+        
         for instrument in self.instrument_provider.list_all():
             if instrument.id not in self.cache:
                 self.cache.add_instrument(instrument)
