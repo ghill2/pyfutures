@@ -105,8 +105,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         return self._cache
 
     async def _connect(self):
-        if self._client.connection.is_connected:
-            await self._client.connect()
+        await self._client.connect()
 
     def open_order_callback(self, event: IBOpenOrderEvent):
         """

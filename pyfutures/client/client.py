@@ -70,15 +70,6 @@ class InteractiveBrokersClient:
         # default timeout for requests if not given
         request_timeout_seconds: float | int | None = 5,
     ):
-        self.conn = Connection(
-            loop=loop,
-            host=host,
-            port=port,
-            client_id=client_id,
-            subscriptions=self._subscriptions,
-            fields_received_callback=self._fields_received_callback,
-        )
-        
         
 
         # Events
@@ -91,6 +82,14 @@ class InteractiveBrokersClient:
 
         self._requests = {}
         self._subscriptions = {}
+        self.conn = Connection(
+            loop=loop,
+            host=host,
+            port=port,
+            client_id=client_id,
+            subscriptions=self._subscriptions,
+            fields_received_callback=self._fields_received_callback,
+        )
         self._executions = {}  # hot cache
         self._request_id_seq = -10  # reset on every connect
 
