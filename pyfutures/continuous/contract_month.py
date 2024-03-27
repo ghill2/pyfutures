@@ -40,7 +40,12 @@ class ContractMonth:
             year=int(str(value)[:4]),
             month=int(str(value)[4:6]),
         )
-
+    
+    @classmethod
+    def now(cls) -> ContractMonth:
+        now = pd.Timestamp.utcnow()
+        return cls.from_month_year(year=now.year, month=now.month)
+    
     def to_int(self) -> int:
         return int(f"{self.year}{self.month:02d}")
 

@@ -121,7 +121,7 @@ class RollCycle:
         while start < end:
             months.add(start)
             start = self.next_month(start)
-        return months
+        return sorted(months)
 
     def __getstate__(self):
         return (self.value, self._skip_months)

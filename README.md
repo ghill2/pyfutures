@@ -67,12 +67,6 @@ creating missing continuous bars from the cached continuous bars to current time
 
 each continuous bar stores it's adjustment value
 
-
-
-
-
-
-
 --------------------------
 * only cache specific errors in the historic cache
 
