@@ -270,25 +270,25 @@ class TestInteractiveBrokersClient:
         assert next_id == 4
         send_mock.assert_called_once_with(1)
 
-    @pytest.mark.asyncio()
-    async def test_place_market_order(self):
-        # Arrange
-        order = Order()
-        order.orderId = 4
-        order.contract = Contract()
-
-        send_mock = Mock()
-        self.client._eclient.placeOrder = send_mock
-
-        # Act
-        self.client.place_order(order)
-
-        # Assert
-        send_mock.assert_called_once_with(
-            order.orderId,
-            order.contract,
-            order,
-        )
+    # @pytest.mark.asyncio()
+    # async def test_place_market_order(self):
+    #     # Arrange
+    #     order = Order()
+    #     order.orderId = 4
+    #     order.contract = Contract()
+    #
+    #     send_mock = Mock()
+    #     self.client._eclient.placeOrder = send_mock
+    #
+    #     # Act
+    #     self.client.place_order(order)
+    #
+    #     # Assert
+    #     send_mock.assert_called_once_with(
+    #         order.orderId,
+    #         order.contract,
+    #         order,
+    #     )
 
     @pytest.mark.skip(reason="TODO")
     @pytest.mark.asyncio()

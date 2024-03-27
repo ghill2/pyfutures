@@ -88,8 +88,6 @@ class Protocol(asyncio.Protocol):
         except Exception as e:
             self._log.exception("protocol data_received exception: ", e)
 
-        print("EXITED WHILE LOOP")
-
     def eof_received(self):
         self._log.error("eof received")
 

@@ -29,53 +29,6 @@ async def test_request_next_order_id(event_loop):
     await client.request_next_order_id()
 
 
-@pytest.mark.skip(reason="can fail due to too many orders")
-@pytest.mark.asyncio()
-async def test_place_market_order(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-    contract = Contract()
-    contract.conId = 564400671
-    contract.exchange = "ICEEUSOFT"
-
-    order = Order()
-    order.contract = contract
-
-    # MARKET order
-    order.orderId = await client.request_next_order_id()
-    order.orderRef = str(UUID4())  # client_order_id
-    order.orderType = "MKT"  # order_type
-    order.totalQuantity = Decimal(1)  # quantity
-    order.action = "BUY"  # side
-
-    client.place_order(order)
-
-
-@pytest.mark.skip(reason="can fail due to too many orders")
-@pytest.mark.asyncio()
-async def test_limit_place_order(event_loop):
-    client = ClientStubs.client(loop=event_loop)
-    await client.connect()
-
-    contract = Contract()
-    contract.conId = 564400671
-    contract.exchange = "ICEEUSOFT"
-
-    order = Order()
-    order.contract = contract
-
-    # LIMIT order
-    order.orderId = await client.request_next_order_id()
-    order.orderRef = str(UUID4())  # client_order_id
-    order.orderType = "LMT"  # order_type
-    order.totalQuantity = Decimal(1)  # quantity
-    order.action = "BUY"  # side
-    order.lmtPrice = 2400.0  # price
-    order.tif = "GTC"  # time in force
-
-    client.place_order(order)
-
-
 @pytest.mark.asyncio()
 async def test_request_open_orders(event_loop):
     client = ClientStubs.client(loop=event_loop)
