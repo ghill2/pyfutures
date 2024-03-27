@@ -248,12 +248,13 @@ class ContinuousData(Actor):
         self._log.info(f"Rolling to month {to_month} from {self.current_month}")
         self.current_month = to_month
         
-        item = asyncio.run_coroutine_threadsafe(
-            coro=self._update_instruments(),
-            loop=asyncio.get_event_loop(),
-        )
-        item.result()
-        # print(asyncio.get_event_loop().create_task(self._update_instruments()))
+        # item = asyncio.run_coroutine_threadsafe(
+        #     coro=self._update_instruments(),
+        #     loop=asyncio.get_event_loop(),
+        # )
+        # item.result()
+        # print(asyncio.get_event_loop().create_task())
+        self._update_instruments()
         self._manage_subscriptions()
         
         # asyncio.get_event_loop().run_until_complete(self._update_instruments())
@@ -295,7 +296,7 @@ class ContinuousData(Actor):
             f"{symbol}={month.year}{month.letter_month}.{venue}",
         )
 
-    async def _update_instruments(self) -> None:
+    def _update_instruments(self) -> None:
         """
         How to make sure we have the real expiry date from the contract when it calculates?
         The roll attempts needs the expiry date of the current contract.
@@ -315,7 +316,7 @@ class ContinuousData(Actor):
         
         for instrument_id in instrument_ids:
             # if self.instrument_provider.find(instrument_id) is None:
-            await self.instrument_provider.load_async(instrument_id)
+            self.instrument_provider.load(instrument_id)
         
         for instrument in self.instrument_provider.list_all():
             if instrument.id not in self.cache:
