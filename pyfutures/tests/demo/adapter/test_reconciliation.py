@@ -24,27 +24,14 @@ from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.data import ContinuousData
-from pyfutures.tests.demo.adapter.stubs import AdapterStubs
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 
 class TestContinuousDataReconcilicationDemo:
     
     def setup_method(self):
         
         self.bar_type = BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL")
-        self.data = ContinuousData(
-            bar_type=self.bar_type,
-            strategy_id=TestIdStubs.strategy_id(),
-            config=RollConfig(
-                hold_cycle=RollCycle("HMUZ"),
-                priced_cycle=RollCycle("FGHJKMNQUVXZ"),
-                roll_offset=-5,
-                approximate_expiry_offset=14,
-                carry_offset=1,
-            ),
-            reconciliation=True,
-        )
-        
-        
+        self.data = AdapterStubs.continuous_data(reconciliation=True)
         self.node = AdapterStubs.trading_node()
         self.node.trader.add_actor(self.data)
     

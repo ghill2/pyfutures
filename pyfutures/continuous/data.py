@@ -1,3 +1,4 @@
+import asyncio
 import pickle
 from collections import deque
 
@@ -17,7 +18,7 @@ from nautilus_trader.model.identifiers import StrategyId
 from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.contract_month import ContractMonth
-
+from nautilus_trader.common.providers import InstrumentProvider
 
 class ContractExpired(Exception):
     pass
@@ -29,6 +30,7 @@ class ContinuousData(Actor):
         bar_type: BarType,
         config: RollConfig,
         strategy_id: StrategyId,
+        instrument_provider: InstrumentProvider,
         start_month: ContractMonth = None,
         reconciliation: bool = False,
         maxlen: int = 250,
@@ -43,7 +45,8 @@ class ContinuousData(Actor):
         self.start_month = start_month
         self.continuous = deque(maxlen=maxlen)
         self.adjusted: list[float] = []
-
+        self.instrument_provider = instrument_provider
+        
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
         
@@ -96,9 +99,12 @@ class ContinuousData(Actor):
             
     def reconcile(self) -> None:
         
+        self._log.info(f"Reconciling continuous data")
+        
         self.cache.load_actor(self)
         
         start_month = self.reconcile_month()
+        self._log.info(f"start_month: {start_month}")
         
         self.roll(start_month)
         
@@ -112,11 +118,11 @@ class ContinuousData(Actor):
             strategy_id=self._strategy_id,
         )
         if len(positions) == 0 or len(self.continuous) == 0:
-            
+            self._log.info(f"Finding month from calendar")
             return self._reconcile_month_from_calendar(self.clock.utc_now())
             
         elif len(positions) == 1:
-            
+            self._log.info(f"Finding month from position")
             return self._reconcile_month_from_position(positions[0])
             
         elif len(positions) > 1:
@@ -240,6 +246,7 @@ class ContinuousData(Actor):
     def roll(self, to_month: ContractMonth) -> None:
         self.current_month = to_month
         self._manage_subscriptions()
+        self._update_instruments()
         
     def _roll_window(
         self,
@@ -255,7 +262,7 @@ class ContinuousData(Actor):
         Update the subscriptions after the roll.
         Subscribe to previous, current, forward and carry, remove all other subscriptions
         """
-        self._log.info("Updating subscriptions...")
+        self._log.info("Managing subscriptions...")
 
         self.unsubscribe_bars(self.previous_bar_type)
         self.subscribe_bars(self.current_bar_type)
@@ -286,7 +293,26 @@ class ContinuousData(Actor):
             will be available directly after a roll.
         Cache the contracts after every roll, and run them on a timer too.
         """
-
+        
+        self._log.info(f"Updating instruments...")
+        
+        instrument_ids = [
+            self.current_bar_type.instrument_id,
+            self.previous_bar_type.instrument_id,
+            self.forward_bar_type.instrument_id,
+            self.carry_bar_type.instrument_id,
+        ]
+        
+        for instrument_id in instrument_ids:
+            if self.instrument_provider.find(instrument_id) is None:
+                self.instrument_provider.load(self.current_bar_type.instrument_id)
+        print(self.instrument_provider.count)
+        exit()
+        for instrument in self.instrument_provider.list_all():
+            if instrument.id not in self.cache:
+                self.cache.add_instrument(instrument)
+        
+        
     def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
         # most outer layer method for testing purposes
         self.continuous.append(bar)

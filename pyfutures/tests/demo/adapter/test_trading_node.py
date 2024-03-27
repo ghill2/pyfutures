@@ -4,8 +4,8 @@ import logging
 from nautilus_trader.model.identifiers import TraderId
 from pyfutures.logger import LoggerAttributes
 from pyfutures.tests.test_kit import IBTestProviderStubs
-from pyfutures.tests.demo.adapter.stubs import AdapterStubs
-from pyfutures.tests.demo.client.stubs import ClientStubs
+from pyfutures.tests.unit.adapter.stubs import AdapterStubs
+from pyfutures.tests.unit.client.stubs import ClientStubs
 
 from nautilus_trader.model.data import BarType
 from nautilus_trader.model.enums import OrderSide
