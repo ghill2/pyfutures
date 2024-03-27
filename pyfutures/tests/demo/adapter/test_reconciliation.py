@@ -1,4 +1,5 @@
 import pandas as pd
+import asyncio
 import pytest
 from nautilus_trader.common.component import MessageBus
 from nautilus_trader.common.component import TestClock
@@ -23,6 +24,7 @@ from pyfutures.continuous.cycle import RollCycle
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.data import ContinuousData
+from pyfutures.tests.demo.adapter.stubs import AdapterStubs
 
 class TestContinuousDataReconcilicationDemo:
     
@@ -55,10 +57,18 @@ class TestContinuousDataReconcilicationDemo:
             ),
             reconciliation=True,
         )
+        
         self.data.register_base(
             portfolio=self.portfolio,
             msgbus=self.msgbus,
             cache=self.cache,
             clock=self.clock,
         )
+        
+        AdapterStubs.trading_node(
+            asyncio.get_event_loop(),
+        )
+        
+    
+    # def test_reconcile_no_position(self):
         
