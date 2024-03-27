@@ -106,7 +106,7 @@ class ContinuousData(Actor):
         self.reconcile_data()
         
         # self.roll(self.forward_month)
-            
+        
     def reconcile_month(self) -> ContractMonth:
         
         positions = self.cache.positions(
