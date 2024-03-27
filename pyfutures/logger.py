@@ -38,6 +38,13 @@ LEVEL_TO_STR = {
 }
 
 
+def init_ib_api_logging(level: int):
+    names = logging.Logger.manager.loggerDict
+    for name in names:
+        if "ibapi" in name:
+            logging.getLogger(name).setLevel(level)
+
+
 def init_logging(log_level: int = logging.DEBUG):
     # initializes all loggers with specified custom format and log level
     log_format = (

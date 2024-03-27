@@ -67,7 +67,6 @@ class InteractiveBrokersClient:
         host: str = "127.0.0.1",
         port: int = 4002,
         client_id: int = 1,
-        api_log_level: int = logging.ERROR,
         # default timeout for requests if not given
         request_timeout_seconds: float | int | None = 5,
     ):
@@ -86,11 +85,6 @@ class InteractiveBrokersClient:
         self._subscriptions = {}
         self._executions = {}  # hot cache
         self._request_id_seq = -10  # reset on every connect
-
-        names = logging.Logger.manager.loggerDict
-        for name in names:
-            if "ibapi" in name:
-                logging.getLogger(name).setLevel(api_log_level)
 
         self._parser = ClientParser()
 
