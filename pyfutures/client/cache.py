@@ -56,7 +56,7 @@ class RequestsCache(BaseCache):
     def __init__(self, path: Path):
         super().__init__(path=path)
         self._parser = ClientParser()
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     def get(
         self,
@@ -176,7 +176,7 @@ class CachedFunc:
         self._func = func
         self._cache = cache
 
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     async def __call__(self, *args, **kwargs) -> list[Any] | Exception:
         assert args == (), "Keywords arguments only"

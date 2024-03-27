@@ -30,7 +30,7 @@ class Connection:
 
         self.reconnect_task: asyncio.Task | None = None
 
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
         self.protocol = Protocol(
             loop=loop,
             client_id=client_id,

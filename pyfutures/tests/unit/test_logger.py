@@ -43,7 +43,7 @@ class TestLogger:
         LoggerAttributes.level = logging.DEBUG
         LoggerAttributes.path = Path("test.log")
 
-        log = LoggerAdapter.from_attrs(
+        log = LoggerAdapter.from_name(
             name="test_name",
         )
         assert log.name == "test_name"

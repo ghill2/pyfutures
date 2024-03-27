@@ -21,7 +21,7 @@ class InteractiveBrokersHistoricClient:
         client: InteractiveBrokersClient,
     ):
         self._client = client
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
         self._parser = ClientParser()
 
     async def request_bars(

@@ -49,7 +49,7 @@ class Protocol(asyncio.Protocol):
         self._connection_lost_callback = connection_lost_callback
         self._fields_received_callback = fields_received_callback
 
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
         self._bstream = None
         self._buffer = b""
 

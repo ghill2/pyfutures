@@ -61,7 +61,7 @@ class Gateway:
 
     def __init__(self, log_level: int = logging.DEBUG):
         self._container: aiodocker.containers.DockerContainer | None = None
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
     async def create_container(self):
         """

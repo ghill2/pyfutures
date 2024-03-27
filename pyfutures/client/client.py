@@ -79,7 +79,7 @@ class InteractiveBrokersClient:
         self.error_events = eventkit.Event("IBErrorEvent")
         self.execution_events = eventkit.Event("IBExecutionEvent")
 
-        self._log = LoggerAdapter.from_attrs(name=type(self).__name__)
+        self._log = LoggerAdapter.from_name(name=type(self).__name__)
 
         self._requests = {}
         self._subscriptions = {}

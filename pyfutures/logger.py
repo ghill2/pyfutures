@@ -121,7 +121,7 @@ class LoggerAdapter:
         cls._timestamp_ns = timestamp_ns
 
     @classmethod
-    def from_attrs(cls, name: str, *args, **kwargs) -> LoggerAdapter:
+    def from_name(cls, name: str, *args, **kwargs) -> LoggerAdapter:
         """
         Creates a LoggerAdapter instance from provided attributes,
         accepting any additional arguments or keyword arguments.

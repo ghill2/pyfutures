@@ -65,10 +65,12 @@ class TestContinuousDataReconcilicationDemo:
             clock=self.clock,
         )
         
-        AdapterStubs.trading_node(
-            asyncio.get_event_loop(),
-        )
-        
+        self.node = AdapterStubs.trading_node()
     
-    # def test_reconcile_no_position(self):
+    def test_reconcile_no_position(self):
+        
+        # Arrange
+        
+        # Act
+        self.node.run()
         

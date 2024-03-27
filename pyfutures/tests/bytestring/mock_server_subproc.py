@@ -12,7 +12,7 @@ from contextlib import suppress
 class MockServerSubproc:
     def __init__(self, loop):
         self._loop = loop
-        self._log = LoggerAdapter.from_attrs(
+        self._log = LoggerAdapter.from_name(
             name=type(self).__name__, prefix=lambda _: ""
         )
         self._read_stdout_task: asyncio.Task | None = None
