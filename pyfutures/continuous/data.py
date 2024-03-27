@@ -89,7 +89,6 @@ class ContinuousData(Actor):
         return self._make_bar_type(self.carry_month)
 
     def on_start(self) -> None:
-        
         if self._reconciliation:
             self.reconcile()
         else:

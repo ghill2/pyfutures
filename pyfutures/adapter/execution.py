@@ -365,7 +365,7 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         # an error related to an order will have a positive request_id
         # all client request_ids are negative
         if event.reqId <= 0:
-            self._log.debug(f"Error with code {event.code} was an error related to an order")
+            self._log.debug(f"Error with code {event.errorCode} was an error NOT related to an order, doing nothing")
             return
 
         venue_order_id = VenueOrderId(str(event.reqId))

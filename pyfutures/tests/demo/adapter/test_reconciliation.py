@@ -30,20 +30,6 @@ class TestContinuousDataReconcilicationDemo:
     
     def setup_method(self):
         
-        self.clock = TestClock()
-        self.msgbus = MessageBus(
-            trader_id=TestIdStubs.trader_id(),
-            clock=self.clock,
-        )
-
-        self.cache = TestComponentStubs.cache()
-
-        self.portfolio = Portfolio(
-            msgbus=self.msgbus,
-            cache=self.cache,
-            clock=self.clock,
-        )
-        
         self.bar_type = BarType.from_str("MES.SIM-1-DAY-MID-EXTERNAL")
         self.data = ContinuousData(
             bar_type=self.bar_type,
@@ -58,14 +44,9 @@ class TestContinuousDataReconcilicationDemo:
             reconciliation=True,
         )
         
-        self.data.register_base(
-            portfolio=self.portfolio,
-            msgbus=self.msgbus,
-            cache=self.cache,
-            clock=self.clock,
-        )
         
         self.node = AdapterStubs.trading_node()
+        self.node.trader.add_actor(self.data)
     
     def test_reconcile_no_position(self):
         
