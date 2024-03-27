@@ -70,8 +70,16 @@ class InteractiveBrokersClient:
         # default timeout for requests if not given
         request_timeout_seconds: float | int | None = 5,
     ):
-        self._loop = loop
-        self._request_timeout_seconds = request_timeout_seconds
+        self.conn = Connection(
+            loop=loop,
+            host=host,
+            port=port,
+            client_id=client_id,
+            subscriptions=self._subscriptions,
+            fields_received_callback=self._fields_received_callback,
+        )
+        
+        
 
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
@@ -88,20 +96,15 @@ class InteractiveBrokersClient:
 
         self._parser = ClientParser()
 
-        self.conn = Connection(
-            loop=loop,
-            host=host,
-            port=port,
-            client_id=client_id,
-            subscriptions=self._subscriptions,
-            fields_received_callback=self._fields_received_callback,
-        )
+        
         self._decoder = Decoder(serverVersion=176, wrapper=self)
 
         self._eclient = EClient(wrapper=self)
         self._eclient.clientId = client_id
         self.conn.protocol.startApi = self._eclient.startApi
         self._eclient.sendMsg = self.conn.protocol.sendMsg
+        self._loop = loop
+        self._request_timeout_seconds = request_timeout_seconds
         # self._eclient.conn = (
         #     self.conn
         # )  # redirect Eclient.conn.sendMsg() to our Connection()
