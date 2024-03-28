@@ -1177,7 +1177,6 @@ class InteractiveBrokersClient:
         self._log.debug(
             f"Received quote tick {reqId} {time}, {bidPrice}, {askPrice}, {bidSize}, {askSize}",
         )
-
         subscription = self._subscriptions.get(reqId)
         if subscription is None:
             self._log.debug(
