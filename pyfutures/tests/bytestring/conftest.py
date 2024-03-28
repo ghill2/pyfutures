@@ -16,6 +16,8 @@ import pickle
 from _pytest.mark import Mark
 from ibapi.contract import Contract as IBContract
 import logging
+from pyfutures.tests.test_kit import IBTestProviderStubs
+import pandas as pd
 
 
 ####
@@ -35,6 +37,31 @@ def contract():
 def cont_contract(contract):
     contract.secType = "CONTFUT"
     return contract
+
+
+@pytest_asyncio.fixture(scope="session")
+async def qual_front_detail(event_loop):
+    """
+    returns the lowest low margin front contract detail for the current test session with market that is open
+    """
+    rows = IBTestProviderStubs.universe_rows()
+    open_rows = [
+        row for row in rows if row.liquid_schedule.is_open(now=pd.Timestamp.utcnow())
+    ]
+
+    def custom_sort(obj):
+        if obj.initMarginChange is None:
+            return 1000000
+        else:
+            return obj.initMarginChange
+
+    open_rows.sort(key=custom_sort)
+    unqual_contract = open_rows[0].contract
+
+    client = InteractiveBrokersClient(loop=event_loop, client_id=30)
+    await client.connect()
+    detail = await client.request_front_contract_details(unqual_contract)
+    return detail
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
