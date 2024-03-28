@@ -55,7 +55,17 @@ class TestHistoric:
             end_time=pd.Timestamp("2023-01-05 02:00:00", tz="UTC"),
             as_dataframe=True,
         )
-        assert list(df.columns) == ["timestamp", "date", "open", "high", "low", "close", "volume", "wap", "barCount"]
+        assert list(df.columns) == [
+            "timestamp",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "wap",
+            "barCount",
+        ]
 
     @pytest.mark.asyncio()
     async def test_request_bars_sends_expected(self):

@@ -1,16 +1,13 @@
 import asyncio
-from pyfutures.logger import LoggerAdapter
-from ibapi import comm
-from ibapi.message import IN
-from ibapi.message import OUT
-import struct
-from typing import Callable
-from pathlib import Path
-from pyfutures import PACKAGE_ROOT
-import os
-import pickle
 import json
+import struct
+from collections.abc import Callable
+from pathlib import Path
 from pprint import pprint
+
+from ibapi import comm
+
+from pyfutures.logger import LoggerAdapter
 
 
 # def parse_buffer(buf: bytes, cb: Callable):
@@ -104,7 +101,7 @@ class Protocol(asyncio.Protocol):
         it receives output from all ibapi requests methods
         and startApi
         """
-        self._log.debug(f"--> sendMsg: {repr(msg)}")
+        self._log.debug(f"--> sendMsg: {msg!r}")
 
         if self._bstream is not None:
             ascii_fields = msg.split("\x00")
@@ -114,7 +111,7 @@ class Protocol(asyncio.Protocol):
         self.write(msg_bytes)
 
     def write(self, msg: bytes):
-        self._log.debug(f"--> {repr(msg)}")
+        self._log.debug(f"--> {msg!r}")
         self._transport.write(msg)
 
     async def perform_handshake(self):

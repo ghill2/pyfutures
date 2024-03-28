@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import logging
 import time
 from collections.abc import Callable
 from decimal import Decimal

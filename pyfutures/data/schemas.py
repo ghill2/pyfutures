@@ -5,6 +5,7 @@ from nautilus_trader.model.objects import QUANTITY_MAX
 from numpy.dtypes import Float64DType
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 
+
 DEFAULT_VOLUME = float(QUANTITY_MAX)
 
 
@@ -81,8 +82,6 @@ class TableSchema:
     @classmethod
     def validate_bars(cls, table: pa.Table) -> pa.Table:
         return cls._validate(table, BAR_TABLE_SCHEMA)
-
-    
 
     @classmethod
     def _validate(cls, table: pa.Table, expected: pa.Schema) -> pa.Table:
@@ -217,6 +216,6 @@ BAR_TABLE_SCHEMA = pa.schema(
 # writing to disk -> rust format for QuoteTicks, normal for bars
 
 # @classmethod
-    # def validate_continuous_prices(cls, df: pd.DataFrame) -> pd.DataFrame:
-    #     return cls._validate(df, MultipleBar.schema())
-    # from pyfutures.continuous.Z.multiple_bar import MultipleBar
+# def validate_continuous_prices(cls, df: pd.DataFrame) -> pd.DataFrame:
+#     return cls._validate(df, MultipleBar.schema())
+# from pyfutures.continuous.Z.multiple_bar import MultipleBar

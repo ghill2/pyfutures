@@ -1,14 +1,3 @@
-import asyncio
-import os
-import struct
-from collections.abc import Coroutine
-
-import psutil
-from ibapi import comm
-
-from pyfutures.logger import LoggerAdapter
-
-
 # this bug is still present on the gnznz fork:
 # https://github.com/UnusualAlpha/ib-gateway-docker/issues/88
 

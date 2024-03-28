@@ -29,7 +29,9 @@ class ContractProvider(InstrumentProvider):
         return self.load_contract(instrument_id, month)
 
     def load_contract(self, instrument_id: InstrumentId, month: ContractMonth) -> None:
-        approximate_expiry_date = month.timestamp_utc + pd.Timedelta(days=self._approximate_expiry_offset)
+        approximate_expiry_date = month.timestamp_utc + pd.Timedelta(
+            days=self._approximate_expiry_offset
+        )
 
         instrument_id = self._fmt_instrument_id(self._base.id, month)
         futures_contract = FuturesContract(
@@ -59,7 +61,9 @@ class ContractProvider(InstrumentProvider):
         return self.find(instrument_id)
 
     @staticmethod
-    def _fmt_instrument_id(instrument_id: InstrumentId, month: ContractMonth) -> InstrumentId:
+    def _fmt_instrument_id(
+        instrument_id: InstrumentId, month: ContractMonth
+    ) -> InstrumentId:
         """
         Format the InstrumentId for contract given the ContractMonth.
         """

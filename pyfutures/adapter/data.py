@@ -73,7 +73,6 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
         return self._cache
 
     async def _connect(self):
-        
         await self._client.connect()
 
         # Load instruments based on config
@@ -87,7 +86,9 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             return
 
         # parse bar_type.spec to bar_size
-        callback = functools.partial(self._bar_callback, bar_type=bar_type, instrument=instrument)
+        callback = functools.partial(
+            self._bar_callback, bar_type=bar_type, instrument=instrument
+        )
 
         self._client.subscribe_bars(
             contract=self._parser.instrument_id_to_contract(bar_type.instrument_id),
@@ -96,8 +97,12 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             callback=callback,
         )
 
-    def _bar_callback(self, bar_type: BarType, bar: BarData, instrument: Instrument) -> None:
-        nautilus_bar: Bar = self._parser.bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument)
+    def _bar_callback(
+        self, bar_type: BarType, bar: BarData, instrument: Instrument
+    ) -> None:
+        nautilus_bar: Bar = self._parser.bar_data_to_nautilus_bar(
+            bar_type=bar_type, bar=bar, instrument=instrument
+        )
         self._handle_data(nautilus_bar)
 
     async def _request_bars(
@@ -129,7 +134,12 @@ class InteractiveBrokersDataClient(LiveMarketDataClient):
             limit=None if limit == 0 else limit,
         )
 
-        bars: list[Bar] = [self._parser.bar_data_to_nautilus_bar(bar_type=bar_type, bar=bar, instrument=instrument) for bar in bars]
+        bars: list[Bar] = [
+            self._parser.bar_data_to_nautilus_bar(
+                bar_type=bar_type, bar=bar, instrument=instrument
+            )
+            for bar in bars
+        ]
 
         self._handle_bars(
             bar_type=bar_type,

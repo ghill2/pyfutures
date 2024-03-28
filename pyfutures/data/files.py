@@ -140,7 +140,9 @@ class ParquetFile:
         return self
 
     def with_spec(self, spec: BarSpecification) -> ParquetFile:
-        self.bar_type = BarType.from_str(f"{self.bar_type.instrument_id}-{spec}-EXTERNAL")
+        self.bar_type = BarType.from_str(
+            f"{self.bar_type.instrument_id}-{spec}-EXTERNAL"
+        )
         return self
 
     def __str__(self) -> str:
@@ -163,7 +165,15 @@ class ParquetFile:
         for batch in pq.ParquetFile(str(self)).iter_batches(batch_size=nrows):
             df = batch.to_pandas()
 
-        if list(df.columns) == ["open", "high", "low", "close", "volume", "ts_event", "ts_init"]:
+        if list(df.columns) == [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "ts_event",
+            "ts_init",
+        ]:
             df = bars_from_rust(df)
             if to_aggregation is not None:
                 step, aggregation = to_aggregation
@@ -185,7 +195,14 @@ class ParquetFile:
                 # df.timestamp = df.timestamp.tz_convert("UTC")
                 df.set_index("timestamp", inplace=True)
 
-        elif list(df.columns) == ["bid", "ask", "bid_size", "ask_size", "ts_event", "ts_init"]:
+        elif list(df.columns) == [
+            "bid",
+            "ask",
+            "bid_size",
+            "ask_size",
+            "ts_event",
+            "ts_init",
+        ]:
             df = quotes_from_rust(df)
             # TODO: add quote sampleing
 
@@ -221,7 +238,9 @@ class ParquetFile:
         instrument: Instrument,
     ) -> ParquetWriter:
         if self.cls is Bar:
-            return BarParquetWriter(path=self.path, instrument=instrument, bar_type=self.bar_type)
+            return BarParquetWriter(
+                path=self.path, instrument=instrument, bar_type=self.bar_type
+            )
         elif self.cls is QuoteTick:
             return QuoteTickParquetWriter(path=self.path, instrument=instrument)
         else:

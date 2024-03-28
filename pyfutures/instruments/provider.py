@@ -33,11 +33,15 @@ class UniverseInstrumentProvider(InstrumentProvider):
         for row in universe.itertuples():
             self.add(
                 Instrument(
-                    instrument_id=InstrumentId.from_str(f"{row.trading_class}_{row.symbol}.IB"),
+                    instrument_id=InstrumentId.from_str(
+                        f"{row.trading_class}_{row.symbol}.IB"
+                    ),
                     raw_symbol=Symbol(row.symbol),
                     asset_class=AssetClass.COMMODITY,
                     asset_type=InstrumentClass.FUTURE,
-                    quote_currency=Currency.from_str(row.quote_currency.split("(")[1].split(")")[0]),
+                    quote_currency=Currency.from_str(
+                        row.quote_currency.split("(")[1].split(")")[0]
+                    ),
                     is_inverse=False,
                     price_precision=IBTestProviderStubs.price_precision(
                         min_tick=row.min_tick,
@@ -45,7 +49,9 @@ class UniverseInstrumentProvider(InstrumentProvider):
                     ),
                     size_precision=0,
                     size_increment=Quantity.from_int(1),
-                    multiplier=Quantity.from_str(str(row.multiplier * row.price_magnifier)),
+                    multiplier=Quantity.from_str(
+                        str(row.multiplier * row.price_magnifier)
+                    ),
                     margin_init=Decimal(),
                     margin_maint=Decimal(),
                     maker_fee=Decimal(),

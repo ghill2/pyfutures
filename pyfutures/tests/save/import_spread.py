@@ -123,7 +123,9 @@ async def find_spread_values():
     #     as_dataframe=True,
     #     delay=0.5,
     # )
-    with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", None):
+    with pd.option_context(
+        "display.max_rows", None, "display.max_columns", None, "display.width", None
+    ):
         if df.empty:
             print("empty")
             return

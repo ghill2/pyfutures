@@ -60,14 +60,22 @@ class ContinuousBarWrangler:
                 timestamps_by_month[month] = set()
             timestamps_by_month[month].add(bar.ts_init)
 
-        hold_months = self._chain.hold_cycle.get_months(self._start_month, self._end_month)
+        hold_months = self._chain.hold_cycle.get_months(
+            self._start_month, self._end_month
+        )
 
-        missing = [m.value for m in [*hold_months, self._end_month] if timestamps_by_month.get(m.value) is None]
+        missing = [
+            m.value
+            for m in [*hold_months, self._end_month]
+            if timestamps_by_month.get(m.value) is None
+        ]
 
         symbol = self._chain_config.instrument_id.symbol.value
 
         if len(missing) > 0:
-            raise ValueError(f"Data validation failed: {symbol} has no timestamps in months {missing}")
+            raise ValueError(
+                f"Data validation failed: {symbol} has no timestamps in months {missing}"
+            )
 
         for current_month in hold_months:
             # print(f"Validating {symbol}={current_month}")
@@ -76,7 +84,11 @@ class ContinuousBarWrangler:
             end_ns = dt_to_unix_nanos(end)
 
             # check current contract timestamps exist in roll window
-            current_timestamps = {t for t in timestamps_by_month[current_month.value] if t >= start_ns and t < end_ns}
+            current_timestamps = {
+                t
+                for t in timestamps_by_month[current_month.value]
+                if t >= start_ns and t < end_ns
+            }
             if len(current_timestamps) == 0:
                 raise ValueError(
                     f"Data validation failed: {symbol}={current_month} has no timestamps in roll window {start} to {end}",
@@ -84,7 +96,11 @@ class ContinuousBarWrangler:
 
             # check forward contract timestamps exist in roll window
             forward_month = self._chain.hold_cycle.next_month(current_month)
-            forward_timestamps = {t for t in timestamps_by_month[forward_month.value] if t >= start_ns and t < end_ns}
+            forward_timestamps = {
+                t
+                for t in timestamps_by_month[forward_month.value]
+                if t >= start_ns and t < end_ns
+            }
             if len(forward_timestamps) == 0:
                 raise ValueError(
                     f"Data validation failed: {symbol}={forward_month} has no timestamps in roll window {start} to {end}",

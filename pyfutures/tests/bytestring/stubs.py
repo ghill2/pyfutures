@@ -1,14 +1,3 @@
-import inspect
-import sys
-from pathlib import Path
-
-from ibapi.contract import Contract as IBContract
-
-from pyfutures import PACKAGE_ROOT
-from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.logger import init_logging
-
-
 # TOMORROW: it seems to hang when i do --demo 1 try, then --unit 1 try, then --unit again..
 # try comparing bytestrings after 1st unit and then 2nd unit ? maybe its rewriting
 

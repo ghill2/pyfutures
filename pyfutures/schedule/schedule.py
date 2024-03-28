@@ -70,7 +70,11 @@ class MarketSchedule:
 
         now_time = now.time()
 
-        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
+        mask = (
+            (now_time >= self.data.open)
+            & (now_time < self.data.close)
+            & (now.dayofweek == self.data.dayofweek)
+        )
 
         return mask.any()
 
@@ -84,7 +88,11 @@ class MarketSchedule:
         mask = np.zeros(len(timestamps), dtype=bool)
         sessions = self.data.itertuples()
         for session in sessions:
-            _mask = (local_times >= session.open) & (local_times < session.close) & (locals.dayofweek == session.dayofweek)
+            _mask = (
+                (local_times >= session.open)
+                & (local_times < session.close)
+                & (locals.dayofweek == session.dayofweek)
+            )
             mask = mask | _mask
 
         return timestamps[mask]
@@ -120,7 +128,9 @@ class MarketSchedule:
         open_timestamp = open_day.replace(hour=open_time.hour, minute=open_time.minute)
         return open_timestamp.tz_convert(pytz.UTC)
 
-    def previous_trading_day(self, date: datetime.date, offset: NegativeInt) -> datetime.date:
+    def previous_trading_day(
+        self, date: datetime.date, offset: NegativeInt
+    ) -> datetime.date:
         count = abs(offset)
 
         matched = 0
@@ -137,7 +147,11 @@ class MarketSchedule:
 
         now_time = now.time()
 
-        mask = (now_time >= self.data.open) & (now_time < self.data.close) & (now.dayofweek == self.data.dayofweek)
+        mask = (
+            (now_time >= self.data.open)
+            & (now_time < self.data.close)
+            & (now.dayofweek == self.data.dayofweek)
+        )
 
         masked = self.data[mask]
 
@@ -147,7 +161,9 @@ class MarketSchedule:
         assert len(masked) == 1
 
         close_time = masked.close.iloc[0]
-        close_timestamp = now.floor("D").replace(hour=close_time.hour, minute=close_time.minute)
+        close_timestamp = now.floor("D").replace(
+            hour=close_time.hour, minute=close_time.minute
+        )
         return close_timestamp - now
 
     def __repr__(self) -> str:
@@ -212,9 +228,15 @@ class MarketSchedule:
         timestamps = []
         for session in sessions:
             timestamps.extend(
-                day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute) for day in days[days.dayofweek == session.dayofweek]
+                day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute)
+                for day in days[days.dayofweek == session.dayofweek]
             )
-        timestamps = pd.DatetimeIndex(timestamps).sort_values().tz_localize(self._timezone).tz_convert("UTC")
+        timestamps = (
+            pd.DatetimeIndex(timestamps)
+            .sort_values()
+            .tz_localize(self._timezone)
+            .tz_convert("UTC")
+        )
 
         timestamps = timestamps[(timestamps >= start_date) & (timestamps < end_date)]
         return list(timestamps)
@@ -240,8 +262,14 @@ class MarketSchedule:
 
             for session in sessions.itertuples():
                 df.loc[len(df)] = (
-                    day + pd.Timedelta(hours=session.open.hour, minutes=session.open.minute),
-                    day + pd.Timedelta(hours=session.close.hour, minutes=session.close.minute),
+                    day
+                    + pd.Timedelta(
+                        hours=session.open.hour, minutes=session.open.minute
+                    ),
+                    day
+                    + pd.Timedelta(
+                        hours=session.close.hour, minutes=session.close.minute
+                    ),
                 )
         return df
 
@@ -249,8 +277,12 @@ class MarketSchedule:
         startofweek = pd.Timestamp("2023-11-06")
         df = self.data.copy()
         df["day"] = df["dayofweek"].apply(lambda i: startofweek + pd.Timedelta(days=i))
-        df["open"] = df["open"].apply(lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute))
-        df["close"] = df["close"].apply(lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute))
+        df["open"] = df["open"].apply(
+            lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute)
+        )
+        df["close"] = df["close"].apply(
+            lambda x: pd.Timedelta(hours=x.hour, minutes=x.minute)
+        )
         df["open"] = (df["day"] + df["open"]).dt.tz_localize(self._timezone)
         df["close"] = (df["day"] + df["close"]).dt.tz_localize(self._timezone)
         df["name"] = self._name

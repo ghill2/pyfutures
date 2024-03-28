@@ -1,11 +1,11 @@
-import pytest
-from pytower.stats.whatif import sort_by_whatif_value
-from pyfutures.tests.test_kit import IBTestProviderStubs
 import pandas as pd
+import pytest
 from ibapi.contract import Contract as IBContract
 from ibapi.order import Order as IBOrder
 from nautilus_trader.core.uuid import UUID4
-import pytest_asyncio
+from pytower.stats.whatif import sort_by_whatif_value
+
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 @pytest.fixture

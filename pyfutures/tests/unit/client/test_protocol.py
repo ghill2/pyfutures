@@ -1,9 +1,10 @@
-import asyncio
-import pytest
-from pyfutures.client.protocol import Protocol
+import time
 from unittest.mock import Mock
 from unittest.mock import call
-import time
+
+import pytest
+
+from pyfutures.client.protocol import Protocol
 
 
 @pytest.mark.asyncio()

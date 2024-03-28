@@ -1,4 +1,3 @@
-import asyncio
 import pickle
 from collections import deque
 
@@ -6,19 +5,20 @@ import numpy as np
 import pandas as pd
 from nautilus_trader.common.actor import Actor
 from nautilus_trader.common.component import TimeEvent
+from nautilus_trader.common.providers import InstrumentProvider
 from nautilus_trader.core.datetime import dt_to_unix_nanos
 from nautilus_trader.core.datetime import secs_to_nanos
 from nautilus_trader.core.datetime import unix_nanos_to_dt
 from nautilus_trader.model.data import Bar
 from nautilus_trader.model.data import BarType
-from nautilus_trader.model.position import Position
 from nautilus_trader.model.identifiers import InstrumentId
 from nautilus_trader.model.identifiers import StrategyId
+from nautilus_trader.model.position import Position
 
 from pyfutures.continuous.bar import ContinuousBar
 from pyfutures.continuous.config import RollConfig
 from pyfutures.continuous.contract_month import ContractMonth
-from nautilus_trader.common.providers import InstrumentProvider
+
 
 class ContractExpired(Exception):
     pass
@@ -46,14 +46,14 @@ class ContinuousData(Actor):
         self.continuous = deque(maxlen=maxlen)
         self.adjusted: list[float] = []
         self.instrument_provider = instrument_provider
-        
+
         assert self.roll_offset <= 0
         assert self.carry_offset == 1 or self.carry_offset == -1
-        
+
         if reconciliation is False:
             assert self._start_month is not None
             assert self._start_month in self.hold_cycle
-        
+
         self._maxlen = maxlen
         self._timer_name = f"chain_{self.bar_type}"
         self._strategy_id = strategy_id
@@ -97,68 +97,66 @@ class ContinuousData(Actor):
             self.reconcile()
         else:
             self.roll(self.start_month)
-            
+
     def reconcile(self) -> None:
-        
-        self._log.info(f"Reconciling continuous data")
-        
+        self._log.info("Reconciling continuous data")
+
         self.cache.load_actor(self)
-        
+
         start_month = self.reconcile_month()
         self._log.info(f"start_month: {start_month}")
-        
+
         self.roll(start_month)
-        
+
         self.reconcile_data()
-        
+
         # self.roll(self.forward_month)
-        
+
     def reconcile_month(self) -> ContractMonth:
-        
         positions = self.cache.positions(
             strategy_id=self._strategy_id,
         )
         if len(positions) == 0 or len(self.continuous) == 0:
-            self._log.info(f"Finding month from calendar")
+            self._log.info("Finding month from calendar")
             return self._reconcile_month_from_calendar(self.clock.utc_now())
-            
+
         elif len(positions) == 1:
-            self._log.info(f"Finding month from position")
+            self._log.info("Finding month from position")
             return self._reconcile_month_from_position(positions[0])
-            
+
         elif len(positions) > 1:
-            raise RuntimeError(f"IB has more than one position for {self._instrument_id}")
-    
+            raise RuntimeError(
+                f"IB has more than one position for {self._instrument_id}"
+            )
+
     def _reconcile_month_from_position(self, position: Position) -> ContractMonth:
-            
         instrument = self.cache.instrument(position.instrument_id)
         assert instrument is not None
-        
+
         position_month = ContractMonth(instrument.id.symbol.value.split("=")[-1])
         last_month = self.continuous[-1].current_month
         if position_month != last_month:
             raise RuntimeError(
                 f"Position has month {position_month} but last month of cached data is {last_month}"
             )
-        
+
         return last_month
-        
+
     def _reconcile_month_from_calendar(self, now: pd.Timestamp) -> ContractMonth:
-        
         df = pd.DataFrame()
-        df['month'] = self.hold_cycle.get_months(
+        df["month"] = self.hold_cycle.get_months(
             start=ContractMonth(f"{now.year - 2}{self.hold_cycle.value[0]}"),
             end=ContractMonth(f"{now.year + 2}{self.hold_cycle.value[0]}"),
         )
         df["start"] = [self._roll_window(month)[0] for month in df.month]
         df["end"] = [self._roll_window(month)[1] for month in df.month]
-        
+
         mask = now < df.end
         return df[mask].iloc[0].month
-        
+
         # mask = (now >= df.start) & (now < df.end)
         # inside = df[mask]
-        
+
         # if inside.empty:
         #     # previous if outside roll window
         #     mask = (now > df.end)
@@ -168,11 +166,10 @@ class ContinuousData(Actor):
         #     # assert len(inside) == 1
         #     # idx = inside.iloc[0].index + 1
         #     self.current_month = inside.iloc[0].month
-    
+
     def reconcile_data(self) -> None:
         assert self.current_month is not None
-        pass
-    
+
     def handle_bar(self, bar: Bar) -> None:
         """
         schedule the timer to process the module after x seconds on current or forward bar
@@ -243,11 +240,11 @@ class ContinuousData(Actor):
 
         if current_timestamp >= start and current_timestamp < end:
             self.roll(self.forward_month)
-            
+
     def roll(self, to_month: ContractMonth) -> None:
         self._log.info(f"Rolling to month {to_month} from {self.current_month}")
         self.current_month = to_month
-        
+
         # item = asyncio.run_coroutine_threadsafe(
         #     coro=self._update_instruments(),
         #     loop=asyncio.get_event_loop(),
@@ -256,15 +253,17 @@ class ContinuousData(Actor):
         # print(asyncio.get_event_loop().create_task())
         self._update_instruments()
         self._manage_subscriptions()
-        
+
         # asyncio.get_event_loop().run_until_complete(self._update_instruments())
-        
+
     def _roll_window(
         self,
         month: ContractMonth,
     ) -> tuple[pd.Timestamp, pd.Timestamp]:
         # TODO: for live environment the expiry date from the contract should be used
-        expiry_date = month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        expiry_date = month.timestamp_utc + pd.Timedelta(
+            days=self.approximate_expiry_offset
+        )
         roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
         return (roll_date, expiry_date)
 
@@ -304,25 +303,23 @@ class ContinuousData(Actor):
             will be available directly after a roll.
         Cache the contracts after every roll, and run them on a timer too.
         """
-        
-        self._log.info(f"Updating instruments...")
-        
+        self._log.info("Updating instruments...")
+
         instrument_ids = [
             self.current_bar_type.instrument_id,
             self.previous_bar_type.instrument_id,
             self.forward_bar_type.instrument_id,
             self.carry_bar_type.instrument_id,
         ]
-        
+
         for instrument_id in instrument_ids:
             # if self.instrument_provider.find(instrument_id) is None:
             self.instrument_provider.load(instrument_id)
-        
+
         for instrument in self.instrument_provider.list_all():
             if instrument.id not in self.cache:
                 self.cache.add_instrument(instrument)
-        
-        
+
     def _handle_continuous_bar(self, bar: ContinuousBar) -> None:
         # most outer layer method for testing purposes
         self.continuous.append(bar)

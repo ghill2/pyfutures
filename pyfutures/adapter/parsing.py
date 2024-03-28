@@ -85,9 +85,15 @@ map_trigger_method: dict[int, int] = {
     TriggerType.LAST_OR_BID_ASK: 7,
     TriggerType.MID_POINT: 8,
 }
-ib_to_nautilus_trigger_method = dict(zip(map_trigger_method.values(), map_trigger_method.keys()))
-ib_to_nautilus_time_in_force = dict(zip(map_time_in_force.values(), map_time_in_force.keys()))
-ib_to_nautilus_order_side = dict(zip(map_order_action.values(), map_order_action.keys()))
+ib_to_nautilus_trigger_method = dict(
+    zip(map_trigger_method.values(), map_trigger_method.keys())
+)
+ib_to_nautilus_time_in_force = dict(
+    zip(map_time_in_force.values(), map_time_in_force.keys())
+)
+ib_to_nautilus_order_side = dict(
+    zip(map_order_action.values(), map_order_action.keys())
+)
 ib_to_nautilus_order_type = dict(zip(map_order_type.values(), map_order_type.keys()))
 
 
@@ -136,11 +142,17 @@ class AdapterParser:
         if contract.secType == "FUT":
             assert len(contract.lastTradeDateOrContractMonth) == 8
             month = str(ContractMonth.from_int(int(details.contractMonth)))
-            return InstrumentId.from_str(f"{trading_class}={symbol}={contract.secType}={month}.{exchange}")
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}={month}.{exchange}"
+            )
         elif contract.secType == "CONTFUT":
-            return InstrumentId.from_str(f"{trading_class}={symbol}={contract.secType}.{exchange}")
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}.{exchange}"
+            )
         elif contract.secType == "CASH":
-            return InstrumentId.from_str(f"{symbol}.{contract.currency}={contract.secType}.{exchange}")
+            return InstrumentId.from_str(
+                f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+            )
 
     @classmethod
     def details_to_instrument(
@@ -189,9 +201,13 @@ class AdapterParser:
         if contract.secType == "FUT":
             raise NotImplementedError
         elif contract.secType == "CONTFUT":
-            return InstrumentId.from_str(f"{trading_class}={symbol}={contract.secType}.{exchange}")
+            return InstrumentId.from_str(
+                f"{trading_class}={symbol}={contract.secType}.{exchange}"
+            )
         elif contract.secType == "CASH":
-            return InstrumentId.from_str(f"{symbol}.{contract.currency}={contract.secType}.{exchange}")
+            return InstrumentId.from_str(
+                f"{symbol}.{contract.currency}={contract.secType}.{exchange}"
+            )
 
     @classmethod
     def _details_to_futures_instrument(
@@ -213,12 +229,15 @@ class AdapterParser:
             currency=Currency.from_str(details.contract.currency),
             price_precision=overrides.get("price_precision") or price_precision,
             price_increment=overrides.get("price_increment") or price_increment,
-            multiplier=overrides.get("multiplier") or Quantity.from_str(str(details.contract.multiplier)),
+            multiplier=overrides.get("multiplier")
+            or Quantity.from_str(str(details.contract.multiplier)),
             lot_size=overrides.get("lot_size") or Quantity.from_int(1),
             underlying=details.underSymbol,
             activation_ns=0,
             expiration_ns=dt_to_unix_nanos(
-                ClientParser.parse_datetime(details.contract.lastTradeDateOrContractMonth),
+                ClientParser.parse_datetime(
+                    details.contract.lastTradeDateOrContractMonth
+                ),
             ),
             ts_event=timestamp,
             ts_init=timestamp,

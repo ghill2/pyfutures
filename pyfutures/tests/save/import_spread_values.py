@@ -1,5 +1,6 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 from pyfutures.tests.test_kit import SPREAD_FOLDER
 from pyfutures.tests.test_kit import IBTestProviderStubs
@@ -9,7 +10,9 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
     bid_df.sort_values(by="timestamp", inplace=True)
     ask_df.sort_values(by="timestamp", inplace=True)
 
-    df = pd.merge(bid_df, ask_df, on="timestamp", how="inner", suffixes=("_bid", "_ask"))
+    df = pd.merge(
+        bid_df, ask_df, on="timestamp", how="inner", suffixes=("_bid", "_ask")
+    )
     df.drop(
         [
             "date_ask",
@@ -46,7 +49,9 @@ def _merge_dataframe(bid_df: pd.DataFrame, ask_df: pd.DataFrame) -> pd.DataFrame
 
 def get_spread_value(row):
     print(row.uname)
-    with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.width", None):
+    with pd.option_context(
+        "display.max_rows", None, "display.max_columns", None, "display.width", None
+    ):
         bid_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_BID.parquet")
 
         ask_df = pd.read_parquet(SPREAD_FOLDER / f"{row.uname}_ASK.parquet")
@@ -84,15 +89,13 @@ def get_spread_value(row):
 
         average_spread: float = pd.Series(spread_values).mean()
         i = 7
-        
+
         if average_spread == 0.0:
             print(f"{row.uname}: {average_spread:.{i}f} failed")
         else:
             print(f"{row.uname}: {average_spread:.{i}f}")
-            
+
         return row.uname, average_spread
-            
-        
 
 
 if __name__ == "__main__":
@@ -103,9 +106,12 @@ if __name__ == "__main__":
 
     # for row in rows:
     #     get_spread_value(row)
-    
+
     import joblib
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(get_spread_value)(row) for row in rows)
+
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
+        joblib.delayed(get_spread_value)(row) for row in rows
+    )
     df = pd.DataFrame(results, columns=["uname", "value"])
     print(df)
     path = Path.home() / "Desktop" / "spreads.csv"

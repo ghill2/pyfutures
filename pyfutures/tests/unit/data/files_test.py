@@ -33,7 +33,10 @@ class TestParquetFile:
         assert file.path == Path(filename)
 
     def test_read(self):
-        path = Path(PACKAGE_ROOT / "tests/data/test_files/MES_MES=2021Z.IB-1-DAY-MID-EXTERNAL-BAR-0.parquet")
+        path = Path(
+            PACKAGE_ROOT
+            / "tests/data/test_files/MES_MES=2021Z.IB-1-DAY-MID-EXTERNAL-BAR-0.parquet"
+        )
         file = ParquetFile.from_path(path)
         df = file.read(bar_to_quote=True)
 

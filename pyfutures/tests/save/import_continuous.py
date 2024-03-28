@@ -28,7 +28,9 @@ def validate(row: dict) -> None:
     #     df = df[roll_window_mask & month_mask]
     #     print(df)
 
-    print(f"Validating {row.trading_class}: end_month={row.end_month} {len(bars)} bars...")
+    print(
+        f"Validating {row.trading_class}: end_month={row.end_month} {len(bars)} bars..."
+    )
 
     wrangler = ContinuousBarWrangler(
         config=row.chain_config,
@@ -62,7 +64,9 @@ if __name__ == "__main__":
 
     import joblib
 
-    results = joblib.Parallel(n_jobs=-1, backend="loky")(joblib.delayed(validate)(row) for row in rows)
+    results = joblib.Parallel(n_jobs=-1, backend="loky")(
+        joblib.delayed(validate)(row) for row in rows
+    )
 
     # # need carry price bars too
     # month = ContractMonth(path.stem.split("=")[1].split(".")[0])

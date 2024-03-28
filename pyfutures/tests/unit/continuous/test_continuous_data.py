@@ -72,7 +72,11 @@ class TestContinuousData:
 
     @pytest.mark.skip
     def test_subscriptions_after_start(self):
-        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
+        sub_topics = [
+            s.topic
+            for s in self.msgbus.subscriptions()
+            if s.topic.startswith("data.bars")
+        ]
         assert sub_topics == [
             "data.bars.MES=2021H.SIM-1-DAY-MID-EXTERNAL",
             "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
@@ -91,10 +95,18 @@ class TestContinuousData:
         self.engine.run()
 
         # Assert
-        assert self.data.current_bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.previous_bar_type == BarType.from_str("MES=2020Z.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.forward_bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.carry_bar_type == BarType.from_str("MES=2021J.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.current_bar_type == BarType.from_str(
+            "MES=2021H.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.previous_bar_type == BarType.from_str(
+            "MES=2020Z.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.forward_bar_type == BarType.from_str(
+            "MES=2021M.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.carry_bar_type == BarType.from_str(
+            "MES=2021J.SIM-1-DAY-MID-EXTERNAL"
+        )
 
     def test_current_bar_schedules_timer(self):
         # Arrange
@@ -117,9 +129,15 @@ class TestContinuousData:
         handle_mock.call_count == 4
         time_events = [call[0][0] for call in handle_mock.call_args_list]
 
-        assert unix_nanos_to_dt(time_events[0].ts_init) == pd.Timestamp("2021-03-09 00:00:02+0000")
-        assert unix_nanos_to_dt(time_events[1].ts_init) == pd.Timestamp("2021-03-10 00:00:02+0000")
-        assert unix_nanos_to_dt(time_events[2].ts_init) == pd.Timestamp("2021-03-11 00:00:02+0000")
+        assert unix_nanos_to_dt(time_events[0].ts_init) == pd.Timestamp(
+            "2021-03-09 00:00:02+0000"
+        )
+        assert unix_nanos_to_dt(time_events[1].ts_init) == pd.Timestamp(
+            "2021-03-10 00:00:02+0000"
+        )
+        assert unix_nanos_to_dt(time_events[2].ts_init) == pd.Timestamp(
+            "2021-03-11 00:00:02+0000"
+        )
 
     def test_forward_bar_schedules_timer(self):
         # Arrange
@@ -142,9 +160,15 @@ class TestContinuousData:
         handle_mock.call_count == 4
         time_events = [call[0][0] for call in handle_mock.call_args_list]
 
-        assert unix_nanos_to_dt(time_events[0].ts_init) == pd.Timestamp("2021-03-09 00:00:02+0000")
-        assert unix_nanos_to_dt(time_events[1].ts_init) == pd.Timestamp("2021-03-10 00:00:02+0000")
-        assert unix_nanos_to_dt(time_events[2].ts_init) == pd.Timestamp("2021-03-11 00:00:02+0000")
+        assert unix_nanos_to_dt(time_events[0].ts_init) == pd.Timestamp(
+            "2021-03-09 00:00:02+0000"
+        )
+        assert unix_nanos_to_dt(time_events[1].ts_init) == pd.Timestamp(
+            "2021-03-10 00:00:02+0000"
+        )
+        assert unix_nanos_to_dt(time_events[2].ts_init) == pd.Timestamp(
+            "2021-03-11 00:00:02+0000"
+        )
 
     def test_contract_expired_raises(self):
         # Arrange
@@ -198,14 +222,26 @@ class TestContinuousData:
         self.engine.run()
 
         # Assert
-        assert self.data.current_bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.previous_bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.forward_bar_type == BarType.from_str("MES=2021U.SIM-1-DAY-MID-EXTERNAL")
-        assert self.data.carry_bar_type == BarType.from_str("MES=2021N.SIM-1-DAY-MID-EXTERNAL")
+        assert self.data.current_bar_type == BarType.from_str(
+            "MES=2021M.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.previous_bar_type == BarType.from_str(
+            "MES=2021H.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.forward_bar_type == BarType.from_str(
+            "MES=2021U.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert self.data.carry_bar_type == BarType.from_str(
+            "MES=2021N.SIM-1-DAY-MID-EXTERNAL"
+        )
 
     @pytest.mark.skip
     def test_subscriptions_after_roll(self):
-        sub_topics = [s.topic for s in self.msgbus.subscriptions() if s.topic.startswith("data.bars")]
+        sub_topics = [
+            s.topic
+            for s in self.msgbus.subscriptions()
+            if s.topic.startswith("data.bars")
+        ]
         assert sub_topics == [
             "data.bars.MES=2021M.SIM-1-DAY-MID-EXTERNAL",
             "data.bars.MES=2021U.SIM-1-DAY-MID-EXTERNAL",
@@ -281,29 +317,71 @@ class TestContinuousData:
         bars: list[ContinuousBar] = [call[0][0] for call in handle_mock.call_args_list]
 
         # Assert
-        assert bars[0].previous_bar.bar_type == BarType.from_str("MES=2020Z.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[0].current_bar.bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[0].carry_bar.bar_type == BarType.from_str("MES=2021J.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[0].forward_bar.bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[0].ts_init == dt_to_unix_nanos(pd.Timestamp("2021-03-09 00:00:02+0000"))
-        assert bars[0].roll_ns == dt_to_unix_nanos(pd.Timestamp("2021-03-10 00:00:00+0000"))
-        assert bars[0].expiration_ns == dt_to_unix_nanos(pd.Timestamp("2021-03-15 00:00:00+0000"))
+        assert bars[0].previous_bar.bar_type == BarType.from_str(
+            "MES=2020Z.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[0].current_bar.bar_type == BarType.from_str(
+            "MES=2021H.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[0].carry_bar.bar_type == BarType.from_str(
+            "MES=2021J.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[0].forward_bar.bar_type == BarType.from_str(
+            "MES=2021M.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[0].ts_init == dt_to_unix_nanos(
+            pd.Timestamp("2021-03-09 00:00:02+0000")
+        )
+        assert bars[0].roll_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-03-10 00:00:00+0000")
+        )
+        assert bars[0].expiration_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-03-15 00:00:00+0000")
+        )
 
-        assert bars[1].previous_bar.bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[1].current_bar.bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[1].carry_bar.bar_type == BarType.from_str("MES=2021N.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[1].forward_bar.bar_type == BarType.from_str("MES=2021U.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[1].ts_init == dt_to_unix_nanos(pd.Timestamp("2021-03-10 00:00:02+0000"))
-        assert bars[1].roll_ns == dt_to_unix_nanos(pd.Timestamp("2021-06-10 00:00:00+00:00"))
-        assert bars[1].expiration_ns == dt_to_unix_nanos(pd.Timestamp("2021-06-15 00:00:00+00:00"))
+        assert bars[1].previous_bar.bar_type == BarType.from_str(
+            "MES=2021H.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[1].current_bar.bar_type == BarType.from_str(
+            "MES=2021M.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[1].carry_bar.bar_type == BarType.from_str(
+            "MES=2021N.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[1].forward_bar.bar_type == BarType.from_str(
+            "MES=2021U.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[1].ts_init == dt_to_unix_nanos(
+            pd.Timestamp("2021-03-10 00:00:02+0000")
+        )
+        assert bars[1].roll_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-06-10 00:00:00+00:00")
+        )
+        assert bars[1].expiration_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-06-15 00:00:00+00:00")
+        )
 
-        assert bars[2].previous_bar.bar_type == BarType.from_str("MES=2021H.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[2].current_bar.bar_type == BarType.from_str("MES=2021M.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[2].carry_bar.bar_type == BarType.from_str("MES=2021N.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[2].forward_bar.bar_type == BarType.from_str("MES=2021U.SIM-1-DAY-MID-EXTERNAL")
-        assert bars[2].ts_init == dt_to_unix_nanos(pd.Timestamp("2021-03-11 00:00:02+0000"))
-        assert bars[2].roll_ns == dt_to_unix_nanos(pd.Timestamp("2021-06-10 00:00:00+00:00"))
-        assert bars[2].expiration_ns == dt_to_unix_nanos(pd.Timestamp("2021-06-15 00:00:00+00:00"))
+        assert bars[2].previous_bar.bar_type == BarType.from_str(
+            "MES=2021H.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[2].current_bar.bar_type == BarType.from_str(
+            "MES=2021M.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[2].carry_bar.bar_type == BarType.from_str(
+            "MES=2021N.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[2].forward_bar.bar_type == BarType.from_str(
+            "MES=2021U.SIM-1-DAY-MID-EXTERNAL"
+        )
+        assert bars[2].ts_init == dt_to_unix_nanos(
+            pd.Timestamp("2021-03-11 00:00:02+0000")
+        )
+        assert bars[2].roll_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-06-10 00:00:00+00:00")
+        )
+        assert bars[2].expiration_ns == dt_to_unix_nanos(
+            pd.Timestamp("2021-06-15 00:00:00+00:00")
+        )
 
     @pytest.mark.skip
     def test_continuous_bar_updates_deque(self):
@@ -411,11 +489,29 @@ class TestContinuousData:
         ]
         df = pd.DataFrame(
             data,
-            columns=["current_month", "current_price", "previous_month", "previous_price"],
+            columns=[
+                "current_month",
+                "current_price",
+                "previous_month",
+                "previous_price",
+            ],
         )
 
         adjusted = self.data._continuous_to_adjusted(df)
-        assert adjusted == [206.0, 207.0, 208.0, 209.0, 3060.0, 3070.0, 3080.0, 3090.0, 3100.0, 3200.0, 3300.0, 3400.0]  # no_qa
+        assert adjusted == [
+            206.0,
+            207.0,
+            208.0,
+            209.0,
+            3060.0,
+            3070.0,
+            3080.0,
+            3090.0,
+            3100.0,
+            3200.0,
+            3300.0,
+            3400.0,
+        ]  # no_qa
 
     # def test_adjustment_appends_on_unique_current_bar(self):
     #     # Arrange

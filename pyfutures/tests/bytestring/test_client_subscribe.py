@@ -1,15 +1,11 @@
-import pandas as pd
-import pytest
-from ibapi.common import BarData
-from ibapi.contract import Contract
-from unittest.mock import AsyncMock
-from unittest.mock import Mock
-from pyfutures.client.objects import ClientSubscription
-
 import asyncio
+from unittest.mock import Mock
+
+import pytest
 
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
+from pyfutures.client.objects import ClientSubscription
 
 
 @pytest.mark.asyncio()

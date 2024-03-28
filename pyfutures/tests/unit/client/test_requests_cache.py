@@ -104,11 +104,15 @@ class TestRequestsCachedFunc:
             end_time=pd.Timestamp("2023-01-01 08:00:00", tz="UTC"),
         )
 
-        self.cached_func = CachedFunc(func=self.request_bars, cache=RequestsCache(path=Path(tempfile.mkdtemp())))
+        self.cached_func = CachedFunc(
+            func=self.request_bars, cache=RequestsCache(path=Path(tempfile.mkdtemp()))
+        )
 
     def test_build_key(self):
         # NOTE: if this failed test it means the cache has been invalidated
-        expected = "DA-CME-CONTFUT=1-day=BID_ASK=2023-01-01-00-00-00=2023-01-01-08-00-00"
+        expected = (
+            "DA-CME-CONTFUT=1-day=BID_ASK=2023-01-01-00-00-00=2023-01-01-08-00-00"
+        )
         key = self.cached_func._cache.build_key(**self.cached_func_kwargs)
         assert key == expected
 

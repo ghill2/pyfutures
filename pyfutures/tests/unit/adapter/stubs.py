@@ -1,5 +1,5 @@
-from decimal import Decimal
 import asyncio
+from decimal import Decimal
 
 import pandas as pd
 from ibapi.commission_report import CommissionReport as IBCommissionReport
@@ -7,59 +7,47 @@ from ibapi.contract import Contract as IBContract
 from ibapi.execution import Execution as IBExecution
 from ibapi.order import Order as IBOrder
 from ibapi.order_state import OrderState as IBOrderState
-from nautilus_trader.model.enums import AssetClass
-from nautilus_trader.model.data import Bar
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.identifiers import InstrumentId
-from nautilus_trader.model.instruments.futures_contract import FuturesContract
-from nautilus_trader.model.objects import Currency
-from nautilus_trader.model.objects import Price
-from nautilus_trader.model.objects import Quantity
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 from nautilus_trader.adapters.interactive_brokers.common import IB_VENUE
 from nautilus_trader.common import Environment
 from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.config import TradingNodeConfig
 from nautilus_trader.live.config import RoutingConfig
-from nautilus_trader.live.node import TradingNode
-from nautilus_trader.model.identifiers import TraderId
-from nautilus_trader.model.objects import Price
-from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
-from pyfutures.continuous.bar import ContinuousBar
-from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
-from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
-from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
-from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
-from pyfutures.tests.unit.client.stubs import ClientStubs
-from pyfutures.continuous.cycle import RollCycle
-from pyfutures.continuous.config import RollConfig
-from pyfutures.continuous.data import ContinuousData
-from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
-from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
-from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.client.objects import IBExecutionEvent
-from pyfutures.client.objects import IBOpenOrderEvent
-from pyfutures.client.objects import IBOrderStatusEvent
-import logging
-
-from nautilus_trader.config import LiveExecEngineConfig
 from nautilus_trader.live.data_engine import LiveDataEngine
 from nautilus_trader.live.execution_engine import LiveExecutionEngine
+from nautilus_trader.live.node import TradingNode
+from nautilus_trader.model.data import Bar
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.enums import AssetClass
 from nautilus_trader.model.identifiers import AccountId
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.identifiers import TraderId
+from nautilus_trader.model.instruments.futures_contract import FuturesContract
+from nautilus_trader.model.objects import Currency
+from nautilus_trader.model.objects import Price
+from nautilus_trader.model.objects import Quantity
 from nautilus_trader.portfolio.portfolio import Portfolio
 from nautilus_trader.test_kit.stubs.events import TestEventStubs
 from nautilus_trader.test_kit.stubs.execution import TestExecStubs
+from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 from pyfutures import IB_ACCOUNT_ID
-from pyfutures.adapter import IB_VENUE
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.config import InteractiveBrokersExecClientConfig
 from pyfutures.adapter.config import InteractiveBrokersInstrumentProviderConfig
 from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.factories import InteractiveBrokersLiveDataClientFactory
+from pyfutures.adapter.factories import InteractiveBrokersLiveExecClientFactory
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
+from pyfutures.client.objects import IBExecutionEvent
+from pyfutures.client.objects import IBOpenOrderEvent
+from pyfutures.client.objects import IBOrderStatusEvent
+from pyfutures.continuous.bar import ContinuousBar
+from pyfutures.continuous.config import RollConfig
+from pyfutures.continuous.cycle import RollCycle
+from pyfutures.continuous.data import ContinuousData
+from pyfutures.tests.unit.client.stubs import ClientStubs
+
 
 PROVIDER_CONFIG = dict(
     chain_filters={

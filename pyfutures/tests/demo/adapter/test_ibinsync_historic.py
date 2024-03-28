@@ -11,11 +11,11 @@ from ib_insync.util import logToFile
 from ib_insync.util import sleep
 from nautilus_trader.adapters.interactive_brokers.common import IBContractDetails
 
+from pyfutures.adapter.parsing import details_to_instrument_id
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import Duration
 from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
-from pyfutures.adapter.parsing import details_to_instrument_id
 from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
@@ -66,7 +66,9 @@ for row in rows:
     what_to_show = WhatToShow.BID_ASK
     bar_size = BarSize._1_MINUTE
 
-    head_timestamp = ib.reqHeadTimeStamp(contract=contract, whatToShow=what_to_show.value, useRTH=True, formatDate=2)
+    head_timestamp = ib.reqHeadTimeStamp(
+        contract=contract, whatToShow=what_to_show.value, useRTH=True, formatDate=2
+    )
 
     total_bars = []
     interval = duration.to_timedelta()

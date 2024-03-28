@@ -17,18 +17,36 @@ class TestMarketCalendar:
         )
 
         # Tuesday
-        self.data.loc[len(self.data)] = {"open": "1980-01-01 08:30", "close": "1980-01-01 16:00"}
-        self.data.loc[len(self.data)] = {"open": "1980-01-01 16:30", "close": "1980-01-01 17:00"}
-        self.data.loc[len(self.data)] = {"open": "1980-01-01 20:15", "close": "1980-01-02 00:00"}
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-01 08:30",
+            "close": "1980-01-01 16:00",
+        }
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-01 16:30",
+            "close": "1980-01-01 17:00",
+        }
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-01 20:15",
+            "close": "1980-01-02 00:00",
+        }
 
         # Wednesday
-        self.data.loc[len(self.data)] = {"open": "1980-01-02 08:30", "close": "1980-01-02 16:00"}
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-02 08:30",
+            "close": "1980-01-02 16:00",
+        }
 
         # Thursday
-        self.data.loc[len(self.data)] = {"open": "1980-01-03 08:30", "close": "1980-01-03 16:00"}
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-03 08:30",
+            "close": "1980-01-03 16:00",
+        }
 
         # Saturday
-        self.data.loc[len(self.data)] = {"open": "1980-01-05 17:00", "close": "1980-01-06 00:00"}
+        self.data.loc[len(self.data)] = {
+            "open": "1980-01-05 17:00",
+            "close": "1980-01-06 00:00",
+        }
 
         self.data.day = pd.to_datetime(self.data.day, format="%Y-%m-%d")
         self.data.open = pd.to_datetime(self.data.open, format="%Y-%m-%d %H:%M")
@@ -52,23 +70,45 @@ class TestMarketCalendar:
     def test_is_open_utc(self):
         calendar = MarketCalendar(name="test", data=self.data, timezone=pytz.UTC)
 
-        assert not calendar.is_open(pd.Timestamp("1980-01-04 08:30:00", tz="UTC"))  # Friday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-04 08:30:00", tz="UTC")
+        )  # Friday
 
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 08:29:00", tz="UTC"))  # Tuesday
-        assert calendar.is_open(pd.Timestamp("1980-01-01 08:30:00", tz="UTC"))  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 08:29:00", tz="UTC")
+        )  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 08:30:00", tz="UTC")
+        )  # Tuesday
 
         # check break
-        assert calendar.is_open(pd.Timestamp("1980-01-01 15:59:00", tz="UTC"))  # Tuesday
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 16:00:00", tz="UTC"))  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 15:59:00", tz="UTC")
+        )  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 16:00:00", tz="UTC")
+        )  # Tuesday
 
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 16:29:00", tz="UTC"))  # Tuesday
-        assert calendar.is_open(pd.Timestamp("1980-01-01 16:30:00", tz="UTC"))  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 16:29:00", tz="UTC")
+        )  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 16:30:00", tz="UTC")
+        )  # Tuesday
 
-        assert calendar.is_open(pd.Timestamp("1980-01-01 16:59:00", tz="UTC"))  # Tuesday
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 17:00:00", tz="UTC"))  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 16:59:00", tz="UTC")
+        )  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 17:00:00", tz="UTC")
+        )  # Tuesday
 
-        assert calendar.is_open(pd.Timestamp("1980-01-01 20:15:00", tz="UTC"))  # Tuesday
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 20:14:00", tz="UTC"))  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 20:15:00", tz="UTC")
+        )  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 20:14:00", tz="UTC")
+        )  # Tuesday
 
     def test_is_market_open_with_timezone(self):
         calendar = MarketCalendar(
@@ -77,43 +117,63 @@ class TestMarketCalendar:
             timezone=pytz.timezone("America/Chicago"),
         )
 
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 14:29:00", tz="UTC"))  # Tuesday
-        assert calendar.is_open(pd.Timestamp("1980-01-01 14:30:00", tz="UTC"))  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 14:29:00", tz="UTC")
+        )  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 14:30:00", tz="UTC")
+        )  # Tuesday
 
-        assert calendar.is_open(pd.Timestamp("1980-01-01 21:59:00", tz="UTC"))  # Tuesday
-        assert not calendar.is_open(pd.Timestamp("1980-01-01 22:00:00", tz="UTC"))  # Tuesday
+        assert calendar.is_open(
+            pd.Timestamp("1980-01-01 21:59:00", tz="UTC")
+        )  # Tuesday
+        assert not calendar.is_open(
+            pd.Timestamp("1980-01-01 22:00:00", tz="UTC")
+        )  # Tuesday
 
-        assert not calendar.is_open(pd.Timestamp("2023-10-28 02:00:00", tz="UTC"))  # Saturday
+        assert not calendar.is_open(
+            pd.Timestamp("2023-10-28 02:00:00", tz="UTC")
+        )  # Saturday
 
     def test_next_open_utc(self):
         calendar = MarketCalendar(name="test", data=self.data, timezone=pytz.UTC)
 
         # Thursday > Thursday
-        assert calendar.next_open(pd.Timestamp("1980-01-03 08:29", tz="UTC")) == pd.Timestamp(
+        assert calendar.next_open(
+            pd.Timestamp("1980-01-03 08:29", tz="UTC")
+        ) == pd.Timestamp(
             "1980-01-03 08:30",
             tz="UTC",
         )
 
         # Thursday > Saturday
-        assert calendar.next_open(pd.Timestamp("1980-01-03 08:30", tz="UTC")) == pd.Timestamp(
+        assert calendar.next_open(
+            pd.Timestamp("1980-01-03 08:30", tz="UTC")
+        ) == pd.Timestamp(
             "1980-01-05 17:00",
             tz="UTC",
         )
 
         # Friday (closed) > Saturday
-        assert calendar.next_open(pd.Timestamp("1980-01-04 08:29", tz="UTC")) == pd.Timestamp(
+        assert calendar.next_open(
+            pd.Timestamp("1980-01-04 08:29", tz="UTC")
+        ) == pd.Timestamp(
             "1980-01-05 17:00",
             tz="UTC",
         )
 
         # Tuesday
-        assert calendar.next_open(pd.Timestamp("1980-01-01 08:29", tz="UTC")) == pd.Timestamp(
+        assert calendar.next_open(
+            pd.Timestamp("1980-01-01 08:29", tz="UTC")
+        ) == pd.Timestamp(
             "1980-01-01 08:30",
             tz="UTC",
         )
 
         # Tuesday
-        assert calendar.next_open(pd.Timestamp("1980-01-01 08:30", tz="UTC")) == pd.Timestamp(
+        assert calendar.next_open(
+            pd.Timestamp("1980-01-01 08:30", tz="UTC")
+        ) == pd.Timestamp(
             "1980-01-01 16:30",
             tz="UTC",
         )
@@ -128,15 +188,24 @@ class TestMarketCalendar:
         assert calendar.time_until_close(
             pd.Timestamp("1980-01-01 15:59:00", tz="UTC"),
         ) == pd.Timedelta(minutes=1)
-        assert calendar.time_until_close(pd.Timestamp("1980-01-01 16:00:00", tz="UTC")) is None
+        assert (
+            calendar.time_until_close(pd.Timestamp("1980-01-01 16:00:00", tz="UTC"))
+            is None
+        )
 
-        assert calendar.time_until_close(pd.Timestamp("1980-01-01 16:29:00", tz="UTC")) is None
+        assert (
+            calendar.time_until_close(pd.Timestamp("1980-01-01 16:29:00", tz="UTC"))
+            is None
+        )
         assert calendar.time_until_close(
             pd.Timestamp("1980-01-01 16:30:00", tz="UTC"),
         ) == pd.Timedelta(minutes=30)
 
         # friday (closed)
-        assert calendar.time_until_close(pd.Timestamp("1980-01-04 16:00:00", tz="UTC")) is None
+        assert (
+            calendar.time_until_close(pd.Timestamp("1980-01-04 16:00:00", tz="UTC"))
+            is None
+        )
 
         # weds
         assert calendar.time_until_close(

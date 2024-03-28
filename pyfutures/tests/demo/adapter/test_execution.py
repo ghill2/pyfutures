@@ -72,7 +72,9 @@ class TestInteractiveBrokersExecutionFilled:
 
 @pytest.mark.asyncio()
 async def test_load_instrument_id(instrument_provider):
-    instrument = await instrument_provider.load_async(InstrumentId.from_str("MIX.MEFFRV"))
+    instrument = await instrument_provider.load_async(
+        InstrumentId.from_str("MIX.MEFFRV")
+    )
     print(instrument)
 
 

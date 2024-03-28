@@ -50,10 +50,14 @@ TIMEZONE_FOR_EXCHANGE = {
 
 
 class MarketScheduleFactory:
-    FOLDER = PACKAGE_ROOT / "tests/adapters/interactive_brokers/demo/import_instrument_json"
+    FOLDER = (
+        PACKAGE_ROOT / "tests/adapters/interactive_brokers/demo/import_instrument_json"
+    )
 
     @classmethod
-    def from_symbol(cls, symbol: Symbol, open_offset: pd.Timedelta = None) -> MarketSchedule | None:
+    def from_symbol(
+        cls, symbol: Symbol, open_offset: pd.Timedelta = None
+    ) -> MarketSchedule | None:
         calendar = cls.from_liquid_hours(symbol, open_offset=open_offset)
         if calendar is None:
             calendar = cls.from_market_hours(symbol, open_offset=open_offset)
@@ -68,7 +72,9 @@ class MarketScheduleFactory:
         symbol: Symbol,
         open_offset: pd.Timedelta = None,
     ) -> MarketSchedule | None:
-        return cls._from_key(symbol=symbol, key="Trading Hours", open_offset=open_offset)
+        return cls._from_key(
+            symbol=symbol, key="Trading Hours", open_offset=open_offset
+        )
 
     @classmethod
     def from_liquid_hours(
@@ -76,7 +82,9 @@ class MarketScheduleFactory:
         symbol: Symbol,
         open_offset: pd.Timedelta = None,
     ) -> MarketSchedule | None:
-        return cls._from_key(symbol=symbol, key="Liquid Trading Hours", open_offset=open_offset)
+        return cls._from_key(
+            symbol=symbol, key="Liquid Trading Hours", open_offset=open_offset
+        )
 
     @classmethod
     def _from_key(
@@ -125,7 +133,9 @@ class MarketScheduleFactory:
 
                 open_time = pd.to_datetime(parts[0], format="%H:%M").time()
 
-                if open_time == datetime.time(0, 0) and close_time == datetime.time(0, 0):
+                if open_time == datetime.time(0, 0) and close_time == datetime.time(
+                    0, 0
+                ):
                     continue
 
                 if open_offset is not None:
@@ -206,7 +216,10 @@ class MarketScheduleFactory:
 
             # print(expected)
 
-            matched = ((expected.open.values == open_time) & (expected.close.values == close_time)).any()
+            matched = (
+                (expected.open.values == open_time)
+                & (expected.close.values == close_time)
+            ).any()
 
             if not matched:
                 print(expected)
@@ -234,7 +247,9 @@ class MarketScheduleFactory:
             for dayofweek in range(1, 5):
                 ndf = expected[expected.dayofweek == dayofweek]
 
-                matched = ((ndf.open.values == open_time) & (ndf.close.values == close_time)).any()
+                matched = (
+                    (ndf.open.values == open_time) & (ndf.close.values == close_time)
+                ).any()
                 if not matched:
                     print(dayofweek, symbol)
 

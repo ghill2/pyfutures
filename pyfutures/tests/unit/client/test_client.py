@@ -1,5 +1,4 @@
 # import asyncio
-import asyncio
 import dataclasses
 from decimal import Decimal
 from unittest.mock import AsyncMock
@@ -9,24 +8,12 @@ import pandas as pd
 import pytest
 from ibapi.account_summary_tags import AccountSummaryTags
 from ibapi.commission_report import CommissionReport as IBCommissionReport
-from ibapi.common import BarData
-from ibapi.common import HistoricalTickBidAsk
-from ibapi.common import HistoricalTickLast
-from ibapi.common import TickAttribBidAsk
 from ibapi.contract import Contract
 from ibapi.contract import Contract as IBContract
-from ibapi.contract import ContractDetails as IBContractDetails
 from ibapi.execution import Execution as IBExecution
-from ibapi.order import Order
-from ibapi.order import Order as IBOrder
-from ibapi.order_state import OrderState as IBOrderState
 
-from pyfutures.client.client import IBOpenOrderEvent
 from pyfutures.client.enums import BarSize
-from pyfutures.client.enums import Duration
-from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.objects import ClientException
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.client.objects import IBErrorEvent
 from pyfutures.client.objects import IBExecutionEvent

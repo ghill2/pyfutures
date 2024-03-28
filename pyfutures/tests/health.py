@@ -129,7 +129,9 @@ def test_historic_schedules_with_sessions_out_of_day():
     """
     find instruments that have sessions where the start and end date is NOT within the same day
     """
-    schedules_dir = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules")
+    schedules_dir = Path(
+        "/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/schedules"
+    )
     universe = IBTestProviderStubs.universe_dataframe()
 
     for row in universe.itertuples():
@@ -183,7 +185,10 @@ def test_find_missing_calendars(self):
         with open(path) as json_file:
             data = json.load(json_file)
 
-        if data.get("Trading Hours") is None and data.get("Liquid Trading Hours") is None:
+        if (
+            data.get("Trading Hours") is None
+            and data.get("Liquid Trading Hours") is None
+        ):
             missing.add(instrument_id)
 
     for item in missing:

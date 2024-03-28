@@ -115,7 +115,9 @@ class RollCycle:
     def __hash__(self) -> int:
         return hash(self.value)
 
-    def get_months(self, start: ContractMonth, end: ContractMonth) -> set[ContractMonth]:
+    def get_months(
+        self, start: ContractMonth, end: ContractMonth
+    ) -> set[ContractMonth]:
         months = set()
         assert start in self
         while start < end:

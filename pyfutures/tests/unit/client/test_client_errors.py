@@ -1,13 +1,11 @@
 import asyncio
 from unittest.mock import Mock
-from unittest.mock import AsyncMock
 
 import pytest
 
 from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.client.mock_server import MockServer
 from pyfutures.tests.unit.client.stubs import ClientStubs
-import functools
 
 
 # PROBLEMS:

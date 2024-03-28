@@ -29,7 +29,8 @@ class PortaraData:
         paths = [
             p
             for p in paths
-            if (start_month is None or ContractMonth(p.stem[-5:]) >= start_month) and (end_month is None or ContractMonth(p.stem[-5:]) <= end_month)
+            if (start_month is None or ContractMonth(p.stem[-5:]) >= start_month)
+            and (end_month is None or ContractMonth(p.stem[-5:]) <= end_month)
         ]
 
         assert len(paths) > 0
@@ -84,7 +85,9 @@ class PortaraData:
                 "tick_count": np.int64,
                 "volume": np.float64,
             }
-        elif path.suffix in (".txt", ".b01") and column_count == 8:  # minute .txt or .b01 file
+        elif (
+            path.suffix in (".txt", ".b01") and column_count == 8
+        ):  # minute .txt or .b01 file
             dtype = {
                 "day": int,
                 "time": int,
@@ -103,7 +106,9 @@ class PortaraData:
 
         missing = _get_missing_rows(path)
         if missing is not None:
-            missing = "\n".join(list(map(lambda x: x.strip(), missing.strip().splitlines())))
+            missing = "\n".join(
+                list(map(lambda x: x.strip(), missing.strip().splitlines()))
+            )
             body = body + missing
 
         df = pd.read_csv(StringIO(body), names=list(dtype.keys()), dtype=dtype)

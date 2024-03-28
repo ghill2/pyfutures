@@ -2,10 +2,11 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import ClassVar
-from pyfutures.logger import LoggerAdapter
 
 import aiodocker
 from dotenv import dotenv_values
+
+from pyfutures.logger import LoggerAdapter
 
 
 # https://github.com/aio-libs/aiodocker/issues/829

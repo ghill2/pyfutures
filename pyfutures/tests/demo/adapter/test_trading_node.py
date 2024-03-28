@@ -1,16 +1,16 @@
 import asyncio
 import logging
 
+from nautilus_trader.model.data import BarType
+from nautilus_trader.model.enums import OrderSide
 from nautilus_trader.model.identifiers import TraderId
+from pytower.tests.stubs.strategies import BuyOnBarX
+
+from pyfutures.adapter.parsing import AdapterParser
 from pyfutures.logger import LoggerAttributes
 from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
-
-from nautilus_trader.model.data import BarType
-from nautilus_trader.model.enums import OrderSide
-from pytower.tests.stubs.strategies import BuyOnBarX
-from pyfutures.adapter.parsing import AdapterParser
 
 
 async def main_universe():
@@ -35,7 +35,9 @@ async def main_universe():
         # TODO: george: what about creating a cache to store all contract details for all universe instruments, create a BaseCache with different variations
         LoggerAttributes.level = logging.DEBUG
         LoggerAttributes.id = row.trading_class
-        node = AdapterStubs.trading_node(loop=loop, trader_id=TraderId("TRADER-001"), load_ids=[instrument_id.value])
+        node = AdapterStubs.trading_node(
+            loop=loop, trader_id=TraderId("TRADER-001"), load_ids=[instrument_id.value]
+        )
 
         # bar_type = BarType.from_str("EUR.GBP=CASH.IDEALPRO-5-SECOND-BID-EXTERNAL")
         strategy = BuyOnBarX(
@@ -58,7 +60,9 @@ async def main():
     LoggerAttributes.level = logging.DEBUG
     LoggerAttributes.id = "EURGBP"
     instrument_id_str = "EUR.GBP=CASH.IDEALPRO"
-    node = AdapterStubs.trading_node(loop=loop, trader_id=TraderId("TRADER-001"), load_ids=[instrument_id_str])
+    node = AdapterStubs.trading_node(
+        loop=loop, trader_id=TraderId("TRADER-001"), load_ids=[instrument_id_str]
+    )
 
     strategy = BuyOnBarX(
         index=1,

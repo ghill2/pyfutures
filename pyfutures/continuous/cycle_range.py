@@ -13,7 +13,9 @@ class RollCycleRange:
     cycle: RollCycle
 
     def __contains__(self, month: ContractMonth) -> bool:
-        return (self.start_month is None or month >= self.start_month) and (self.end_month is None or month <= self.end_month)
+        return (self.start_month is None or month >= self.start_month) and (
+            self.end_month is None or month <= self.end_month
+        )
 
 
 @dataclass
@@ -100,7 +102,9 @@ class RangedRollCycle:
 
         raise RuntimeError  # design-time error
 
-    def get_months(self, start: ContractMonth, end: ContractMonth) -> set[ContractMonth]:
+    def get_months(
+        self, start: ContractMonth, end: ContractMonth
+    ) -> set[ContractMonth]:
         months = set()
         assert start in self
         while start < end:

@@ -4,19 +4,17 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from pyfutures.schedule.schedule import MarketSchedule
 import pytest
 from ibapi.contract import Contract as IBContract
 from pytower import PACKAGE_ROOT
 
+from pyfutures.client.cache import DetailsCache
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
 from pyfutures.client.historic import InteractiveBrokersHistoricClient
 from pyfutures.client.objects import ClientException
-from pyfutures.tests.test_kit import IBTestProviderStubs
 from pyfutures.tests.demo.client.stubs import ClientStubs
-from pyfutures.client.cache import DetailsCache
-import pytz
+from pyfutures.tests.test_kit import IBTestProviderStubs
 
 
 @pytest.mark.asyncio()
@@ -32,7 +30,9 @@ async def test_subscribe_realtime_bars(event_loop):
         print(bar)
 
     for row in rows[0:9]:
-        details = await client.request_contract_details(contract=row.contract_cont, cache=cache)
+        details = await client.request_contract_details(
+            contract=row.contract_cont, cache=cache
+        )
         client._subscribe_realtime_bars(
             contract=details[0].contract,
             what_to_show=WhatToShow.BID,
@@ -77,7 +77,6 @@ async def test_request_last_quote_tick_universe(event_loop):
     """
     Find missing subscriptions in the universe
     """
-
     client = ClientStubs.uncached_client(loop=event_loop)
     rows = IBTestProviderStubs.universe_rows()
 
@@ -216,7 +215,6 @@ async def test_trading_class(event_loop):
     """
     Find which instruments in the universe have more than one trading class
     """
-
     client = ClientStubs.uncached_client(loop=event_loop)
     await client.connect()
 

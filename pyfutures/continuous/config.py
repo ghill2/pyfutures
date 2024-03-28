@@ -39,6 +39,7 @@ class RollConfig(NautilusConfig, frozen=True):
     approximate_expiry_offset: int
     carry_offset: Literal[1, -1]
 
+
 class ContractChainConfig(NautilusConfig, frozen=True):
     """
     Configuration for contract chain.

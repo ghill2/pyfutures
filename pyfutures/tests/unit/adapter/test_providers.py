@@ -25,7 +25,9 @@ class TestInteractiveBrokersInstrumentProvider:
         mock_contract = AdapterStubs.contract()
 
         self.provider._details_to_instrument = Mock(return_value=mock_contract)
-        self.provider.client.request_contract_details = AsyncMock(return_value=[details])
+        self.provider.client.request_contract_details = AsyncMock(
+            return_value=[details]
+        )
 
         # Act
         await self.provider.load_async(mock_contract.id)

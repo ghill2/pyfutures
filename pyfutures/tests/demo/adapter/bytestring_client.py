@@ -63,7 +63,11 @@ class DecorateMethods(type):
         # Iterate through attrs to access instance methods
         for attr_name, attr_value in attrs.items():
             print(attr_name)
-            if isinstance(attr_value, types.FunctionType) and attr_name not in exclude and not attr_name.startswith("__"):
+            if (
+                isinstance(attr_value, types.FunctionType)
+                and attr_name not in exclude
+                and not attr_name.startswith("__")
+            ):
                 attrs[attr_name] = decorator(attr_value)
 
         return super(DecorateMethods, cls).__new__(cls, name, bases, attrs)

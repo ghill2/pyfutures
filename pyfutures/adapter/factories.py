@@ -16,6 +16,7 @@ from pyfutures.adapter.execution import InteractiveBrokersExecClient
 from pyfutures.adapter.providers import InteractiveBrokersInstrumentProvider
 from pyfutures.client.client import InteractiveBrokersClient
 
+
 CLIENT = None
 PROVIDER = None
 DATA_CLIENT = None

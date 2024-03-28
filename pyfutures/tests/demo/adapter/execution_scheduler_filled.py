@@ -18,7 +18,9 @@ class ExecutionFilledRunner:
         self._sessions = {}
 
         for session in sessions:
-            start_time = datetime.time(session.start_time.hour + 1, session.start_time.minute)
+            start_time = datetime.time(
+                session.start_time.hour + 1, session.start_time.minute
+            )
             end_time = session.end_time
 
             assert start_time < end_time
@@ -48,7 +50,9 @@ class ExecutionFilledRunner:
         self._run(instrument_ids)
 
     def _run(self, instrument_ids: list[InstrumentId]) -> None:
-        joblib.Parallel(n_jobs=-1, backend="loky", verbose=100)(joblib.delayed(_run_test)(instrument_id) for instrument_id in instrument_ids)
+        joblib.Parallel(n_jobs=-1, backend="loky", verbose=100)(
+            joblib.delayed(_run_test)(instrument_id) for instrument_id in instrument_ids
+        )
 
 
 def _run_test(instrument_id: InstrumentId):
@@ -56,7 +60,9 @@ def _run_test(instrument_id: InstrumentId):
     from pathlib import Path
 
     log_path = Path(__file__).parent / (r"logs/" + instrument_id.value + ".log")
-    log_path_pytest = Path(__file__).parent / (r"logs/" + instrument_id.value + "_test.html")
+    log_path_pytest = Path(__file__).parent / (
+        r"logs/" + instrument_id.value + "_test.html"
+    )
 
     retcode = pytest.main(
         [
@@ -91,7 +97,11 @@ def _run_test(instrument_id: InstrumentId):
         )
         shutil.move(
             str(log_path_pytest),
-            str(log_path_pytest.with_name(log_path_pytest.stem + "_failed" + log_path.suffix)),
+            str(
+                log_path_pytest.with_name(
+                    log_path_pytest.stem + "_failed" + log_path.suffix
+                )
+            ),
         )
 
 

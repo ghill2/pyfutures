@@ -1,9 +1,7 @@
 import pytest
 from ibapi.contract import ContractDetails as IBContractDetails
 
-
 from pyfutures.client.objects import ClientException
-import logging
 
 
 @pytest.mark.asyncio()

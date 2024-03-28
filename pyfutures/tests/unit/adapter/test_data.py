@@ -20,9 +20,9 @@ from nautilus_trader.test_kit.stubs.identifiers import TestIdStubs
 
 from pyfutures.adapter.config import InteractiveBrokersDataClientConfig
 from pyfutures.adapter.data import InteractiveBrokersDataClient
+from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
-from pyfutures.client.client import InteractiveBrokersClient
 from pyfutures.tests.unit.adapter.stubs import AdapterStubs
 from pyfutures.tests.unit.client.stubs import ClientStubs
 
@@ -79,7 +79,9 @@ class TestInteractiveBrokersDataClient:
         assert sent_kwargs["bar_size"] == BarSize._1_DAY
         assert sent_kwargs["callback"].func == self.data_client._bar_callback
         assert sent_kwargs["callback"].keywords["bar_type"] == self.bar_type
-        assert sent_kwargs["callback"].keywords["instrument"] == self.data_client.cache.instrument(self.instrument_id)
+        assert sent_kwargs["callback"].keywords[
+            "instrument"
+        ] == self.data_client.cache.instrument(self.instrument_id)
 
     @pytest.mark.asyncio()
     async def test_bar_callback(self):

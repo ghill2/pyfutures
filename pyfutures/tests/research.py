@@ -60,7 +60,8 @@ async def use_rt():
     ):
         df["dayofweek"] = df.timestamp.dt.dayofweek
         print(df)
-        
+
+
 async def find_universe_weekly_contracts(client):
     """
     Find instruments that have special contracts and need special handling.

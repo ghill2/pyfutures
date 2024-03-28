@@ -35,7 +35,9 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
         df.ask_price = 1 / df.ask_price
         symbol = f"{symbol[3:6]}{symbol[:3]}"
 
-    instrument: CurrencyPair = TestInstrumentProvider.default_fx_ccy(symbol=symbol, venue=Venue("SIM"))
+    instrument: CurrencyPair = TestInstrumentProvider.default_fx_ccy(
+        symbol=symbol, venue=Venue("SIM")
+    )
     df.bid_price = df.bid_price.round(5)
     df.ask_price = df.ask_price.round(5)
     print(symbol, df)
@@ -56,7 +58,9 @@ def write_dataframe(symbol: str, df: pd.DataFrame) -> None:
 
 
 def import_tradermade() -> None:
-    folder = Path("/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/tradermade/old")
+    folder = Path(
+        "/Users/g1/BU/projects/pytower_develop/pyfutures/pyfutures/tradermade/old"
+    )
 
     paths = folder.glob("*.csv")
 
@@ -66,7 +70,9 @@ def import_tradermade() -> None:
         total = pd.concat([total, df])
 
     for symbol in TRADERMADE_SYMBOLS:
-        mask = (total.base_currency == symbol[:3]) & (total.quote_currency == symbol[3:6])
+        mask = (total.base_currency == symbol[:3]) & (
+            total.quote_currency == symbol[3:6]
+        )
         df = total[mask].reset_index(drop=True)
         df.timestamp = pd.to_datetime(df.timestamp.values, utc=True)
         df.sort_values(by="timestamp", inplace=True)

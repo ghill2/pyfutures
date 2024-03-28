@@ -1,17 +1,13 @@
 import asyncio
-import socket
-from pyfutures import PACKAGE_ROOT
-import sys
-from asyncio.streams import StreamReader
-from asyncio.streams import StreamReaderProtocol
-from asyncio.streams import StreamWriter
-import functools
-from pathlib import Path
-import pickle
-from pyfutures.client.protocol import parse_buffer
-import traceback
 import json
+import sys
+import traceback
+from pathlib import Path
+
 from ibapi import comm
+
+from pyfutures import PACKAGE_ROOT
+from pyfutures.client.protocol import parse_buffer
 
 
 # def write_to_file(msg):

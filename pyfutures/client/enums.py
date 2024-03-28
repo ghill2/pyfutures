@@ -48,7 +48,9 @@ class Frequency(Enum):
 class Duration:
     def __init__(self, step: int, freq: Frequency):
         if freq == Frequency.HOUR or freq == Frequency.MINUTE:
-            raise RuntimeError("IB does not support Hourly or MINUTE duration frequency.")
+            raise RuntimeError(
+                "IB does not support Hourly or MINUTE duration frequency."
+            )
 
         self.step = step
         self.freq = freq
@@ -56,7 +58,6 @@ class Duration:
         if freq == Frequency.SECOND:
             # ib rejects durations under 30 seconds
             assert step >= 30
-        
 
     def __repr__(self) -> str:
         return str(self)
@@ -74,9 +75,9 @@ class Duration:
         elif self.freq == Frequency.WEEK:
             return pd.Timedelta(days=self.step * 7)
         else:
-            raise RuntimeError(f"Timedelta parsing error: the Duration {self} is not a fixed length of time.")
-
-    
+            raise RuntimeError(
+                f"Timedelta parsing error: the Duration {self} is not a fixed length of time."
+            )
 
 
 class BarSize(Enum):
@@ -131,7 +132,7 @@ class BarSize(Enum):
             )
         frequency = Frequency[bar_aggregation_to_str(aggregation)]
         return cls((step, frequency))
-    
+
     def to_appropriate_duration(self) -> Duration:
         """
         Return an appopriate interval range depending on the desired data frequency
@@ -160,7 +161,7 @@ class BarSize(Enum):
             return Duration(step=3600, freq=Frequency.SECOND)  # 1 hour = 3600 seconds
         else:
             raise ValueError("TODO: Unsupported duration")
-        
+
     # def to_duration(self) -> Duration:
     #     # special handling for HOUR and MINUTE because no DurationStr exists for them
     #     if self.frequency == Frequency.HOUR:

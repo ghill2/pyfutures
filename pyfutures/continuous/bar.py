@@ -59,25 +59,33 @@ class ContinuousBar(Data):
 
     @property
     def current_month(self) -> ContractMonth:
-        return ContractMonth(self.current_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+        return ContractMonth(
+            self.current_bar.bar_type.instrument_id.symbol.value.split("=")[-1]
+        )
 
     @property
     def forward_month(self) -> ContractMonth | None:
         if self.forward_bar is None:
             return None
-        return ContractMonth(self.forward_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+        return ContractMonth(
+            self.forward_bar.bar_type.instrument_id.symbol.value.split("=")[-1]
+        )
 
     @property
     def carry_month(self) -> ContractMonth | None:
         if self.carry_bar is None:
             return None
-        return ContractMonth(self.carry_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+        return ContractMonth(
+            self.carry_bar.bar_type.instrument_id.symbol.value.split("=")[-1]
+        )
 
     @property
     def previous_month(self) -> ContractMonth | None:
         if self.previous_bar is None:
             return None
-        return ContractMonth(self.previous_bar.bar_type.instrument_id.symbol.value.split("=")[-1])
+        return ContractMonth(
+            self.previous_bar.bar_type.instrument_id.symbol.value.split("=")[-1]
+        )
 
     @property
     def expiration_date(self) -> pd.Timestamp:
@@ -126,7 +134,11 @@ class ContinuousBar(Data):
                 pa.field("current_volume", pa.string()),
                 pa.field("current_ts_event", pa.uint64()),
                 pa.field("current_ts_init", pa.uint64()),
-                pa.field("forward_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
+                pa.field(
+                    "forward_bar_type",
+                    pa.dictionary(pa.int16(), pa.string()),
+                    nullable=True,
+                ),
                 pa.field("forward_open", pa.string(), nullable=True),
                 pa.field("forward_high", pa.string(), nullable=True),
                 pa.field("forward_low", pa.string(), nullable=True),
@@ -134,7 +146,11 @@ class ContinuousBar(Data):
                 pa.field("forward_volume", pa.string(), nullable=True),
                 pa.field("forward_ts_event", pa.uint64(), nullable=True),
                 pa.field("forward_ts_init", pa.uint64(), nullable=True),
-                pa.field("previous_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
+                pa.field(
+                    "previous_bar_type",
+                    pa.dictionary(pa.int16(), pa.string()),
+                    nullable=True,
+                ),
                 pa.field("previous_open", pa.string(), nullable=True),
                 pa.field("previous_high", pa.string(), nullable=True),
                 pa.field("previous_low", pa.string(), nullable=True),
@@ -142,7 +158,11 @@ class ContinuousBar(Data):
                 pa.field("previous_volume", pa.string(), nullable=True),
                 pa.field("previous_ts_event", pa.uint64(), nullable=True),
                 pa.field("previous_ts_init", pa.uint64(), nullable=True),
-                pa.field("carry_bar_type", pa.dictionary(pa.int16(), pa.string()), nullable=True),
+                pa.field(
+                    "carry_bar_type",
+                    pa.dictionary(pa.int16(), pa.string()),
+                    nullable=True,
+                ),
                 pa.field("carry_open", pa.string(), nullable=True),
                 pa.field("carry_high", pa.string(), nullable=True),
                 pa.field("carry_low", pa.string(), nullable=True),
@@ -169,30 +189,76 @@ class ContinuousBar(Data):
             "current_volume": str(obj.current_bar.volume),
             "current_ts_event": obj.current_bar.ts_event,
             "current_ts_init": obj.current_bar.ts_init,
-            "forward_bar_type": str(obj.forward_bar.bar_type) if obj.forward_bar is not None else None,
-            "forward_open": str(obj.forward_bar.open) if obj.forward_bar is not None else None,
-            "forward_high": str(obj.forward_bar.high) if obj.forward_bar is not None else None,
-            "forward_low": str(obj.forward_bar.low) if obj.forward_bar is not None else None,
-            "forward_close": str(obj.forward_bar.close) if obj.forward_bar is not None else None,
-            "forward_volume": str(obj.forward_bar.volume) if obj.forward_bar is not None else None,
-            "forward_ts_event": obj.forward_bar.ts_event if obj.forward_bar is not None else None,
-            "forward_ts_init": obj.forward_bar.ts_init if obj.forward_bar is not None else None,
-            "previous_bar_type": str(obj.previous_bar.bar_type) if obj.previous_bar is not None else None,
-            "previous_open": str(obj.previous_bar.open) if obj.previous_bar is not None else None,
-            "previous_high": str(obj.previous_bar.high) if obj.previous_bar is not None else None,
-            "previous_low": str(obj.previous_bar.low) if obj.previous_bar is not None else None,
-            "previous_close": str(obj.previous_bar.close) if obj.previous_bar is not None else None,
-            "previous_volume": str(obj.previous_bar.volume) if obj.previous_bar is not None else None,
-            "previous_ts_event": obj.previous_bar.ts_event if obj.previous_bar is not None else None,
-            "previous_ts_init": obj.previous_bar.ts_init if obj.previous_bar is not None else None,
-            "carry_bar_type": str(obj.carry_bar.bar_type) if obj.carry_bar is not None else None,
-            "carry_open": str(obj.carry_bar.open) if obj.carry_bar is not None else None,
-            "carry_high": str(obj.carry_bar.high) if obj.carry_bar is not None else None,
+            "forward_bar_type": str(obj.forward_bar.bar_type)
+            if obj.forward_bar is not None
+            else None,
+            "forward_open": str(obj.forward_bar.open)
+            if obj.forward_bar is not None
+            else None,
+            "forward_high": str(obj.forward_bar.high)
+            if obj.forward_bar is not None
+            else None,
+            "forward_low": str(obj.forward_bar.low)
+            if obj.forward_bar is not None
+            else None,
+            "forward_close": str(obj.forward_bar.close)
+            if obj.forward_bar is not None
+            else None,
+            "forward_volume": str(obj.forward_bar.volume)
+            if obj.forward_bar is not None
+            else None,
+            "forward_ts_event": obj.forward_bar.ts_event
+            if obj.forward_bar is not None
+            else None,
+            "forward_ts_init": obj.forward_bar.ts_init
+            if obj.forward_bar is not None
+            else None,
+            "previous_bar_type": str(obj.previous_bar.bar_type)
+            if obj.previous_bar is not None
+            else None,
+            "previous_open": str(obj.previous_bar.open)
+            if obj.previous_bar is not None
+            else None,
+            "previous_high": str(obj.previous_bar.high)
+            if obj.previous_bar is not None
+            else None,
+            "previous_low": str(obj.previous_bar.low)
+            if obj.previous_bar is not None
+            else None,
+            "previous_close": str(obj.previous_bar.close)
+            if obj.previous_bar is not None
+            else None,
+            "previous_volume": str(obj.previous_bar.volume)
+            if obj.previous_bar is not None
+            else None,
+            "previous_ts_event": obj.previous_bar.ts_event
+            if obj.previous_bar is not None
+            else None,
+            "previous_ts_init": obj.previous_bar.ts_init
+            if obj.previous_bar is not None
+            else None,
+            "carry_bar_type": str(obj.carry_bar.bar_type)
+            if obj.carry_bar is not None
+            else None,
+            "carry_open": str(obj.carry_bar.open)
+            if obj.carry_bar is not None
+            else None,
+            "carry_high": str(obj.carry_bar.high)
+            if obj.carry_bar is not None
+            else None,
             "carry_low": str(obj.carry_bar.low) if obj.carry_bar is not None else None,
-            "carry_close": str(obj.carry_bar.close) if obj.carry_bar is not None else None,
-            "carry_volume": str(obj.carry_bar.volume) if obj.carry_bar is not None else None,
-            "carry_ts_event": obj.carry_bar.ts_event if obj.carry_bar is not None else None,
-            "carry_ts_init": obj.carry_bar.ts_init if obj.carry_bar is not None else None,
+            "carry_close": str(obj.carry_bar.close)
+            if obj.carry_bar is not None
+            else None,
+            "carry_volume": str(obj.carry_bar.volume)
+            if obj.carry_bar is not None
+            else None,
+            "carry_ts_event": obj.carry_bar.ts_event
+            if obj.carry_bar is not None
+            else None,
+            "carry_ts_init": obj.carry_bar.ts_init
+            if obj.carry_bar is not None
+            else None,
             "ts_event": obj.ts_event,
             "ts_init": obj.ts_init,
             "expiration_ns": obj.expiration_ns,
@@ -319,7 +385,9 @@ class ContinuousBar(Data):
         if current_timestamp != forward_timestamp:
             return False
 
-        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) and (
+            current_timestamp < self.chain.expiry_date
+        )
 
         return in_roll_window
 
@@ -328,6 +396,8 @@ class ContinuousBar(Data):
         month: ContractMonth,
     ) -> tuple[pd.Timestamp, pd.Timestamp]:
         # TODO: for live environment the expiry date from the contract should be used
-        expiry_date = month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        expiry_date = month.timestamp_utc + pd.Timedelta(
+            days=self.approximate_expiry_offset
+        )
         roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
         return (roll_date, expiry_date)

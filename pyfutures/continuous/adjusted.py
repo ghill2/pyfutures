@@ -37,9 +37,14 @@ class AdjustedPrices:
         return next(self.values)
 
     def on_continuous_bar(self, bar: ContinuousBar) -> None:
-        if self._last is None or self._last.current_bar.bar_type == bar.current_bar.bar_type:
+        if (
+            self._last is None
+            or self._last.current_bar.bar_type == bar.current_bar.bar_type
+        ):
             self.values.append(float(bar.close))
             return
 
         adjustment_value = float(bar.current_bar.close) - float(bar.previous_bar.close)
-        self.values = deque([x + adjustment_value for x in self.values], maxlen=self.maxlen)
+        self.values = deque(
+            [x + adjustment_value for x in self.values], maxlen=self.maxlen
+        )

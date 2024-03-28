@@ -60,7 +60,9 @@ class ContractChain(Actor):
         if current_timestamp != forward_timestamp:
             return False
 
-        in_roll_window = (current_timestamp >= self.chain.roll_date) and (current_timestamp < self.chain.expiry_date)
+        in_roll_window = (current_timestamp >= self.chain.roll_date) and (
+            current_timestamp < self.chain.expiry_date
+        )
 
         return in_roll_window
 
@@ -112,7 +114,9 @@ class ContractChain(Actor):
         month: ContractMonth,
     ) -> tuple[pd.Timestamp, pd.Timestamp]:
         # TODO: for live environment the expiry date from the contract should be used
-        expiry_date = month.timestamp_utc + pd.Timedelta(days=self.approximate_expiry_offset)
+        expiry_date = month.timestamp_utc + pd.Timedelta(
+            days=self.approximate_expiry_offset
+        )
         roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
         return (roll_date, expiry_date)
 

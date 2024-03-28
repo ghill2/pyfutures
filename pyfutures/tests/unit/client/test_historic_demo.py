@@ -129,7 +129,12 @@ async def test_request_quote_ticks_dc(self, client):
         start_time=start_time,
         end_time=end_time,
     )
-    assert all([parse_datetime(q.time) >= start_time and parse_datetime(q.time) < end_time for q in quotes])
+    assert all(
+        [
+            parse_datetime(q.time) >= start_time and parse_datetime(q.time) < end_time
+            for q in quotes
+        ]
+    )
     assert parse_datetime(quotes[0].time) == pd.Timestamp("2023-02-13 14:34:11+00:00")
     assert parse_datetime(quotes[-1].time) == pd.Timestamp("2023-02-13 21:44:26+00:00")
 

@@ -1,7 +1,9 @@
 import pandas as pd
 import pytest
 from nautilus_trader.adapters.interactive_brokers.common import IBContract
-from nautilus_trader.adapters.interactive_brokers.historic.client import HistoricInteractiveBrokersClient
+from nautilus_trader.adapters.interactive_brokers.historic.client import (
+    HistoricInteractiveBrokersClient,
+)
 
 
 @pytest.mark.asyncio()

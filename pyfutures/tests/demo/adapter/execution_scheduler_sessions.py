@@ -68,13 +68,17 @@ if __name__ == "__main__":
 
         # print(f"Processing {instrument_id}...")
 
-        calendar = MarketScheduleFactory.from_symbol(instrument_id.symbol, open_offset=1)
+        calendar = MarketScheduleFactory.from_symbol(
+            instrument_id.symbol, open_offset=1
+        )
         if calendar is None:  # no calendar for symbol
             continue
 
         now = pd.Timestamp.utcnow()
 
-        if calendar.is_open(now) and calendar.time_until_close(now) < pd.Timedelta(hours=1):
+        if calendar.is_open(now) and calendar.time_until_close(now) < pd.Timedelta(
+            hours=1
+        ):
             test_start_time = now
         else:
             test_start_time = calendar.next_open(now)

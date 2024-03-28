@@ -21,7 +21,9 @@ def process_daily_bars(row: dict, path: Path) -> None:
     df = PortaraData.read_dataframe(path)
 
     # apply settlement time
-    df.index = df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30)
+    df.index = (
+        df.index.tz_localize(None) + row.settlement_time + pd.Timedelta(seconds=30)
+    )
     df.index = df.index.tz_localize(row.timezone)
     df.index = df.index.tz_convert("UTC")
 

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import datetime
-import inspect
 import logging
 import os
 import re
 import sys
 import time
 import traceback
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 
 NORMAL = 0
@@ -126,7 +125,6 @@ class LoggerAdapter:
         Creates a LoggerAdapter instance from provided attributes,
         accepting any additional arguments or keyword arguments.
         """
-
         # Gather attributes from LoggerAttributes class
         attrs_dict = {
             "id": getattr(LoggerAttributes, "id"),
@@ -251,7 +249,6 @@ class LoggerAdapter:
             })
         }
         """
-
         msg = message
         if self.prefix is not None:
             prefix = self.prefix(level)

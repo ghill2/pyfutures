@@ -16,6 +16,7 @@ from nautilus_trader.model.data import BarType
 from nautilus_trader.model.data import DataType
 from nautilus_trader.model.data import QuoteTick
 from nautilus_trader.model.identifiers import InstrumentId
+
 from pyfutures.data.schemas import BAR_TABLE_SCHEMA
 from pyfutures.data.schemas import QUOTE_TABLE_SCHEMA
 from pyfutures.data.schemas import DataFrameSchema
@@ -76,7 +77,12 @@ class BarParquetWriter(ParquetWriter):
     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
         df = DataFrameSchema.validate_bars(df)
 
-        timestamps = pd.to_datetime(df["timestamp"], utc=True, format="mixed").dt.tz_localize(None).view("int64").astype("uint64")
+        timestamps = (
+            pd.to_datetime(df["timestamp"], utc=True, format="mixed")
+            .dt.tz_localize(None)
+            .view("int64")
+            .astype("uint64")
+        )
         open = (df["open"] * 1e9).astype("int64")
         high = (df["high"] * 1e9).astype("int64")
         low = (df["low"] * 1e9).astype("int64")
@@ -131,7 +137,12 @@ class QuoteTickParquetWriter(ParquetWriter):
     def write_dataframe(self, df: pd.DataFrame, append: bool = False) -> None:
         df = DataFrameSchema.validate_quotes(df)
 
-        timestamps = pd.to_datetime(df["timestamp"], utc=True, format="mixed").dt.tz_localize(None).view("int64").astype("uint64")
+        timestamps = (
+            pd.to_datetime(df["timestamp"], utc=True, format="mixed")
+            .dt.tz_localize(None)
+            .view("int64")
+            .astype("uint64")
+        )
 
         bid_price = (df["bid_price"] * 1e9).astype("int64")
         ask_price = (df["ask_price"] * 1e9).astype("int64")

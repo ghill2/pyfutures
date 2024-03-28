@@ -45,7 +45,15 @@ if __name__ == "__main__":
             continue
 
         df = pd.DataFrame(
-            columns=["timestamp", "base_currency", "close", "high", "low", "open", "quote_currency"],
+            columns=[
+                "timestamp",
+                "base_currency",
+                "close",
+                "high",
+                "low",
+                "open",
+                "quote_currency",
+            ],
         )
 
         for i, day in enumerate(days):

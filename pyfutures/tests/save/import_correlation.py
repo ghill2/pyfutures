@@ -107,10 +107,18 @@ if __name__ == "__main__":
         assert df.timestamp.is_monotonic_increasing
 
         # prices
-        prices_dfs[row.uname] = pd.DataFrame({"timestamp": df.timestamp.dt.floor("D").values, row.uname: df.adjusted.values})
+        prices_dfs[row.uname] = pd.DataFrame(
+            {
+                "timestamp": df.timestamp.dt.floor("D").values,
+                row.uname: df.adjusted.values,
+            }
+        )
 
         returns_dfs[row.uname] = pd.DataFrame(
-            {"timestamp": df.timestamp.iloc[1:].dt.floor("D").values, row.uname: df.adjusted.diff().iloc[1:].values}
+            {
+                "timestamp": df.timestamp.iloc[1:].dt.floor("D").values,
+                row.uname: df.adjusted.diff().iloc[1:].values,
+            }
         )
 
     start_time = time.perf_counter()

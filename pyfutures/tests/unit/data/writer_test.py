@@ -65,7 +65,9 @@ class TestParquetWriter:
         # Arrange
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "bid_price": [1.0],
                 "ask_price": [1.1],
                 "ask_size": [2.1],
@@ -118,7 +120,9 @@ class TestParquetWriter:
         # Arrange
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "bid_price": [1.0],
                 "ask_price": [1.1],
                 "ask_size": [2.1],
@@ -150,7 +154,9 @@ class TestParquetWriter:
         # Arrange
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "bid_price": [1.0],
                 "ask_price": [1.1],
             },
@@ -186,7 +192,9 @@ class TestParquetWriter:
 
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "open": [1],
                 "high": [2],
                 "low": [3],
@@ -196,7 +204,9 @@ class TestParquetWriter:
         )
 
         bar_type = BarType.from_str("EURDKK.DUKA-1-HOUR-BID-EXTERNAL")
-        writer = BarParquetWriter(path=path, instrument=self.instrument, bar_type=bar_type)
+        writer = BarParquetWriter(
+            path=path, instrument=self.instrument, bar_type=bar_type
+        )
 
         # Act & Arrange
         with pytest.raises(AssertionError):
@@ -210,7 +220,9 @@ class TestParquetWriter:
 
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "bid_price": [1],
                 "ask_price": [1],
                 "ask_size": [1],
@@ -226,7 +238,9 @@ class TestParquetWriter:
         # Arrange
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "open": [0.1],
                 "high": [0.2],
                 "low": [0.3],
@@ -267,7 +281,9 @@ class TestParquetWriter:
         # Arrange
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "open": [0.1],
                 "high": [0.2],
                 "low": [0.3],
@@ -317,7 +333,9 @@ class TestParquetWriter:
     def test_write_bar_dataframe_append_writes_expected(self, tmpdir):
         df = pd.DataFrame.from_dict(
             {
-                "timestamp": [pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")],
+                "timestamp": [
+                    pd.Timestamp("2004-10-25 00:33:07.007000+00:00", tz="UTC")
+                ],
                 "open": [0.1],
                 "high": [0.2],
                 "low": [0.3],
@@ -434,7 +452,9 @@ class TestParquetWriter:
         assert path.exists()
 
         batch = next(pq.ParquetFile(path).iter_batches(batch_size=2))
-        deserialized = ArrowSerializer.deserialize(data_cls=ContinuousPrice, batch=batch)
+        deserialized = ArrowSerializer.deserialize(
+            data_cls=ContinuousPrice, batch=batch
+        )
         assert deserialized == expected
 
         # for chunk in session.to_query_result():

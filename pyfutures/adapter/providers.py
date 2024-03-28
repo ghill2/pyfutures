@@ -71,7 +71,9 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
             cycle=cycle,
         )
 
-        contracts: list[FuturesContract] = [self._details_to_instrument(d) for d in details_list]
+        contracts: list[FuturesContract] = [
+            self._details_to_instrument(d) for d in details_list
+        ]
 
         for c in contracts:
             self._add_instrument(c)
@@ -85,7 +87,11 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
     ) -> list[IBContractDetails]:
         contract: IBContract = self._parse_input(instrument_id)
 
-        return [details for details in (await self._request_details(contract)) if ContractMonth.from_int(details.contractMonth) in cycle]
+        return [
+            details
+            for details in (await self._request_details(contract))
+            if ContractMonth.from_int(details.contractMonth) in cycle
+        ]
 
     async def _request_details(self, contract: IBContract) -> list[IBContractDetails]:
         details_list = await self.client.request_contract_details(contract)
@@ -112,7 +118,8 @@ class InteractiveBrokersInstrumentProvider(InstrumentProvider):
         if has_duplicates:
             tradingClass = details_list[0].contract.tradingClass
             raise ValueError(
-                f"Contract chain for trading class {tradingClass} contains weekly or daily contracts. " "Check or specify a monthly contract filter"
+                f"Contract chain for trading class {tradingClass} contains weekly or daily contracts. "
+                "Check or specify a monthly contract filter"
             )
 
     def _details_to_instrument(self, details: IBContractDetails) -> Instrument:

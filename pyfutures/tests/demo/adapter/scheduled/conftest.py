@@ -20,7 +20,9 @@ def future_for_timestamp(timestamp):
     -------
         A concurrent.futures.Future object that resolves to True when the timestamp is reached.
     """
-    target_time = datetime.fromtimestamp(timestamp / 1000, timezone.utc)  # Convert ms to datetime
+    target_time = datetime.fromtimestamp(
+        timestamp / 1000, timezone.utc
+    )  # Convert ms to datetime
 
     def is_future_reached():
         return datetime.now(timezone.utc) >= target_time

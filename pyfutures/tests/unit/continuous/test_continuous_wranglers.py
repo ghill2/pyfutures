@@ -47,7 +47,10 @@ class TestContinuousWrangler:
         continuous_bars = wrangler.process(bars)
         assert len(continuous_bars) == 1322
 
-        current_months = {ContractMonth(b.bar_type.instrument_id.symbol.value.split("=")[-1]) for b in continuous_bars}
+        current_months = {
+            ContractMonth(b.bar_type.instrument_id.symbol.value.split("=")[-1])
+            for b in continuous_bars
+        }
 
         assert all(m in self.roll_config.hold_cycle for m in current_months)
 
@@ -94,7 +97,10 @@ class TestContinuousWrangler:
 
         assert "2021H" in ex_info.value.args[0]
         assert "no timestamps" in ex_info.value.args[0]
-        assert "2021-02-26 00:00:00+00:00 to 2021-03-28 00:00:00+00:00" in ex_info.value.args[0]
+        assert (
+            "2021-02-26 00:00:00+00:00 to 2021-03-28 00:00:00+00:00"
+            in ex_info.value.args[0]
+        )
 
         # no forward in 2021H > 2021N roll window 2021-02-26 to 2021-03-28
         data = [
@@ -108,7 +114,10 @@ class TestContinuousWrangler:
 
         assert "2021N" in ex_info.value.args[0]
         assert "no timestamps" in ex_info.value.args[0]
-        assert "2021-02-26 00:00:00+00:00 to 2021-03-28 00:00:00+00:00" in ex_info.value.args[0]
+        assert (
+            "2021-02-26 00:00:00+00:00 to 2021-03-28 00:00:00+00:00"
+            in ex_info.value.args[0]
+        )
 
         # no current in 2021N > 2021U window 2021-06-28 to 2021-07-28
         data = [
@@ -122,7 +131,10 @@ class TestContinuousWrangler:
 
         assert "2021N" in ex_info.value.args[0]
         assert "no timestamps" in ex_info.value.args[0]
-        assert "2021-06-28 00:00:00+00:00 to 2021-07-28 00:00:00+00:00" in ex_info.value.args[0]
+        assert (
+            "2021-06-28 00:00:00+00:00 to 2021-07-28 00:00:00+00:00"
+            in ex_info.value.args[0]
+        )
 
         # no forward in 2021N > 2021U roll window 2021-06-28 to 2021-07-28
         data = [
@@ -137,7 +149,10 @@ class TestContinuousWrangler:
 
         assert "2021U" in ex_info.value.args[0]
         assert "no timestamps" in ex_info.value.args[0]
-        assert "2021-06-28 00:00:00+00:00 to 2021-07-28 00:00:00+00:00" in ex_info.value.args[0]
+        assert (
+            "2021-06-28 00:00:00+00:00 to 2021-07-28 00:00:00+00:00"
+            in ex_info.value.args[0]
+        )
 
     def test_validate_no_matching_timestamps_in_roll_window_raises(self):
         wrangler = ContinuousBarWrangler(

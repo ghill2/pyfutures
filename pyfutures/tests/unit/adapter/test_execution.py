@@ -65,7 +65,9 @@ class TestInteractiveBrokersExecution:
 
         cache.add_instrument(self.contract)
 
-        self.exec_client.client.request_next_order_id = AsyncMock(return_value=AdapterStubs.orderId())
+        self.exec_client.client.request_next_order_id = AsyncMock(
+            return_value=AdapterStubs.orderId()
+        )
 
     @pytest.mark.asyncio()
     async def test_submit_market_order_sends_expected(self):
@@ -159,7 +161,9 @@ class TestInteractiveBrokersExecution:
 
         # Assert
         self.exec_client.generate_order_submitted.assert_called_once()
-        submitted_kwargs = self.exec_client.generate_order_submitted.call_args_list[0][1]
+        submitted_kwargs = self.exec_client.generate_order_submitted.call_args_list[0][
+            1
+        ]
         assert submitted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert submitted_kwargs["instrument_id"] == self.contract.id
         assert submitted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
@@ -182,7 +186,9 @@ class TestInteractiveBrokersExecution:
         assert accepted_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert accepted_kwargs["instrument_id"] == self.contract.id
         assert accepted_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert accepted_kwargs["venue_order_id"] == VenueOrderId(str(AdapterStubs.orderId()))
+        assert accepted_kwargs["venue_order_id"] == VenueOrderId(
+            str(AdapterStubs.orderId())
+        )
 
     def test_order_filled_response(self):
         # Arrange
@@ -202,7 +208,9 @@ class TestInteractiveBrokersExecution:
         assert filled_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert filled_kwargs["instrument_id"] == self.contract.id
         assert filled_kwargs["client_order_id"] == TestIdStubs.client_order_id()
-        assert filled_kwargs["venue_order_id"] == VenueOrderId(str(AdapterStubs.orderId()))
+        assert filled_kwargs["venue_order_id"] == VenueOrderId(
+            str(AdapterStubs.orderId())
+        )
         assert filled_kwargs["venue_position_id"] is None
         assert filled_kwargs["trade_id"] == TradeId("0000e9b5.6555a859.01.01")
         assert filled_kwargs["order_side"] == OrderSide.BUY
@@ -212,7 +220,9 @@ class TestInteractiveBrokersExecution:
         assert filled_kwargs["quote_currency"] == GBP
         assert filled_kwargs["commission"] == Money(1.2, GBP)
         assert filled_kwargs["liquidity_side"] == LiquiditySide.NO_LIQUIDITY_SIDE
-        assert filled_kwargs["ts_event"] == dt_to_unix_nanos(pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC"))
+        assert filled_kwargs["ts_event"] == dt_to_unix_nanos(
+            pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+        )
 
     @pytest.mark.asyncio()
     async def test_cancel_order_sends_expected(self):
@@ -240,7 +250,9 @@ class TestInteractiveBrokersExecution:
     @pytest.mark.asyncio()
     async def test_modify_order_sends_expected(self):
         # Arrange
-        instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
+        instrument = TestInstrumentProvider.default_fx_ccy(
+            "AUD/USD", venue=Venue("SIM")
+        )
         self.exec_client.cache.add_instrument(instrument)
 
         limit_order = TestExecStubs.limit_order(
@@ -274,7 +286,9 @@ class TestInteractiveBrokersExecution:
     @pytest.mark.asyncio()
     async def test_modify_order_response(self):
         # Arrange
-        instrument = TestInstrumentProvider.default_fx_ccy("AUD/USD", venue=Venue("SIM"))
+        instrument = TestInstrumentProvider.default_fx_ccy(
+            "AUD/USD", venue=Venue("SIM")
+        )
         self.exec_client.cache.add_instrument(instrument)
         limit_order = TestExecStubs.limit_order()
         self.exec_client.cache.add_order(limit_order)
@@ -372,7 +386,9 @@ class TestInteractiveBrokersExecution:
 
         # Assert
         self.exec_client.generate_order_modify_rejected.assert_called_once()
-        cancel_kwargs = self.exec_client.generate_order_modify_rejected.call_args_list[0][1]
+        cancel_kwargs = self.exec_client.generate_order_modify_rejected.call_args_list[
+            0
+        ][1]
         assert cancel_kwargs["strategy_id"] == TestIdStubs.strategy_id()
         assert cancel_kwargs["instrument_id"] == TestIdStubs.audusd_id()
         assert cancel_kwargs["client_order_id"] == TestIdStubs.client_order_id()

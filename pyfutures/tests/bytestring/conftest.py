@@ -1,23 +1,22 @@
 import asyncio
+import logging
+import pickle
 from pathlib import Path
 
+import pandas as pd
 import pytest
 import pytest_asyncio
+from _pytest.mark import Mark
+from ibapi.contract import Contract as IBContract
+from pytest import CollectReport
+from pytest import StashKey
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.client.client import InteractiveBrokersClient
-from pyfutures.logger import init_logging
 from pyfutures.logger import init_ib_api_logging
+from pyfutures.logger import init_logging
 from pyfutures.tests.bytestring.mock_server_subproc import MockServerSubproc
-
-from typing import Dict
-from pytest import StashKey, CollectReport
-import pickle
-from _pytest.mark import Mark
-from ibapi.contract import Contract as IBContract
-import logging
 from pyfutures.tests.test_kit import IBTestProviderStubs
-import pandas as pd
 
 
 ####
@@ -65,7 +64,7 @@ async def qual_front_detail(event_loop):
 
 
 # https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
-phase_report_key = StashKey[Dict[str, CollectReport]]()
+phase_report_key = StashKey[dict[str, CollectReport]]()
 
 
 @pytest.hookimpl(wrapper=True, tryfirst=True)

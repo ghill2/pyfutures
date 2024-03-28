@@ -3,20 +3,13 @@ import logging
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
-from unittest.mock import MagicMock
-
 import pytest
 
-from pyfutures.client.connection import Connection
 from pyfutures.client.objects import ClientSubscription
 from pyfutures.logger import LoggerAttributes
 
 # from pyfutures.tests.unit.client.mock_server import MockServer
 from pyfutures.tests.unit.client.stubs import ClientStubs
-import async_solipsism
-
-from async_solipsism.socket import Socket
-from async_solipsism.socket import Queue
 
 
 # pytestmark = pytest.mark.unit
@@ -213,7 +206,11 @@ async def test_reconnect_subscriptions(mocker):
     #     callback=Mock(),
     # )
     subscribe_mock = Mock()
-    subscriptions = {-10: ClientSubscription(id=10, subscribe=subscribe_mock, cancel=Mock(), callback=Mock())}
+    subscriptions = {
+        -10: ClientSubscription(
+            id=10, subscribe=subscribe_mock, cancel=Mock(), callback=Mock()
+        )
+    }
     connection = ClientStubs.connection(client_id=1, subscriptions=subscriptions)
     mock_server = MockServer()
     mocker.patch(

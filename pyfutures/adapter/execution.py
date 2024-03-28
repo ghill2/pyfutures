@@ -114,7 +114,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         can only access the order's price and quantity from openOrder
         """
         if event.orderState.status == "Filled" and event.order.orderType == "MKT":
-            self._log.debug(f"Ignoring open order filled event for MKT, order filled handled by executioin {event}")
+            self._log.debug(
+                f"Ignoring open order filled event for MKT, order filled handled by executioin {event}"
+            )
             return  # nothing to do
 
         client_order_id = ClientOrderId(str(event.order.orderRef))
@@ -125,7 +127,10 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
 
         self._log.debug(f"Received {event}")
 
-        is_modified_event = event.orderState.status not in self.SUBMITTED_STATUSES and event.order.orderType == "LMT"
+        is_modified_event = (
+            event.orderState.status not in self.SUBMITTED_STATUSES
+            and event.order.orderType == "LMT"
+        )
         if is_modified_event:
             # events related to orders that have been modified
             self._handle_open_order_modified(event)
@@ -175,7 +180,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
             return  # no change
 
         venue_order_id = VenueOrderId(str(event.order.orderId))
-        venue_order_id_modified = order.venue_order_id is None or order.venue_order_id != venue_order_id
+        venue_order_id_modified = (
+            order.venue_order_id is None or order.venue_order_id != venue_order_id
+        )
 
         self._log.debug("generate_order_updated")
 
@@ -197,7 +204,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         order = command.order
 
         # reject fractional quantity, all universe instruments have a size increment of 1
-        if order.order_type == OrderType.LIMIT and not (order.quantity.as_double() % 1 == 0):
+        if order.order_type == OrderType.LIMIT and not (
+            order.quantity.as_double() % 1 == 0
+        ):
             self.generate_order_rejected(
                 strategy_id=order.strategy_id,
                 instrument_id=command.instrument_id,
@@ -261,7 +270,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         # update order attributes to the the desired modification
         if command.quantity and command.quantity != ib_order.totalQuantity:
             ib_order.totalQuantity = command.quantity.as_double()
-        if command.price and command.price.as_double() != getattr(ib_order, "lmtPrice", None):
+        if command.price and command.price.as_double() != getattr(
+            ib_order, "lmtPrice", None
+        ):
             ib_order.lmtPrice = command.price.as_double()
 
         # set parentId
@@ -317,7 +328,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
             trade_id=TradeId(event.execution.execId),
             order_side=OrderSide[order_side_to_order_action[event.execution.side]],
             order_type=order.order_type,
-            last_qty=Quantity(event.execution.shares, precision=instrument.size_precision),
+            last_qty=Quantity(
+                event.execution.shares, precision=instrument.size_precision
+            ),
             last_px=Price(event.execution.price, precision=instrument.price_precision),
             quote_currency=instrument.quote_currency,
             commission=Money(
@@ -334,7 +347,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
     def _find_instrument(self, instrument_id: InstrumentId) -> Instrument | None:
         instrument = self._cache.instrument(instrument_id)
         if instrument is None:
-            self._log.error(f"Instrument not found in instrument provider {instrument_id}")
+            self._log.error(
+                f"Instrument not found in instrument provider {instrument_id}"
+            )
         return instrument
 
     def _find_order(self, client_order_id: ClientOrderId) -> Order | None:
@@ -365,20 +380,26 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         # an error related to an order will have a positive request_id
         # all client request_ids are negative
         if event.reqId <= 0:
-            self._log.debug(f"Error with code {event.errorCode} was an error NOT related to an order, doing nothing")
+            self._log.debug(
+                f"Error with code {event.errorCode} was an error NOT related to an order, doing nothing"
+            )
             return
 
         venue_order_id = VenueOrderId(str(event.reqId))
         client_order_id = self._cache.client_order_id(venue_order_id)
         if client_order_id is None:
-            self._log.debug(f"client_order_id not found for venue_order_id: {venue_order_id}")
+            self._log.debug(
+                f"client_order_id not found for venue_order_id: {venue_order_id}"
+            )
             return
 
         if (order := self._find_order(client_order_id)) is None:
             return  # nothing to do
 
         if event.errorCode == 202:
-            self._log.error(f"Order with id {event.reqId} was canceled: {event.errorString}")
+            self._log.error(
+                f"Order with id {event.reqId} was canceled: {event.errorString}"
+            )
             self._log.debug("generate_order_canceled")
             # TODO: check for order.status == OrderStatus.PENDING_CANCEL?
             self.generate_order_canceled(
@@ -495,7 +516,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         PyCondition.type_or_none(client_order_id, ClientOrderId, "client_order_id")
         PyCondition.type_or_none(venue_order_id, VenueOrderId, "venue_order_id")
         if not (client_order_id or venue_order_id):
-            self._log.debug("Both `client_order_id` and `venue_order_id` cannot be None.")
+            self._log.debug(
+                "Both `client_order_id` and `venue_order_id` cannot be None."
+            )
             return None
 
         report = None
@@ -503,8 +526,11 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
         events: list[IBOpenOrderEvent] = await self._client.request_open_orders()
 
         for event in events:
-            if (client_order_id is not None and client_order_id.value == event.orderRef) or (
-                venue_order_id is not None and venue_order_id.value == str(event.orderId)
+            if (
+                client_order_id is not None and client_order_id.value == event.orderRef
+            ) or (
+                venue_order_id is not None
+                and venue_order_id.value == str(event.orderId)
             ):
                 instrument = await self._cache.instrument_with_contract_id(event.conId)
 
@@ -517,7 +543,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
 
         return report
 
-    async def request_last_quote_tick(self, instrument_id: InstrumentId) -> HistoricalTickBidAsk:
+    async def request_last_quote_tick(
+        self, instrument_id: InstrumentId
+    ) -> HistoricalTickBidAsk:
         self._log.debug(f"Requesting last quote tick for {instrument_id}")
 
         instrument = self._cache.instrument(instrument_id)
@@ -531,7 +559,9 @@ class InteractiveBrokersExecClient(LiveExecutionClient):
 
         last_quote = await self._client.request_last_quote_tick(contract=contract)
 
-        return self._parser.historical_tick_to_nautilus_quote_tick(instrument=instrument, tick=last_quote)
+        return self._parser.historical_tick_to_nautilus_quote_tick(
+            instrument=instrument, tick=last_quote
+        )
 
 
 # generate modify

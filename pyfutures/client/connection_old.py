@@ -1,18 +1,12 @@
 import asyncio
 import queue
 import struct
-from asyncio.streams import StreamReader
-from asyncio.streams import StreamReaderProtocol
-from asyncio.streams import StreamWriter
 from asyncio.protocols import Protocol
 
+
 # transport -> _SelectorSocketTransport > asyncio/selector_events
-from typing import Any
-
-from ibapi import comm
 
 
-from pyfutures.logger import LoggerAdapter
 # from pyfutures.client.client import InteractiveBrokersClient
 #
 
@@ -200,7 +194,9 @@ class Connection:
         # asyncio.open_connection()
         # self._reader = StreamReader(loop=self._loop)
         # self._protocol = MyProtocol()
-        self._transport, _ = await self._loop.create_connection(lambda: self._protocol, host, port)
+        self._transport, _ = await self._loop.create_connection(
+            lambda: self._protocol, host, port
+        )
         # self._writer = StreamWriter(self._transport, self._protocol, self._reader, self._loop)
         return self._protocol, self._transport
         # return await asyncio.open_connection(host, port)
@@ -235,7 +231,9 @@ class Connection:
         extension of connect
         separated into a different function to mock
         """
-        self._connect_task = self._loop.create_task(self.connect_task(client_id, timeout_seconds), name="connect")
+        self._connect_task = self._loop.create_task(
+            self.connect_task(client_id, timeout_seconds), name="connect"
+        )
         self._read_task = self._loop.create_task(self.read_task(), name="read")
 
     async def reconnect(self, client_id):
@@ -300,7 +298,9 @@ class Connection:
                 continue
 
             try:
-                await asyncio.wait_for(self.reconnect(client_id), timeout=timeout_seconds)
+                await asyncio.wait_for(
+                    self.reconnect(client_id), timeout=timeout_seconds
+                )
             except Exception as e:
                 self._log.exception("_connect task exception", e)
             # else:
@@ -321,7 +321,9 @@ class Connection:
                 msg: bytes = self._write_queue.get()
                 self._write(msg)
             else:
-                self._log.warning("Message tried to send when the client is disconnected. Waiting until the client is reconnected...")
+                self._log.warning(
+                    "Message tried to send when the client is disconnected. Waiting until the client is reconnected..."
+                )
                 await self._is_connected.wait()
 
     def _write(self, msg: bytes):
@@ -330,7 +332,7 @@ class Connection:
         """
         # self._log.debug(f"--> generated: {repr(msg)}")
         # msg = b"API\x00\x00\x00\x00\tv176..176"
-        self._log.debug(f"--> {repr(msg)}")
+        self._log.debug(f"--> {msg!r}")
         self._writer.write(msg)
         # self._loop.create_task(self._writer.drain())
 

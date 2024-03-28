@@ -41,7 +41,10 @@ class TestDetailsCachedFunc:
         self.detail = create_detail()
         self.cached_func_kwargs = dict(contract=self.detail.contract)
 
-        self.cached_func = CachedFunc(func=self.request_contract_details, cache=DetailsCache(path=tempfile.mkdtemp()))
+        self.cached_func = CachedFunc(
+            func=self.request_contract_details,
+            cache=DetailsCache(path=tempfile.mkdtemp()),
+        )
 
     def test_build_key(self):
         # NOTE: if this failed test it means the cache has been invalidated

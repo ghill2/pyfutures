@@ -1,9 +1,10 @@
 # MODIFIED FROM:
 # https://github.com/jonathanslenders/asyncio-redis/blob/master/asyncio_redis/connection.py
 import asyncio
-from pyfutures.logger import LoggerAdapter
-from typing import Callable
+from collections.abc import Callable
+
 from pyfutures.client.protocol import Protocol
+from pyfutures.logger import LoggerAdapter
 
 
 class Connection:
@@ -49,13 +50,14 @@ class Connection:
 
     async def _connect(self):
         async with self._is_connected_lock:
-            
             # if connect is called twice at the same time this stops the second attempt from being made
             # occurred when ExecClient and DataClient would attempt to connect at startup
             if self.is_connected.is_set():
-                self._log.debug("An connection attempt was made while already connected")
+                self._log.debug(
+                    "An connection attempt was made while already connected"
+                )
                 return
-        
+
             self._log.info("Connecting...")
             await self.create_connection(
                 self._loop, self.protocol, self.host, self.port

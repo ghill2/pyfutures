@@ -26,7 +26,9 @@ def tick_to_bar(
 
     freq = BarSpecification(step, aggregation, PriceType.ASK).timedelta
 
-    df = ticks.groupby(pd.Grouper(freq=freq)).agg(
+    df = ticks.groupby(
+        pd.Grouper(freq=freq)
+    ).agg(
         {
             "bid_price": "ohlc",
             "ask_price": "ohlc",

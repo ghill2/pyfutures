@@ -1,12 +1,9 @@
 import asyncio
-import pickle
 import subprocess
 import sys
 
 from pyfutures import PACKAGE_ROOT
 from pyfutures.logger import LoggerAdapter
-import pytest
-from contextlib import suppress
 
 
 class MockServerSubproc:

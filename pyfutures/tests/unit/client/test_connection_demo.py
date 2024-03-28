@@ -1,10 +1,6 @@
 import asyncio
 import logging
-import sys
 
-from pyfutures.tests.test_kit import IBTestProviderStubs
-
-import pandas as pd
 import pytest
 from ibapi.contract import Contract as IBContract
 
@@ -16,24 +12,11 @@ from ibapi.contract import Contract as IBContract
 # )
 #
 from pyfutures.client.enums import BarSize
-from pyfutures.client.enums import Duration
-from pyfutures.client.enums import Frequency
 from pyfutures.client.enums import WhatToShow
 
-from pyfutures.logger import LoggerAttributes
-
-
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-from pyfutures.tests.demo.client.gateway import Gateway
-from pyfutures.tests.demo.client.stubs import ClientStubs
-
-
 # from pyfutures.adapter.enums import WhatToShow
-
 # Requirements: ensure Docker Desktop is running on OSX
 # or get docker CLI version working by manually running the docker daemon.
-
 ###########
 ## TEST CASE 1:
 # A request is made after the empty bytestring,
@@ -43,17 +26,20 @@ from pyfutures.tests.demo.client.stubs import ClientStubs
 # A request is made before the empty bytestring
 # while waiting for a response, the empty bytestring is received
 #
-
 # TODO: If building into CI / make test workflow: aLways restart the container once before running all tests
 # Sometimes the docker container socat responds with Connection Refused...
 # If this doesnt work reliably, try removing the container and creating it again
-
 # with IB Eclient/EWrapper:
 # > clientId=10 -> NullPointerException, no OutofMemoryError
 #
 #
-
 from pyfutures.logger import LoggerAdapter
+from pyfutures.logger import LoggerAttributes
+
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+from pyfutures.tests.demo.client.gateway import Gateway
+from pyfutures.tests.demo.client.stubs import ClientStubs
+
 
 _log = LoggerAdapter.from_name(name="test_connection.py")
 
@@ -90,7 +76,6 @@ async def test_reconnect_subscriptions(gateway, event_loop):
     tests if subscriptions are reconnected when the client receives an empty bytestring
     tests if the client reconnects if the gateway connection is dropped
     """
-
     client = ClientStubs.client(client_id=10, loop=event_loop)
 
     await gateway.start()
@@ -154,10 +139,10 @@ def test_helper_ibapi_connection():
         startApi:
             msg = b"\x00\x00\x00\t71\x002\x0012\x00\x00"
     """
-    from ibapi.wrapper import EWrapper
-    from ibapi.client import EClient
     import logging
-    import sys
+
+    from ibapi.client import EClient
+    from ibapi.wrapper import EWrapper
 
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -179,7 +164,6 @@ def test_nautilus_gateway():
     log the config in python (sync) docker package
     """
     from dotenv import dotenv_values
-
     from nautilus_trader.adapters.interactive_brokers.config import (
         InteractiveBrokersGatewayConfig,
     )
