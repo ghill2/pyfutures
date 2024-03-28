@@ -70,8 +70,6 @@ class InteractiveBrokersClient:
         # default timeout for requests if not given
         request_timeout_seconds: float | int | None = 5,
     ):
-        
-
         # Events
         self.order_status_events = eventkit.Event("IBOrderStatusEvent")
         self.open_order_events = eventkit.Event("IBOpenOrderEvent")
@@ -95,7 +93,6 @@ class InteractiveBrokersClient:
 
         self._parser = ClientParser()
 
-        
         self._decoder = Decoder(serverVersion=176, wrapper=self)
 
         self._eclient = EClient(wrapper=self)

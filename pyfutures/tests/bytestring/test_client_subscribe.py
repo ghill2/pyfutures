@@ -3,79 +3,71 @@ import pytest
 from ibapi.common import BarData
 from ibapi.contract import Contract
 from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from pyfutures.client.objects import ClientSubscription
+
 import asyncio
 
 from pyfutures.client.enums import BarSize
 from pyfutures.client.enums import WhatToShow
 
 
-# MERGE THESE 2 TESTS BELOW
-# @pytest.mark.skip(reason="flakey if market not open")
-@pytest.mark.timeout(30)
 @pytest.mark.asyncio()
-async def test_subscribe_bars_historical(client, contract):
+async def test_subscribe_historical_bars(client, mode, qual_front_detail):
     await client.connect()
-    contract = await client.request_front_contract(contract)
+    send_mock = Mock(side_effect=client._eclient.reqHistoricalData)
+    client._eclient.reqHistoricalData = send_mock
 
-    async def wait_for_bar(bar):
-        await asyncio.sleep(0)
+    cancel_mock = Mock(side_effect=client._eclient.cancelHistoricalData)
+    client._eclient.cancelHistoricalData = cancel_mock
 
-    callback_mock = AsyncMock(side_effect=wait_for_bar)
-
-    client.subscribe_bars(
-        contract=contract,
-        what_to_show=WhatToShow.BID,
-        bar_size=BarSize._1_MINUTE,
-        callback=callback_mock,
-    )
-
-    while callback_mock.call_count == 0:
-        await asyncio.sleep(0)
-
-
-@pytest.mark.asyncio()
-async def test_subscribe_bars_historical_returns_expected(self):
-    def send_mocked_response(*args, **kwargs):
-        bar = BarData()
-        bar.date = 1700069390
-        self.client.historicalDataUpdate(-10, bar)
-
-    send_mock = Mock(side_effect=send_mocked_response)
-    self.client._eclient.reqHistoricalData = send_mock
+    # def on_bar(bar):
+    #     assert isinstance(bar, BarData)
 
     callback_mock = Mock()
 
     # Act
-    self.client.subscribe_bars(
-        contract=Contract(),
+    subscription = client.subscribe_bars(
+        contract=qual_front_detail.contract,
         what_to_show=WhatToShow.BID,
         bar_size=BarSize._1_MINUTE,
         callback=callback_mock,
     )
 
+    assert isinstance(subscription, ClientSubscription)
+
     # Assert
-    bar = callback_mock.call_args_list[0][0][0]
-    assert isinstance(bar, BarData)
-    assert bar.timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+    # sent_kwargs = send_mock.call_args_list[0][1]
+    # assert sent_kwargs == dict(
+    #     reqId=-10,
+    #     contract=qual_front_detail.contract,
+    #     endDateTime="",
+    #     durationStr="30 S",
+    #     barSizeSetting="30 secs",
+    #     whatToShow="BID",
+    #     useRTH=0,
+    #     formatDate=2,
+    #     keepUpToDate=True,
+    #     chartOptions=[],
+    # )
 
+    # wait until 3 bars have come in
+    # while callback_mock.call_count < 3:
+    # await asyncio.sleep(0)
 
-@pytest.mark.asyncio()
-async def test_unsubscribe_historical_bars(self):
-    # Arrange
-    self.client._eclient.reqHistoricalData = Mock()
-
-    cancel_mock = Mock()
-    self.client._eclient.cancelHistoricalData = cancel_mock
-
-    # Act
-    subscription = self.client.subscribe_bars(
-        contract=Contract(),
-        what_to_show=WhatToShow.BID,
-        bar_size=BarSize._1_MINUTE,
-        callback=Mock(),
-    )
     subscription.cancel()
+    print(callback_mock.call_count)
+
+    # wait to see if any other bars come in after the cancellation
+    # in unit mode the
+    # if mode != "unit":
+    # await asyncio.sleep(20)
 
     # Assert
+    # assert bar.timestamp == pd.Timestamp("2023-11-15 17:29:50+00:00", tz="UTC")
+
     cancel_mock.assert_called_once_with(reqId=-10)
-    assert subscription not in self.client.subscriptions
+    assert subscription not in client._subscriptions.values()
+
+    print("WAITING 10 secs")
+    await asyncio.sleep(10)

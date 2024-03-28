@@ -53,9 +53,6 @@ class ClientParser:
 
     @staticmethod
     def parse_datetime(value: str) -> pd.Timestamp:
-        print("PARSE DATETIME")
-        print(value)
-        print(type(value))
         if isinstance(value, int):
             # historical ticks int: DDDDDDDDDD
             return pd.to_datetime(value, unit="s", utc=True)
