@@ -51,13 +51,16 @@ RESPONSES_PATH = pathlib.Path(TEST_PATH / "responses")
 STREAMING_PATH = pathlib.Path(TEST_PATH / "streaming")
 PER_CONTRACT_FOLDER = Path.home() / "Desktop" / "per_contract"
 CONTRACT_PATH = pathlib.Path(RESPONSES_PATH / "contracts")
-MULTIPLE_PRICES_FOLDER = Path.home() / "Desktop" / "catalog" / "data" / "custom_multiple_bar"
+MULTIPLE_PRICES_FOLDER = (
+    Path.home() / "Desktop" / "catalog" / "data" / "custom_multiple_bar"
+)
 CATALOG_FOLDER = Path.home() / "Desktop" / "catalog"
 CATALOG = ParquetDataCatalog(path=CATALOG_FOLDER)  # , show_query_paths=True
 ADJUSTED_PRICES_FOLDER = Path.home() / "Desktop" / "adjusted"
 MERGED_FOLDER = Path.home() / "Desktop" / "merged"
 CONTRACT_DETAILS_PATH = RESPONSES_PATH / "import_contracts_details"
 UNIVERSE_XLSX_PATH = PACKAGE_ROOT / "universe.xlsx"
+UNIVERSE_WHATIF_CSV_PATH = PACKAGE_ROOT / "universe_whatif.csv"
 FX_RATES_FOLDER = PACKAGE_ROOT / "fx_rates"
 TRADERMADE_FOLDER = PACKAGE_ROOT / "tradermade"
 SPREAD_FOLDER = Path.home() / "Desktop" / "spread"
@@ -112,6 +115,9 @@ class UniverseRow:
     contract_cont: IBContract
     instrument_id: InstrumentId
     instrument_id_live: InstrumentId
+    initMarginChange: float
+    commission: float
+    commissionCurrency: float
     # fee_execution: float
     # fee_execution_currency: str
     # fee_execution_percent: bool
@@ -167,14 +173,18 @@ class UniverseRow:
         )
         aggregation = bar_aggregation_to_str(aggregation)
         price_type = price_type_to_str(price_type)
-        return BarType.from_str(f"{instrument_id}-1-{aggregation}-{price_type}-EXTERNAL")
+        return BarType.from_str(
+            f"{instrument_id}-1-{aggregation}-{price_type}-EXTERNAL"
+        )
 
     def bar_files(
         self,
         aggregation: BarAggregation | None = None,
         month: str | None = None,
     ) -> list[ParquetFile]:
-        aggregation = bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
+        aggregation = (
+            bar_aggregation_to_str(aggregation) if aggregation is not None else "*"
+        )
         month = month or "*"
         glob_str = f"{self.trading_class}={self.symbol}=FUT={month}-1-{aggregation}-MID*.parquet"
         return self._get_files(parent=PER_CONTRACT_FOLDER, glob=glob_str)
@@ -260,10 +270,11 @@ class UniverseRow:
 
 class IBTestProviderStubs:
     @staticmethod
-    def universe_dataframe(filter: list | None = None, skip: list | None = None) -> pd.DataFrame:
-        file = UNIVERSE_XLSX_PATH
-        assert file.exists()
-
+    def universe_dataframe(
+        filter: list | None = None,
+        skip: list | None = None,
+        merge: bool = True,  # merge with the csv files, universe_whatif.csv
+    ) -> pd.DataFrame:
         dtype = {
             "uname": str,
             "trading_class": str,
@@ -314,8 +325,8 @@ class IBTestProviderStubs:
             "close": str,
             "comments": str,
         }
-        # converters override dtypes
-        df = pd.read_excel(file, dtype=dtype, engine="openpyxl")
+        assert UNIVERSE_XLSX_PATH.exists()
+        df = pd.read_excel(UNIVERSE_XLSX_PATH, dtype=dtype, engine="openpyxl")
 
         def parse_bool(s):
             if s in ["TRUE", "True"]:
@@ -324,6 +335,23 @@ class IBTestProviderStubs:
                 return False
             elif s == "nan":
                 return None
+
+        ######################################
+
+        dtype = {
+            "uname": str,
+            "trading_class": str,
+            "symbol": str,
+            "exchange": str,
+            "initMarginChange": pd.Float64Dtype(),
+            "commission": pd.Float64Dtype(),
+            "commissionCurrency": str,
+        }
+        df_whatif = pd.read_csv(UNIVERSE_WHATIF_CSV_PATH, dtype=dtype)
+
+        df = df.merge(df_whatif, how="left", on="uname")
+
+        ######################################
 
         # openpyxl casting is broken for booleans
         # https://github.com/pandas-dev/pandas/issues/45903
@@ -374,15 +402,23 @@ class IBTestProviderStubs:
         df["quote_currency"] = df.quote_currency.apply(lambda x: Currency.from_str(x))
 
         df["instrument_id"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.SIM"),
+            lambda row: InstrumentId.from_str(
+                f"{row.trading_class}={row.symbol}=FUT.SIM"
+            ),
             axis=1,
         )
         df["instrument_id_live"] = df.apply(
-            lambda row: InstrumentId.from_str(f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"),
+            lambda row: InstrumentId.from_str(
+                f"{row.trading_class}={row.symbol}=FUT.{row.exchange}"
+            ),
             axis=1,
         )
 
-        df["quote_home_instrument"] = df.quote_currency.apply(lambda x: TestInstrumentProvider.default_fx_ccy(symbol=f"{x}GBP", venue=Venue("SIM")))
+        df["quote_home_instrument"] = df.quote_currency.apply(
+            lambda x: TestInstrumentProvider.default_fx_ccy(
+                symbol=f"{x}GBP", venue=Venue("SIM")
+            )
+        )
 
         df["contract"] = df.apply(
             lambda row: create_contract(
@@ -424,12 +460,16 @@ class IBTestProviderStubs:
         )
 
         df["skip_months"] = df.skip_months.apply(
-            lambda x: None if isinstance(x, float) else [ContractMonth(s) for s in x.replace(" ", "").split(",")]
+            lambda x: None
+            if isinstance(x, float)
+            else [ContractMonth(s) for s in x.replace(" ", "").split(",")]
         )
 
         df["roll_config"] = df.apply(
             lambda row: RollConfig(
-                hold_cycle=RangedRollCycle.from_str(row.hold_cycle, skip_months=row.skip_months)
+                hold_cycle=RangedRollCycle.from_str(
+                    row.hold_cycle, skip_months=row.skip_months
+                )
                 if "," in row.hold_cycle
                 else RollCycle(row.hold_cycle, skip_months=row.skip_months),
                 priced_cycle=RollCycle(row.priced_cycle),
@@ -458,7 +498,9 @@ class IBTestProviderStubs:
         # )
 
         df["price_precision"] = df.apply(
-            lambda row: len(f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]),
+            lambda row: len(
+                f"{(row.min_tick * row.price_magnifier):.8f}".rstrip("0").split(".")[1]
+            ),
             axis=1,
         )
 
@@ -469,7 +511,9 @@ class IBTestProviderStubs:
                 asset_class=AssetClass.COMMODITY,
                 currency=row.quote_currency,
                 price_precision=row.price_precision,
-                price_increment=Price(row.min_tick * row.price_magnifier, row.price_precision),
+                price_increment=Price(
+                    row.min_tick * row.price_magnifier, row.price_precision
+                ),
                 multiplier=Quantity.from_str(str(row.multiplier)),
                 lot_size=Quantity.from_int(1),
                 underlying="",
@@ -497,13 +541,34 @@ class IBTestProviderStubs:
 
             if not math.isnan(row.fee_execution):  # if non empty cell
                 # assert not math.isnan(row.fee_execution_currency)
-                fees.append(dict(name="fixed", value=row.fee_execution, currency=row.fee_execution_currency, is_percent=row.fee_execution_percent))
+                fees.append(
+                    dict(
+                        name="fixed",
+                        value=row.fee_execution,
+                        currency=row.fee_execution_currency,
+                        is_percent=row.fee_execution_percent,
+                    )
+                )
             if not math.isnan(row.fee_exchange):
                 # assert not math.isnan(row.fee_exchange_currency)
-                fees.append(dict(name="exchange", value=row.fee_exchange, currency=row.fee_exchange_currency, is_percent=None))
+                fees.append(
+                    dict(
+                        name="exchange",
+                        value=row.fee_exchange,
+                        currency=row.fee_exchange_currency,
+                        is_percent=None,
+                    )
+                )
             if not math.isnan(row.fee_regulatory):
                 # assert not math.isnan(row.fee_regulatory_currency)
-                fees.append(dict(name="regulatory", value=row.fee_regulatory, currency=row.fee_regulatory_currency, is_percent=None))
+                fees.append(
+                    dict(
+                        name="regulatory",
+                        value=row.fee_regulatory,
+                        currency=row.fee_regulatory_currency,
+                        is_percent=None,
+                    )
+                )
             # if row.fee_clearing != 0:
             # assert row.fee_clearing_currency != "nan"
             # fees.append(dict(name="clearing", value=row.fee_clearing, currency=row.fee_clearing_currency, is_percent=row.fee_clearing_percent))

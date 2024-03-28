@@ -202,7 +202,7 @@ class AdapterStubs:
                 ),
             ),
         )
-    
+
     @staticmethod
     def continuous_bar(self):
         return ContinuousBar(
@@ -250,7 +250,7 @@ class AdapterStubs:
             ts_event=0,
             ts_init=0,
         )
-    
+
     @classmethod
     def continuous_data(cls, reconciliation: bool = False) -> ContinuousData:
         return ContinuousData(
@@ -266,7 +266,7 @@ class AdapterStubs:
             reconciliation=reconciliation,
             instrument_provider=cls.instrument_provider(),
         )
-        
+
     @classmethod
     def trading_node(
         cls,
@@ -274,15 +274,16 @@ class AdapterStubs:
         load_ids: list | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
-        
         trader_id = trader_id or TestIdStubs.trader_id()
         loop = loop or asyncio.get_event_loop()
-        
+
         provider_config_dict = dict(
             load_ids=load_ids,
             **cls.provider_config(),
         )
-        provider_config = InteractiveBrokersInstrumentProviderConfig(**provider_config_dict)
+        provider_config = InteractiveBrokersInstrumentProviderConfig(
+            **provider_config_dict
+        )
 
         config = TradingNodeConfig(
             trader_id=trader_id,
@@ -310,15 +311,19 @@ class AdapterStubs:
         node = TradingNode(config=config, loop=loop)
 
         # add instrument to the cache,
-        node.add_data_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory)
-        node.add_exec_client_factory("INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory)
+        node.add_data_client_factory(
+            "INTERACTIVE_BROKERS", InteractiveBrokersLiveDataClientFactory
+        )
+        node.add_exec_client_factory(
+            "INTERACTIVE_BROKERS", InteractiveBrokersLiveExecClientFactory
+        )
 
         node.build()
 
         node.portfolio.set_specific_venue(IB_VENUE)
 
         return node
-    
+
     def data_engine(
         loop: asyncio.AbstractEventLoop,
         msgbus,
@@ -350,7 +355,7 @@ class AdapterStubs:
         data_engine.start()
 
         return data_engine, data_client
-    
+
     @staticmethod
     def exec_engine(
         loop: asyncio.AbstractEventLoop,
@@ -377,7 +382,9 @@ class AdapterStubs:
             port=4002,
         )
 
-        provider = InteractiveBrokersInstrumentProvider(client=client, config=provider_config)
+        provider = InteractiveBrokersInstrumentProvider(
+            client=client, config=provider_config
+        )
 
         account_id = AccountId(f"{IB_VENUE.value}-{IB_ACCOUNT_ID}")
 
@@ -423,5 +430,3 @@ class AdapterStubs:
         portfolio.update_account(TestEventStubs.margin_account_state())
 
         return exec_engine, exec_client, provider, client
-    
-    
