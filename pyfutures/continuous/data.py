@@ -1,3 +1,4 @@
+from collection import deque
 from nautilus_trader.common.actor import Actor
 
 
