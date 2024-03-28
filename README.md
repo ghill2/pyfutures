@@ -12,7 +12,12 @@ API > Settings > Socket Port > 4002
 API > Settings > Download Orders on Connection > Disabled  
 API > Settings > Send instrument-specific attributes for dual-mode API client in > UTC format  
 
-# TODO - ContinuousData
+# TODO - ContinuousData Reconciliation
+
+The recon code can go outside of the class the make it cleaner.
+The catalog should include portara data pre 2023 and ib data from 2023 onwards.
+The catalog should be up to date to current time before recon is performed.
+
 
 on_stop, save continuous and adjusted to cache
 - if an exception is raised while the strategy is running it will stop and save the strategies state
@@ -37,18 +42,7 @@ on_start:
     check that current position matches position on ib
     create the missing continuous bars upto current time
 
-"""
-        get position
-            if position.month == self.continuous[-1]:
-                reconcile missing data
-            else:
-                raise Exception
-        else:
-            use the forward month if in roll window otherwise current month
-            when execution runs next it will use up-to-date forward month data to open position
-        
-        no cached bars?
-        """
+
         
 OTHER:
     if there is a discrepancy between local forecasted position size and broker position size it should flag and we manually check

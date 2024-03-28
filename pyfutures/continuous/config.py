@@ -1,5 +1,6 @@
 from typing import Annotated, Literal
 
+import pandas as pd
 from msgspec import Meta
 from nautilus_trader.common.config import NautilusConfig
 from nautilus_trader.model.identifiers import InstrumentId
@@ -29,8 +30,7 @@ class RollConfig(NautilusConfig, frozen=True):
         After this date, the contract is assumed expired and non-tradeable.
     carry_offset : Literal[1, -1]
         The number of contracts forward or backwards in the priced roll cycle
-    skip_months : list[ContractMonth], optional
-        The months to skip in the hold cycle
+
     """
 
     hold_cycle: RollCycle
@@ -38,6 +38,20 @@ class RollConfig(NautilusConfig, frozen=True):
     roll_offset: NonPositiveInt
     approximate_expiry_offset: int
     carry_offset: Literal[1, -1]
+
+    def roll_window(
+        self,
+        month: ContractMonth,
+    ) -> tuple[pd.Timestamp, pd.Timestamp]:
+        expiry_date = month.timestamp_utc + pd.Timedelta(
+            days=self.approximate_expiry_offset
+        )
+        roll_date = expiry_date + pd.Timedelta(days=self.roll_offset)
+        return (roll_date, expiry_date)
+
+    def __post_init__(self):
+        assert self.roll_offset <= 0
+        assert self.carry_offset == 1 or self.carry_offset == -1
 
 
 class ContractChainConfig(NautilusConfig, frozen=True):
